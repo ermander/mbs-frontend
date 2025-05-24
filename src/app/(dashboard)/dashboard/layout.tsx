@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
-import SidebarMenu from '@/components/SidebarMenu'
+import Sidebar from '@/components/Sidebar'
+import Header from '@/components/Header';
 
 export default function DashboardLayout({
   children,
@@ -7,9 +8,14 @@ export default function DashboardLayout({
   children: ReactNode;
 }>) {
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <SidebarMenu />
-      <main className="flex-1">{children}</main>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'row' }}>
+      <Sidebar />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Header />
+        <main style={{ background: '#f5f6f9', flex: 1, minHeight: 'calc(100vh - 64px)' }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

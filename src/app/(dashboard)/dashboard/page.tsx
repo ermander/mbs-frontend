@@ -1,16 +1,7 @@
-import Link from "next/link";
-
-export default function Dashboard() {
+export default function DashboardHome() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <nav className="flex gap-4">
-        <Link href="/signin" className="text-blue-600 hover:text-blue-800">
-          Sign In
-        </Link>
-        <Link href="/signup" className="text-blue-600 hover:text-blue-800">
-          Sign Up
-        </Link>
-      </nav>
+    <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>
+      Seleziona una sezione dal menu a sinistra.
     </div>
   );
 }

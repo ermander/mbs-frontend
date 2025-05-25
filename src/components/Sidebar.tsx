@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './Sidebar.module.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
@@ -10,36 +10,100 @@ import { selectMenu } from '../app/store';
 const menuItems = [
   {
     label: 'OddsFinders',
-    subItems: ['OddsMatcher', 'Dutcher', 'Trimacther'],
+    subItems: ['OddsMatcher', 'Dutcher', 'Trimacther', 'Best Odds'],
   },
   {
     label: 'Offline Tools',
-    subItems: ['Punta Banca', 'Punta Punta', 'Punta Tre Vie'],
+    subItems: ['Punta Banca', 'Punta Punta', 'Punta Tre Vie', 'Multipla', 'Condizionale', 'Converter', 'Casino'],
   },
   {
     label: 'Tracker',
     subItems: ['In Corso', 'Terminate', 'Casino and Games', 'Wallets', 'Utenti', 'Reports'],
   },
   {
-    label: 'Settings',
-    subItems: [],
+    label: 'Account',
+    subItems: ['Settings', 'Profile'],
   },
 ];
 
+const folderMap: Record<string, string> = {
+  'OddsFinders': 'odds-finder',
+  'Offline Tools': 'offline-tools',
+  'Tracker': 'tracker',
+  'Account': 'account',
+};
+
+const subMenuSlugMap: Record<string, Record<string, string>> = {
+  'tracker': {
+    'In Corso': 'in-corso',
+    'Terminate': 'terminate',
+    'Casino and Games': 'casino-and-games',
+    'Wallets': 'wallets',
+    'Utenti': 'utenti',
+    'Reports': 'reports',
+  },
+  'offline-tools': {
+    'Punta Banca': 'punta-banca',
+    'Punta Punta': 'punta-punta',
+    'Punta Tre Vie': 'punta-tre-vie',
+    'Multipla': 'multipla',
+    'Condizionale': 'condizionale',
+    'Converter': 'converter',
+    'Casino': 'casino',
+  },
+  'odds-finder': {
+    'OddsMatcher': 'odds-matcher',
+    'Dutcher': 'dutcher',
+    'Trimacther': 'trimatcher',
+    'Best Odds': 'best-odds',
+  },
+  'account': {
+    'Settings': 'settings',
+    'Profile': 'profile',
+  },
+};
+
 export default function Sidebar() {
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('openMenus');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
   const dispatch = useDispatch();
   const router = useRouter();
   const selectedSubMenu = useSelector((state: RootState) => state.navigation.selectedSubMenu);
 
+  useEffect(() => {
+    localStorage.setItem('openMenus', JSON.stringify(openMenus));
+  }, [openMenus]);
+
+  useEffect(() => {
+    if (selectedSubMenu) {
+      const parentMenu = menuItems.find(item =>
+        item.subItems.includes(selectedSubMenu)
+      );
+      if (parentMenu && !openMenus[parentMenu.label]) {
+        setOpenMenus(prev => ({
+          ...prev,
+          [parentMenu.label]: true,
+        }));
+      }
+    }
+    // Only run this effect on mount and when selectedSubMenu changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSubMenu]);
+
   const toggleMenu = (label: string) => {
-    setOpenMenu((prev) => (prev === label ? null : label));
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   const handleSubMenuClick = (menu: string, sub: string) => {
     dispatch(selectMenu({ menu, subMenu: sub }));
-    // Build the path for navigation
-    const path = `/dashboard/${encodeURIComponent(sub)}`;
+    const folder = folderMap[menu] || menu.replace(/ /g, '');
+    const subSlug = subMenuSlugMap[folder]?.[sub] || sub.replace(/ /g, '-').toLowerCase();
+    const path = `/dashboard/${folder}/${subSlug}`;
     router.push(path);
   };
 
@@ -53,7 +117,7 @@ export default function Sidebar() {
                 className={
                   styles.menuButton +
                   ' ' +
-                  (openMenu === item.label ? styles.menuButtonActive : '')
+                  (openMenus[item.label] ? styles.menuButtonActive : '')
                 }
                 onClick={() => toggleMenu(item.label)}
               >
@@ -63,7 +127,7 @@ export default function Sidebar() {
                     className={
                       styles.arrow +
                       ' ' +
-                      (openMenu === item.label ? styles.arrowOpen : '')
+                      (openMenus[item.label] ? styles.arrowOpen : '')
                     }
                     fill="none"
                     stroke="currentColor"
@@ -81,10 +145,10 @@ export default function Sidebar() {
                   className={
                     styles.subMenuList +
                     ' ' +
-                    (openMenu === item.label ? styles.subMenuListOpen : '')
+                    (openMenus[item.label] ? styles.subMenuListOpen : '')
                   }
                 >
-                  {openMenu === item.label &&
+                  {openMenus[item.label] &&
                     item.subItems.map((sub) => (
                       <li key={sub}>
                         <button
@@ -110,6 +174,15 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+      <button
+        className={styles.logoutButton}
+        onClick={() => {
+          // Placeholder: Add your logout logic here
+          alert('Logout clicked!');
+        }}
+      >
+        Logout
+      </button>
     </aside>
   );
 } 

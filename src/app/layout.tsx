@@ -1,6 +1,5 @@
+import './globals.css';
 import type { Metadata } from 'next'
-import { Provider } from 'react-redux';
-import { store } from './store';
 
 export const metadata: Metadata = {
   title: 'Betting Arbitrage System',
@@ -14,11 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Provider store={store}>
-          {children}
-        </Provider>
-      </body>
+      <body>{children}</body>
     </html>
   )
 } 

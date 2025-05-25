@@ -10,12 +10,32 @@
   flex-shrink: 0;
   overflow: hidden;
   margin: 0;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 8px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: #fff;
+  border-radius: 8px;
+}
+
+/* For Firefox */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #e0e0e0 #fff;
 }
 
 .menu {
   flex: 1 1 0;
   min-height: 0;
-  padding: 24px 20px 0 12px;
+  padding: 12px 12px 12px 16px;
   overflow-y: auto;
 }
 

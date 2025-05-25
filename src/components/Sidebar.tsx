@@ -109,6 +109,18 @@ export default function Sidebar() {
 
   return (
     <aside className={styles.sidebar}>
+      <div style={{
+        fontWeight: 700,
+        fontSize: 18,
+        padding: '24px 20px 12px 20px',
+        textAlign: 'center',
+        letterSpacing: '0.02em',
+        color: '#000',
+        borderBottom: '1px solid #f1f1f1',
+        marginBottom: 8,
+      }}>
+        Matched Betting Management System
+      </div>
       <nav className={styles.menu}>
         <ul className={styles.menuList}>
           {menuItems.map((item) => (

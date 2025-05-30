@@ -164,7 +164,7 @@ const TabBar = () => {
             </div>
  
             {/* Reset Button */}
-            <div>
+            <div className={styles.resetButtonContainer}>
               <button
                 onClick={handleReset}
                 className={styles.resetButton}
@@ -174,12 +174,12 @@ const TabBar = () => {
             </div>
           </div>
         )}
-        {activeTab === 'Bookmakers' && (
+        {/* {activeTab === 'Bookmakers' && (
           <div>Bookmakers tab content</div>
         )}
         {activeTab === 'Multipla' && (
           <div>Multipla tab content</div>
-        )}
+        )} */}
       </div>
     </div>
   );

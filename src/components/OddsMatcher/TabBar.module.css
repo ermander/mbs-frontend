@@ -121,6 +121,13 @@
   min-width: 220px;
 }
 
+.resetButtonContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16px;
+}
+
 .resetButton {
   background: #aee6e6;
   color: #222;
@@ -129,5 +136,6 @@
   padding: 8px 24px;
   font-weight: 600;
   cursor: pointer;
-  align-self: flex-end;
+  position: relative;
+  bottom: 16px;
 } 

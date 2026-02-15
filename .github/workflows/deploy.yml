@@ -11,22 +11,26 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ermander
           password: ${{ secrets.GHCR_PAT }}
 
-      - uses: docker/build-push-action@v6
+      - name: Build and Push Multi-Arch
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/ermander/mbs-frontend:latest
             ghcr.io/ermander/mbs-frontend:${{ github.sha }}

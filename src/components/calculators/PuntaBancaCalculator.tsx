@@ -176,44 +176,44 @@ export function PuntaBancaCalculator() {
               <span className="text-muted-foreground">@</span>
             </div>
           </div>
+          {(tipologia === 'RIMBORSO (CR%)' || tipologia === 'BONUS') && (
+            <div className="space-y-2">
+              {tipologia === 'RIMBORSO (CR%)' ? (
+                <>
+                  <Label htmlFor="rimborso">Rimborso</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="rimborso"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={rimborso}
+                      onChange={(e) => setRimborso(e.target.value)}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Label htmlFor="bonus">Bonus</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="bonus"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={bonus}
+                      onChange={(e) => setBonus(e.target.value)}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
-        {(tipologia === 'RIMBORSO (CR%)' || tipologia === 'BONUS') && (
-          <div className="mt-4 space-y-2">
-            {tipologia === 'RIMBORSO (CR%)' ? (
-              <>
-                <Label htmlFor="rimborso">Rimborso</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="rimborso"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={rimborso}
-                    onChange={(e) => setRimborso(e.target.value)}
-                    className="max-w-[8rem]"
-                  />
-                  <span className="text-muted-foreground">€</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <Label htmlFor="bonus">Bonus</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="bonus"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={bonus}
-                    onChange={(e) => setBonus(e.target.value)}
-                    className="max-w-[8rem]"
-                  />
-                  <span className="text-muted-foreground">€</span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
         {isAvanzato && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">

@@ -19,7 +19,7 @@ export function HeroSection() {
             <Link href="/registrazione">Registrati gratis</Link>
           </Button>
           <Button variant="glass" size="lg" asChild>
-            <Link href="#come-funziona">Scopri come funziona</Link>
+            <Link href="/#come-funziona">Scopri come funziona</Link>
           </Button>
         </div>
       </Container>

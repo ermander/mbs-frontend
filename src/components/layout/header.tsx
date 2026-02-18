@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
-  { href: '#come-funziona', label: 'Come funziona' },
-  { href: '#strumenti', label: 'Strumenti' },
-  { href: '#prezzi', label: 'Prezzi' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/#come-funziona', label: 'Come funziona' },
+  { href: '/#strumenti', label: 'Strumenti' },
+  { href: '/#prezzi', label: 'Prezzi' },
+  { href: '/#faq', label: 'FAQ' },
 ] as const
 
 export function Header() {

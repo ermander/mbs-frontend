@@ -4,10 +4,10 @@ const footerColumns = [
   {
     title: 'Prodotto',
     links: [
-      { href: '#come-funziona', label: 'Come funziona' },
-      { href: '#strumenti', label: 'Strumenti' },
-      { href: '#prezzi', label: 'Prezzi' },
-      { href: '#faq', label: 'FAQ' },
+      { href: '/#come-funziona', label: 'Come funziona' },
+      { href: '/#strumenti', label: 'Strumenti' },
+      { href: '/#prezzi', label: 'Prezzi' },
+      { href: '/#faq', label: 'FAQ' },
     ],
   },
   {
@@ -20,7 +20,10 @@ const footerColumns = [
   },
   {
     title: 'Contatti',
-    links: [{ href: 'mailto:info@example.com', label: 'info@example.com' }],
+    links: [
+      { href: '/contatti', label: 'Contatti' },
+      { href: 'mailto:info@example.com', label: 'info@example.com' },
+    ],
   },
 ] as const
 

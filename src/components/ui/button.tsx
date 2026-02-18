@@ -18,6 +18,7 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
         glass:
           'border border-white/20 bg-white/5 text-foreground backdrop-blur-md hover:bg-white/10 hover:border-white/30',
+        success: 'bg-emerald-600 text-white shadow hover:bg-emerald-500',
       },
       size: {
         default: 'h-9 px-4 py-2',

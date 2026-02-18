@@ -11,6 +11,7 @@ export interface AgendaEntry {
   puntata: number
   quotaPunta: number
   rimborso?: number
+  bonus?: number
   commissione: number
   quotaBanca: number
   quotaPuntaEquivalente: number | null

@@ -44,6 +44,7 @@ export function PuntaBancaCalculator() {
   const [puntata, setPuntata] = useState('')
   const [quotaPunta, setQuotaPunta] = useState('')
   const [rimborso, setRimborso] = useState('')
+  const [bonus, setBonus] = useState('')
   const [puntataPotenziata, setPuntataPotenziata] = useState(false)
   const [puntataPotenziataPercent, setPuntataPotenziataPercent] = useState('')
   const [commissione, setCommissione] = useState('0')
@@ -88,6 +89,7 @@ export function PuntaBancaCalculator() {
       puntata: puntataNum ?? 0,
       quotaPunta: quotaPuntaNum ?? 0,
       rimborso: parseNum(rimborso) ?? undefined,
+      bonus: parseNum(bonus) ?? undefined,
       commissione: commissioneNum,
       quotaBanca: quotaBancaNum ?? 0,
       quotaPuntaEquivalente,
@@ -175,24 +177,44 @@ export function PuntaBancaCalculator() {
             </div>
           </div>
         </div>
-        {tipologia === 'RIMBORSO (CR%)' && (
+        {(tipologia === 'RIMBORSO (CR%)' || tipologia === 'BONUS') && (
           <div className="mt-4 space-y-2">
-            <Label htmlFor="rimborso">Rimborso</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="rimborso"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={rimborso}
-                onChange={(e) => setRimborso(e.target.value)}
-                className="max-w-[8rem]"
-              />
-              <span className="text-muted-foreground">€</span>
-            </div>
+            {tipologia === 'RIMBORSO (CR%)' ? (
+              <>
+                <Label htmlFor="rimborso">Rimborso</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="rimborso"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={rimborso}
+                    onChange={(e) => setRimborso(e.target.value)}
+                    className="max-w-[8rem]"
+                  />
+                  <span className="text-muted-foreground">€</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="bonus">Bonus</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="bonus"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={bonus}
+                    onChange={(e) => setBonus(e.target.value)}
+                    className="max-w-[8rem]"
+                  />
+                  <span className="text-muted-foreground">€</span>
+                </div>
+              </>
+            )}
           </div>
         )}
-        {(tipologia === 'BONUS' || isAvanzato) && (
+        {isAvanzato && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Checkbox
@@ -255,111 +277,117 @@ export function PuntaBancaCalculator() {
             </div>
           </div>
         </div>
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="quota-punta-equiv">Quota Punta Equivalente</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="quota-punta-equiv"
-              readOnly
-              aria-readonly
-              value={formatNum(quotaPuntaEquivalente)}
-              className="flex-1 bg-muted/50"
-            />
-            <span className="text-muted-foreground">@</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Slider Sbilanciamento */}
-      <div className="border-b border-white/10 p-4">
-        <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">Under</span>
-          <Slider
-            value={[imbalance]}
-            onValueChange={([v]) => setImbalance(v ?? 1)}
-            min={0}
-            max={2}
-            step={1}
-            className="flex-1"
-          />
-          <span className="text-xs text-muted-foreground">Over</span>
-        </div>
-        <p className="mt-1 text-center text-xs text-muted-foreground">
-          {imbalance === 0 ? 'Under' : imbalance === 2 ? 'Over' : 'Standard'}
-        </p>
-      </div>
-
-      {/* Bancata Parziale */}
-      <div className="flex justify-center border-b border-white/10 p-4">
-        <Button variant="success">Bancata Parziale</Button>
-      </div>
-
-      {/* Sezione Abbinata */}
-      <div className="border-b border-white/10 bg-muted/20 p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="abbinata">Abbinata</Label>
+        {isAvanzato && (
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="quota-punta-equiv">Quota Punta Equivalente</Label>
             <div className="flex items-center gap-2">
               <Input
-                id="abbinata"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={abbinata}
-                onChange={(e) => setAbbinata(e.target.value)}
-                className="flex-1"
-              />
-              <span className="text-muted-foreground">€</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="nuova-quota">Nuova Quota</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="nuova-quota"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={nuovaQuota}
-                onChange={(e) => setNuovaQuota(e.target.value)}
-                className="flex-1"
+                id="quota-punta-equiv"
+                readOnly
+                aria-readonly
+                value={formatNum(quotaPuntaEquivalente)}
+                className="flex-1 bg-muted/50"
               />
               <span className="text-muted-foreground">@</span>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="banca">Banca</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="banca"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={banca}
-                onChange={(e) => setBanca(e.target.value)}
-                className="flex-1"
-              />
-              <span className="text-muted-foreground">€</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="responsabilita-abbinata">Responsabilità</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="responsabilita-abbinata"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={responsabilitaAbbinata}
-                onChange={(e) => setResponsabilitaAbbinata(e.target.value)}
-                className="flex-1"
-              />
-              <span className="text-muted-foreground">€</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {isAvanzato && (
+        <>
+          {/* Slider Sbilanciamento */}
+          <div className="border-b border-white/10 p-4">
+            <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">Under</span>
+              <Slider
+                value={[imbalance]}
+                onValueChange={([v]) => setImbalance(v ?? 1)}
+                min={0}
+                max={2}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground">Over</span>
+            </div>
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              {imbalance === 0 ? 'Under' : imbalance === 2 ? 'Over' : 'Standard'}
+            </p>
+          </div>
+
+          {/* Bancata Parziale */}
+          <div className="flex justify-center border-b border-white/10 p-4">
+            <Button variant="success">Bancata Parziale</Button>
+          </div>
+
+          {/* Sezione Abbinata */}
+          <div className="border-b border-white/10 bg-muted/20 p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="abbinata">Abbinata</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="abbinata"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={abbinata}
+                    onChange={(e) => setAbbinata(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground">€</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nuova-quota">Nuova Quota</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="nuova-quota"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={nuovaQuota}
+                    onChange={(e) => setNuovaQuota(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground">@</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banca">Banca</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="banca"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={banca}
+                    onChange={(e) => setBanca(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground">€</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responsabilita-abbinata">Responsabilità</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="responsabilita-abbinata"
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={responsabilitaAbbinata}
+                    onChange={(e) => setResponsabilitaAbbinata(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-muted-foreground">€</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Invia ad Agenda */}
       <div className="flex flex-col items-center gap-2 p-4">

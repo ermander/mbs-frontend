@@ -16,3 +16,10 @@ export const registrationSchema = z
   })
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>
+
+export const loginSchema = z.object({
+  email: z.string().min(1, 'Campo obbligatorio').email('Email non valida'),
+  password: z.string().min(1, 'Campo obbligatorio'),
+})
+
+export type LoginFormData = z.infer<typeof loginSchema>

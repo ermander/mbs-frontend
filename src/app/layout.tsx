@@ -6,7 +6,7 @@ import { queryClient } from '@/lib/react-query'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
+    <html lang="it" className="dark">
       <body>
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </body>

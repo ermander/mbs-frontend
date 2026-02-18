@@ -2,15 +2,19 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function LoginForm() {
+  const router = useRouter()
+  const login = useAuthStore((s) => s.login)
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = React.useState<string>('')
 
@@ -26,24 +30,28 @@ export function LoginForm() {
     },
   })
 
-  const onSubmit = React.useCallback(async (data: LoginFormData) => {
-    setSubmitStatus('idle')
-    setSubmitMessage('')
-    try {
-      // Placeholder: replace with apiClient.post('/auth/login', data) when backend is ready
-      console.log('Login data:', data)
-      setSubmitStatus('success')
-      setSubmitMessage('Accesso in sviluppo. Verrai reindirizzato quando il backend sarà attivo.')
-    } catch (err) {
-      setSubmitStatus('error')
-      setSubmitMessage(
-        err && typeof err === 'object' && 'response' in err
-          ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-              "Errore durante l'accesso. Riprova.")
-          : "Errore durante l'accesso. Riprova.",
-      )
-    }
-  }, [])
+  const onSubmit = React.useCallback(
+    async (data: LoginFormData) => {
+      setSubmitStatus('idle')
+      setSubmitMessage('')
+      try {
+        // Mock: no API call; when backend is ready, call API and only login() on success
+        login({ email: data.email })
+        setSubmitStatus('success')
+        setSubmitMessage('Accesso effettuato.')
+        router.push('/dashboard')
+      } catch (err) {
+        setSubmitStatus('error')
+        setSubmitMessage(
+          err && typeof err === 'object' && 'response' in err
+            ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+                "Errore durante l'accesso. Riprova.")
+            : "Errore durante l'accesso. Riprova.",
+        )
+      }
+    },
+    [login, router],
+  )
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

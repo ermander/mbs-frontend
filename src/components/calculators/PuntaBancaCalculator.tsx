@@ -4,7 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
   equivalentBackOdds,
+  getImbalanceFactor,
   liability,
+  layStakeRimborso,
   layStakeWithImbalance,
   minGain,
   ratingPercent,
@@ -65,6 +67,9 @@ export function PuntaBancaCalculator() {
   const [agendaMessage, setAgendaMessage] = useState<string | null>(null)
 
   const puntataNum = parseNum(puntata)
+  const bonusNum = parseNum(bonus) ?? 0
+  const rimborsoNum = parseNum(rimborso) ?? 0
+  const puntataEffettiva = (puntataNum ?? 0) + bonusNum
   const quotaPuntaNum = parseNum(quotaPunta)
   const commissioneNum = parseNum(commissione) ?? 0
   const quotaBancaNum = parseNum(quotaBanca)
@@ -76,15 +81,39 @@ export function PuntaBancaCalculator() {
   }, [quotaBancaNum, commissioneNum])
 
   const layStake = useMemo(() => {
-    if (puntataNum == null || quotaPuntaNum == null || quotaBancaNum == null) return null
+    if (tipologia === 'RIMBORSO (CR%)') {
+      if (puntataNum == null || puntataNum <= 0 || quotaPuntaNum == null || quotaBancaNum == null)
+        return null
+      const base = layStakeRimborso(
+        puntataNum,
+        quotaPuntaNum,
+        rimborsoNum,
+        quotaBancaNum,
+        commissioneNum,
+      )
+      if (base == null) return null
+      const factor = getImbalanceFactor(imbalanceVal)
+      const adjusted = base * factor
+      return Number.isFinite(adjusted) ? adjusted : null
+    }
+    if (puntataEffettiva <= 0 || quotaPuntaNum == null || quotaBancaNum == null) return null
     return layStakeWithImbalance(
-      puntataNum,
+      puntataEffettiva,
       quotaPuntaNum,
       quotaBancaNum,
       commissioneNum,
       imbalanceVal,
     )
-  }, [puntataNum, quotaPuntaNum, quotaBancaNum, commissioneNum, imbalanceVal])
+  }, [
+    tipologia,
+    puntataNum,
+    rimborsoNum,
+    puntataEffettiva,
+    quotaPuntaNum,
+    quotaBancaNum,
+    commissioneNum,
+    imbalanceVal,
+  ])
 
   const responsabilita = useMemo(() => {
     if (layStake == null || quotaBancaNum == null) return null
@@ -92,14 +121,24 @@ export function PuntaBancaCalculator() {
   }, [layStake, quotaBancaNum])
 
   const rating = useMemo(() => {
-    if (puntataNum == null || puntataNum <= 0 || layStake == null) return null
-    return ratingPercent(puntataNum, layStake)
-  }, [puntataNum, layStake])
+    if (puntataEffettiva <= 0 || layStake == null) return null
+    return ratingPercent(puntataEffettiva, layStake)
+  }, [puntataEffettiva, layStake])
+
+  const baseMinGain = useMemo(() => {
+    if (quotaPuntaNum == null || responsabilita == null) return null
+    return minGain(puntataEffettiva, quotaPuntaNum, responsabilita)
+  }, [puntataEffettiva, quotaPuntaNum, responsabilita])
 
   const guadagnoMinimo = useMemo(() => {
-    if (puntataNum == null || quotaPuntaNum == null || responsabilita == null) return null
-    return minGain(puntataNum, quotaPuntaNum, responsabilita)
-  }, [puntataNum, quotaPuntaNum, responsabilita])
+    if (tipologia === 'RIMBORSO (CR%)') {
+      if (puntataNum == null || quotaPuntaNum == null || responsabilita == null) return null
+      const gain = puntataNum * (quotaPuntaNum - 1) - responsabilita
+      return Number.isFinite(gain) ? gain : null
+    }
+    if (baseMinGain == null) return null
+    return baseMinGain + bonusNum
+  }, [tipologia, puntataNum, quotaPuntaNum, responsabilita, baseMinGain, bonusNum])
 
   /** Profitto sull'exchange quando vinci la bancata (dopo commissione). */
   const exchangeProfitAfterCommission = useMemo(() => {
@@ -107,19 +146,32 @@ export function PuntaBancaCalculator() {
     return layStake * (1 - commissioneNum / 100)
   }, [layStake, commissioneNum])
 
+  const crPercent =
+    tipologia === 'RIMBORSO (CR%)' &&
+    rimborsoNum > 0 &&
+    guadagnoMinimo != null &&
+    Number.isFinite(guadagnoMinimo)
+      ? (guadagnoMinimo / rimborsoNum) * 100
+      : null
+
   const showSummary =
-    puntataNum != null &&
-    puntataNum > 0 &&
-    quotaPuntaNum != null &&
-    quotaBancaNum != null &&
-    layStake != null &&
-    responsabilita != null
+    tipologia === 'RIMBORSO (CR%)'
+      ? puntataNum != null &&
+        puntataNum > 0 &&
+        quotaPuntaNum != null &&
+        quotaBancaNum != null &&
+        layStake != null &&
+        responsabilita != null
+      : puntataEffettiva > 0 &&
+        quotaPuntaNum != null &&
+        quotaBancaNum != null &&
+        layStake != null &&
+        responsabilita != null
 
   // #region agent log
   useEffect(() => {
     if (
       !showSummary ||
-      puntataNum == null ||
       quotaPuntaNum == null ||
       layStake == null ||
       responsabilita == null ||
@@ -128,9 +180,9 @@ export function PuntaBancaCalculator() {
     )
       return
     const commissionePct = commissioneNum
-    const totalRow1 = puntataNum * (quotaPuntaNum - 1) - responsabilita
+    const totalRow1 = puntataEffettiva * (quotaPuntaNum - 1) - responsabilita
     const exchangeProfitAfterCommission = layStake * (1 - commissionePct / 100)
-    const totalRow2 = -puntataNum + exchangeProfitAfterCommission
+    const totalRow2 = -puntataEffettiva + exchangeProfitAfterCommission
     const ts = Date.now()
     fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
       method: 'POST',
@@ -140,7 +192,7 @@ export function PuntaBancaCalculator() {
         location: 'PuntaBancaCalculator.tsx:summary',
         message: 'Tabella profitti calc',
         data: {
-          puntataNum,
+          puntataEffettiva,
           quotaPuntaNum,
           commissionePct,
           quotaBancaNum,
@@ -168,7 +220,7 @@ export function PuntaBancaCalculator() {
           totalRow1,
           totalRow2,
           guadagnoMinimo,
-          row2IfExchangeShownAsLayStake: -puntataNum + layStake,
+          row2IfExchangeShownAsLayStake: -puntataEffettiva + layStake,
         },
         timestamp: ts,
         hypothesisId: 'H3',
@@ -176,7 +228,7 @@ export function PuntaBancaCalculator() {
     }).catch(() => {})
   }, [
     showSummary,
-    puntataNum,
+    puntataEffettiva,
     quotaPuntaNum,
     layStake,
     responsabilita,
@@ -279,41 +331,40 @@ export function PuntaBancaCalculator() {
               <span className="text-muted-foreground">@</span>
             </div>
           </div>
-          {(tipologia === 'RIMBORSO (CR%)' || tipologia === 'BONUS') && (
+          {tipologia === 'RIMBORSO (CR%)' && (
             <div className="space-y-2">
-              {tipologia === 'RIMBORSO (CR%)' ? (
-                <>
-                  <Label htmlFor="rimborso">Rimborso</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="rimborso"
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={rimborso}
-                      onChange={(e) => setRimborso(e.target.value)}
-                      className="flex-1"
-                    />
-                    <span className="text-muted-foreground">€</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Label htmlFor="bonus">Bonus</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="bonus"
-                      type="number"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={bonus}
-                      onChange={(e) => setBonus(e.target.value)}
-                      className="flex-1"
-                    />
-                    <span className="text-muted-foreground">€</span>
-                  </div>
-                </>
-              )}
+              <Label htmlFor="rimborso">Rimborso</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="rimborso"
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={rimborso}
+                  onChange={(e) => setRimborso(e.target.value)}
+                  className="flex-1"
+                />
+                <span className="text-muted-foreground">€</span>
+              </div>
+            </div>
+          )}
+          {(tipologia === 'NORMALE' || tipologia === 'BONUS') && (
+            <div className="space-y-2">
+              <Label htmlFor="bonus">
+                {tipologia === 'NORMALE' ? 'Saldo bonus (opz.)' : 'Bonus'}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="bonus"
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={bonus}
+                  onChange={(e) => setBonus(e.target.value)}
+                  className="flex-1"
+                />
+                <span className="text-muted-foreground">€</span>
+              </div>
             </div>
           )}
         </div>
@@ -493,43 +544,67 @@ export function PuntaBancaCalculator() {
       )}
 
       {/* Riepilogo */}
-      {showSummary && rating != null && guadagnoMinimo != null && (
-        <div className="border-b border-white/10 bg-white/5">
-          <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            Riepilogo
+      {showSummary &&
+        guadagnoMinimo != null &&
+        (tipologia !== 'RIMBORSO (CR%)' ? rating != null : true) && (
+          <div className="border-b border-white/10 bg-white/5">
+            <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+              {tipologia === 'RIMBORSO (CR%)'
+                ? 'BANCATA RIMBORSO • '
+                : bonusNum > 0
+                  ? 'BANCATA STANDARD + BONUS • '
+                  : ''}
+              Riepilogo
+            </div>
+            <div className="space-y-2 p-4 text-sm">
+              <p>
+                {tipologia === 'RIMBORSO (CR%)'
+                  ? `CR%: ${crPercent != null ? crPercent.toFixed(2) : '—'}%`
+                  : `Rating: ${rating != null ? rating.toFixed(2) : '—'}%`}
+              </p>
+              <p>
+                <span className="font-medium text-primary">Punta</span>{' '}
+                <span className="text-primary">
+                  {formatNum(tipologia === 'RIMBORSO (CR%)' ? puntataNum : puntataEffettiva)} €
+                </span>
+                {tipologia !== 'RIMBORSO (CR%)' && bonusNum > 0 && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    (di cui {formatNum(bonusNum)} € bonus)
+                  </span>
+                )}{' '}
+                a quota {formatNum(quotaPuntaNum)} sul Book.
+              </p>
+              <p>
+                <span className="font-medium text-destructive">Banca</span>{' '}
+                <span className="text-destructive">{formatNum(layStake)} €</span> a quota{' '}
+                {formatNum(quotaBancaNum)} su Betfair, con Responsabilità di{' '}
+                <span className="text-destructive">{formatNum(responsabilita)} €</span>.
+              </p>
+              <p>
+                Il guadagno minimo sarà{' '}
+                <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
+                  {formatSigned(guadagnoMinimo)} €
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="space-y-2 p-4 text-sm">
-            <p>Rating: {rating.toFixed(2)}%</p>
-            <p>
-              <span className="font-medium text-primary">Punta</span>{' '}
-              <span className="text-primary">{formatNum(puntataNum)} €</span> a quota{' '}
-              {formatNum(quotaPuntaNum)} sul Book.
-            </p>
-            <p>
-              <span className="font-medium text-destructive">Banca</span>{' '}
-              <span className="text-destructive">{formatNum(layStake)} €</span> a quota{' '}
-              {formatNum(quotaBancaNum)} su Betfair, con Responsabilità di{' '}
-              <span className="text-destructive">{formatNum(responsabilita)} €</span>.
-            </p>
-            <p>
-              Il guadagno minimo sarà{' '}
-              <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
-                {formatSigned(guadagnoMinimo)} €
-              </span>
-            </p>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Tabella dei profitti */}
       {showSummary &&
         guadagnoMinimo != null &&
-        puntataNum != null &&
         quotaPuntaNum != null &&
         layStake != null &&
-        responsabilita != null && (
+        responsabilita != null &&
+        (tipologia === 'RIMBORSO (CR%)' ? puntataNum != null : true) && (
           <div className="border-b border-white/10 bg-white/5">
             <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+              {tipologia === 'RIMBORSO (CR%)'
+                ? 'BANCATA RIMBORSO • '
+                : bonusNum > 0
+                  ? 'BANCATA STANDARD + BONUS • '
+                  : ''}
               Tabella dei profitti
             </div>
             <div className="overflow-x-auto">
@@ -539,46 +614,116 @@ export function PuntaBancaCalculator() {
                     <th className="p-3 text-left font-normal"></th>
                     <th className="p-3 text-right font-normal">Book</th>
                     <th className="p-3 text-right font-normal">Exchange</th>
+                    {tipologia === 'RIMBORSO (CR%)' && (
+                      <th className="p-3 text-right font-normal">Rimborso</th>
+                    )}
                     <th className="p-3 text-right font-normal">Totale</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-white/10 bg-primary/10">
-                    <td className="p-3">Se vinci la puntata sul Book:</td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned(puntataNum * (quotaPuntaNum - 1))}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-responsabilita)}
-                    </td>
-                    <td className="p-3 text-right">
-                      <span
-                        className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(guadagnoMinimo)} €
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="bg-destructive/10">
-                    <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
-                    <td className="p-3 text-right text-destructive">{formatSigned(-puntataNum)}</td>
-                    <td className="p-3 text-right text-primary">
-                      {exchangeProfitAfterCommission != null
-                        ? formatSigned(exchangeProfitAfterCommission)
-                        : '—'}
-                    </td>
-                    <td className="p-3 text-right">
-                      <span
-                        className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        ={' '}
-                        {puntataNum != null && exchangeProfitAfterCommission != null
-                          ? formatSigned(-puntataNum + exchangeProfitAfterCommission)
-                          : formatSigned(guadagnoMinimo)}{' '}
-                        €
-                      </span>
-                    </td>
-                  </tr>
+                  {tipologia === 'RIMBORSO (CR%)' ? (
+                    <>
+                      <tr className="border-b border-white/10 bg-primary/10">
+                        <td className="p-3">Se vinci la puntata sul Book:</td>
+                        <td className="p-3 text-right text-primary">
+                          {formatSigned((puntataNum ?? 0) * (quotaPuntaNum - 1))}
+                        </td>
+                        <td className="p-3 text-right text-destructive">
+                          {formatSigned(-responsabilita)}
+                        </td>
+                        <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
+                        <td className="p-3 text-right">
+                          <span
+                            className={cn(
+                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                            )}
+                          >
+                            = {formatSigned(guadagnoMinimo)} €
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="bg-destructive/10">
+                        <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
+                        <td className="p-3 text-right text-destructive">
+                          {formatSigned(-(puntataNum ?? 0))}
+                        </td>
+                        <td className="p-3 text-right text-primary">
+                          {exchangeProfitAfterCommission != null
+                            ? formatSigned(exchangeProfitAfterCommission)
+                            : '—'}
+                        </td>
+                        <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
+                        <td className="p-3 text-right">
+                          <span
+                            className={cn(
+                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                            )}
+                          >
+                            ={' '}
+                            {exchangeProfitAfterCommission != null
+                              ? formatSigned(
+                                  -(puntataNum ?? 0) + exchangeProfitAfterCommission + rimborsoNum,
+                                )
+                              : formatSigned(guadagnoMinimo)}{' '}
+                            €
+                          </span>
+                        </td>
+                      </tr>
+                    </>
+                  ) : (
+                    <>
+                      <tr className="border-b border-white/10 bg-primary/10">
+                        <td className="p-3">Se vinci la puntata sul Book:</td>
+                        <td className="p-3 text-right text-primary">
+                          {formatSigned(
+                            bonusNum > 0
+                              ? puntataEffettiva * quotaPuntaNum - (puntataNum ?? 0)
+                              : puntataEffettiva * (quotaPuntaNum - 1),
+                          )}
+                        </td>
+                        <td className="p-3 text-right text-destructive">
+                          {formatSigned(-responsabilita)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <span
+                            className={cn(
+                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                            )}
+                          >
+                            = {formatSigned(guadagnoMinimo)} €
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="bg-destructive/10">
+                        <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
+                        <td className="p-3 text-right text-destructive">
+                          {formatSigned(bonusNum > 0 ? -(puntataNum ?? 0) : -puntataEffettiva)}
+                        </td>
+                        <td className="p-3 text-right text-primary">
+                          {exchangeProfitAfterCommission != null
+                            ? formatSigned(exchangeProfitAfterCommission)
+                            : '—'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <span
+                            className={cn(
+                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                            )}
+                          >
+                            ={' '}
+                            {exchangeProfitAfterCommission != null
+                              ? formatSigned(
+                                  bonusNum > 0
+                                    ? -(puntataNum ?? 0) + exchangeProfitAfterCommission
+                                    : -puntataEffettiva + exchangeProfitAfterCommission,
+                                )
+                              : formatSigned(guadagnoMinimo)}{' '}
+                            €
+                          </span>
+                        </td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>

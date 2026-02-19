@@ -109,6 +109,26 @@ export function minGain(
 }
 
 /**
+ * Lay stake for refund (Rimborso) mode: equal profit when back wins vs when lay wins + refund.
+ * layStake = (stake * backOdds - refund) / (layOdds - commissionPercent/100)
+ */
+export function layStakeRimborso(
+  stake: number,
+  backOdds: number,
+  refund: number,
+  layOdds: number,
+  commissionPercent: number,
+): number | null {
+  if (stake <= 0 || backOdds <= 0 || layOdds <= 0) return null
+  const denom = layOdds - commissionPercent / 100
+  if (denom <= 0) return null
+  const numerator = stake * backOdds - refund
+  if (numerator <= 0) return null
+  const lay = numerator / denom
+  return Number.isFinite(lay) ? lay : null
+}
+
+/**
  * Lay stake adjusted by imbalance (for display/agenda).
  */
 export function layStakeWithImbalance(

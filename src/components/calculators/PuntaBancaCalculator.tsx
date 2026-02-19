@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
   equivalentBackOdds,
   liability,
   layStakeWithImbalance,
+  minGain,
+  ratingPercent,
   type ImbalanceValue,
 } from '@/lib/calculators/punta-banca'
 import type { TipologiaCalcolo } from '@/stores/agenda-store'
@@ -34,6 +36,12 @@ function parseNum(s: string): number | null {
 function formatNum(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
   return n.toFixed(2)
+}
+
+function formatSigned(n: number): string {
+  if (!Number.isFinite(n)) return '—'
+  const v = n.toFixed(2)
+  return n >= 0 ? `+${v}` : v
 }
 
 export function PuntaBancaCalculator() {
@@ -82,6 +90,101 @@ export function PuntaBancaCalculator() {
     if (layStake == null || quotaBancaNum == null) return null
     return liability(layStake, quotaBancaNum)
   }, [layStake, quotaBancaNum])
+
+  const rating = useMemo(() => {
+    if (puntataNum == null || puntataNum <= 0 || layStake == null) return null
+    return ratingPercent(puntataNum, layStake)
+  }, [puntataNum, layStake])
+
+  const guadagnoMinimo = useMemo(() => {
+    if (puntataNum == null || quotaPuntaNum == null || responsabilita == null) return null
+    return minGain(puntataNum, quotaPuntaNum, responsabilita)
+  }, [puntataNum, quotaPuntaNum, responsabilita])
+
+  /** Profitto sull'exchange quando vinci la bancata (dopo commissione). */
+  const exchangeProfitAfterCommission = useMemo(() => {
+    if (layStake == null) return null
+    return layStake * (1 - commissioneNum / 100)
+  }, [layStake, commissioneNum])
+
+  const showSummary =
+    puntataNum != null &&
+    puntataNum > 0 &&
+    quotaPuntaNum != null &&
+    quotaBancaNum != null &&
+    layStake != null &&
+    responsabilita != null
+
+  // #region agent log
+  useEffect(() => {
+    if (
+      !showSummary ||
+      puntataNum == null ||
+      quotaPuntaNum == null ||
+      layStake == null ||
+      responsabilita == null ||
+      guadagnoMinimo == null ||
+      quotaBancaNum == null
+    )
+      return
+    const commissionePct = commissioneNum
+    const totalRow1 = puntataNum * (quotaPuntaNum - 1) - responsabilita
+    const exchangeProfitAfterCommission = layStake * (1 - commissionePct / 100)
+    const totalRow2 = -puntataNum + exchangeProfitAfterCommission
+    const ts = Date.now()
+    fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '897992' },
+      body: JSON.stringify({
+        sessionId: '897992',
+        location: 'PuntaBancaCalculator.tsx:summary',
+        message: 'Tabella profitti calc',
+        data: {
+          puntataNum,
+          quotaPuntaNum,
+          commissionePct,
+          quotaBancaNum,
+          layStake,
+          responsabilita,
+          guadagnoMinimo,
+          totalRow1,
+          exchangeProfitAfterCommission,
+          totalRow2,
+          diffRow1: totalRow1 - guadagnoMinimo,
+          diffRow2: totalRow2 - guadagnoMinimo,
+        },
+        timestamp: ts,
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {})
+    fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '897992' },
+      body: JSON.stringify({
+        sessionId: '897992',
+        location: 'PuntaBancaCalculator.tsx:compare',
+        message: 'Row totals vs guadagnoMinimo',
+        data: {
+          totalRow1,
+          totalRow2,
+          guadagnoMinimo,
+          row2IfExchangeShownAsLayStake: -puntataNum + layStake,
+        },
+        timestamp: ts,
+        hypothesisId: 'H3',
+      }),
+    }).catch(() => {})
+  }, [
+    showSummary,
+    puntataNum,
+    quotaPuntaNum,
+    layStake,
+    responsabilita,
+    guadagnoMinimo,
+    quotaBancaNum,
+    commissioneNum,
+  ])
+  // #endregion
 
   const handleInviaAgenda = () => {
     addEntry({
@@ -388,6 +491,99 @@ export function PuntaBancaCalculator() {
           </div>
         </>
       )}
+
+      {/* Riepilogo */}
+      {showSummary && rating != null && guadagnoMinimo != null && (
+        <div className="border-b border-white/10 bg-white/5">
+          <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+            Riepilogo
+          </div>
+          <div className="space-y-2 p-4 text-sm">
+            <p>Rating: {rating.toFixed(2)}%</p>
+            <p>
+              <span className="font-medium text-primary">Punta</span>{' '}
+              <span className="text-primary">{formatNum(puntataNum)} €</span> a quota{' '}
+              {formatNum(quotaPuntaNum)} sul Book.
+            </p>
+            <p>
+              <span className="font-medium text-destructive">Banca</span>{' '}
+              <span className="text-destructive">{formatNum(layStake)} €</span> a quota{' '}
+              {formatNum(quotaBancaNum)} su Betfair, con Responsabilità di{' '}
+              <span className="text-destructive">{formatNum(responsabilita)} €</span>.
+            </p>
+            <p>
+              Il guadagno minimo sarà{' '}
+              <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
+                {formatSigned(guadagnoMinimo)} €
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tabella dei profitti */}
+      {showSummary &&
+        guadagnoMinimo != null &&
+        puntataNum != null &&
+        quotaPuntaNum != null &&
+        layStake != null &&
+        responsabilita != null && (
+          <div className="border-b border-white/10 bg-white/5">
+            <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+              Tabella dei profitti
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-muted-foreground">
+                    <th className="p-3 text-left font-normal"></th>
+                    <th className="p-3 text-right font-normal">Book</th>
+                    <th className="p-3 text-right font-normal">Exchange</th>
+                    <th className="p-3 text-right font-normal">Totale</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-white/10 bg-primary/10">
+                    <td className="p-3">Se vinci la puntata sul Book:</td>
+                    <td className="p-3 text-right text-primary">
+                      {formatSigned(puntataNum * (quotaPuntaNum - 1))}
+                    </td>
+                    <td className="p-3 text-right text-destructive">
+                      {formatSigned(-responsabilita)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <span
+                        className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}
+                      >
+                        = {formatSigned(guadagnoMinimo)} €
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="bg-destructive/10">
+                    <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
+                    <td className="p-3 text-right text-destructive">{formatSigned(-puntataNum)}</td>
+                    <td className="p-3 text-right text-primary">
+                      {exchangeProfitAfterCommission != null
+                        ? formatSigned(exchangeProfitAfterCommission)
+                        : '—'}
+                    </td>
+                    <td className="p-3 text-right">
+                      <span
+                        className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}
+                      >
+                        ={' '}
+                        {puntataNum != null && exchangeProfitAfterCommission != null
+                          ? formatSigned(-puntataNum + exchangeProfitAfterCommission)
+                          : formatSigned(guadagnoMinimo)}{' '}
+                        €
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       {/* Invia ad Agenda */}
       <div className="flex flex-col items-center gap-2 p-4">

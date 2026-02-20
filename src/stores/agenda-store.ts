@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type TipologiaCalcolo = 'NORMALE' | 'RIMBORSO (CR%)' | 'BONUS'
-export type SbilanciamentoValue = 0 | 1 | 2
+/** Sbilanciamento della bancata: percentuale da -30 a +30 (solo in modalità avanzata). */
+export type SbilanciamentoValue = number
 
 export interface AgendaEntry {
   id: string
@@ -17,7 +18,7 @@ export interface AgendaEntry {
   quotaPuntaEquivalente: number | null
   layStake: number | null
   responsabilita: number | null
-  sbilanciamento: SbilanciamentoValue
+  sbilanciamento: SbilanciamentoValue // -30..30
   /** Optional partial lay section */
   abbinata?: number
   nuovaQuota?: number

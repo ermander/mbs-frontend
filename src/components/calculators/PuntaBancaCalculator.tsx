@@ -10,9 +10,9 @@ import {
   layStakeWithImbalance,
   minGain,
   ratingPercent,
-  type ImbalanceValue,
+  remainingLayStakeAtNewOdds,
 } from '@/lib/calculators/punta-banca'
-import type { TipologiaCalcolo } from '@/stores/agenda-store'
+import type { TipologiaCalcolo, SbilanciamentoValue } from '@/stores/agenda-store'
 import { useAgendaStore } from '@/stores/agenda-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,11 +59,10 @@ export function PuntaBancaCalculator() {
   const [puntataPotenziataPercent, setPuntataPotenziataPercent] = useState('')
   const [commissione, setCommissione] = useState('0')
   const [quotaBanca, setQuotaBanca] = useState('')
-  const [imbalance, setImbalance] = useState<number>(1)
+  const [imbalance, setImbalance] = useState<number>(0)
   const [abbinata, setAbbinata] = useState('')
   const [nuovaQuota, setNuovaQuota] = useState('')
-  const [banca, setBanca] = useState('')
-  const [responsabilitaAbbinata, setResponsabilitaAbbinata] = useState('')
+  const [showBancataParziale, setShowBancataParziale] = useState(false)
   const [agendaMessage, setAgendaMessage] = useState<string | null>(null)
 
   const puntataNum = parseNum(puntata)
@@ -73,7 +72,8 @@ export function PuntaBancaCalculator() {
   const quotaPuntaNum = parseNum(quotaPunta)
   const commissioneNum = parseNum(commissione) ?? 0
   const quotaBancaNum = parseNum(quotaBanca)
-  const imbalanceVal = (imbalance === 0 ? 0 : imbalance === 2 ? 2 : 1) as ImbalanceValue
+  /** Sbilanciamento -30..+30%; usato solo se isAvanzato, altrimenti 0. */
+  const imbalancePercent = isAvanzato ? Math.max(-30, Math.min(30, imbalance)) : 0
 
   const quotaPuntaEquivalente = useMemo(() => {
     if (quotaBancaNum == null) return null
@@ -92,7 +92,7 @@ export function PuntaBancaCalculator() {
         commissioneNum,
       )
       if (base == null) return null
-      const factor = getImbalanceFactor(imbalanceVal)
+      const factor = getImbalanceFactor(imbalancePercent)
       const adjusted = base * factor
       return Number.isFinite(adjusted) ? adjusted : null
     }
@@ -102,7 +102,7 @@ export function PuntaBancaCalculator() {
       quotaPuntaNum,
       quotaBancaNum,
       commissioneNum,
-      imbalanceVal,
+      imbalancePercent,
     )
   }, [
     tipologia,
@@ -112,7 +112,7 @@ export function PuntaBancaCalculator() {
     quotaPuntaNum,
     quotaBancaNum,
     commissioneNum,
-    imbalanceVal,
+    imbalancePercent,
   ])
 
   const responsabilita = useMemo(() => {
@@ -120,31 +120,90 @@ export function PuntaBancaCalculator() {
     return liability(layStake, quotaBancaNum)
   }, [layStake, quotaBancaNum])
 
+  const abbinataNum = parseNum(abbinata) ?? 0
+  const nuovaQuotaNum = parseNum(nuovaQuota)
+  /** Stake da abbinare alla nuova quota: stesso profitto in entrambi gli esiti (formula equal profit). */
+  const bancaParziale = useMemo(() => {
+    if (
+      puntataEffettiva <= 0 ||
+      quotaPuntaNum == null ||
+      quotaPuntaNum <= 0 ||
+      quotaBancaNum == null ||
+      quotaBancaNum <= 1 ||
+      nuovaQuotaNum == null ||
+      nuovaQuotaNum <= 1
+    )
+      return null
+    return remainingLayStakeAtNewOdds(
+      puntataEffettiva,
+      quotaPuntaNum,
+      abbinataNum,
+      quotaBancaNum,
+      nuovaQuotaNum,
+      commissioneNum,
+    )
+  }, [puntataEffettiva, quotaPuntaNum, abbinataNum, quotaBancaNum, nuovaQuotaNum, commissioneNum])
+  /** Responsabilità sulla parte da abbinare alla nuova quota. */
+  const responsabilitaParziale = useMemo(() => {
+    if (bancaParziale == null || nuovaQuotaNum == null || nuovaQuotaNum <= 1) return null
+    const liab = bancaParziale * (nuovaQuotaNum - 1)
+    return Number.isFinite(liab) ? liab : null
+  }, [bancaParziale, nuovaQuotaNum])
+  /** Nuova responsabilità totale (abbinate a quota originale + resto a nuova quota). */
+  const nuovaResponsabilita = useMemo(() => {
+    if (responsabilitaParziale == null) return null
+    const liabilityAbbinata =
+      quotaBancaNum != null && quotaBancaNum > 1 ? abbinataNum * (quotaBancaNum - 1) : 0
+    return liabilityAbbinata + responsabilitaParziale
+  }, [abbinataNum, quotaBancaNum, responsabilitaParziale])
+
+  /** Responsabilità da usare in riepilogo/tabella: con bancata parziale attiva usa la nuova totale. */
+  const effectiveLiability =
+    showBancataParziale && nuovaResponsabilita != null ? nuovaResponsabilita : responsabilita
+  /** Profitto exchange quando vinci la bancata: con bancata parziale attiva = (abbinata + bancaParziale) × (1 - comm). */
+  const effectiveExchangeProfit = useMemo(() => {
+    if (layStake == null) return null
+    const factor = 1 - commissioneNum / 100
+    if (showBancataParziale && bancaParziale != null && (abbinataNum > 0 || bancaParziale > 0))
+      return (abbinataNum + bancaParziale) * factor
+    return layStake * factor
+  }, [layStake, commissioneNum, showBancataParziale, abbinataNum, bancaParziale])
+
   const rating = useMemo(() => {
     if (puntataEffettiva <= 0 || layStake == null) return null
     return ratingPercent(puntataEffettiva, layStake)
   }, [puntataEffettiva, layStake])
 
   const baseMinGain = useMemo(() => {
-    if (quotaPuntaNum == null || responsabilita == null) return null
-    return minGain(puntataEffettiva, quotaPuntaNum, responsabilita)
-  }, [puntataEffettiva, quotaPuntaNum, responsabilita])
+    if (quotaPuntaNum == null || effectiveLiability == null) return null
+    return minGain(puntataEffettiva, quotaPuntaNum, effectiveLiability)
+  }, [puntataEffettiva, quotaPuntaNum, effectiveLiability])
 
-  const guadagnoMinimo = useMemo(() => {
+  /** Totale se vinci la puntata sul Book (riga 1 tabella). */
+  const totalSeVinciPuntata = useMemo(() => {
     if (tipologia === 'RIMBORSO (CR%)') {
-      if (puntataNum == null || quotaPuntaNum == null || responsabilita == null) return null
-      const gain = puntataNum * (quotaPuntaNum - 1) - responsabilita
-      return Number.isFinite(gain) ? gain : null
+      if (puntataNum == null || quotaPuntaNum == null || effectiveLiability == null) return null
+      return puntataNum * (quotaPuntaNum - 1) - effectiveLiability
     }
     if (baseMinGain == null) return null
     return baseMinGain + bonusNum
-  }, [tipologia, puntataNum, quotaPuntaNum, responsabilita, baseMinGain, bonusNum])
+  }, [tipologia, puntataNum, quotaPuntaNum, effectiveLiability, baseMinGain, bonusNum])
 
-  /** Profitto sull'exchange quando vinci la bancata (dopo commissione). */
-  const exchangeProfitAfterCommission = useMemo(() => {
-    if (layStake == null) return null
-    return layStake * (1 - commissioneNum / 100)
-  }, [layStake, commissioneNum])
+  /** Totale se vinci la bancata sull'Exchange (riga 2 tabella). */
+  const totalSeVinciBancata = useMemo(() => {
+    if (tipologia === 'RIMBORSO (CR%)') {
+      if (effectiveExchangeProfit == null) return null
+      return -(puntataNum ?? 0) + effectiveExchangeProfit + rimborsoNum
+    }
+    if (effectiveExchangeProfit == null) return null
+    return (bonusNum > 0 ? -(puntataNum ?? 0) : -puntataEffettiva) + effectiveExchangeProfit
+  }, [tipologia, puntataNum, puntataEffettiva, bonusNum, rimborsoNum, effectiveExchangeProfit])
+
+  const guadagnoMinimo = useMemo(() => {
+    if (totalSeVinciPuntata == null || totalSeVinciBancata == null) return null
+    const minGainValue = Math.min(totalSeVinciPuntata, totalSeVinciBancata)
+    return Number.isFinite(minGainValue) ? minGainValue : null
+  }, [totalSeVinciPuntata, totalSeVinciBancata])
 
   const crPercent =
     tipologia === 'RIMBORSO (CR%)' &&
@@ -250,11 +309,11 @@ export function PuntaBancaCalculator() {
       quotaPuntaEquivalente,
       layStake: layStake ?? null,
       responsabilita,
-      sbilanciamento: imbalanceVal,
+      sbilanciamento: imbalancePercent as SbilanciamentoValue,
       abbinata: parseNum(abbinata) ?? undefined,
       nuovaQuota: parseNum(nuovaQuota) ?? undefined,
-      banca: parseNum(banca) ?? undefined,
-      responsabilitaAbbinata: parseNum(responsabilitaAbbinata) ?? undefined,
+      banca: bancaParziale ?? undefined,
+      responsabilitaAbbinata: responsabilitaParziale ?? undefined,
     })
     setAgendaMessage("Aggiunto all'agenda.")
     setTimeout(() => setAgendaMessage(null), 3000)
@@ -448,101 +507,6 @@ export function PuntaBancaCalculator() {
         )}
       </div>
 
-      {isAvanzato && (
-        <>
-          {/* Slider Sbilanciamento */}
-          <div className="border-b border-white/10 p-4">
-            <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">Under</span>
-              <Slider
-                value={[imbalance]}
-                onValueChange={([v]) => setImbalance(v ?? 1)}
-                min={0}
-                max={2}
-                step={1}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground">Over</span>
-            </div>
-            <p className="mt-1 text-center text-xs text-muted-foreground">
-              {imbalance === 0 ? 'Under' : imbalance === 2 ? 'Over' : 'Standard'}
-            </p>
-          </div>
-
-          {/* Bancata Parziale */}
-          <div className="flex justify-center border-b border-white/10 p-4">
-            <Button variant="success">Bancata Parziale</Button>
-          </div>
-
-          {/* Sezione Abbinata */}
-          <div className="border-b border-white/10 bg-muted/20 p-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="abbinata">Abbinata</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="abbinata"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={abbinata}
-                    onChange={(e) => setAbbinata(e.target.value)}
-                    className="flex-1"
-                  />
-                  <span className="text-muted-foreground">€</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nuova-quota">Nuova Quota</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="nuova-quota"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={nuovaQuota}
-                    onChange={(e) => setNuovaQuota(e.target.value)}
-                    className="flex-1"
-                  />
-                  <span className="text-muted-foreground">@</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banca">Banca</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="banca"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={banca}
-                    onChange={(e) => setBanca(e.target.value)}
-                    className="flex-1"
-                  />
-                  <span className="text-muted-foreground">€</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="responsabilita-abbinata">Responsabilità</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="responsabilita-abbinata"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={responsabilitaAbbinata}
-                    onChange={(e) => setResponsabilitaAbbinata(e.target.value)}
-                    className="flex-1"
-                  />
-                  <span className="text-muted-foreground">€</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Riepilogo */}
       {showSummary &&
         guadagnoMinimo != null &&
@@ -581,6 +545,15 @@ export function PuntaBancaCalculator() {
                 {formatNum(quotaBancaNum)} su Betfair, con Responsabilità di{' '}
                 <span className="text-destructive">{formatNum(responsabilita)} €</span>.
               </p>
+              {showBancataParziale &&
+                nuovaResponsabilita != null &&
+                abbinataNum > 0 &&
+                nuovaQuotaNum != null && (
+                  <p>
+                    <span className="font-medium text-destructive">Nuova Responsabilità:</span>{' '}
+                    <span className="text-destructive">{formatNum(nuovaResponsabilita)} €</span>
+                  </p>
+                )}
               <p>
                 Il guadagno minimo sarà{' '}
                 <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
@@ -590,6 +563,124 @@ export function PuntaBancaCalculator() {
             </div>
           </div>
         )}
+
+      {isAvanzato && (
+        <>
+          {/* Slider Sbilanciamento (-30% … +30%), solo in modalità avanzata */}
+          <div className="border-b border-white/10 p-4">
+            <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">−30%</span>
+              <Slider
+                value={[imbalance]}
+                onValueChange={([v]) => setImbalance(v ?? 0)}
+                min={-30}
+                max={30}
+                step={0.2}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground">+30%</span>
+            </div>
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              {imbalance === 0
+                ? 'Standard (0%)'
+                : imbalance > 0
+                  ? `+${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`
+                  : `${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`}
+            </p>
+          </div>
+
+          {/* Bancata Parziale */}
+          <div className="flex justify-center border-b border-white/10 p-4">
+            <Button
+              type="button"
+              variant="success"
+              onClick={() => {
+                if (showBancataParziale) {
+                  setAbbinata('')
+                  setNuovaQuota('')
+                }
+                setShowBancataParziale((v) => !v)
+              }}
+              aria-expanded={showBancataParziale}
+            >
+              Bancata Parziale
+            </Button>
+          </div>
+
+          {/* Sezione Abbinata (visibile solo se Bancata Parziale espansa) */}
+          {showBancataParziale && (
+            <div className="border-b border-white/10 bg-muted/20 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="abbinata">Abbinata</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="abbinata"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={abbinata}
+                      onChange={(e) => setAbbinata(e.target.value)}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nuova-quota">Nuova Quota</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="nuova-quota"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={nuovaQuota}
+                      onChange={(e) => setNuovaQuota(e.target.value)}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground">@</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="banca">Banca (stake da abbinare)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="banca"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={bancaParziale != null ? bancaParziale.toFixed(2) : ''}
+                      readOnly
+                      aria-readonly
+                      className="flex-1 bg-muted/50"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="responsabilita-abbinata">Responsabilità</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="responsabilita-abbinata"
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={
+                        responsabilitaParziale != null ? responsabilitaParziale.toFixed(2) : ''
+                      }
+                      readOnly
+                      aria-readonly
+                      className="flex-1 bg-muted/50"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Tabella dei profitti */}
       {showSummary &&
@@ -629,16 +720,20 @@ export function PuntaBancaCalculator() {
                           {formatSigned((puntataNum ?? 0) * (quotaPuntaNum - 1))}
                         </td>
                         <td className="p-3 text-right text-destructive">
-                          {formatSigned(-responsabilita)}
+                          {formatSigned(-(effectiveLiability ?? 0))}
                         </td>
                         <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
                         <td className="p-3 text-right">
                           <span
                             className={cn(
-                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                              totalSeVinciPuntata != null && totalSeVinciPuntata >= 0
+                                ? 'text-primary'
+                                : 'text-destructive',
                             )}
                           >
-                            = {formatSigned(guadagnoMinimo)} €
+                            ={' '}
+                            {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'}{' '}
+                            €
                           </span>
                         </td>
                       </tr>
@@ -648,23 +743,21 @@ export function PuntaBancaCalculator() {
                           {formatSigned(-(puntataNum ?? 0))}
                         </td>
                         <td className="p-3 text-right text-primary">
-                          {exchangeProfitAfterCommission != null
-                            ? formatSigned(exchangeProfitAfterCommission)
+                          {effectiveExchangeProfit != null
+                            ? formatSigned(effectiveExchangeProfit)
                             : '—'}
                         </td>
                         <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
                         <td className="p-3 text-right">
                           <span
                             className={cn(
-                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                              totalSeVinciBancata != null && totalSeVinciBancata >= 0
+                                ? 'text-primary'
+                                : 'text-destructive',
                             )}
                           >
                             ={' '}
-                            {exchangeProfitAfterCommission != null
-                              ? formatSigned(
-                                  -(puntataNum ?? 0) + exchangeProfitAfterCommission + rimborsoNum,
-                                )
-                              : formatSigned(guadagnoMinimo)}{' '}
+                            {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'}{' '}
                             €
                           </span>
                         </td>
@@ -682,15 +775,19 @@ export function PuntaBancaCalculator() {
                           )}
                         </td>
                         <td className="p-3 text-right text-destructive">
-                          {formatSigned(-responsabilita)}
+                          {formatSigned(-(effectiveLiability ?? 0))}
                         </td>
                         <td className="p-3 text-right">
                           <span
                             className={cn(
-                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                              totalSeVinciPuntata != null && totalSeVinciPuntata >= 0
+                                ? 'text-primary'
+                                : 'text-destructive',
                             )}
                           >
-                            = {formatSigned(guadagnoMinimo)} €
+                            ={' '}
+                            {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'}{' '}
+                            €
                           </span>
                         </td>
                       </tr>
@@ -700,24 +797,20 @@ export function PuntaBancaCalculator() {
                           {formatSigned(bonusNum > 0 ? -(puntataNum ?? 0) : -puntataEffettiva)}
                         </td>
                         <td className="p-3 text-right text-primary">
-                          {exchangeProfitAfterCommission != null
-                            ? formatSigned(exchangeProfitAfterCommission)
+                          {effectiveExchangeProfit != null
+                            ? formatSigned(effectiveExchangeProfit)
                             : '—'}
                         </td>
                         <td className="p-3 text-right">
                           <span
                             className={cn(
-                              guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                              totalSeVinciBancata != null && totalSeVinciBancata >= 0
+                                ? 'text-primary'
+                                : 'text-destructive',
                             )}
                           >
                             ={' '}
-                            {exchangeProfitAfterCommission != null
-                              ? formatSigned(
-                                  bonusNum > 0
-                                    ? -(puntataNum ?? 0) + exchangeProfitAfterCommission
-                                    : -puntataEffettiva + exchangeProfitAfterCommission,
-                                )
-                              : formatSigned(guadagnoMinimo)}{' '}
+                            {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'}{' '}
                             €
                           </span>
                         </td>

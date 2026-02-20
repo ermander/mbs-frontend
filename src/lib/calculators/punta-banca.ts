@@ -58,24 +58,14 @@ export function liability(layStakeAmount: number, layOdds: number): number | nul
   return Number.isFinite(liab) ? liab : null
 }
 
-/** Slider value: 0 = Under, 1 = Standard, 2 = Over */
-export type ImbalanceValue = 0 | 1 | 2
-
 /**
- * Factor applied to lay stake for "Sbilanciamento della Bancata".
- * Under = slightly less lay (0.95), Standard = 1, Over = slightly more (1.05).
+ * Sbilanciamento della Bancata: percentuale da -30 a +30.
+ * Factor = 1 + percent/100 (es. -30 → 0.70, 0 → 1, +30 → 1.30).
  */
-export function getImbalanceFactor(value: ImbalanceValue): number {
-  switch (value) {
-    case 0:
-      return 0.95
-    case 1:
-      return 1
-    case 2:
-      return 1.05
-    default:
-      return 1
-  }
+export function getImbalanceFactor(percent: number): number {
+  const clamped = Math.max(-30, Math.min(30, percent))
+  const factor = 1 + clamped / 100
+  return Number.isFinite(factor) ? factor : 1
 }
 
 /**
@@ -129,18 +119,42 @@ export function layStakeRimborso(
 }
 
 /**
+ * Bancata parziale: stake da abbinare alla nuova quota per avere lo stesso profitto
+ * in entrambi gli esiti (vince puntata / vince bancata). Formula: ugualianza profitti.
+ * B = (S·Ob - A(Ol-1) - A(1-c)) / ((On-1) + (1-c))
+ */
+export function remainingLayStakeAtNewOdds(
+  backStake: number,
+  backOdds: number,
+  matchedStake: number,
+  originalLayOdds: number,
+  newLayOdds: number,
+  commissionPercent: number,
+): number | null {
+  if (backStake <= 0 || backOdds <= 0 || originalLayOdds <= 1 || newLayOdds <= 1) return null
+  const c = commissionPercent / 100
+  const numerator =
+    backStake * backOdds - matchedStake * (originalLayOdds - 1) - matchedStake * (1 - c)
+  const denominator = newLayOdds - 1 + (1 - c)
+  if (denominator <= 0) return null
+  const stakeAtNewOdds = numerator / denominator
+  return Number.isFinite(stakeAtNewOdds) ? stakeAtNewOdds : null
+}
+
+/**
  * Lay stake adjusted by imbalance (for display/agenda).
+ * imbalancePercent: -30..30 (solo in modalità avanzata).
  */
 export function layStakeWithImbalance(
   backStake: number,
   backOdds: number,
   layOdds: number,
   commissionPercent: number,
-  imbalance: ImbalanceValue,
+  imbalancePercent: number,
 ): number | null {
   const base = layStake(backStake, backOdds, layOdds, commissionPercent)
   if (base == null) return null
-  const factor = getImbalanceFactor(imbalance)
+  const factor = getImbalanceFactor(imbalancePercent)
   const adjusted = base * factor
   return Number.isFinite(adjusted) ? adjusted : null
 }

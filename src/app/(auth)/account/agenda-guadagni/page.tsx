@@ -8,8 +8,10 @@ export default function AccountAgendaGuadagniPage() {
       <Header />
       <main className="py-12 sm:py-16">
         <Container className="max-w-3xl space-y-4 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Agenda dei guadagni</h1>
-          <p className="text-muted-foreground">In costruzione.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Profit Tracker</h1>
+          <p className="text-muted-foreground">
+            Qui troverai il riepilogo strutturato dei tuoi guadagni e delle giocate salvate.
+          </p>
         </Container>
       </main>
       <Footer />

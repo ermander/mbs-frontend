@@ -185,7 +185,7 @@ export function OddsmatcherCalculatorModal({
       responsabilita,
       sbilanciamento: 0,
     })
-    setAgendaMessage("Aggiunto all'agenda.")
+    setAgendaMessage('Aggiunto al Profit Tracker.')
     setTimeout(() => setAgendaMessage(null), 3000)
   }
 
@@ -502,9 +502,7 @@ export function OddsmatcherCalculatorModal({
 
             {/* Footer azioni */}
             <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Invia scommessa all&apos;Agenda del Guadagni
-              </p>
+              <p className="text-sm text-muted-foreground">Invia scommessa al Profit Tracker</p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -526,7 +524,7 @@ export function OddsmatcherCalculatorModal({
                     layStakeValue == null
                   }
                 >
-                  AGENDA
+                  PROFIT TRACKER
                 </Button>
               </div>
             </div>

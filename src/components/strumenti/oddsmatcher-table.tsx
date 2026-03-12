@@ -394,262 +394,173 @@ export function OddsmatcherTable() {
     (a, b) => ratingValue(b.back_odd, b.lay_odd) - ratingValue(a.back_odd, a.lay_odd),
   )
 
-  const filtersContent = (
-    <div className="space-y-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Ricerca e fonti
+  const advancedFiltersSection = (
+    <div className="border-t border-border pt-3">
+      <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <SlidersHorizontal className="h-3.5 w-3.5" />
+        Filtri avanzati
       </p>
       <div className="flex min-w-0 flex-wrap items-center gap-4">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="min-w-[100px] justify-between">
+              {selectedSportIds.length === 0
+                ? 'Sport'
+                : selectedSportIds.length === 1
+                  ? selectedSportIds[0]
+                  : `${selectedSportIds.length} sport`}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
+            {sports.map((s) => (
+              <DropdownMenuItem
+                key={s}
+                onSelect={(e) => e.preventDefault()}
+                className="cursor-pointer"
+              >
+                <label className="flex w-full cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={selectedSportIds.includes(s)}
+                    onChange={() => toggleSport(s)}
+                  />
+                  <span>Sport {s}</span>
+                </label>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="min-w-[100px] justify-between">
+              {selectedMarkets.length === 0
+                ? 'Mercati'
+                : selectedMarkets.length === 1
+                  ? selectedMarkets[0]
+                  : `${selectedMarkets.length} mercati`}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
+            {markets.map((m) => (
+              <DropdownMenuItem
+                key={m}
+                onSelect={(e) => e.preventDefault()}
+                className="cursor-pointer"
+              >
+                <label className="flex w-full cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={selectedMarkets.includes(m)}
+                    onChange={() => toggleMarket(m)}
+                  />
+                  <span>{m}</span>
+                </label>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Label
+            htmlFor="oddsmatcher-liq-min"
+            className="flex items-center gap-1.5 text-muted-foreground"
+          >
+            <Euro className="h-3.5 w-3.5" />
+            Liq. min
+          </Label>
           <Input
-            type="search"
-            placeholder="Cerca evento o torneo..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            aria-label="Cerca per nome evento o torneo"
+            id="oddsmatcher-liq-min"
+            type="number"
+            placeholder="€"
+            value={minLiquidity}
+            onChange={(e) => setMinLiquidity(e.target.value)}
+            className="w-20"
+            min={0}
+            step={1}
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[140px] justify-between">
-              {selectedBookIds.length === 0
-                ? 'Book'
-                : selectedBookIds.length === 1
-                  ? (ODDSMATCHER_BOOKS_ONLY.find((b) => b.id === selectedBookIds[0])?.name ??
-                    'Book')
-                  : `${selectedBookIds.length} book`}
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-[280px] overflow-y-auto">
-            {ODDSMATCHER_BOOKS_ONLY.map((book) => (
-              <DropdownMenuItem
-                key={book.id}
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer"
-              >
-                <label className="flex w-full cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selectedBookIds.includes(book.id)}
-                    onChange={() => toggleBook(book.id)}
-                  />
-                  <span>{book.name}</span>
-                </label>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[140px] justify-between">
-              {selectedExchangeIds.length === 0
-                ? 'Exchange'
-                : selectedExchangeIds.length === 1
-                  ? (ODDSMATCHER_EXCHANGES_ONLY.find((e) => e.id === selectedExchangeIds[0])
-                      ?.name ?? 'Exchange')
-                  : `${selectedExchangeIds.length} exchange`}
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-[280px] overflow-y-auto">
-            {ODDSMATCHER_EXCHANGES_ONLY.map((ex) => (
-              <DropdownMenuItem
-                key={ex.id}
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer"
-              >
-                <label className="flex w-full cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selectedExchangeIds.includes(ex.id)}
-                    onChange={() => toggleExchange(ex.id)}
-                  />
-                  <span>{ex.name}</span>
-                </label>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button onClick={() => refetch()} disabled={isRefetching} variant="success">
-          <RefreshCw className={cn('h-4 w-4', isRefetching && 'animate-spin')} />
-          REFRESH QUOTE
-        </Button>
-        <Button variant="outline" onClick={resetFilters} aria-label="Reset filtri">
-          <RotateCcw className="h-4 w-4" />
-          Reset filtri
-        </Button>
-      </div>
-      <div className="border-t border-border pt-3">
-        <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filtri avanzati
-        </p>
-        <div className="flex min-w-0 flex-wrap items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-[100px] justify-between">
-                {selectedSportIds.length === 0
-                  ? 'Sport'
-                  : selectedSportIds.length === 1
-                    ? selectedSportIds[0]
-                    : `${selectedSportIds.length} sport`}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-              {sports.map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  onSelect={(e) => e.preventDefault()}
-                  className="cursor-pointer"
-                >
-                  <label className="flex w-full cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={selectedSportIds.includes(s)}
-                      onChange={() => toggleSport(s)}
-                    />
-                    <span>Sport {s}</span>
-                  </label>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-[100px] justify-between">
-                {selectedMarkets.length === 0
-                  ? 'Mercati'
-                  : selectedMarkets.length === 1
-                    ? selectedMarkets[0]
-                    : `${selectedMarkets.length} mercati`}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-              {markets.map((m) => (
-                <DropdownMenuItem
-                  key={m}
-                  onSelect={(e) => e.preventDefault()}
-                  className="cursor-pointer"
-                >
-                  <label className="flex w-full cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={selectedMarkets.includes(m)}
-                      onChange={() => toggleMarket(m)}
-                    />
-                    <span>{m}</span>
-                  </label>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Label
+            htmlFor="oddsmatcher-rating-min"
+            className="flex items-center gap-1.5 text-muted-foreground"
+          >
+            <Percent className="h-3.5 w-3.5" />
+            Rating min %
+          </Label>
+          <Input
+            id="oddsmatcher-rating-min"
+            type="number"
+            placeholder="%"
+            value={minRating}
+            onChange={(e) => setMinRating(e.target.value)}
+            className="w-16"
+            min={0}
+            max={100}
+            step={0.1}
+          />
+        </div>
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Label
-              htmlFor="oddsmatcher-liq-min"
-              className="flex items-center gap-1.5 text-muted-foreground"
-            >
-              <Euro className="h-3.5 w-3.5" />
-              Liq. min
-            </Label>
-            <Input
-              id="oddsmatcher-liq-min"
-              type="number"
-              placeholder="€"
-              value={minLiquidity}
-              onChange={(e) => setMinLiquidity(e.target.value)}
-              className="w-20"
-              min={0}
-              step={1}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Label
-              htmlFor="oddsmatcher-rating-min"
-              className="flex items-center gap-1.5 text-muted-foreground"
-            >
-              <Percent className="h-3.5 w-3.5" />
-              Rating min %
-            </Label>
-            <Input
-              id="oddsmatcher-rating-min"
-              type="number"
-              placeholder="%"
-              value={minRating}
-              onChange={(e) => setMinRating(e.target.value)}
-              className="w-16"
-              min={0}
-              max={100}
-              step={0.1}
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Label
-                htmlFor="oddsmatcher-quota-min"
-                className="whitespace-nowrap text-muted-foreground"
-              >
-                Quota min
-              </Label>
-              <Input
-                id="oddsmatcher-quota-min"
-                type="number"
-                placeholder="min"
-                value={minOdds}
-                onChange={(e) => setMinOdds(e.target.value)}
-                className="w-16"
-                min={1}
-                step={0.01}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label
-                htmlFor="oddsmatcher-quota-max"
-                className="whitespace-nowrap text-muted-foreground"
-              >
-                Quota max
-              </Label>
-              <Input
-                id="oddsmatcher-quota-max"
-                type="number"
-                placeholder="max"
-                value={maxOdds}
-                onChange={(e) => setMaxOdds(e.target.value)}
-                className="w-16"
-                min={1}
-                step={0.01}
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Label
-              htmlFor="oddsmatcher-date-from"
-              className="flex items-center gap-1.5 text-muted-foreground"
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              Da
-            </Label>
-            <Input
-              id="oddsmatcher-date-from"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-36"
-            />
-            <Label
-              htmlFor="oddsmatcher-date-to"
+              htmlFor="oddsmatcher-quota-min"
               className="whitespace-nowrap text-muted-foreground"
             >
-              A
+              Quota min
             </Label>
             <Input
-              id="oddsmatcher-date-to"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-36"
+              id="oddsmatcher-quota-min"
+              type="number"
+              placeholder="min"
+              value={minOdds}
+              onChange={(e) => setMinOdds(e.target.value)}
+              className="w-16"
+              min={1}
+              step={0.01}
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor="oddsmatcher-quota-max"
+              className="whitespace-nowrap text-muted-foreground"
+            >
+              Quota max
+            </Label>
+            <Input
+              id="oddsmatcher-quota-max"
+              type="number"
+              placeholder="max"
+              value={maxOdds}
+              onChange={(e) => setMaxOdds(e.target.value)}
+              className="w-16"
+              min={1}
+              step={0.01}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Label
+            htmlFor="oddsmatcher-date-from"
+            className="flex items-center gap-1.5 text-muted-foreground"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Da
+          </Label>
+          <Input
+            id="oddsmatcher-date-from"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-36"
+          />
+          <Label htmlFor="oddsmatcher-date-to" className="whitespace-nowrap text-muted-foreground">
+            A
+          </Label>
+          <Input
+            id="oddsmatcher-date-to"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-36"
+          />
         </div>
       </div>
     </div>
@@ -788,11 +699,11 @@ export function OddsmatcherTable() {
   )
 
   const mainCard = (
-    <Card variant="elevated" className="overflow-hidden">
+    <Card variant="elevated" className="overflow-hidden border border-border bg-muted/30">
       <CardContent className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(280px,1fr)_auto] lg:items-start">
         <div className="space-y-4">
           {multiplaSection}
-          <div className="border-t border-border pt-4">{filtersContent}</div>
+          {advancedFiltersSection}
         </div>
         <div className="border-l border-border pl-4">{eventiSelezionatiPanel}</div>
       </CardContent>
@@ -891,6 +802,7 @@ export function OddsmatcherTable() {
   return (
     <div className="space-y-4">
       {mainCard}
+      {filtersBarSlim}
       {oneBookId === null && (
         <div className="rounded-md border border-border bg-muted/30 p-6 text-center text-muted-foreground">
           Seleziona un solo book dalla tendina per compilare la multipla.

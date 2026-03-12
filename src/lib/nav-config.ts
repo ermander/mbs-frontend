@@ -50,7 +50,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     label: 'ACCOUNT',
     items: [
       { label: 'Profilo', href: '/account/profilo' },
-      { label: 'Agenda dei guadagni', href: '/account/agenda-guadagni' },
+      { label: 'Profit Tracker', href: '/account/agenda-guadagni' },
       { label: 'Fogli Excel', href: '/account/fogli-excel' },
       { label: 'Area affiliato', href: '/account/affiliato' },
       // Logout is handled as action in Header, not a link
@@ -64,6 +64,6 @@ export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'GUIDE', href: '/guide' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = [
-  { label: 'AGENDA', href: '/agenda' }, // highlighted
+  { label: 'PROFIT TRACKER', href: '/profit-tracker' }, // highlighted
   { label: 'FORUM', href: '/forum' },
 ]

@@ -1,0 +1,136 @@
+'use client'
+
+import { useState } from 'react'
+
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+
+interface WalletTransferModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalProps) {
+  const wallets = useProfitTrackerStore((s) => s.wallets)
+  const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
+
+  const [fromWalletId, setFromWalletId] = useState(wallets[0]?.id ?? '')
+  const [toWalletId, setToWalletId] = useState(wallets[1]?.id ?? '')
+  const [valore, setValore] = useState('')
+  const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
+  const [descrizione, setDescrizione] = useState('')
+
+  const handleSave = () => {
+    const importo = Number.parseFloat(valore.replace(',', '.'))
+    if (!fromWalletId || !toWalletId || fromWalletId === toWalletId || !Number.isFinite(importo))
+      return
+
+    addWalletMovement({
+      walletId: '', // non usato per trasferimento
+      tipo: 'trasferimento',
+      fromWalletId,
+      toWalletId,
+      valore: importo,
+      dataRegistrazione: new Date(dataRegistrazione).toISOString(),
+      descrizione: descrizione || undefined,
+    })
+
+    setValore('')
+    setDescrizione('')
+    onOpenChange(false)
+  }
+
+  const canSave =
+    fromWalletId &&
+    toWalletId &&
+    fromWalletId !== toWalletId &&
+    valore.trim() !== '' &&
+    Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nuovo trasferimento</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 p-4 pt-0 text-sm">
+          <div className="space-y-1.5">
+            <Label htmlFor="from-wallet">Da wallet</Label>
+            <select
+              id="from-wallet"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={fromWalletId}
+              onChange={(e) => setFromWalletId(e.target.value)}
+            >
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="to-wallet">A wallet</Label>
+            <select
+              id="to-wallet"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={toWalletId}
+              onChange={(e) => setToWalletId(e.target.value)}
+            >
+              {wallets.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="transfer-valore">Movimento (€)</Label>
+            <Input
+              id="transfer-valore"
+              type="number"
+              inputMode="decimal"
+              value={valore}
+              onChange={(e) => setValore(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="transfer-data">Registrato il</Label>
+            <Input
+              id="transfer-data"
+              type="date"
+              value={dataRegistrazione}
+              onChange={(e) => setDataRegistrazione(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="transfer-desc">Descrizione (opzionale)</Label>
+            <textarea
+              id="transfer-desc"
+              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={descrizione}
+              onChange={(e) => setDescrizione(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            Annulla
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={!canSave}>
+            Salva
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

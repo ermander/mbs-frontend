@@ -108,7 +108,7 @@ export function Header() {
                   href={href}
                   className={cn(
                     navLinkClass,
-                    label === 'AGENDA' &&
+                    label === 'PROFIT TRACKER' &&
                       'bg-primary/20 font-medium text-primary hover:bg-primary/30 hover:text-primary',
                   )}
                 >
@@ -205,7 +205,7 @@ export function Header() {
                     href={href}
                     className={cn(
                       'rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground',
-                      label === 'AGENDA' && 'bg-primary/20 font-medium text-primary',
+                      label === 'PROFIT TRACKER' && 'bg-primary/20 font-medium text-primary',
                     )}
                     onClick={() => setMobileOpen(false)}
                   >

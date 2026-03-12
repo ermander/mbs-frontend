@@ -315,7 +315,7 @@ export function PuntaBancaCalculator() {
       banca: bancaParziale ?? undefined,
       responsabilitaAbbinata: responsabilitaParziale ?? undefined,
     })
-    setAgendaMessage("Aggiunto all'agenda.")
+    setAgendaMessage('Aggiunto al Profit Tracker.')
     setTimeout(() => setAgendaMessage(null), 3000)
   }
 
@@ -823,10 +823,10 @@ export function PuntaBancaCalculator() {
           </div>
         )}
 
-      {/* Invia ad Agenda */}
+      {/* Invia al Profit Tracker */}
       <div className="flex flex-col items-center gap-2 p-4">
         <Button onClick={handleInviaAgenda} variant="default">
-          Invia ad Agenda Online
+          Invia al Profit Tracker
         </Button>
         {agendaMessage && <p className={cn('text-sm', 'text-primary')}>{agendaMessage}</p>}
       </div>

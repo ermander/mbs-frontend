@@ -3,26 +3,27 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Dark glass as default theme */
-    --background: 222 47% 11%;
+  /* Default: Dark slate. Overridden by [data-theme] when set by script. */
+  :root,
+  [data-theme="slate"] {
+    --background: 220 13% 9%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
+    --card: 220 13% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 14%;
+    --popover: 220 13% 12%;
     --popover-foreground: 210 40% 98%;
     --primary: 187 85% 43%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 18%;
+    --primary-foreground: 220 13% 9%;
+    --secondary: 220 13% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 18%;
+    --muted: 220 13% 15%;
+    --muted-foreground: 215 20% 58%;
+    --accent: 220 13% 15%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
     --ring: 187 85% 43%;
     --chart-1: 187 85% 43%;
     --chart-2: 263 70% 66%;
@@ -30,28 +31,153 @@
     --chart-4: 160 60% 45%;
     --chart-5: 340 75% 55%;
     --radius: 0.5rem;
-    /* Glass panel tokens */
     --glass-bg: rgba(255, 255, 255, 0.05);
     --glass-border: rgba(255, 255, 255, 0.1);
   }
-  .dark {
-    --background: 222 47% 11%;
+
+  [data-theme="warm"] {
+    --background: 24 10% 10%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
+    --card: 24 10% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 14%;
+    --popover: 24 10% 13%;
     --popover-foreground: 210 40% 98%;
     --primary: 187 85% 43%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 18%;
+    --primary-foreground: 24 10% 10%;
+    --secondary: 24 10% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 18%;
+    --muted: 24 10% 16%;
+    --muted-foreground: 215 20% 58%;
+    --accent: 24 10% 16%;
     --accent-foreground: 210 40% 98%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 24 10% 20%;
+    --input: 24 10% 20%;
     --ring: 187 85% 43%;
+    --chart-1: 187 85% 43%;
+    --chart-2: 263 70% 66%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 340 75% 55%;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="oled"] {
+    --background: 0 0% 5%;
+    --foreground: 210 40% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 187 85% 43%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 215 20% 58%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 187 85% 43%;
+    --chart-1: 187 85% 43%;
+    --chart-2: 263 70% 66%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 340 75% 55%;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light-slate"] {
+    --background: 220 13% 98%;
+    --foreground: 220 13% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 11%;
+    --primary: 187 85% 43%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 13% 96%;
+    --secondary-foreground: 220 13% 11%;
+    --muted: 220 13% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 220 13% 96%;
+    --accent-foreground: 220 13% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 187 85% 43%;
+    --chart-1: 187 85% 43%;
+    --chart-2: 263 70% 66%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 340 75% 55%;
+    --glass-bg: rgba(0, 0, 0, 0.04);
+    --glass-border: rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="light-warm"] {
+    --background: 40 20% 97%;
+    --foreground: 24 10% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 10% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 10% 15%;
+    --primary: 187 85% 43%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 15% 93%;
+    --secondary-foreground: 24 10% 15%;
+    --muted: 40 15% 93%;
+    --muted-foreground: 24 10% 40%;
+    --accent: 40 15% 93%;
+    --accent-foreground: 24 10% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 187 85% 43%;
+    --chart-1: 187 85% 43%;
+    --chart-2: 263 70% 66%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 340 75% 55%;
+    --glass-bg: rgba(0, 0, 0, 0.04);
+    --glass-border: rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="light-pure"] {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 187 85% 43%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 187 85% 43%;
+    --chart-1: 187 85% 43%;
+    --chart-2: 263 70% 66%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 160 60% 45%;
+    --chart-5: 340 75% 55%;
+    --glass-bg: rgba(0, 0, 0, 0.04);
+    --glass-border: rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -64,7 +190,6 @@
   }
   body {
     @apply min-h-screen bg-background text-foreground;
-    background-image: linear-gradient(to bottom right, hsl(222 47% 11%), hsl(222 47% 16%), hsl(243 47% 25%));
     background-attachment: fixed;
   }
 }

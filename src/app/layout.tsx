@@ -6,8 +6,13 @@ import { queryClient } from '@/lib/react-query'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" className="dark">
+    <html lang="it" suppressHydrationWarning>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('mbs-theme');var v=['slate','warm','oled','light-slate','light-warm','light-pure'];if(!t||v.indexOf(t)===-1)t='slate';document.documentElement.setAttribute('data-theme',t);})();`,
+          }}
+        />
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </body>
     </html>

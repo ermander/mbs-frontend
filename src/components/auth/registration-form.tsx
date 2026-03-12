@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { authClient } from '@/services/api/auth-client'
 
 export function RegistrationForm() {
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
@@ -35,11 +36,17 @@ export function RegistrationForm() {
     setSubmitStatus('idle')
     setSubmitMessage('')
     try {
-      // Placeholder: replace with apiClient.post('/auth/register', data) when backend is ready
-      console.log('Registration data:', data)
+      const response = await authClient.register({
+        email: data.email,
+        password: data.password,
+        name: data.email.split('@')[0],
+        username: data.email,
+      })
+
       setSubmitStatus('success')
       setSubmitMessage(
-        'Registrazione in sviluppo. Controlla la tua email quando il backend sarà attivo.',
+        `Registrazione completata. Ti abbiamo inviato una mail di verifica a ${response.email}. ` +
+          'Controlla la tua casella (anche spam) e clicca il link per confermare il tuo account.',
       )
     } catch (err) {
       setSubmitStatus('error')

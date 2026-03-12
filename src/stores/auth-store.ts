@@ -1,22 +1,36 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-
-export interface User {
-  email: string
-}
+import { authClient } from '@/services/api/auth-client'
+import type { AuthUser } from '@/services/api/auth-client'
 
 interface AuthState {
-  user: User | null
-  login: (data: { email: string }) => void
-  logout: () => void
+  user: AuthUser | null
+  isBootstrapping: boolean
+  setUser: (user: AuthUser | null) => void
+  startBootstrapping: () => void
+  finishBootstrapping: () => void
+  logout: () => Promise<void>
+  clearUser: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      login: (data) => set({ user: { email: data.email } }),
-      logout: () => set({ user: null }),
+      isBootstrapping: false,
+      setUser: (user) => set({ user }),
+      startBootstrapping: () => set({ isBootstrapping: true }),
+      finishBootstrapping: () => set({ isBootstrapping: false }),
+      clearUser: () => set({ user: null }),
+      logout: async () => {
+        try {
+          await authClient.logout()
+        } catch {
+          // ignore logout errors (e.g. already logged out)
+        } finally {
+          set({ user: null })
+        }
+      },
     }),
     {
       name: 'mbs-auth',

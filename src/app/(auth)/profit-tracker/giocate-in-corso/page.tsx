@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -13,15 +13,20 @@ export default function GiocateInCorsoPage() {
   const router = useRouter()
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const bets = useMemo(() => ongoingBets.filter((b) => !b.archiviata), [ongoingBets])
-  const accounts = useProfitTrackerStore((s) => s.accounts)
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const books = useProfitTrackerStore((s) => s.books)
   const holders = useProfitTrackerStore((s) => s.holders)
   const addBet = useProfitTrackerStore((s) => s.addOngoingBet)
   const updateBet = useProfitTrackerStore((s) => s.updateOngoingBet)
   const removeBet = useProfitTrackerStore((s) => s.removeOngoingBet)
 
+  useEffect(() => {
+    void fetchAllAccounts()
+  }, [fetchAllAccounts])
+
   const resolveAccountLabel = (accountId: string) => {
-    const account = accounts.find((a) => a.id === accountId)
+    const account = allAccounts.find((a) => a.id === accountId)
     if (!account) return '—'
     const book = books.find((b) => b.id === account.bookId)
     const holder = holders.find((h) => h.id === account.holderId)

@@ -8,13 +8,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { useAuthStore } from '@/stores/auth-store'
+import { authClient } from '@/services/api/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function LoginForm() {
   const router = useRouter()
-  const login = useAuthStore((s) => s.login)
+  const setUser = useAuthStore((s) => s.setUser)
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = React.useState<string>('')
 
@@ -35,11 +36,14 @@ export function LoginForm() {
       setSubmitStatus('idle')
       setSubmitMessage('')
       try {
-        // Mock: no API call; when backend is ready, call API and only login() on success
-        login({ email: data.email })
+        const response = await authClient.login({
+          email: data.email,
+          password: data.password,
+        })
+        setUser(response.user)
         setSubmitStatus('success')
         setSubmitMessage('Accesso effettuato.')
-        router.push('/dashboard')
+        router.push('/')
       } catch (err) {
         setSubmitStatus('error')
         setSubmitMessage(
@@ -50,7 +54,7 @@ export function LoginForm() {
         )
       }
     },
-    [login, router],
+    [router, setUser],
   )
 
   return (

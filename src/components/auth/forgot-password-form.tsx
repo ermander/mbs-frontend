@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth'
+import { authClient } from '@/services/api/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,10 +33,9 @@ export function ForgotPasswordForm() {
     setSubmitStatus('idle')
     setSubmitMessage('')
     try {
-      // Placeholder: replace with apiClient.post('/auth/forgot-password', { email: data.email })
-      console.log('Forgot password request:', data.email)
+      const { message } = await authClient.requestPasswordReset(data.email)
       setSubmitStatus('success')
-      setSubmitMessage(SUCCESS_MESSAGE)
+      setSubmitMessage(message ?? SUCCESS_MESSAGE)
     } catch (err) {
       setSubmitStatus('error')
       setSubmitMessage(

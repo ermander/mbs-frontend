@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   Dialog,
@@ -35,22 +35,35 @@ const QUICK_METHODS: { value: QuickGameMethod; label: string }[] = [
 ]
 
 export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
-  const accounts = useProfitTrackerStore((s) => s.accounts)
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const addQuickBet = useProfitTrackerStore((s) => s.addQuickBet)
+  const isSavingQuickBet = useProfitTrackerStore((s) => s.isSavingQuickBet)
+  const quickBetError = useProfitTrackerStore((s) => s.quickBetError)
 
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
+  const [accountId, setAccountId] = useState(allAccounts[0]?.id ?? '')
   const [method, setMethod] = useState<QuickGameMethod>('slot_machine')
   const [movimento, setMovimento] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [tag, setTag] = useState('')
   const [nota, setNota] = useState('')
 
-  const handleSave = () => {
-    const valore = Number.parseFloat(movimento.replace(',', '.'))
-    if (!accountId || !Number.isFinite(valore)) return
+  useEffect(() => {
+    if (!open) return
+    void fetchAllAccounts()
+  }, [open, fetchAllAccounts])
 
-    addQuickBet({
-      accountId,
+  const effectiveAccountId =
+    accountId && allAccounts.some((a) => a.id === accountId)
+      ? accountId
+      : (allAccounts[0]?.id ?? '')
+
+  const handleSave = async () => {
+    const valore = Number.parseFloat(movimento.replace(',', '.'))
+    if (!effectiveAccountId || !Number.isFinite(valore)) return
+
+    await addQuickBet({
+      accountId: effectiveAccountId,
       quickMethod: method,
       movimento: valore,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
@@ -58,14 +71,17 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
       nota: nota || undefined,
     })
 
-    setMovimento('')
-    setTag('')
-    setNota('')
-    onOpenChange(false)
+    const state = useProfitTrackerStore.getState()
+    if (!state.quickBetError) {
+      setMovimento('')
+      setTag('')
+      setNota('')
+      onOpenChange(false)
+    }
   }
 
   const canSave =
-    accountId &&
+    effectiveAccountId &&
     movimento.trim() !== '' &&
     Number.isFinite(Number.parseFloat(movimento.replace(',', '.')))
 
@@ -81,10 +97,10 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
             <select
               id="quick-account"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={accountId}
+              value={effectiveAccountId}
               onChange={(e) => setAccountId(e.target.value)}
             >
-              {accounts.map((a) => (
+              {allAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.nome}
                 </option>
@@ -144,13 +160,18 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
               onChange={(e) => setNota(e.target.value)}
             />
           </div>
+          {quickBetError && <p className="text-xs text-destructive">{quickBetError}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
-            Salva
+          <Button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!canSave || isSavingQuickBet}
+          >
+            {isSavingQuickBet ? 'Salvataggio...' : 'Salva'}
           </Button>
         </DialogFooter>
       </DialogContent>

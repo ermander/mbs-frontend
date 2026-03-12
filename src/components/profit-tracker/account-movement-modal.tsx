@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -26,25 +26,56 @@ export function AccountMovementModal({
   onOpenChange,
   defaultAccountId,
 }: AccountMovementModalProps) {
-  const accounts = useProfitTrackerStore((s) => s.accounts)
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const addAccountMovement = useProfitTrackerStore((s) => s.addAccountMovement)
+  const isSavingAccountMovement = useProfitTrackerStore((s) => s.isSavingAccountMovement)
+  const accountMovementsError = useProfitTrackerStore((s) => s.accountMovementsError)
 
-  const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? '')
-  const [walletId, setWalletId] = useState(wallets[0]?.id ?? '')
+  const [accountId, setAccountId] = useState(defaultAccountId ?? allAccounts[0]?.id ?? '')
+  const [walletId, setWalletId] = useState('')
   const [tipo, setTipo] = useState<AccountMovementType>('deposito')
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
 
-  const handleSave = () => {
-    const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!accountId || !Number.isFinite(importo)) return
+  useEffect(() => {
+    if (!open) return
+    void fetchAllAccounts()
+  }, [open, fetchAllAccounts])
 
-    addAccountMovement({
-      accountId,
+  const effectiveAccountId =
+    defaultAccountId ??
+    (accountId && allAccounts.some((a) => a.id === accountId)
+      ? accountId
+      : (allAccounts[0]?.id ?? ''))
+
+  const selectedAccount = useMemo(
+    () => allAccounts.find((a) => a.id === effectiveAccountId),
+    [allAccounts, effectiveAccountId],
+  )
+
+  const holderWallets = useMemo(() => {
+    if (!selectedAccount) return wallets
+    return wallets.filter((w) => w.holderId === selectedAccount.holderId)
+  }, [wallets, selectedAccount])
+
+  const effectiveWalletId =
+    holderWallets.length === 0
+      ? ''
+      : walletId && holderWallets.some((w) => w.id === walletId)
+        ? walletId
+        : (holderWallets[0]?.id ?? '')
+
+  const handleSave = async () => {
+    const importo = Number.parseFloat(valore.replace(',', '.'))
+    if (!effectiveAccountId || !Number.isFinite(importo)) return
+
+    await addAccountMovement({
+      accountId: effectiveAccountId,
       tipo,
-      walletId: tipo === 'riconciliazione' ? undefined : walletId,
+      walletId: tipo === 'riconciliazione' ? undefined : effectiveWalletId,
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
       descrizione: descrizione || undefined,
@@ -56,9 +87,10 @@ export function AccountMovementModal({
   }
 
   const canSave =
-    accountId &&
+    effectiveAccountId &&
     valore.trim() !== '' &&
-    Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
+    Number.isFinite(Number.parseFloat(valore.replace(',', '.'))) &&
+    (tipo === 'riconciliazione' || effectiveWalletId)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,10 +117,10 @@ export function AccountMovementModal({
             <select
               id="mov-account"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={accountId}
+              value={effectiveAccountId}
               onChange={(e) => setAccountId(e.target.value)}
             >
-              {accounts.map((a) => (
+              {allAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.nome}
                 </option>
@@ -101,12 +133,12 @@ export function AccountMovementModal({
               <select
                 id="mov-wallet"
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                value={walletId}
+                value={effectiveWalletId}
                 onChange={(e) => setWalletId(e.target.value)}
               >
-                {wallets.map((w) => (
+                {holderWallets.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.nome}
+                    {w.nome} ({w.saldoAttuale.toFixed(2)} €)
                   </option>
                 ))}
               </select>
@@ -140,12 +172,15 @@ export function AccountMovementModal({
               onChange={(e) => setDescrizione(e.target.value)}
             />
           </div>
+          {accountMovementsError && (
+            <p className="text-xs text-destructive">{accountMovementsError}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
+          <Button type="button" onClick={handleSave} disabled={!canSave || isSavingAccountMovement}>
             Salva
           </Button>
         </DialogFooter>

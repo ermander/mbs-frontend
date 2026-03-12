@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -20,25 +20,68 @@ interface WalletTransferModalProps {
 }
 
 export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalProps) {
+  const holders = useProfitTrackerStore((s) => s.holders)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
+  const isSavingWalletMovement = useProfitTrackerStore((s) => s.isSavingWalletMovement)
+  const walletMovementsError = useProfitTrackerStore((s) => s.walletMovementsError)
 
-  const [fromWalletId, setFromWalletId] = useState(wallets[0]?.id ?? '')
-  const [toWalletId, setToWalletId] = useState(wallets[1]?.id ?? '')
+  const [fromHolderId, setFromHolderId] = useState('')
+  const [toHolderId, setToHolderId] = useState('')
+  const [fromWalletId, setFromWalletId] = useState('')
+  const [toWalletId, setToWalletId] = useState('')
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
 
-  const handleSave = () => {
-    const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!fromWalletId || !toWalletId || fromWalletId === toWalletId || !Number.isFinite(importo))
-      return
+  const firstHolderOrWalletHolder =
+    wallets.length > 0 ? wallets[0].holderId : holders.length > 0 ? holders[0].id : ''
 
-    addWalletMovement({
-      walletId: '', // non usato per trasferimento
+  const effectiveFromHolderId = fromHolderId || firstHolderOrWalletHolder
+  const effectiveToHolderId = toHolderId || firstHolderOrWalletHolder
+
+  const fromHolderWallets = useMemo(() => {
+    if (!effectiveFromHolderId) return wallets
+    return wallets.filter((w) => w.holderId === effectiveFromHolderId)
+  }, [wallets, effectiveFromHolderId])
+
+  const toHolderWallets = useMemo(() => {
+    if (!effectiveToHolderId) return wallets
+    return wallets.filter((w) => w.holderId === effectiveToHolderId)
+  }, [wallets, effectiveToHolderId])
+
+  const effectiveFromWalletId =
+    fromHolderWallets.length === 0
+      ? ''
+      : fromWalletId && fromHolderWallets.some((w) => w.id === fromWalletId)
+        ? fromWalletId
+        : (fromHolderWallets[0]?.id ?? '')
+
+  const effectiveToWalletId =
+    toHolderWallets.length === 0
+      ? ''
+      : toWalletId && toHolderWallets.some((w) => w.id === toWalletId)
+        ? toWalletId
+        : (toHolderWallets[0]?.id ?? '')
+
+  const handleSave = async () => {
+    const importo = Number.parseFloat(valore.replace(',', '.'))
+    if (
+      !effectiveFromHolderId ||
+      !effectiveToHolderId ||
+      !effectiveFromWalletId ||
+      !effectiveToWalletId ||
+      effectiveFromWalletId === effectiveToWalletId ||
+      !Number.isFinite(importo)
+    ) {
+      return
+    }
+
+    await addWalletMovement({
+      walletId: undefined,
       tipo: 'trasferimento',
-      fromWalletId,
-      toWalletId,
+      fromWalletId: effectiveFromWalletId,
+      toWalletId: effectiveToWalletId,
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
       descrizione: descrizione || undefined,
@@ -50,9 +93,11 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
   }
 
   const canSave =
-    fromWalletId &&
-    toWalletId &&
-    fromWalletId !== toWalletId &&
+    effectiveFromHolderId &&
+    effectiveToHolderId &&
+    effectiveFromWalletId &&
+    effectiveToWalletId &&
+    effectiveFromWalletId !== effectiveToWalletId &&
     valore.trim() !== '' &&
     Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
 
@@ -64,16 +109,46 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
         </DialogHeader>
         <div className="space-y-4 p-4 pt-0 text-sm">
           <div className="space-y-1.5">
+            <Label htmlFor="from-holder">Da intestatario</Label>
+            <select
+              id="from-holder"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={effectiveFromHolderId}
+              onChange={(e) => setFromHolderId(e.target.value)}
+            >
+              {holders.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="from-wallet">Da wallet</Label>
             <select
               id="from-wallet"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={fromWalletId}
+              value={effectiveFromWalletId}
               onChange={(e) => setFromWalletId(e.target.value)}
             >
-              {wallets.map((w) => (
+              {fromHolderWallets.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.nome}
+                  {w.nome} ({w.saldoAttuale.toFixed(2)} €)
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="to-holder">A intestatario</Label>
+            <select
+              id="to-holder"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={effectiveToHolderId}
+              onChange={(e) => setToHolderId(e.target.value)}
+            >
+              {holders.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nome}
                 </option>
               ))}
             </select>
@@ -83,12 +158,12 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
             <select
               id="to-wallet"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={toWalletId}
+              value={effectiveToWalletId}
               onChange={(e) => setToWalletId(e.target.value)}
             >
-              {wallets.map((w) => (
+              {toHolderWallets.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.nome}
+                  {w.nome} ({w.saldoAttuale.toFixed(2)} €)
                 </option>
               ))}
             </select>
@@ -121,12 +196,15 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
               onChange={(e) => setDescrizione(e.target.value)}
             />
           </div>
+          {walletMovementsError && (
+            <p className="text-xs text-destructive">{walletMovementsError}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
+          <Button type="button" onClick={handleSave} disabled={!canSave || isSavingWalletMovement}>
             Salva
           </Button>
         </DialogFooter>

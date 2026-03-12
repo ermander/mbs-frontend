@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -21,21 +21,40 @@ interface WalletTopupExpenseModalProps {
 }
 
 export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpenseModalProps) {
+  const holders = useProfitTrackerStore((s) => s.holders)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
+  const isSavingWalletMovement = useProfitTrackerStore((s) => s.isSavingWalletMovement)
+  const walletMovementsError = useProfitTrackerStore((s) => s.walletMovementsError)
 
-  const [walletId, setWalletId] = useState(wallets[0]?.id ?? '')
+  const [holderId, setHolderId] = useState('')
+  const [walletId, setWalletId] = useState('')
   const [tipo, setTipo] = useState<WalletMovementType>('ricarica')
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
 
-  const handleSave = () => {
-    const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!walletId || !Number.isFinite(importo)) return
+  const effectiveHolderId =
+    holderId || (wallets.length > 0 ? wallets[0].holderId : holders.length > 0 ? holders[0].id : '')
 
-    addWalletMovement({
-      walletId,
+  const holderWallets = useMemo(() => {
+    if (!effectiveHolderId) return wallets
+    return wallets.filter((w) => w.holderId === effectiveHolderId)
+  }, [wallets, effectiveHolderId])
+
+  const effectiveWalletId =
+    holderWallets.length === 0
+      ? ''
+      : walletId && holderWallets.some((w) => w.id === walletId)
+        ? walletId
+        : (holderWallets[0]?.id ?? '')
+
+  const handleSave = async () => {
+    const importo = Number.parseFloat(valore.replace(',', '.'))
+    if (!effectiveWalletId || !Number.isFinite(importo)) return
+
+    await addWalletMovement({
+      walletId: effectiveWalletId,
       tipo,
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
@@ -48,7 +67,10 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
   }
 
   const canSave =
-    walletId && valore.trim() !== '' && Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
+    effectiveHolderId &&
+    effectiveWalletId &&
+    valore.trim() !== '' &&
+    Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,6 +79,21 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
           <DialogTitle>Nuova ricarica/spesa</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 p-4 pt-0 text-sm">
+          <div className="space-y-1.5">
+            <Label htmlFor="topup-holder">Intestatario</Label>
+            <select
+              id="topup-holder"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={effectiveHolderId}
+              onChange={(e) => setHolderId(e.target.value)}
+            >
+              {holders.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nome}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="topup-tipo">Metodo</Label>
             <select
@@ -74,12 +111,12 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
             <select
               id="topup-wallet"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={walletId}
+              value={effectiveWalletId}
               onChange={(e) => setWalletId(e.target.value)}
             >
-              {wallets.map((w) => (
+              {holderWallets.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.nome}
+                  {w.nome} ({w.saldoAttuale.toFixed(2)} €)
                 </option>
               ))}
             </select>
@@ -112,12 +149,15 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
               onChange={(e) => setDescrizione(e.target.value)}
             />
           </div>
+          {walletMovementsError && (
+            <p className="text-xs text-destructive">{walletMovementsError}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
+          <Button type="button" onClick={handleSave} disabled={!canSave || isSavingWalletMovement}>
             Salva
           </Button>
         </DialogFooter>

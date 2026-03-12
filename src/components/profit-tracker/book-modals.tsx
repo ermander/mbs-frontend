@@ -22,22 +22,25 @@ interface BookCreateModalProps {
 
 export function BookCreateModal({ open, onOpenChange }: BookCreateModalProps) {
   const addBook = useProfitTrackerStore((s) => s.addBook)
+  const booksError = useProfitTrackerStore((s) => s.booksError)
 
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [isExchange, setIsExchange] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nome.trim()) return
-    addBook({
+    await addBook({
       nome: nome.trim(),
       descrizione: descrizione || undefined,
       isExchange,
     })
-    setNome('')
-    setDescrizione('')
-    setIsExchange(false)
-    onOpenChange(false)
+    if (!booksError) {
+      setNome('')
+      setDescrizione('')
+      setIsExchange(false)
+      onOpenChange(false)
+    }
   }
 
   return (
@@ -55,6 +58,7 @@ export function BookCreateModal({ open, onOpenChange }: BookCreateModalProps) {
               onChange={(e) => setNome(e.target.value)}
               placeholder="Es. SportMarket, Pinnacle..."
             />
+            {booksError && <p className="text-xs text-destructive">{booksError}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="book-desc">Descrizione (opzionale)</Label>
@@ -99,21 +103,24 @@ interface BookEditModalProps {
 
 export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) {
   const updateBook = useProfitTrackerStore((s) => s.updateBook)
+  const booksError = useProfitTrackerStore((s) => s.booksError)
 
-  const [nome, setNome] = useState(book?.nome ?? '')
   const [descrizione, setDescrizione] = useState(book?.descrizione ?? '')
   const [isExchange, setIsExchange] = useState<boolean>(book?.isExchange ?? false)
+  const [isSaving, setIsSaving] = useState(false)
 
   if (!book) return null
 
-  const handleSave = () => {
-    if (!nome.trim()) return
-    updateBook(book.id, {
-      nome: nome.trim(),
+  const handleSave = async () => {
+    setIsSaving(true)
+    await updateBook(book.id, {
       descrizione: descrizione || undefined,
       isExchange,
     })
-    onOpenChange(false)
+    setIsSaving(false)
+    if (!booksError) {
+      onOpenChange(false)
+    }
   }
 
   return (
@@ -125,7 +132,7 @@ export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) 
         <div className="space-y-4 p-4 pt-0 text-sm">
           <div className="space-y-1.5">
             <Label htmlFor="book-edit-nome">Nome</Label>
-            <Input id="book-edit-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <Input id="book-edit-nome" value={book.nome} disabled readOnly />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="book-edit-desc">Descrizione (opzionale)</Label>
@@ -136,6 +143,7 @@ export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) 
               onChange={(e) => setDescrizione(e.target.value)}
             />
           </div>
+          {booksError && <p className="text-xs text-destructive">{booksError}</p>}
           <div className="flex items-center gap-2">
             <input
               id="book-edit-exchange"
@@ -153,8 +161,8 @@ export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) 
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!nome.trim()}>
-            Salva
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Salvataggio...' : 'Salva'}
           </Button>
         </DialogFooter>
       </DialogContent>

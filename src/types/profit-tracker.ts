@@ -105,6 +105,8 @@ export interface QuickBet {
   tag?: string
   nota?: string
   movimento: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface AccountMovement {

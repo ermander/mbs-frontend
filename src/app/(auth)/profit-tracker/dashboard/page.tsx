@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { Scale, Wallet, Loader2, Banknote } from 'lucide-react'
 
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 
@@ -8,11 +9,30 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
 
+const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/20 p-1.5 text-amber-600'
+
 export default function ProfitTrackerDashboardPage() {
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const wallets = useProfitTrackerStore((s) => s.wallets)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
+  const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const quickBets = useProfitTrackerStore((s) => s.quickBets)
   const accountMovements = useProfitTrackerStore((s) => s.accountMovements)
   const walletMovements = useProfitTrackerStore((s) => s.walletMovements)
+
+  useEffect(() => {
+    void fetchAllAccounts()
+    void fetchWallets()
+  }, [fetchAllAccounts, fetchWallets])
+
+  const bilancio = useMemo(() => {
+    const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
+    const saldoWallets = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
+    const puntateInCorso = 0
+    const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorso
+    return { saldoBookmakers, saldoWallets, puntateInCorso, saldoTotale }
+  }, [allAccounts, wallets])
 
   const kpi = useMemo(() => {
     const totalQuick = quickBets.reduce((sum, q) => sum + q.movimento, 0)
@@ -37,6 +57,64 @@ export default function ProfitTrackerDashboardPage() {
 
   return (
     <section className="space-y-8">
+      <div>
+        <h2 className="mb-4 text-xl font-bold text-foreground">Bilancio</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Saldo Bookmakers
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(bilancio.saldoBookmakers)}
+              </p>
+            </div>
+            <div className={BALANCE_ICON_CLASS}>
+              <Scale className="size-full" />
+            </div>
+          </div>
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Saldo Wallets
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(bilancio.saldoWallets)}
+              </p>
+            </div>
+            <div className={BALANCE_ICON_CLASS}>
+              <Wallet className="size-full" />
+            </div>
+          </div>
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Puntate in corso
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(bilancio.puntateInCorso)}
+              </p>
+            </div>
+            <div className={BALANCE_ICON_CLASS}>
+              <Loader2 className="size-full" />
+            </div>
+          </div>
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Saldo Totale
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(bilancio.saldoTotale)}
+              </p>
+            </div>
+            <div className={BALANCE_ICON_CLASS}>
+              <Banknote className="size-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

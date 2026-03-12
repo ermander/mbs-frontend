@@ -2,10 +2,13 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
+import { authClient } from '@/services/api/auth-client'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +18,8 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
+  const router = useRouter()
+  const setUser = useAuthStore((s) => s.setUser)
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = React.useState<string>('')
 
@@ -35,10 +40,16 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       setSubmitStatus('idle')
       setSubmitMessage('')
       try {
-        // Placeholder: replace with apiClient.post('/auth/reset-password', { token, password: data.password })
-        console.log('Reset password:', { token, password: data.password })
+        const response = await authClient.resetPassword({
+          token,
+          password: data.password,
+        })
         setSubmitStatus('success')
         setSubmitMessage('Password aggiornata. Puoi accedere con la nuova password.')
+        if (response.user) {
+          setUser(response.user)
+          router.push('/dashboard')
+        }
       } catch (err) {
         setSubmitStatus('error')
         setSubmitMessage(
@@ -49,7 +60,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         )
       }
     },
-    [token],
+    [token, setUser, router],
   )
 
   return (

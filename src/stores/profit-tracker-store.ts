@@ -1,36 +1,93 @@
 import { create } from 'zustand'
 
+import { getErrorCode, getErrorMessage, getResponseDataCode } from '@/lib/error-utils'
 import type {
   Account,
   AccountMovement,
   BetLeg,
   Book,
+  EnabledStatus,
   Holder,
   OngoingBet,
   QuickBet,
   Wallet,
   WalletMovement,
 } from '@/types/profit-tracker'
+import type { GetAccountsParams } from '@/services/api/profit-tracker-client'
+import {
+  createAccount as apiCreateAccount,
+  createAccountMovement as apiCreateAccountMovement,
+  createBook as apiCreateBook,
+  createHolder as apiCreateHolder,
+  createQuickBet as apiCreateQuickBet,
+  createWallet as apiCreateWallet,
+  createWalletMovement as apiCreateWalletMovement,
+  deleteQuickBet as apiDeleteQuickBet,
+  getAccounts as apiGetAccounts,
+  getBooks as apiGetBooks,
+  getHolders as apiGetHolders,
+  getQuickBets as apiGetQuickBets,
+  getWallets as apiGetWallets,
+  updateAccount as apiUpdateAccount,
+  updateBook as apiUpdateBook,
+  updateQuickBet as apiUpdateQuickBet,
+} from '@/services/api/profit-tracker-client'
 
 interface ProfitTrackerState {
   holders: Holder[]
+  isLoadingHolders: boolean
+  holdersError?: string
   books: Book[]
+  booksTotal: number | null
+  isLoadingBooks: boolean
+  booksError?: string
   accounts: Account[]
+  accountsTotal: number | null
+  isLoadingAccounts: boolean
+  accountsError?: string
+  allAccounts: Account[]
   wallets: Wallet[]
   ongoingBets: OngoingBet[]
   betLegs: BetLeg[]
   quickBets: QuickBet[]
+  isLoadingQuickBets: boolean
+  quickBetsError?: string
+  isSavingQuickBet: boolean
+  quickBetError?: string
   accountMovements: AccountMovement[]
   walletMovements: WalletMovement[]
+  isSavingAccountMovement: boolean
+  accountMovementsError?: string
+  isSavingWalletMovement: boolean
+  walletMovementsError?: string
 
-  addHolder: (holder: Omit<Holder, 'id'>) => void
+  fetchHolders: () => Promise<void>
+  fetchQuickBets: () => Promise<void>
+  addHolder: (holder: Omit<Holder, 'id'>) => Promise<void>
   updateHolder: (id: string, patch: Partial<Holder>) => void
+  fetchBooks: (params?: {
+    page?: number
+    limit?: number
+    nome?: string
+    descrizione?: string
+  }) => Promise<void>
+  addBook: (book: Omit<Book, 'id'>) => Promise<void>
+  updateBook: (id: string, patch: Partial<Book>) => Promise<void>
+  fetchAccounts: (params?: GetAccountsParams) => Promise<void>
+  fetchAllAccounts: () => Promise<void>
+  addAccount: (account: {
+    holderId: string
+    bookId: string
+    descrizione?: string
+    stato: EnabledStatus
+  }) => Promise<void>
+  fetchWallets: () => Promise<void>
+  addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'> & { holderId: string }) => Promise<void>
 
-  addBook: (book: Omit<Book, 'id'>) => void
-  updateBook: (id: string, patch: Partial<Book>) => void
-
-  addAccount: (account: Omit<Account, 'id' | 'saldoAttuale' | 'createdAt'>) => void
-  updateAccount: (id: string, patch: Partial<Account>) => void
+  updateAccount: (
+    id: string,
+    patch: Partial<Pick<Account, 'nome' | 'descrizione' | 'stato'>>,
+  ) => Promise<void>
 
   addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => void
   updateWallet: (id: string, patch: Partial<Wallet>) => void
@@ -39,12 +96,22 @@ interface ProfitTrackerState {
   updateOngoingBet: (id: string, patch: Partial<OngoingBet>) => void
   removeOngoingBet: (id: string) => void
 
-  addQuickBet: (bet: Omit<QuickBet, 'id'>) => void
-  updateQuickBet: (id: string, patch: Partial<QuickBet>) => void
-  removeQuickBet: (id: string) => void
+  addQuickBet: (bet: Omit<QuickBet, 'id'>) => Promise<void>
+  updateQuickBet: (
+    id: string,
+    patch: Partial<Pick<QuickBet, 'movimento' | 'tag' | 'nota'>>,
+  ) => Promise<void>
+  removeQuickBet: (id: string) => Promise<void>
 
-  addAccountMovement: (movement: Omit<AccountMovement, 'id'>) => void
-  addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => void
+  addAccountMovement: (movement: {
+    accountId: string
+    tipo: AccountMovement['tipo']
+    walletId?: string
+    valore: number
+    dataRegistrazione: string
+    descrizione?: string
+  }) => Promise<void>
+  addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => Promise<void>
 }
 
 function generateId(prefix: string): string {
@@ -56,55 +123,10 @@ const STATIC_NOW_ISO = '2024-01-01T00:00:00.000Z'
 const nowIso = () => STATIC_NOW_ISO
 
 export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
-  const initialHolders: Holder[] = [
-    { id: 'holder-1', nome: 'Emanuele', stato: 'abilitato' },
-    { id: 'holder-2', nome: 'Maria', stato: 'abilitato' },
-  ]
-
-  const initialBooks: Book[] = [
-    { id: 'book-1', nome: 'Bet365', isExchange: false },
-    { id: 'book-2', nome: 'Betfair Exchange', isExchange: true },
-  ]
-
-  const initialAccounts: Account[] = [
-    {
-      id: 'account-1',
-      holderId: 'holder-1',
-      bookId: 'book-1',
-      nome: 'Bet365 (Emanuele)',
-      saldoAttuale: 250,
-      stato: 'abilitato',
-      createdAt: nowIso(),
-    },
-    {
-      id: 'account-2',
-      holderId: 'holder-1',
-      bookId: 'book-2',
-      nome: 'Betfair (Emanuele)',
-      saldoAttuale: 520,
-      stato: 'abilitato',
-      createdAt: nowIso(),
-    },
-  ]
-
-  const initialWallets: Wallet[] = [
-    {
-      id: 'wallet-1',
-      holderId: 'holder-1',
-      nome: 'Revolut',
-      saldoAttuale: 1200,
-      stato: 'abilitato',
-      createdAt: nowIso(),
-    },
-    {
-      id: 'wallet-2',
-      holderId: 'holder-1',
-      nome: 'PayPal',
-      saldoAttuale: 300,
-      stato: 'abilitato',
-      createdAt: nowIso(),
-    },
-  ]
+  const initialHolders: Holder[] = []
+  const initialBooks: Book[] = []
+  const initialAccounts: Account[] = []
+  const initialWallets: Wallet[] = []
 
   const initialOngoingBets: OngoingBet[] = [
     {
@@ -140,78 +162,221 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     },
   ]
 
-  const initialQuickBets: QuickBet[] = [
-    {
-      id: 'quick-1',
-      dataRegistrazione: nowIso(),
-      accountId: 'account-1',
-      quickMethod: 'slot_machine',
-      movimento: -20,
-      tag: 'Slot serata',
-      nota: 'Sessione breve su Starburst',
-    },
-  ]
+  const initialQuickBets: QuickBet[] = []
 
   const initialAccountMovements: AccountMovement[] = []
   const initialWalletMovements: WalletMovement[] = []
 
   return {
     holders: initialHolders,
+    isLoadingHolders: false,
+    holdersError: undefined,
     books: initialBooks,
+    booksTotal: null,
+    isLoadingBooks: false,
+    booksError: undefined,
     accounts: initialAccounts,
+    accountsTotal: null,
+    isLoadingAccounts: false,
+    accountsError: undefined,
+    allAccounts: [],
     wallets: initialWallets,
     ongoingBets: initialOngoingBets,
     betLegs: initialBetLegs,
     quickBets: initialQuickBets,
+    isLoadingQuickBets: false,
+    quickBetsError: undefined,
+    isSavingQuickBet: false,
+    quickBetError: undefined,
     accountMovements: initialAccountMovements,
     walletMovements: initialWalletMovements,
+    isSavingAccountMovement: false,
+    accountMovementsError: undefined,
+    isSavingWalletMovement: false,
+    walletMovementsError: undefined,
 
-    addHolder: (holder) =>
-      set((state) => ({
-        holders: [...state.holders, { ...holder, id: generateId('holder') }],
-      })),
+    fetchHolders: async () => {
+      set(() => ({ isLoadingHolders: true, holdersError: undefined }))
+      try {
+        const holders = await apiGetHolders()
+        set(() => ({ holders, isLoadingHolders: false }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingHolders: false,
+          holdersError: getErrorMessage(error) || 'Errore nel caricamento degli intestatari',
+        }))
+      }
+    },
+    addHolder: async (holder) => {
+      set(() => ({ holdersError: undefined }))
+      try {
+        const created = await apiCreateHolder({
+          nome: holder.nome,
+          descrizione: holder.descrizione,
+        })
+        set((state) => ({
+          holders: [...state.holders, created],
+        }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'HOLDER_NAME_ALREADY_EXISTS') {
+          set(() => ({
+            holdersError: 'Esiste già un intestatario con questo nome',
+          }))
+          return
+        }
+        set(() => ({
+          holdersError: getErrorMessage(error) || 'Errore nel salvataggio dell’intestatario',
+        }))
+      }
+    },
     updateHolder: (id, patch) =>
       set((state) => ({
         holders: state.holders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
       })),
 
-    addBook: (book) =>
-      set((state) => ({
-        books: [...state.books, { ...book, id: generateId('book') }],
-      })),
-    updateBook: (id, patch) =>
-      set((state) => ({
-        books: state.books.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-      })),
+    fetchBooks: async (params) => {
+      set(() => ({ isLoadingBooks: true, booksError: undefined }))
+      try {
+        const isPaginated = params && (params.page != null || params.limit != null)
+        const queryParams = isPaginated ? params : { limit: 5000 }
+        const { items, total } = await apiGetBooks(queryParams)
+        set(() => ({
+          books: items,
+          booksTotal: isPaginated ? total : null,
+          isLoadingBooks: false,
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingBooks: false,
+          booksError: getErrorMessage(error) || 'Errore nel caricamento dei book',
+        }))
+      }
+    },
+    addBook: async (book) => {
+      set(() => ({ booksError: undefined }))
+      try {
+        const created = await apiCreateBook({
+          nome: book.nome,
+          descrizione: book.descrizione,
+          isExchange: book.isExchange,
+        })
+        set((state) => ({
+          books: [...state.books, created],
+        }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'BOOK_NAME_ALREADY_EXISTS') {
+          set(() => ({
+            booksError: 'Esiste già un book con questo nome',
+          }))
+          return
+        }
+        set(() => ({
+          booksError: getErrorMessage(error) || 'Errore nel salvataggio del book',
+        }))
+      }
+    },
+    updateBook: async (id, patch) => {
+      set(() => ({ booksError: undefined }))
+      try {
+        const updated = await apiUpdateBook(id, {
+          descrizione: patch.descrizione,
+          isExchange: patch.isExchange,
+        })
+        set((state) => ({
+          books: state.books.map((b) => (b.id === id ? updated : b)),
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          booksError: getErrorMessage(error) || 'Errore nel salvataggio del book',
+        }))
+      }
+    },
 
-    addAccount: (account) =>
-      set((state) => ({
-        accounts: [
-          ...state.accounts,
-          {
-            ...account,
-            id: generateId('account'),
-            saldoAttuale: 0,
-            createdAt: nowIso(),
-          },
-        ],
-      })),
-    updateAccount: (id, patch) =>
-      set((state) => ({
-        accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-      })),
+    fetchAccounts: async (params) => {
+      set(() => ({ isLoadingAccounts: true, accountsError: undefined }))
+      try {
+        const { items, total } = await apiGetAccounts({
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 20,
+          sortSaldo: params?.sortSaldo ?? 'desc',
+          holderId: params?.holderId,
+          bookId: params?.bookId,
+          status: params?.status,
+        })
+        set(() => ({ accounts: items, accountsTotal: total, isLoadingAccounts: false }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingAccounts: false,
+          accountsError: getErrorMessage(error) || 'Errore nel caricamento dei conti',
+        }))
+      }
+    },
+    fetchAllAccounts: async () => {
+      try {
+        const { items } = await apiGetAccounts({ limit: 5000 })
+        set(() => ({ allAccounts: items }))
+      } catch {
+        set(() => ({ allAccounts: [] }))
+      }
+    },
+    addAccount: async ({ holderId, bookId, descrizione, stato }) => {
+      set(() => ({ accountsError: undefined }))
+      try {
+        const created = await apiCreateAccount({
+          holderId,
+          bookId,
+          descrizione,
+          stato,
+        })
+        set((state) => ({
+          accounts: state.accounts.some((a) => a.id === created.id)
+            ? state.accounts
+            : [...state.accounts, created],
+          allAccounts: state.allAccounts.some((a) => a.id === created.id)
+            ? state.allAccounts
+            : [...state.allAccounts, created],
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          accountsError: getErrorMessage(error) || 'Errore nel salvataggio del conto',
+        }))
+      }
+    },
 
-    addWallet: (wallet) =>
+    fetchWallets: async () => {
+      set((state) => ({ ...state }))
+      const wallets = await apiGetWallets()
+      set((state) => ({ ...state, wallets }))
+    },
+    addWallet: async (wallet) => {
+      const created = await apiCreateWallet({
+        holderId: wallet.holderId,
+        nome: wallet.nome,
+        descrizione: wallet.descrizione,
+        saldoIniziale: wallet.saldoAttuale,
+        stato: wallet.stato,
+      })
       set((state) => ({
-        wallets: [
-          ...state.wallets,
-          {
-            ...wallet,
-            id: generateId('wallet'),
-            createdAt: nowIso(),
-          },
-        ],
-      })),
+        wallets: [...state.wallets, created],
+      }))
+    },
+
+    updateAccount: async (id, patch) => {
+      try {
+        const updated = await apiUpdateAccount(id, {
+          nome: patch.nome,
+          descrizione: patch.descrizione,
+          stato: patch.stato,
+        })
+        set((state) => ({
+          accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+          allAccounts: state.allAccounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+        }))
+      } catch {
+        // Keep local state unchanged on error; could set accountsError
+      }
+    },
+
     updateWallet: (id, patch) =>
       set((state) => ({
         wallets: state.wallets.map((w) => (w.id === id ? { ...w, ...patch } : w)),
@@ -230,66 +395,286 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         ongoingBets: state.ongoingBets.filter((b) => b.id !== id),
       })),
 
-    addQuickBet: (bet) =>
-      set((state) => ({
-        quickBets: [...state.quickBets, { ...bet, id: generateId('quick') }],
-      })),
-    updateQuickBet: (id, patch) =>
-      set((state) => ({
-        quickBets: state.quickBets.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-      })),
-    removeQuickBet: (id) =>
-      set((state) => ({
-        quickBets: state.quickBets.filter((b) => b.id !== id),
-      })),
+    fetchQuickBets: async () => {
+      set(() => ({ isLoadingQuickBets: true, quickBetsError: undefined }))
+      try {
+        const list = await apiGetQuickBets()
+        set(() => ({ quickBets: list, isLoadingQuickBets: false, quickBetsError: undefined }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || 'Errore nel caricamento delle giocate rapide'
+        set(() => ({ isLoadingQuickBets: false, quickBetsError: message }))
+      }
+    },
 
-    addAccountMovement: (movement) =>
-      set((state) => {
-        const movementWithId: AccountMovement = { ...movement, id: generateId('acc-mov') }
-        const account = state.accounts.find((a) => a.id === movement.accountId)
-        if (!account) return state
-
-        let delta = movement.valore
-        if (movement.tipo === 'prelievo') delta = -movement.valore
-        if (movement.tipo === 'riconciliazione') {
-          delta = movement.valore - account.saldoAttuale
-        }
-
-        return {
+    addQuickBet: async (bet) => {
+      set((s) => ({ ...s, isSavingQuickBet: true, quickBetError: undefined }))
+      try {
+        const created = await apiCreateQuickBet({
+          accountId: bet.accountId,
+          quickMethod: bet.quickMethod,
+          movimento: bet.movimento,
+          dataRegistrazione: bet.dataRegistrazione,
+          tag: bet.tag,
+          nota: bet.nota,
+        })
+        set((state) => ({
           ...state,
-          accountMovements: [...state.accountMovements, movementWithId],
-          accounts: state.accounts.map((a) =>
-            a.id === movement.accountId ? { ...a, saldoAttuale: a.saldoAttuale + delta } : a,
-          ),
-        }
-      }),
+          quickBets: [...state.quickBets, created],
+          isSavingQuickBet: false,
+          quickBetError: undefined,
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || 'Errore nel salvataggio della giocata rapida'
+        set((s) => ({ ...s, isSavingQuickBet: false, quickBetError: message }))
+      }
+    },
 
-    addWalletMovement: (movement) =>
-      set((state) => {
-        const movementWithId: WalletMovement = { ...movement, id: generateId('wal-mov') }
-        const wallets = [...state.wallets]
+    updateQuickBet: async (id, patch) => {
+      try {
+        const updated = await apiUpdateQuickBet(id, {
+          movimento: patch.movimento,
+          tag: patch.tag,
+          nota: patch.nota,
+        })
+        set((state) => ({
+          quickBets: state.quickBets.map((b) => (b.id === id ? updated : b)),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'aggiornamento della giocata rapida"
+        set((s) => ({ ...s, quickBetError: message }))
+      }
+    },
 
-        const applyDelta = (walletId: string | undefined, delta: number) => {
-          if (!walletId) return
-          const idx = wallets.findIndex((w) => w.id === walletId)
-          if (idx === -1) return
-          wallets[idx] = { ...wallets[idx], saldoAttuale: wallets[idx].saldoAttuale + delta }
-        }
+    removeQuickBet: async (id) => {
+      try {
+        await apiDeleteQuickBet(id)
+        set((state) => ({
+          quickBets: state.quickBets.filter((b) => b.id !== id),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'eliminazione della giocata rapida"
+        set((s) => ({ ...s, quickBetError: message }))
+      }
+    },
 
-        if (movement.tipo === 'trasferimento') {
-          applyDelta(movement.fromWalletId, -movement.valore)
-          applyDelta(movement.toWalletId, movement.valore)
-        } else if (movement.tipo === 'ricarica') {
-          applyDelta(movement.walletId, movement.valore)
-        } else if (movement.tipo === 'spesa') {
-          applyDelta(movement.walletId, -movement.valore)
-        }
+    addAccountMovement: async (movement) => {
+      set((state) => ({
+        ...state,
+        isSavingAccountMovement: true,
+        accountMovementsError: undefined,
+      }))
+      const state = _get()
+      const account = state.accounts.find((a) => a.id === movement.accountId)
+      if (!account) {
+        set((s) => ({
+          ...s,
+          isSavingAccountMovement: false,
+          accountMovementsError: 'Conto non valido',
+        }))
+        return
+      }
 
-        return {
-          ...state,
-          walletMovements: [...state.walletMovements, movementWithId],
-          wallets,
+      const importo = movement.valore
+      if (!Number.isFinite(importo) || importo <= 0) {
+        set((s) => ({
+          ...s,
+          isSavingAccountMovement: false,
+          accountMovementsError: "L'importo deve essere maggiore di zero",
+        }))
+        return
+      }
+
+      if (movement.tipo === 'deposito') {
+        if (!movement.walletId) {
+          set((s) => ({
+            ...s,
+            isSavingAccountMovement: false,
+            accountMovementsError: 'Seleziona un wallet per il deposito',
+          }))
+          return
         }
-      }),
+        const wallet = state.wallets.find((w) => w.id === movement.walletId)
+        if (!wallet || wallet.saldoAttuale < importo) {
+          set((s) => ({
+            ...s,
+            isSavingAccountMovement: false,
+            accountMovementsError: 'Saldo wallet insufficiente per il deposito',
+          }))
+          return
+        }
+      }
+
+      if (movement.tipo === 'prelievo') {
+        if (!movement.walletId) {
+          set((s) => ({
+            ...s,
+            isSavingAccountMovement: false,
+            accountMovementsError: 'Seleziona un wallet per il prelievo',
+          }))
+          return
+        }
+        if (account.saldoAttuale < importo) {
+          set((s) => ({
+            ...s,
+            isSavingAccountMovement: false,
+            accountMovementsError: 'Saldo conto insufficiente per il prelievo',
+          }))
+          return
+        }
+      }
+
+      try {
+        const created = await apiCreateAccountMovement(movement)
+        set((prev) => {
+          const applyAccountDelta = (a: Account) => {
+            if (a.id !== created.accountId) return a
+            let delta = 0
+            if (created.tipo === 'deposito') delta = importo
+            if (created.tipo === 'prelievo') delta = -importo
+            if (created.tipo === 'riconciliazione') delta = importo
+            return { ...a, saldoAttuale: a.saldoAttuale + delta }
+          }
+          const accounts = prev.accounts.map(applyAccountDelta)
+          const allAccounts = prev.allAccounts.map(applyAccountDelta)
+
+          const wallets = prev.wallets.map((w) => {
+            if (!created.walletId || w.id !== created.walletId) return w
+            let delta = 0
+            if (created.tipo === 'deposito') delta = -importo
+            if (created.tipo === 'prelievo') delta = importo
+            return { ...w, saldoAttuale: w.saldoAttuale + delta }
+          })
+
+          return {
+            ...prev,
+            isSavingAccountMovement: false,
+            accountMovementsError: undefined,
+            accountMovements: [...prev.accountMovements, created],
+            accounts,
+            allAccounts,
+            wallets,
+          }
+        })
+      } catch (error: unknown) {
+        const code = getErrorCode(error) || getResponseDataCode(error)
+        let message = getErrorMessage(error) || 'Errore nel salvataggio del movimento conto'
+        if (code === 'INSUFFICIENT_WALLET_FUNDS') {
+          message = 'Saldo wallet insufficiente per il deposito'
+        }
+        if (code === 'INSUFFICIENT_ACCOUNT_FUNDS') {
+          message = "Saldo conto insufficiente per l'operazione richiesta"
+        }
+        set((s) => ({
+          ...s,
+          isSavingAccountMovement: false,
+          accountMovementsError: message,
+        }))
+      }
+    },
+
+    addWalletMovement: async (movement) => {
+      set((state) => ({ ...state, isSavingWalletMovement: true, walletMovementsError: undefined }))
+      const state = _get()
+      const importo = movement.valore
+      if (!Number.isFinite(importo) || importo <= 0) {
+        set((s) => ({
+          ...s,
+          isSavingWalletMovement: false,
+          walletMovementsError: "L'importo deve essere maggiore di zero",
+        }))
+        return
+      }
+
+      if ((movement.tipo === 'ricarica' || movement.tipo === 'spesa') && !movement.walletId) {
+        set((s) => ({
+          ...s,
+          isSavingWalletMovement: false,
+          walletMovementsError: 'Seleziona un wallet valido',
+        }))
+        return
+      }
+
+      if (movement.tipo === 'spesa' && movement.walletId) {
+        const wallet = state.wallets.find((w) => w.id === movement.walletId)
+        if (!wallet || wallet.saldoAttuale < importo) {
+          set((s) => ({
+            ...s,
+            isSavingWalletMovement: false,
+            walletMovementsError: 'Saldo wallet insufficiente per la spesa',
+          }))
+          return
+        }
+      }
+
+      if (movement.tipo === 'trasferimento') {
+        if (!movement.fromWalletId || !movement.toWalletId) {
+          set((s) => ({
+            ...s,
+            isSavingWalletMovement: false,
+            walletMovementsError: 'Seleziona wallet origine e destinazione per il trasferimento',
+          }))
+          return
+        }
+        if (movement.fromWalletId === movement.toWalletId) {
+          set((s) => ({
+            ...s,
+            isSavingWalletMovement: false,
+            walletMovementsError: 'I wallet di origine e destinazione devono essere diversi',
+          }))
+          return
+        }
+        const fromWallet = state.wallets.find((w) => w.id === movement.fromWalletId)
+        if (!fromWallet || fromWallet.saldoAttuale < importo) {
+          set((s) => ({
+            ...s,
+            isSavingWalletMovement: false,
+            walletMovementsError: 'Saldo wallet insufficiente per il trasferimento',
+          }))
+          return
+        }
+      }
+
+      try {
+        const created = await apiCreateWalletMovement(movement)
+        set((prev) => {
+          const wallets = [...prev.wallets]
+
+          const applyDelta = (walletId: string | undefined | null, delta: number) => {
+            if (!walletId) return
+            const idx = wallets.findIndex((w) => w.id === walletId)
+            if (idx === -1) return
+            wallets[idx] = { ...wallets[idx], saldoAttuale: wallets[idx].saldoAttuale + delta }
+          }
+
+          if (created.tipo === 'trasferimento') {
+            applyDelta(created.fromWalletId, -created.valore)
+            applyDelta(created.toWalletId, created.valore)
+          } else if (created.tipo === 'ricarica') {
+            applyDelta(created.walletId, created.valore)
+          } else if (created.tipo === 'spesa') {
+            applyDelta(created.walletId, -created.valore)
+          }
+
+          return {
+            ...prev,
+            isSavingWalletMovement: false,
+            walletMovementsError: undefined,
+            walletMovements: [...prev.walletMovements, { ...created }],
+            wallets,
+          }
+        })
+      } catch (error: unknown) {
+        const code = getErrorCode(error) || getResponseDataCode(error)
+        let message = getErrorMessage(error) || 'Errore nel salvataggio del movimento wallet'
+        if (code === 'INSUFFICIENT_WALLET_FUNDS') {
+          message = 'Saldo wallet insufficiente per il movimento richiesto'
+        }
+        set((s) => ({
+          ...s,
+          isSavingWalletMovement: false,
+          walletMovementsError: message,
+        }))
+      }
+    },
   }
 })

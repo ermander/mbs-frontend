@@ -22,21 +22,24 @@ interface HolderCreateModalProps {
 
 export function HolderCreateModal({ open, onOpenChange }: HolderCreateModalProps) {
   const addHolder = useProfitTrackerStore((s) => s.addHolder)
+  const holdersError = useProfitTrackerStore((s) => s.holdersError)
 
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [stato, setStato] = useState<EnabledStatus>('abilitato')
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nome.trim()) return
-    addHolder({
+    await addHolder({
       nome: nome.trim(),
       descrizione: descrizione || undefined,
       stato,
     })
-    setNome('')
-    setDescrizione('')
-    onOpenChange(false)
+    if (!holdersError) {
+      setNome('')
+      setDescrizione('')
+      onOpenChange(false)
+    }
   }
 
   return (
@@ -76,6 +79,7 @@ export function HolderCreateModal({ open, onOpenChange }: HolderCreateModalProps
               <option value="disabilitato">Non abilitato</option>
             </select>
           </div>
+          {holdersError && <p className="text-xs text-destructive">{holdersError}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
@@ -99,16 +103,13 @@ interface HolderEditModalProps {
 export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalProps) {
   const updateHolder = useProfitTrackerStore((s) => s.updateHolder)
 
-  const [nome, setNome] = useState(holder?.nome ?? '')
   const [descrizione, setDescrizione] = useState(holder?.descrizione ?? '')
   const [stato, setStato] = useState<EnabledStatus>(holder?.stato ?? 'abilitato')
 
   if (!holder) return null
 
   const handleSave = () => {
-    if (!nome.trim()) return
     updateHolder(holder.id, {
-      nome: nome.trim(),
       descrizione: descrizione || undefined,
       stato,
     })
@@ -124,7 +125,15 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
         <div className="space-y-4 p-4 pt-0 text-sm">
           <div className="space-y-1.5">
             <Label htmlFor="holder-edit-nome">Nome</Label>
-            <Input id="holder-edit-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+            <Input
+              id="holder-edit-nome"
+              value={holder.nome}
+              disabled
+              className="cursor-default select-none bg-muted/60"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Il nome dell&apos;intestatario non può essere modificato dopo la creazione.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="holder-edit-desc">Descrizione (opzionale)</Label>
@@ -152,7 +161,7 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!nome.trim()}>
+          <Button type="button" onClick={handleSave}>
             Salva
           </Button>
         </DialogFooter>

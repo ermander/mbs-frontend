@@ -55,7 +55,7 @@ jobs:
       - name: Deploy frontend with Docker Compose
         run: |
           set -e
-          cd ~/mbs-infra
+          cd /opt/mbs-infra
 
           echo "Pull latest frontend image"
           docker compose pull mbs-frontend

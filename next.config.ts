@@ -4,16 +4,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   async rewrites() {
-    if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:4000/api/:path*',
-        },
-      ]
-    }
+    const apiBaseUrl =
+      process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'http://betting-app:3000'
 
-    return []
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiBaseUrl}/api/:path*`,
+      },
+    ]
   },
 }
 

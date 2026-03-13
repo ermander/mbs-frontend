@@ -66,11 +66,31 @@ jobs:
           echo "Restart frontend container"
           docker compose up -d mbs-frontend
 
+          echo "Waiting for frontend container to become healthy..."
+          for i in {1..30}; do
+            STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' mbs-frontend 2>/dev/null || echo "missing")
+            echo "Attempt $i - mbs-frontend status: $STATUS"
+
+            if [ "$STATUS" = "healthy" ]; then
+              break
+            fi
+
+            sleep 2
+          done
+
+          FINAL_STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' mbs-frontend)
+          if [ "$FINAL_STATUS" != "healthy" ]; then
+            echo "Frontend did not become healthy"
+            docker compose ps
+            docker compose logs mbs-frontend --tail 100
+            exit 1
+          fi
+
           echo "Running containers:"
           docker compose ps
 
           echo "Verify local frontend"
-          curl -I http://127.0.0.1:3002
+          curl -I --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:3002
 
           echo "Verify frontend API proxy"
-          curl http://127.0.0.1:3002/api/health
+          curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:3002/api/health

@@ -89,7 +89,6 @@ interface ProfitTrackerState {
     patch: Partial<Pick<Account, 'nome' | 'descrizione' | 'stato'>>,
   ) => Promise<void>
 
-  addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => void
   updateWallet: (id: string, patch: Partial<Wallet>) => void
 
   addOngoingBet: (bet: Omit<OngoingBet, 'id'>) => void

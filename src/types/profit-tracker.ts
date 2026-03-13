@@ -121,7 +121,7 @@ export interface AccountMovement {
 
 export interface WalletMovement {
   id: string
-  walletId: string
+  walletId?: string
   tipo: WalletMovementType
   fromWalletId?: string
   toWalletId?: string

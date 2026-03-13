@@ -78,7 +78,6 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
     }
 
     await addWalletMovement({
-      walletId: undefined,
       tipo: 'trasferimento',
       fromWalletId: effectiveFromWalletId,
       toWalletId: effectiveToWalletId,

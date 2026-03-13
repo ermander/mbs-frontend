@@ -13,22 +13,34 @@ import type {
   Wallet,
   WalletMovement,
 } from '@/types/profit-tracker'
-import type { GetAccountsParams } from '@/services/api/profit-tracker-client'
+import type {
+  CreateBetLegPayload,
+  CreateBetPayload,
+  GetAccountsParams,
+} from '@/services/api/profit-tracker-client'
 import {
   createAccount as apiCreateAccount,
+  createBet as apiCreateBet,
+  createBetLegs as apiCreateBetLegs,
   createAccountMovement as apiCreateAccountMovement,
   createBook as apiCreateBook,
   createHolder as apiCreateHolder,
   createQuickBet as apiCreateQuickBet,
   createWallet as apiCreateWallet,
   createWalletMovement as apiCreateWalletMovement,
+  deleteBet as apiDeleteBet,
+  deleteBetLeg as apiDeleteBetLeg,
   deleteQuickBet as apiDeleteQuickBet,
   getAccounts as apiGetAccounts,
+  getBetWithLegs as apiGetBetWithLegs,
+  getBets as apiGetBets,
   getBooks as apiGetBooks,
   getHolders as apiGetHolders,
   getQuickBets as apiGetQuickBets,
   getWallets as apiGetWallets,
   updateAccount as apiUpdateAccount,
+  updateBet as apiUpdateBet,
+  updateBetLeg as apiUpdateBetLeg,
   updateBook as apiUpdateBook,
   updateQuickBet as apiUpdateQuickBet,
 } from '@/services/api/profit-tracker-client'
@@ -49,6 +61,9 @@ interface ProfitTrackerState {
   wallets: Wallet[]
   ongoingBets: OngoingBet[]
   betLegs: BetLeg[]
+  isLoadingOngoingBets: boolean
+  ongoingBetsError?: string
+  isSavingOngoingBet: boolean
   quickBets: QuickBet[]
   isLoadingQuickBets: boolean
   quickBetsError?: string
@@ -91,9 +106,27 @@ interface ProfitTrackerState {
 
   updateWallet: (id: string, patch: Partial<Wallet>) => void
 
+  fetchOngoingBets: () => Promise<void>
+  fetchBetWithLegs: (betId: string) => Promise<{ bet: OngoingBet; legs: BetLeg[] }>
+  saveOngoingBetFromCalculator: (
+    betPayload: CreateBetPayload,
+    legs: CreateBetLegPayload[],
+  ) => Promise<OngoingBet>
   addOngoingBet: (bet: Omit<OngoingBet, 'id'>) => void
-  updateOngoingBet: (id: string, patch: Partial<OngoingBet>) => void
-  removeOngoingBet: (id: string) => void
+  updateOngoingBet: (id: string, patch: Partial<OngoingBet>) => Promise<void>
+  removeOngoingBet: (id: string) => Promise<void>
+  updateBetLeg: (
+    betId: string,
+    legId: string,
+    patch: Partial<
+      Pick<
+        BetLeg,
+        'stake' | 'quota' | 'commissionePercentuale' | 'statoEvento' | 'tag' | 'movimento'
+      >
+    >,
+  ) => Promise<void>
+  removeBetLeg: (betId: string, legId: string) => Promise<void>
+  addBetLegs: (betId: string, legs: CreateBetLegPayload[]) => Promise<BetLeg[]>
 
   addQuickBet: (bet: Omit<QuickBet, 'id'>) => Promise<void>
   updateQuickBet: (
@@ -117,50 +150,14 @@ function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-// Use a fixed timestamp to avoid SSR/CSR hydration mismatches
-const STATIC_NOW_ISO = '2024-01-01T00:00:00.000Z'
-const nowIso = () => STATIC_NOW_ISO
-
 export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
   const initialHolders: Holder[] = []
   const initialBooks: Book[] = []
   const initialAccounts: Account[] = []
   const initialWallets: Wallet[] = []
 
-  const initialOngoingBets: OngoingBet[] = [
-    {
-      id: 'bet-1',
-      eventoData: nowIso(),
-      sport: 'calcio',
-      eventoNome: 'Milan vs Inter',
-      modalitaSaldo: 'reale',
-      accountId: 'account-1',
-      statoEvento: 'in_corso',
-      tag: 'Welcome bonus',
-    },
-  ]
-
-  const initialBetLegs: BetLeg[] = [
-    {
-      id: 'leg-1',
-      betId: 'bet-1',
-      eventoData: nowIso(),
-      sport: 'calcio',
-      eventoNome: 'Milan vs Inter',
-      competizione: 'Serie A',
-      mercato: '1X2',
-      metodo: 'punta',
-      tipoBonus: 'bonus',
-      accountId: 'account-1',
-      stake: 50,
-      quota: 2.1,
-      rischio: 50,
-      bonusValore: 50,
-      movimento: 55,
-      statoEvento: 'in_corso',
-    },
-  ]
-
+  const initialOngoingBets: OngoingBet[] = []
+  const initialBetLegs: BetLeg[] = []
   const initialQuickBets: QuickBet[] = []
 
   const initialAccountMovements: AccountMovement[] = []
@@ -182,6 +179,9 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     wallets: initialWallets,
     ongoingBets: initialOngoingBets,
     betLegs: initialBetLegs,
+    isLoadingOngoingBets: false,
+    ongoingBetsError: undefined,
+    isSavingOngoingBet: false,
     quickBets: initialQuickBets,
     isLoadingQuickBets: false,
     quickBetsError: undefined,
@@ -381,18 +381,133 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         wallets: state.wallets.map((w) => (w.id === id ? { ...w, ...patch } : w)),
       })),
 
+    fetchOngoingBets: async () => {
+      set(() => ({ isLoadingOngoingBets: true, ongoingBetsError: undefined }))
+      try {
+        const bets = await apiGetBets()
+        set(() => ({
+          ongoingBets: bets,
+          isLoadingOngoingBets: false,
+          ongoingBetsError: undefined,
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || 'Errore nel caricamento delle giocate in corso'
+        set(() => ({
+          isLoadingOngoingBets: false,
+          ongoingBetsError: message,
+        }))
+      }
+    },
+
+    fetchBetWithLegs: async (betId) => {
+      const { bet, legs } = await apiGetBetWithLegs(betId)
+      set((state) => {
+        const hasBet = state.ongoingBets.some((b) => b.id === betId)
+        const ongoingBets = hasBet
+          ? state.ongoingBets.map((b) => (b.id === betId ? bet : b))
+          : [...state.ongoingBets, bet]
+        const otherLegs = state.betLegs.filter((l) => l.betId !== betId)
+        return {
+          ongoingBets,
+          betLegs: [...otherLegs, ...legs],
+        }
+      })
+      return { bet, legs }
+    },
+
+    saveOngoingBetFromCalculator: async (betPayload, legsPayload) => {
+      set(() => ({ isSavingOngoingBet: true, ongoingBetsError: undefined }))
+      try {
+        const bet = await apiCreateBet(betPayload)
+        const legs = await apiCreateBetLegs(bet.id, { legs: legsPayload })
+        set((state) => ({
+          ongoingBets: [...state.ongoingBets, bet],
+          betLegs: [...state.betLegs, ...legs],
+          isSavingOngoingBet: false,
+          ongoingBetsError: undefined,
+        }))
+        return bet
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || 'Errore nel salvataggio della giocata'
+        set(() => ({
+          isSavingOngoingBet: false,
+          ongoingBetsError: message,
+        }))
+        throw err
+      }
+    },
+
     addOngoingBet: (bet) =>
       set((state) => ({
         ongoingBets: [...state.ongoingBets, { ...bet, id: generateId('bet') }],
       })),
-    updateOngoingBet: (id, patch) =>
-      set((state) => ({
-        ongoingBets: state.ongoingBets.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-      })),
-    removeOngoingBet: (id) =>
-      set((state) => ({
-        ongoingBets: state.ongoingBets.filter((b) => b.id !== id),
-      })),
+
+    updateOngoingBet: async (id, patch) => {
+      try {
+        const updated = await apiUpdateBet(id, patch)
+        set((state) => ({
+          ongoingBets: state.ongoingBets.map((b) => (b.id === id ? updated : b)),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'aggiornamento della giocata"
+        set((s) => ({ ...s, ongoingBetsError: message }))
+        throw err
+      }
+    },
+
+    removeOngoingBet: async (id) => {
+      try {
+        await apiDeleteBet(id)
+        set((state) => ({
+          ongoingBets: state.ongoingBets.filter((b) => b.id !== id),
+          betLegs: state.betLegs.filter((l) => l.betId !== id),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'eliminazione della giocata"
+        set((s) => ({ ...s, ongoingBetsError: message }))
+        throw err
+      }
+    },
+
+    updateBetLeg: async (betId, legId, patch) => {
+      try {
+        const updated = await apiUpdateBetLeg(betId, legId, patch)
+        set((state) => ({
+          betLegs: state.betLegs.map((l) => (l.id === legId ? updated : l)),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'aggiornamento del leg"
+        set((s) => ({ ...s, ongoingBetsError: message }))
+        throw err
+      }
+    },
+
+    removeBetLeg: async (betId, legId) => {
+      try {
+        await apiDeleteBetLeg(betId, legId)
+        set((state) => ({
+          betLegs: state.betLegs.filter((l) => l.id !== legId),
+        }))
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'eliminazione del leg"
+        set((s) => ({ ...s, ongoingBetsError: message }))
+        throw err
+      }
+    },
+
+    addBetLegs: async (betId, legsPayload) => {
+      try {
+        const created = await apiCreateBetLegs(betId, { legs: legsPayload })
+        set((state) => ({
+          betLegs: [...state.betLegs, ...created],
+        }))
+        return created
+      } catch (err: unknown) {
+        const message = getErrorMessage(err) || "Errore nell'aggiunta degli elementi"
+        set((s) => ({ ...s, ongoingBetsError: message }))
+        throw err
+      }
+    },
 
     fetchQuickBets: async () => {
       set(() => ({ isLoadingQuickBets: true, quickBetsError: undefined }))

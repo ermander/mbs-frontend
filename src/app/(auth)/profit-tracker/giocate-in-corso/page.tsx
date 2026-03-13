@@ -15,6 +15,8 @@ export default function GiocateInCorsoPage() {
   const bets = useMemo(() => ongoingBets.filter((b) => !b.archiviata), [ongoingBets])
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
+  const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
+  const isLoadingOngoingBets = useProfitTrackerStore((s) => s.isLoadingOngoingBets)
   const books = useProfitTrackerStore((s) => s.books)
   const holders = useProfitTrackerStore((s) => s.holders)
   const addBet = useProfitTrackerStore((s) => s.addOngoingBet)
@@ -22,8 +24,9 @@ export default function GiocateInCorsoPage() {
   const removeBet = useProfitTrackerStore((s) => s.removeOngoingBet)
 
   useEffect(() => {
+    void fetchOngoingBets()
     void fetchAllAccounts()
-  }, [fetchAllAccounts])
+  }, [fetchOngoingBets, fetchAllAccounts])
 
   const resolveAccountLabel = (accountId: string) => {
     const account = allAccounts.find((a) => a.id === accountId)
@@ -34,8 +37,12 @@ export default function GiocateInCorsoPage() {
     return `${book.nome} (${holder.nome})`
   }
 
-  const handleArchive = (id: string) => {
-    updateBet(id, { archiviata: true, statoEvento: 'annullato' })
+  const handleArchive = async (id: string) => {
+    try {
+      await updateBet(id, { archiviata: true, statoEvento: 'annullato' })
+    } catch {
+      // Error already set in store
+    }
   }
 
   const handleClone = (id: string) => {
@@ -51,13 +58,17 @@ export default function GiocateInCorsoPage() {
     })
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Vuoi davvero eliminare questa giocata?')) return
-    removeBet(id)
+    try {
+      await removeBet(id)
+    } catch {
+      // Error already set in store
+    }
   }
 
   return (
-    <section className="space-y-4">
+    <section className="min-h-[50vh] space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Giocate in corso</h1>
         <p className="text-muted-foreground">
@@ -65,6 +76,9 @@ export default function GiocateInCorsoPage() {
         </p>
       </header>
 
+      {isLoadingOngoingBets && (
+        <p className="text-sm text-muted-foreground">Caricamento giocate...</p>
+      )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
         <table className="min-w-full text-sm">
           <thead>

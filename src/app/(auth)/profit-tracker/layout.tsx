@@ -8,7 +8,7 @@ export default function ProfitTrackerLayout({ children }: { children: React.Reac
     <>
       <Header />
       <main className="py-8 sm:py-12">
-        <Container className="max-w-6xl space-y-6">
+        <Container className="max-w-screen-2xl space-y-6">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Profit Tracker</h1>
             <p className="text-sm text-muted-foreground">

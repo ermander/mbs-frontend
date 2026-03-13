@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/api/client'
 import type { OddsmatcherRow } from '@/types/oddsmatcher'
 
-const ODDSMATCHER_PATH = '/api/odds/oddsmatcher'
+const ODDSMATCHER_PATH = '/odds/oddsmatcher'
 
 export interface OddsmatcherParams {
   id_book?: string[]

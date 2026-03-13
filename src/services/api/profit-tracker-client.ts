@@ -4,9 +4,11 @@ import type {
   Account,
   AccountMovement,
   AccountMovementType,
+  BetLeg,
   Book,
   EnabledStatus,
   Holder,
+  OngoingBet,
   QuickBet,
   Wallet,
   WalletMovement,
@@ -238,4 +240,103 @@ export async function updateQuickBet(
 
 export async function deleteQuickBet(id: string): Promise<void> {
   await apiClient.delete(`/profit-tracker/quick-bets/${id}`)
+}
+
+// Ongoing bets (giocate in corso)
+export interface GetBetsParams {
+  status?: string
+  archiviata?: boolean
+  fromDate?: string
+  toDate?: string
+  sport?: string
+}
+
+export interface CreateBetPayload {
+  eventoData: string
+  sport: string
+  eventoNome: string
+  modalitaSaldo: string
+  accountId: string
+  tag?: string | null
+  nota?: string | null
+}
+
+export interface BetWithLegs {
+  bet: OngoingBet
+  legs: BetLeg[]
+}
+
+export interface CreateBetLegPayload {
+  eventoData: string
+  sport: string
+  eventoNome: string
+  competizione: string
+  mercato: string
+  metodo: 'punta' | 'banca'
+  tipoBonus: string
+  accountId: string
+  stake: number
+  quota: number
+  rischio?: number
+  bonusValore?: number
+  rimborsoValore?: number
+  commissionePercentuale?: number
+  movimento: number
+  statoEvento: string
+  tag?: string | null
+}
+
+export async function getBets(params?: GetBetsParams): Promise<OngoingBet[]> {
+  const response = await apiClient.get<OngoingBet[]>('/profit-tracker/bets', {
+    params: params ?? {},
+  })
+  return response.data
+}
+
+export async function createBet(payload: CreateBetPayload): Promise<OngoingBet> {
+  const response = await apiClient.post<OngoingBet>('/profit-tracker/bets', payload)
+  return response.data
+}
+
+export async function getBetWithLegs(id: string): Promise<BetWithLegs> {
+  const response = await apiClient.get<BetWithLegs>(`/profit-tracker/bets/${id}`)
+  return response.data
+}
+
+export async function updateBet(
+  id: string,
+  payload: Partial<CreateBetPayload> & { statoEvento?: string; archiviata?: boolean },
+): Promise<OngoingBet> {
+  const response = await apiClient.patch<OngoingBet>(`/profit-tracker/bets/${id}`, payload)
+  return response.data
+}
+
+export async function deleteBet(id: string): Promise<void> {
+  await apiClient.delete(`/profit-tracker/bets/${id}`)
+}
+
+export async function createBetLegs(
+  betId: string,
+  payload: { legs: CreateBetLegPayload[] },
+): Promise<BetLeg[]> {
+  const response = await apiClient.post<BetLeg[]>(`/profit-tracker/bets/${betId}/legs`, payload)
+  return response.data
+}
+
+export async function updateBetLeg(
+  betId: string,
+  legId: string,
+  payload: Partial<
+    Pick<BetLeg, 'stake' | 'quota' | 'commissionePercentuale' | 'statoEvento' | 'tag' | 'movimento'>
+  >,
+): Promise<BetLeg> {
+  const response = await apiClient.patch<BetLeg>(
+    `/profit-tracker/bets/${betId}/legs/${legId}`,
+    payload,
+  )
+  return response.data
+}
+
+export async function deleteBetLeg(betId: string, legId: string): Promise<void> {
+  await apiClient.delete(`/profit-tracker/bets/${betId}/legs/${legId}`)
 }

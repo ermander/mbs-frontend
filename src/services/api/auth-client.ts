@@ -48,7 +48,10 @@ export const authClient = {
   },
 
   async requestPasswordReset(email: string) {
-    const { data } = await apiClient.post<{ message: string }>('/auth/forgot-password', {
+    const { data } = await apiClient.post<{
+      message: string
+      status?: 'pending_verification'
+    }>('/auth/forgot-password', {
       email,
     })
     return data

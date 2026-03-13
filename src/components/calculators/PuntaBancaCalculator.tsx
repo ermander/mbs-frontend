@@ -227,7 +227,6 @@ export function PuntaBancaCalculator() {
         layStake != null &&
         responsabilita != null
 
-  // #region agent log
   useEffect(() => {
     if (
       !showSummary ||
@@ -243,48 +242,6 @@ export function PuntaBancaCalculator() {
     const exchangeProfitAfterCommission = layStake * (1 - commissionePct / 100)
     const totalRow2 = -puntataEffettiva + exchangeProfitAfterCommission
     const ts = Date.now()
-    fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '897992' },
-      body: JSON.stringify({
-        sessionId: '897992',
-        location: 'PuntaBancaCalculator.tsx:summary',
-        message: 'Tabella profitti calc',
-        data: {
-          puntataEffettiva,
-          quotaPuntaNum,
-          commissionePct,
-          quotaBancaNum,
-          layStake,
-          responsabilita,
-          guadagnoMinimo,
-          totalRow1,
-          exchangeProfitAfterCommission,
-          totalRow2,
-          diffRow1: totalRow1 - guadagnoMinimo,
-          diffRow2: totalRow2 - guadagnoMinimo,
-        },
-        timestamp: ts,
-        hypothesisId: 'H1',
-      }),
-    }).catch(() => {})
-    fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '897992' },
-      body: JSON.stringify({
-        sessionId: '897992',
-        location: 'PuntaBancaCalculator.tsx:compare',
-        message: 'Row totals vs guadagnoMinimo',
-        data: {
-          totalRow1,
-          totalRow2,
-          guadagnoMinimo,
-          row2IfExchangeShownAsLayStake: -puntataEffettiva + layStake,
-        },
-        timestamp: ts,
-        hypothesisId: 'H3',
-      }),
-    }).catch(() => {})
   }, [
     showSummary,
     puntataEffettiva,

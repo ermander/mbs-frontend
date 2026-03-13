@@ -30,21 +30,6 @@ export function layStake(
   const denom = layOdds - commissionPercent / 100
   if (denom <= 0) return null
   const stake = (backOdds * backStake) / denom
-  // #region agent log
-  if (typeof fetch !== 'undefined')
-    fetch('http://127.0.0.1:7629/ingest/3106dbfd-66a0-4e79-9380-92a1b790d016', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '897992' },
-      body: JSON.stringify({
-        sessionId: '897992',
-        location: 'punta-banca.ts:layStake',
-        message: 'Lay stake formula',
-        data: { backStake, backOdds, layOdds, commissionPercent, stake, denom },
-        timestamp: Date.now(),
-        hypothesisId: 'H2',
-      }),
-    }).catch(() => {})
-  // #endregion
   return Number.isFinite(stake) ? stake : null
 }
 

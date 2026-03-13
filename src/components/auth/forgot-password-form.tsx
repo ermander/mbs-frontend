@@ -33,9 +33,9 @@ export function ForgotPasswordForm() {
     setSubmitStatus('idle')
     setSubmitMessage('')
     try {
-      const { message } = await authClient.requestPasswordReset(data.email)
+      const res = await authClient.requestPasswordReset(data.email)
       setSubmitStatus('success')
-      setSubmitMessage(message ?? SUCCESS_MESSAGE)
+      setSubmitMessage(res.message ?? SUCCESS_MESSAGE)
     } catch (err) {
       setSubmitStatus('error')
       setSubmitMessage(

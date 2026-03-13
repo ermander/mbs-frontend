@@ -52,6 +52,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Log in to GHCR on self-hosted runner
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ermander --password-stdin
+
       - name: Deploy frontend with Docker Compose
         run: |
           set -e

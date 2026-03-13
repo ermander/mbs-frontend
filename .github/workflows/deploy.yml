@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-deploy:
+  build-and-test-ssh:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -46,21 +46,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy on Oracle server
+      - name: Test SSH connection
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-            cd ~/mbs-infra
-
-            echo "Pull latest frontend image"
-            docker compose pull mbs-frontend
-
-            echo "Restart frontend container"
-            docker compose up -d mbs-frontend
-
-            echo "Running containers:"
-            docker compose ps
+            whoami
+            hostname
+            pwd

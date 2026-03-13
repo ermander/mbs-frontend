@@ -78,7 +78,7 @@ export default function BetDetailPage() {
             </p>
             <select
               value={bet.statoEvento}
-              onChange={(e) => handleStatoChange(e.target.value)}
+              onChange={(e) => handleStatoChange(e.target.value as OngoingBet['statoEvento'])}
               className="mt-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
             >
               <option value="bozza">Bozza</option>

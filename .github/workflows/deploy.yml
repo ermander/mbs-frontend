@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-test-ssh:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -46,13 +46,28 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test SSH connection
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            whoami
-            hostname
-            pwd
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux, arm64, frontend]
+    timeout-minutes: 30
+
+    steps:
+      - name: Deploy frontend with Docker Compose
+        run: |
+          set -e
+          cd ~/mbs-infra
+
+          echo "Pull latest frontend image"
+          docker compose pull mbs-frontend
+
+          echo "Restart frontend container"
+          docker compose up -d mbs-frontend
+
+          echo "Running containers:"
+          docker compose ps
+
+          echo "Verify local frontend"
+          curl -I http://127.0.0.1:3002
+
+          echo "Verify frontend API proxy"
+          curl http://127.0.0.1:3002/api/health

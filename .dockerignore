@@ -1,4 +1,12 @@
 node_modules
 .next
 .git
-.env*
+.github
+.cursor
+docs
+npm-debug.log
+Dockerfile*
+docker-compose*
+.env
+.env.*
+!.env.example

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   async rewrites() {
     const apiBaseUrl =
-      process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'http://betting-app:3000'
+      process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'http://mbs-backend:3000'
 
     return [
       {

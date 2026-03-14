@@ -26,11 +26,10 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
     label: 'STRUMENTI',
     items: [
-      { label: 'Oddsmatcher', href: '/strumenti/oddsmatcher' },
-      { label: 'Dutcher', href: '/strumenti/dutcher' },
-      { label: 'Trimatcher', href: '/strumenti/trimatcher' },
-      { label: 'Himatcher', href: '/strumenti/himatcher' },
-      { label: 'Targeter', href: '/strumenti/targeter' },
+      { label: 'Oddsmatcher', href: '/oddsmatcher' },
+      { label: 'Dutcher', href: '/dutcher' },
+      { label: 'Trimatcher', href: '/trimatcher' },
+      { label: 'Targeter', href: '/targeter' },
     ],
   },
   {

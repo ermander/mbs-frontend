@@ -211,6 +211,17 @@ export default function BetDetailPage() {
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const hasPuntaAndBanca =
     legs.some((l) => l.metodo === 'punta') && legs.some((l) => l.metodo === 'banca')
+  const countPunta = legs.filter((l) => l.metodo === 'punta').length
+  const countBanca = legs.filter((l) => l.metodo === 'banca').length
+  const legsSummary =
+    countPunta > 0 || countBanca > 0
+      ? [
+          countPunta > 0 && `${countPunta} puntat${countPunta === 1 ? 'a' : 'e'}`,
+          countBanca > 0 && `${countBanca} bancat${countBanca === 1 ? 'a' : 'e'}`,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : ''
 
   const renderEditableCell = (
     leg: BetLeg,
@@ -361,8 +372,13 @@ export default function BetDetailPage() {
             Nuovo Deposito
           </Link>
           {hasPuntaAndBanca && (
-            <span className="rounded-md bg-green-500/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-              Abbinata
+            <span className="inline-flex items-center gap-2">
+              <span className="rounded-md bg-green-500/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">
+                Abbinata
+              </span>
+              {legsSummary && (
+                <span className="text-xs text-muted-foreground">({legsSummary})</span>
+              )}
             </span>
           )}
           <button

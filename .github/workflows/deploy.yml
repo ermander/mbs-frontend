@@ -94,3 +94,9 @@ jobs:
 
           echo "Verify frontend API proxy"
           curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:3002/api/health
+
+      - name: Clean up Docker (free disk for next run)
+        if: always()
+        run: |
+          docker system prune -af
+          docker builder prune -af

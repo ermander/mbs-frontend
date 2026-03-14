@@ -157,11 +157,16 @@ export function OddsmatcherCalculatorModal({
     } else {
       setAccountsBanca([])
     }
-    setAccountIdPunta('')
-    setAccountIdBanca('')
     setHolderModalError(null)
     setSavedBetId(null)
   }, [row, bookNamePunta, bookNameBanca, books, fetchBooks, holders.length, fetchHolders])
+
+  useEffect(() => {
+    if (holderModalOpen) {
+      setAccountIdPunta('')
+      setAccountIdBanca('')
+    }
+  }, [holderModalOpen])
 
   useEffect(() => {
     if (holderModalOpen && row) {
@@ -306,7 +311,10 @@ export function OddsmatcherCalculatorModal({
   const tipoBonus = tipologia === 'RIMBORSO (CR%)' ? 'rimborso' : 'none'
 
   const handleSendToProfitTracker = async () => {
-    if (!row || !accountIdPunta || !accountIdBanca) return
+    if (!row || !accountIdPunta || !accountIdBanca) {
+      setHolderModalError("Seleziona sia l'intestatario punta sia l'intestatario banca.")
+      return
+    }
     if (
       puntataEffettiva <= 0 ||
       quotaPuntaNum == null ||
@@ -345,8 +353,8 @@ export function OddsmatcherCalculatorModal({
           bonusValore: undefined,
           rimborsoValore: tipologia === 'RIMBORSO (CR%)' ? rimborsoNum : undefined,
           commissionePercentuale: commissioneNum,
-          movimento: guadagnoMinimo,
-          statoEvento: 'in_corso',
+          movimento: 0,
+          statoEvento: 'bozza',
           tag: undefined as string | undefined,
         },
         {
@@ -364,8 +372,8 @@ export function OddsmatcherCalculatorModal({
           bonusValore: undefined,
           rimborsoValore: undefined,
           commissionePercentuale: commissioneNum,
-          movimento: guadagnoMinimo,
-          statoEvento: 'in_corso',
+          movimento: 0,
+          statoEvento: 'bozza',
           tag: undefined as string | undefined,
         },
       ]

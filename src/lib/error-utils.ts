@@ -2,7 +2,18 @@
  * Safe helpers for unknown catch bindings (no explicit any).
  */
 
+/**
+ * Prefer backend API message (response.data.message) when present, so the user
+ * sees e.g. "Saldo insufficiente sul conto per questa operazione" instead of
+ * "Request failed with status code 400".
+ */
 export function getErrorMessage(e: unknown): string {
+  if (e && typeof e === 'object' && 'response' in e) {
+    const res = (e as { response?: { data?: { message?: unknown } } }).response
+    if (res?.data?.message && typeof res.data.message === 'string') {
+      return res.data.message
+    }
+  }
   if (e instanceof Error) return e.message
   if (
     e &&

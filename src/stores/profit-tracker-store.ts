@@ -121,7 +121,16 @@ interface ProfitTrackerState {
     patch: Partial<
       Pick<
         BetLeg,
-        'stake' | 'quota' | 'commissionePercentuale' | 'statoEvento' | 'tag' | 'movimento'
+        | 'stake'
+        | 'quota'
+        | 'commissionePercentuale'
+        | 'statoEvento'
+        | 'tag'
+        | 'movimento'
+        | 'tipoBonus'
+        | 'bonusValore'
+        | 'rimborsoValore'
+        | 'accountId'
       >
     >,
   ) => Promise<void>

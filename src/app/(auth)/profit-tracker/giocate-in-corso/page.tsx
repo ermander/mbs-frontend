@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { OngoingBet } from '@/types/profit-tracker'
 import type { OngoingBet } from '@/types/profit-tracker'
 
 /** Formatta data e ora senza secondi (es. 14/03/2026, 16:00) */
@@ -62,9 +62,9 @@ export default function GiocateInCorsoPage() {
 
   const handleArchive = async (id: string) => {
     try {
-      await updateBet(id, { archiviata: true, statoEvento: 'annullato' })
-    } catch {
-      // Error already set in store
+      await updateBet(id, { archiviata: true })
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 

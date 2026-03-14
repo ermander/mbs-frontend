@@ -5,12 +5,46 @@ import Link from 'next/link'
 import { notFound, useParams, useRouter } from 'next/navigation'
 import { Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
+import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { calcolaMovimento } from '@/lib/profit-tracker/calcs'
-import type { BetLeg, OngoingBet } from '@/types/profit-tracker'
+import type { BetLeg } from '@/types/profit-tracker'
 import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
-type EditableField = 'stake' | 'quota' | 'commissionePercentuale'
+/** Formatta data e ora senza secondi (es. 14/03/2026, 18:00) */
+function formatEventDate(date: string) {
+  return new Date(date).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const TIPO_BONUS_OPTIONS: { value: BetLeg['tipoBonus']; label: string }[] = [
+  { value: 'none', label: 'Nessuno' },
+  { value: 'bonus', label: 'Bonus' },
+  { value: 'rimborso', label: 'Rimborso' },
+  { value: 'freebet', label: 'Freebet' },
+]
+
+function statoEventoClasses(stato: BetLeg['statoEvento']): string {
+  switch (stato) {
+    case 'vinto':
+      return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/40'
+    case 'perso':
+      return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/40'
+    case 'in_corso':
+      return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/40'
+    case 'annullato':
+      return 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40'
+    default:
+      return 'bg-background border-border'
+  }
+}
+
+type EditableField = 'stake' | 'quota' | 'commissionePercentuale' | 'bonusValore' | 'rimborsoValore'
 
 export default function BetDetailPage() {
   const params = useParams<{ betId: string }>()
@@ -58,6 +92,15 @@ export default function BetDetailPage() {
       return `${book.nome} (${holder.nome})`
     },
     [allAccounts, books, holders],
+  )
+
+  const accountSelectOptions = useMemo(
+    () =>
+      allAccounts.map((a) => ({
+        value: a.id,
+        label: resolveAccountLabel(a.id),
+      })),
+    [allAccounts, resolveAccountLabel],
   )
 
   useEffect(() => {
@@ -110,10 +153,10 @@ export default function BetDetailPage() {
   const handleArchive = async () => {
     if (!bet) return
     try {
-      await updateBet(bet.id, { archiviata: true, statoEvento: 'annullato' })
+      await updateBet(bet.id, { archiviata: true })
       router.push('/profit-tracker/giocate-in-corso')
-    } catch {
-      // Error in store
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 
@@ -180,34 +223,56 @@ export default function BetDetailPage() {
       setEditingCell(null)
       return
     }
-    const stake = editingCell.field === 'stake' ? draftValue : leg.stake
-    const quota = editingCell.field === 'quota' ? draftValue : leg.quota
-    const comm =
-      editingCell.field === 'commissionePercentuale'
-        ? draftValue
-        : (leg.commissionePercentuale ?? 0)
-    const movimento = calcolaMovimento(stake, quota, comm)
+    const value =
+      editingCell.field === 'bonusValore' || editingCell.field === 'rimborsoValore'
+        ? Number.isFinite(draftValue)
+          ? draftValue
+          : 0
+        : draftValue
     try {
       await updateBetLeg(betId, leg.id, {
-        [editingCell.field]: draftValue,
-        movimento,
+        [editingCell.field]: value,
       })
       setEditingCell(null)
-    } catch {
-      // Error in store
+      await fetchBetWithLegs(betId)
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Errore nel salvataggio.')
     }
   }
 
-  const handleLegStatoChange = (legId: string, stato: BetLeg['statoEvento']) => {
-    void updateBetLeg(betId, legId, { statoEvento: stato })
+  const handleLegStatoChange = async (legId: string, stato: BetLeg['statoEvento']) => {
+    try {
+      await updateBetLeg(betId, legId, { statoEvento: stato })
+      await fetchBetWithLegs(betId)
+      await fetchAllAccounts()
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? "Errore nell'aggiornamento dello stato.")
+    }
   }
 
-  const handleStatoChange = (stato: OngoingBet['statoEvento']) => {
-    void updateBet(bet.id, { statoEvento: stato })
+  const handleTipoBonusChange = async (legId: string, tipoBonus: BetLeg['tipoBonus']) => {
+    try {
+      await updateBetLeg(betId, legId, { tipoBonus })
+      await fetchBetWithLegs(betId)
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? "Errore nell'aggiornamento del tipo bonus.")
+    }
+  }
+
+  const handleAccountChange = async (legId: string, accountId: string) => {
+    try {
+      await updateBetLeg(betId, legId, { accountId })
+      await fetchBetWithLegs(betId)
+      await fetchAllAccounts()
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? "Errore nell'assegnazione del conto.")
+    }
   }
 
   const isLegEditable = (leg: BetLeg) => leg.statoEvento === 'bozza'
-  const totalRischio = legs.reduce((s, l) => s + l.rischio, 0)
+  const totalRischio =
+    legs.filter((l) => l.metodo === 'punta').reduce((s, l) => s + l.stake, 0) +
+    legs.filter((l) => l.metodo === 'banca').reduce((s, l) => s + l.rischio, 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const hasPuntaAndBanca =
     legs.some((l) => l.metodo === 'punta') && legs.some((l) => l.metodo === 'banca')
@@ -223,6 +288,12 @@ export default function BetDetailPage() {
           .join(', ')
       : ''
 
+  const canEditField = (leg: BetLeg, field: EditableField) => {
+    if (field === 'bonusValore') return leg.tipoBonus === 'bonus'
+    if (field === 'rimborsoValore') return leg.tipoBonus === 'rimborso'
+    return isLegEditable(leg)
+  }
+
   const renderEditableCell = (
     leg: BetLeg,
     field: EditableField,
@@ -230,18 +301,29 @@ export default function BetDetailPage() {
     format: (v: number) => string = (v) => String(v),
   ) => {
     const isEditing = editingCell?.legId === leg.id && editingCell?.field === field
-    const canEdit = isLegEditable(leg)
+    const canEdit = canEditField(leg, field)
     const value = isEditing ? draftValue : displayValue
 
     if (!canEdit) {
-      return <span className="text-xs text-foreground">{format(displayValue)}</span>
+      const lockedStyle = !isLegEditable(leg)
+        ? 'text-xs text-muted-foreground'
+        : 'text-xs text-foreground'
+      return <span className={lockedStyle}>{format(displayValue)}</span>
     }
     if (isEditing) {
+      const step =
+        field === 'commissionePercentuale'
+          ? 0.1
+          : field === 'quota'
+            ? 0.01
+            : field === 'bonusValore' || field === 'rimborsoValore'
+              ? 0.01
+              : 1
       return (
         <div className="flex flex-col gap-1">
           <input
             type="number"
-            step={field === 'commissionePercentuale' ? 0.1 : field === 'quota' ? 0.01 : 1}
+            step={step}
             className="w-20 rounded-md border border-border bg-background px-2 py-1 text-xs"
             value={value}
             onChange={(e) => setDraftValue(Number(e.target.value))}
@@ -284,7 +366,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="text-left text-xs text-foreground underline-offset-2 hover:underline"
+        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
         onClick={() => handleStartEdit(leg.id, field, displayValue)}
       >
         {format(displayValue)}
@@ -304,29 +386,11 @@ export default function BetDetailPage() {
       </header>
 
       <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              ID giocata
-            </p>
-            <p className="font-mono text-sm text-foreground">{bet.id}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Stato evento
-            </p>
-            <select
-              value={bet.statoEvento}
-              onChange={(e) => handleStatoChange(e.target.value as OngoingBet['statoEvento'])}
-              className="mt-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
-            >
-              <option value="bozza">Bozza</option>
-              <option value="in_corso">In corso</option>
-              <option value="vinto">Vinto</option>
-              <option value="perso">Perso</option>
-              <option value="annullato">Annullato</option>
-            </select>
-          </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="text-muted-foreground">ID GIOCATA </span>
+            <span className="font-mono text-foreground">{bet.id}</span>
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -341,62 +405,66 @@ export default function BetDetailPage() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('punta')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Puntata
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('banca')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Bancata
-          </button>
-          <Link
-            href="/profit-tracker/conti"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-          >
-            <Plus className="h-4 w-4" />
-            Nuovo Deposito
-          </Link>
-          {hasPuntaAndBanca && (
-            <span className="inline-flex items-center gap-2">
-              <span className="rounded-md bg-green-500/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-                Abbinata
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              onClick={() => {
+                setAddLegMethod('punta')
+                setAddLegOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nuova Puntata
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              onClick={() => {
+                setAddLegMethod('banca')
+                setAddLegOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nuova Bancata
+            </button>
+            <Link
+              href="/profit-tracker/conti"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <Plus className="h-4 w-4" />
+              Nuovo Deposito
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasPuntaAndBanca && (
+              <span className="inline-flex items-center gap-2">
+                <span className="rounded-md bg-green-500/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">
+                  Abbinata
+                </span>
+                {legsSummary && (
+                  <span className="text-xs text-muted-foreground">({legsSummary})</span>
+                )}
               </span>
-              {legsSummary && (
-                <span className="text-xs text-muted-foreground">({legsSummary})</span>
-              )}
-            </span>
-          )}
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={handleArchive}
-          >
-            <Archive className="h-4 w-4" />
-            Archivia
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
-            onClick={handleDeleteBet}
-          >
-            <Trash2 className="h-4 w-4" />
-            Elimina
-          </button>
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+              onClick={handleArchive}
+            >
+              <Archive className="h-4 w-4" />
+              Archivia
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+              onClick={handleDeleteBet}
+            >
+              <Trash2 className="h-4 w-4" />
+              Elimina
+            </button>
+          </div>
         </div>
       </div>
 
@@ -409,7 +477,7 @@ export default function BetDetailPage() {
       <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium text-muted-foreground">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
@@ -419,11 +487,10 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
               <th className="px-3 py-2 text-left">Quota</th>
-              <th className="px-3 py-2 text-left">Comm %</th>
+              <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
               <th className="px-3 py-2 text-left">Rimborso</th>
-              <th className="px-3 py-2 text-left">Tasse</th>
               <th className="px-3 py-2 text-left">Mov.</th>
               <th className="px-3 py-2 text-left">Stato evento</th>
               <th className="px-3 py-2 text-left">Tag</th>
@@ -432,17 +499,49 @@ export default function BetDetailPage() {
           </thead>
           <tbody>
             {legs.map((leg) => (
-              <tr key={leg.id} className="border-b border-border/40 last:border-b-0">
+              <tr
+                key={leg.id}
+                className={`border-b border-border/40 align-top last:border-b-0 ${
+                  leg.statoEvento !== 'bozza' ? 'opacity-75' : ''
+                }`}
+              >
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {new Date(leg.eventoData).toLocaleString('it-IT')}
+                  {formatEventDate(leg.eventoData)}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.eventoNome}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
                 <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{leg.tipoBonus}</td>
-                <td className="px-3 py-2 text-xs text-foreground">
-                  {resolveAccountLabel(leg.accountId)}
+                <td className="px-3 py-2">
+                  <select
+                    value={leg.tipoBonus}
+                    onChange={(e) =>
+                      handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
+                    }
+                    disabled={leg.statoEvento !== 'bozza'}
+                    className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {TIPO_BONUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="max-w-[260px]">
+                    <SearchableSelect
+                      options={accountSelectOptions}
+                      value={leg.accountId}
+                      onChange={(value) => handleAccountChange(leg.id, value)}
+                      placeholder="Seleziona conto"
+                      searchPlaceholder="Cerca conto..."
+                      allowEmpty={false}
+                      disabled={leg.statoEvento !== 'bozza'}
+                      size="sm"
+                      className="w-full"
+                    />
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
@@ -459,13 +558,16 @@ export default function BetDetailPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.rischio.toFixed(2)} €</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {leg.bonusValore != null ? `${leg.bonusValore.toFixed(2)} €` : '—'}
+                <td className="px-3 py-2">
+                  {renderEditableCell(leg, 'bonusValore', leg.bonusValore ?? 0, (v) =>
+                    v !== 0 ? `${v.toFixed(2)} €` : '—',
+                  )}
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {leg.rimborsoValore != null ? `${leg.rimborsoValore.toFixed(2)} €` : '—'}
+                <td className="px-3 py-2">
+                  {renderEditableCell(leg, 'rimborsoValore', leg.rimborsoValore ?? 0, (v) =>
+                    v !== 0 ? `${v.toFixed(2)} €` : '—',
+                  )}
                 </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">—</td>
                 <td className="px-3 py-2 text-xs font-medium text-foreground">
                   {leg.movimento.toFixed(2)} €
                 </td>
@@ -475,7 +577,7 @@ export default function BetDetailPage() {
                     onChange={(e) =>
                       handleLegStatoChange(leg.id, e.target.value as BetLeg['statoEvento'])
                     }
-                    className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                    className={`rounded-md border px-2 py-1 text-xs font-medium ${statoEventoClasses(leg.statoEvento)}`}
                   >
                     <option value="bozza">Bozza</option>
                     <option value="in_corso">In corso</option>
@@ -489,14 +591,14 @@ export default function BetDetailPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="text-xs font-medium text-foreground underline-offset-2 hover:underline"
+                      className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
                       onClick={() => handleCloneLeg(leg)}
                     >
                       Clona
                     </button>
                     <button
                       type="button"
-                      className="text-xs text-destructive underline-offset-2 hover:underline"
+                      className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20"
                       onClick={() => handleDeleteLeg(leg.id)}
                     >
                       Elimina
@@ -507,7 +609,7 @@ export default function BetDetailPage() {
             ))}
             {legs.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={18}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={17}>
                   Nessun esito registrato per questa giocata.
                 </td>
               </tr>

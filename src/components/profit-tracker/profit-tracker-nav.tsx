@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const items = [
   { href: '/profit-tracker/dashboard', label: 'Dashboard' },
   { href: '/profit-tracker/giocate-in-corso', label: 'Giocate in corso' },
+  { href: '/profit-tracker/giocate-archiviate', label: 'Giocate archiviate' },
   { href: '/profit-tracker/giocate-rapide', label: 'Giocate rapide' },
   { href: '/profit-tracker/conti', label: 'Conti' },
   { href: '/profit-tracker/wallets', label: 'Wallets' },

@@ -327,7 +327,19 @@ export async function updateBetLeg(
   betId: string,
   legId: string,
   payload: Partial<
-    Pick<BetLeg, 'stake' | 'quota' | 'commissionePercentuale' | 'statoEvento' | 'tag' | 'movimento'>
+    Pick<
+      BetLeg,
+      | 'stake'
+      | 'quota'
+      | 'commissionePercentuale'
+      | 'statoEvento'
+      | 'tag'
+      | 'movimento'
+      | 'tipoBonus'
+      | 'bonusValore'
+      | 'rimborsoValore'
+      | 'accountId'
+    >
   >,
 ): Promise<BetLeg> {
   const response = await apiClient.patch<BetLeg>(

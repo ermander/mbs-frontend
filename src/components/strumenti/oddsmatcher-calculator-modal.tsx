@@ -1,14 +1,12 @@
 'use client'
 
 import Image from 'next/image'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  equivalentBackOdds,
   layStakeRimborso,
   layStakeWithImbalance,
   liability,
   minGain,
-  ratingPercent,
 } from '@/lib/calculators/punta-banca'
 import type { TipologiaCalcolo } from '@/stores/agenda-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
@@ -24,7 +22,7 @@ import type { OddsmatcherRow } from '@/types/oddsmatcher'
 import { Calendar, Send, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const TIPOLOGIE: TipologiaCalcolo[] = ['NORMALE', 'RIMBORSO (CR%)', 'BONUS']
+const TIPOLOGIE: TipologiaCalcolo[] = ['NORMALE', 'RIMBORSO (CR%)']
 
 function formatModalDate(date: string, hour: string): string {
   const [y, m, d] = date.split('-')
@@ -100,6 +98,7 @@ export function OddsmatcherCalculatorModal({
   const [accountIdBanca, setAccountIdBanca] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
+  const wasOpenRef = useRef(false)
 
   useEffect(() => {
     if (open && row) {
@@ -111,6 +110,23 @@ export function OddsmatcherCalculatorModal({
       })
     }
   }, [open, row])
+
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      setTipologia('NORMALE')
+      setCommissione('3')
+      setRimborso('')
+      setBonus('')
+      setPuntata('')
+      setQuotaPunta('')
+      setQuotaBanca('')
+      setAgendaMessage(null)
+      setAccountIdPunta('')
+      setAccountIdBanca('')
+      setHolderModalOpen(false)
+    }
+    wasOpenRef.current = open
+  }, [open])
 
   const bookNamePunta = row ? getBookName(row.id_book_1) : ''
   const bookNameBanca = row ? getBookName(row.id_book_2) : ''
@@ -158,51 +174,64 @@ export function OddsmatcherCalculatorModal({
   const commissioneNum = parseNum(commissione) ?? 0
   const quotaBancaNum = parseNum(quotaBanca)
 
-  const quotaPuntaEquivalente = useMemo(() => {
-    if (quotaBancaNum == null) return null
-    return equivalentBackOdds(quotaBancaNum, commissioneNum)
-  }, [quotaBancaNum, commissioneNum])
-
   const layStakeValue = useMemo(() => {
     if (tipologia === 'RIMBORSO (CR%)') {
       if (puntataNum == null || puntataNum <= 0 || quotaPuntaNum == null || quotaBancaNum == null)
         return null
       return layStakeRimborso(puntataNum, quotaPuntaNum, rimborsoNum, quotaBancaNum, commissioneNum)
     }
-    if (puntataEffettiva <= 0 || quotaPuntaNum == null || quotaBancaNum == null) return null
-    return layStakeWithImbalance(puntataEffettiva, quotaPuntaNum, quotaBancaNum, commissioneNum, 0)
-  }, [
-    tipologia,
-    puntataNum,
-    rimborsoNum,
-    puntataEffettiva,
-    quotaPuntaNum,
-    quotaBancaNum,
-    commissioneNum,
-  ])
+    if (quotaPuntaNum == null || quotaBancaNum == null) return null
+    if (tipologia === 'NORMALE' && bonusNum > 0) {
+      const backStakeTotale = (puntataNum ?? 0) + bonusNum
+      if (backStakeTotale <= 0) return null
+      return layStakeWithImbalance(backStakeTotale, quotaPuntaNum, quotaBancaNum, commissioneNum, 0)
+    }
+    // NORMALE senza bonus: bancata sulla sola puntata
+    if (puntataNum == null || puntataNum <= 0) return null
+    return layStakeWithImbalance(puntataNum, quotaPuntaNum, quotaBancaNum, commissioneNum, 0)
+  }, [tipologia, puntataNum, bonusNum, rimborsoNum, quotaPuntaNum, quotaBancaNum, commissioneNum])
+
+  /** Bancata arrotondata a 2 decimali: usata per responsabilità e totali tabella PROFITTI (come nel calcolatore di riferimento). */
+  const layStakeRounded = useMemo(() => {
+    if (layStakeValue == null || !Number.isFinite(layStakeValue)) return null
+    return Math.round(layStakeValue * 100) / 100
+  }, [layStakeValue])
 
   const responsabilita = useMemo(() => {
-    if (layStakeValue == null || quotaBancaNum == null) return null
-    return liability(layStakeValue, quotaBancaNum)
-  }, [layStakeValue, quotaBancaNum])
+    if (layStakeRounded == null || quotaBancaNum == null) return null
+    return liability(layStakeRounded, quotaBancaNum)
+  }, [layStakeRounded, quotaBancaNum])
 
   const effectiveExchangeProfit = useMemo(() => {
     if (layStakeValue == null) return null
     return layStakeValue * (1 - commissioneNum / 100)
   }, [layStakeValue, commissioneNum])
 
+  /** Profitto exchange arrotondato a 2 decimali (per totali tabella: "se vinci la bancata" = -puntata + questo). */
+  const effectiveExchangeProfitRounded = useMemo(() => {
+    if (layStakeRounded == null) return null
+    const raw = layStakeRounded * (1 - commissioneNum / 100)
+    return Math.round(raw * 100) / 100
+  }, [layStakeRounded, commissioneNum])
+
   const baseMinGain = useMemo(() => {
-    if (quotaPuntaNum == null || responsabilita == null) return null
-    return minGain(puntataEffettiva, quotaPuntaNum, responsabilita)
-  }, [puntataEffettiva, quotaPuntaNum, responsabilita])
+    if (puntataNum == null || puntataNum <= 0 || quotaPuntaNum == null || responsabilita == null)
+      return null
+    return minGain(puntataNum, quotaPuntaNum, responsabilita)
+  }, [puntataNum, quotaPuntaNum, responsabilita])
 
   const totalSeVinciPuntata = useMemo(() => {
     if (tipologia === 'RIMBORSO (CR%)') {
       if (puntataNum == null || quotaPuntaNum == null || responsabilita == null) return null
       return puntataNum * (quotaPuntaNum - 1) - responsabilita
     }
+    if (responsabilita == null || quotaPuntaNum == null) return null
+    if (tipologia === 'NORMALE' && bonusNum > 0) {
+      const ritorno = ((puntataNum ?? 0) + bonusNum) * quotaPuntaNum
+      return ritorno - (puntataNum ?? 0) - responsabilita
+    }
     if (baseMinGain == null) return null
-    return baseMinGain + bonusNum
+    return baseMinGain
   }, [tipologia, puntataNum, quotaPuntaNum, responsabilita, baseMinGain, bonusNum])
 
   const totalSeVinciBancata = useMemo(() => {
@@ -210,9 +239,20 @@ export function OddsmatcherCalculatorModal({
       if (effectiveExchangeProfit == null) return null
       return -(puntataNum ?? 0) + effectiveExchangeProfit + rimborsoNum
     }
-    if (effectiveExchangeProfit == null) return null
-    return (bonusNum > 0 ? -(puntataNum ?? 0) : -puntataEffettiva) + effectiveExchangeProfit
-  }, [tipologia, puntataNum, puntataEffettiva, bonusNum, rimborsoNum, effectiveExchangeProfit])
+    const profit = effectiveExchangeProfitRounded ?? effectiveExchangeProfit
+    if (profit == null) return null
+    if (tipologia === 'NORMALE' && bonusNum > 0) {
+      return -(puntataNum ?? 0) + profit
+    }
+    return -(puntataNum ?? 0) + profit
+  }, [
+    tipologia,
+    puntataNum,
+    bonusNum,
+    rimborsoNum,
+    effectiveExchangeProfit,
+    effectiveExchangeProfitRounded,
+  ])
 
   const guadagnoMinimo = useMemo(() => {
     if (totalSeVinciPuntata == null || totalSeVinciBancata == null) return null
@@ -220,10 +260,19 @@ export function OddsmatcherCalculatorModal({
     return Number.isFinite(v) ? v : null
   }, [totalSeVinciPuntata, totalSeVinciBancata])
 
-  const rating = useMemo(() => {
+  const ratingSeVinciPuntata = useMemo(() => {
+    if (puntataEffettiva <= 0 || totalSeVinciPuntata == null) return null
+    const num = totalSeVinciPuntata + (puntataNum ?? 0)
+    const pct = (num / puntataEffettiva) * 100
+    return Number.isFinite(pct) ? pct : null
+  }, [puntataEffettiva, totalSeVinciPuntata, puntataNum])
+
+  const ratingSeVinciBancata = useMemo(() => {
     if (puntataEffettiva <= 0 || layStakeValue == null) return null
-    return ratingPercent(puntataEffettiva, layStakeValue)
-  }, [puntataEffettiva, layStakeValue])
+    const exchangeProfit = layStakeValue * (1 - commissioneNum / 100)
+    const pct = (exchangeProfit / puntataEffettiva) * 100
+    return Number.isFinite(pct) ? pct : null
+  }, [puntataEffettiva, layStakeValue, commissioneNum])
 
   const showSummary =
     tipologia === 'RIMBORSO (CR%)'
@@ -251,18 +300,17 @@ export function OddsmatcherCalculatorModal({
   const competizione = row?.competition ?? ''
   const mercato = row?.market ?? row?.selection ?? ''
 
-  const tipoBonus =
-    tipologia === 'RIMBORSO (CR%)' ? 'rimborso' : tipologia === 'BONUS' ? 'bonus' : 'none'
+  const tipoBonus = tipologia === 'RIMBORSO (CR%)' ? 'rimborso' : 'none'
 
   const handleSendToProfitTracker = async () => {
     if (!row || !accountIdPunta || !accountIdBanca) return
     if (
-      puntataNum == null ||
-      puntataNum <= 0 ||
+      puntataEffettiva <= 0 ||
       quotaPuntaNum == null ||
       quotaBancaNum == null ||
       layStakeValue == null ||
-      responsabilita == null
+      responsabilita == null ||
+      guadagnoMinimo == null
     ) {
       return
     }
@@ -278,7 +326,6 @@ export function OddsmatcherCalculatorModal({
         tag: undefined as string | undefined,
         nota: undefined as string | undefined,
       }
-      const guadagnoMinimo = minGain(puntataNum, quotaPuntaNum, responsabilita) ?? 0
       const legsPayload = [
         {
           eventoData: eventoDataIso,
@@ -289,10 +336,10 @@ export function OddsmatcherCalculatorModal({
           metodo: 'punta' as const,
           tipoBonus,
           accountId: accountIdPunta,
-          stake: puntataNum,
+          stake: puntataEffettiva,
           quota: quotaPuntaNum,
           rischio: 0,
-          bonusValore: tipologia === 'BONUS' ? bonusNum : undefined,
+          bonusValore: undefined,
           rimborsoValore: tipologia === 'RIMBORSO (CR%)' ? rimborsoNum : undefined,
           commissionePercentuale: commissioneNum,
           movimento: guadagnoMinimo,
@@ -361,10 +408,10 @@ export function OddsmatcherCalculatorModal({
           </div>
 
           <div className="space-y-5 p-5">
-            {/* Tipo: segment control + commissione */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Tipo: segment control + commissione — labels allineati sulla stessa riga */}
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[1fr_auto] sm:items-start">
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="block h-5 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground">
                   Tipo calcolo
                 </span>
                 <div className="flex rounded-lg border border-border bg-muted/20 p-0.5">
@@ -385,37 +432,42 @@ export function OddsmatcherCalculatorModal({
                   ))}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {tipologia === 'RIMBORSO (CR%)' && (
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="modal-commissione"
+                  className="block h-5 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground"
+                >
+                  Commissione
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  {tipologia === 'RIMBORSO (CR%)' && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="modal-rimborso" className="text-sm text-muted-foreground">
+                        € rimborso
+                      </Label>
+                      <Input
+                        id="modal-rimborso"
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={rimborso}
+                        onChange={(e) => setRimborso(e.target.value)}
+                        className="h-8 w-24"
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="modal-rimborso" className="text-sm text-muted-foreground">
-                      € rimborso
-                    </Label>
                     <Input
-                      id="modal-rimborso"
+                      id="modal-commissione"
                       type="number"
                       inputMode="decimal"
-                      placeholder="0"
-                      value={rimborso}
-                      onChange={(e) => setRimborso(e.target.value)}
-                      className="h-8 w-24"
+                      placeholder="3"
+                      value={commissione}
+                      onChange={(e) => setCommissione(e.target.value)}
+                      className="h-8 w-14"
                     />
+                    <span className="text-sm text-muted-foreground">%</span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="modal-commissione" className="text-sm text-muted-foreground">
-                    Commissione
-                  </Label>
-                  <Input
-                    id="modal-commissione"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="3"
-                    value={commissione}
-                    onChange={(e) => setCommissione(e.target.value)}
-                    className="h-8 w-14"
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
             </div>
@@ -447,9 +499,10 @@ export function OddsmatcherCalculatorModal({
                 </div>
               </div>
               <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-destructive">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-destructive">
                   Banca
                 </p>
+                <p className="mb-3 text-sm text-muted-foreground">{row.selection}</p>
                 <Input
                   type="number"
                   inputMode="decimal"
@@ -496,7 +549,7 @@ export function OddsmatcherCalculatorModal({
                     </span>
                   </div>
                 </div>
-                {(tipologia === 'NORMALE' || tipologia === 'BONUS') && (
+                {tipologia === 'NORMALE' && (
                   <div className="space-y-1.5">
                     <Label htmlFor="modal-bonus" className="text-sm">
                       Bonus € (opz.)
@@ -590,9 +643,10 @@ export function OddsmatcherCalculatorModal({
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium text-primary">
                           {formatSigned(
-                            tipologia === 'RIMBORSO (CR%)'
-                              ? (puntataNum ?? 0) * (quotaPuntaNum ?? 0) - (puntataNum ?? 0)
-                              : puntataEffettiva * (quotaPuntaNum ?? 0) - puntataEffettiva,
+                            tipologia === 'NORMALE' && bonusNum > 0
+                              ? ((puntataNum ?? 0) + bonusNum) * (quotaPuntaNum ?? 0) -
+                                  (puntataNum ?? 0)
+                              : (puntataNum ?? 0) * ((quotaPuntaNum ?? 0) - 1),
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium text-destructive">
@@ -605,7 +659,9 @@ export function OddsmatcherCalculatorModal({
                           {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'} €
                         </td>
                         <td className="px-4 py-2.5 text-right text-muted-foreground">
-                          {rating != null ? `${formatNum(rating)}%` : '—'}
+                          {ratingSeVinciPuntata != null
+                            ? `${formatNum(ratingSeVinciPuntata)}%`
+                            : '—'}
                         </td>
                       </tr>
                       <tr className="bg-destructive/5">
@@ -613,13 +669,13 @@ export function OddsmatcherCalculatorModal({
                           se vinci la bancata su {exchangeName}
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                          {formatSigned(
-                            tipologia === 'RIMBORSO (CR%)' ? -(puntataNum ?? 0) : -puntataEffettiva,
-                          )}
+                          {formatSigned(-(puntataNum ?? 0))}
                         </td>
                         <td className="px-4 py-2.5 text-right font-medium text-primary">
-                          {effectiveExchangeProfit != null
-                            ? formatSigned(effectiveExchangeProfit)
+                          {(effectiveExchangeProfitRounded ?? effectiveExchangeProfit) != null
+                            ? formatSigned(
+                                effectiveExchangeProfitRounded ?? effectiveExchangeProfit ?? 0,
+                              )
                             : '—'}
                         </td>
                         {tipologia === 'RIMBORSO (CR%)' && (
@@ -630,7 +686,11 @@ export function OddsmatcherCalculatorModal({
                         <td className="px-4 py-2.5 text-right font-semibold">
                           {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'} €
                         </td>
-                        <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
+                        <td className="px-4 py-2.5 text-right text-muted-foreground">
+                          {ratingSeVinciBancata != null
+                            ? `${formatNum(ratingSeVinciBancata)}%`
+                            : '—'}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -645,8 +705,7 @@ export function OddsmatcherCalculatorModal({
                 className="w-full"
                 onClick={handleOpenHolderModal}
                 disabled={
-                  puntataNum == null ||
-                  puntataNum <= 0 ||
+                  puntataEffettiva <= 0 ||
                   quotaPuntaNum == null ||
                   quotaBancaNum == null ||
                   layStakeValue == null

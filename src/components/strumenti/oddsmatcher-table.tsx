@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useOddsmatcher } from '@/hooks/use-oddsmatcher'
 import type { OddsmatcherRow } from '@/types/oddsmatcher'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ODDSMATCHER_BOOKS_ONLY, ODDSMATCHER_EXCHANGES_ONLY } from '@/lib/oddsmatcher-books'
@@ -35,6 +36,17 @@ import { OddsmatcherCalculatorModal } from '@/components/strumenti/oddsmatcher-c
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
+
+/** 0 = Calcio, 1 = Tennis, 2 = Basket */
+const SPORT_LABELS: Record<string, { label: string; icon: string }> = {
+  '0': { label: 'Calcio', icon: '⚽' },
+  '1': { label: 'Tennis', icon: '🎾' },
+  '2': { label: 'Basket', icon: '🏀' },
+}
+
+function getSportDisplay(sportId: string) {
+  return SPORT_LABELS[sportId] ?? { label: `Sport ${sportId}`, icon: '' }
+}
 
 function formatDate(date: string, hour: string): string {
   const [y, m, d] = date.split('-')
@@ -91,7 +103,9 @@ export function OddsmatcherTable() {
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
-  const [selectedExchangeIds, setSelectedExchangeIds] = useState<string[]>([])
+  const [selectedExchangeIds, setSelectedExchangeIds] = useState<string[]>(() =>
+    ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id),
+  )
   const [selectedSportIds, setSelectedSportIds] = useState<string[]>([])
   const [selectedMarkets, setSelectedMarkets] = useState<string[]>([])
   const [minLiquidity, setMinLiquidity] = useState('')
@@ -106,8 +120,11 @@ export function OddsmatcherTable() {
   const [multiplaQuotaMinTotale, setMultiplaQuotaMinTotale] = useState('1.00')
   const [multiplaDataInizio, setMultiplaDataInizio] = useState('')
   const [multiplaDataFine, setMultiplaDataFine] = useState('')
+  const startDateInputRef = useRef<HTMLInputElement>(null)
+  const endDateInputRef = useRef<HTMLInputElement>(null)
+  const multiplaDataInizioRef = useRef<HTMLInputElement>(null)
+  const multiplaDataFineRef = useRef<HTMLInputElement>(null)
   const [multiplaSelectedEvents, setMultiplaSelectedEvents] = useState<OddsmatcherRow[]>([])
-
   const apiParams = {
     id_book: selectedBookIds.length > 0 ? selectedBookIds : undefined,
     id_exchange: selectedExchangeIds.length > 0 ? selectedExchangeIds : undefined,
@@ -134,7 +151,7 @@ export function OddsmatcherTable() {
   const resetFilters = () => {
     setSearchQuery('')
     setSelectedBookIds([])
-    setSelectedExchangeIds([])
+    setSelectedExchangeIds(ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id))
     setSelectedSportIds([])
     setSelectedMarkets([])
     setMinLiquidity('')
@@ -186,14 +203,24 @@ export function OddsmatcherTable() {
     )
   }
 
+  const bookButtonLabel =
+    selectedBookIds.length === 0
+      ? 'Book'
+      : selectedBookIds.length === 1
+        ? (ODDSMATCHER_BOOKS_ONLY.find((b) => b.id === selectedBookIds[0])?.name ?? 'Book')
+        : `${selectedBookIds.length} book`
+
+  const exchangeButtonLabel =
+    selectedExchangeIds.length === 0
+      ? 'Exchange'
+      : selectedExchangeIds.length === 1
+        ? (ODDSMATCHER_EXCHANGES_ONLY.find((e) => e.id === selectedExchangeIds[0])?.name ??
+          'Exchange')
+        : `${selectedExchangeIds.length} exchange`
+
   const filtersBarSlim = (
-    <Card variant="elevated" className="overflow-hidden">
-      <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Ricerca e fonti
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 pb-4 pt-0">
+    <Card className="overflow-hidden border-border bg-muted/30">
+      <CardContent className="space-y-3 pb-4 pt-4">
         <div className="flex min-w-0 flex-wrap items-center gap-4">
           <div className="relative min-w-[200px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -206,45 +233,19 @@ export function OddsmatcherTable() {
               aria-label="Cerca per nome evento o torneo"
             />
           </div>
+          <SearchableMultiSelect
+            options={ODDSMATCHER_BOOKS_ONLY}
+            selectedIds={selectedBookIds}
+            onToggle={toggleBook}
+            buttonLabel={bookButtonLabel}
+            searchPlaceholder="Cerca book..."
+            searchInputAriaLabel="Filtra book"
+            emptyMessage="Nessun book trovato"
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="min-w-[140px] justify-between">
-                {selectedBookIds.length === 0
-                  ? 'Book'
-                  : selectedBookIds.length === 1
-                    ? (ODDSMATCHER_BOOKS_ONLY.find((b) => b.id === selectedBookIds[0])?.name ??
-                      'Book')
-                    : `${selectedBookIds.length} book`}
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[280px] overflow-y-auto">
-              {ODDSMATCHER_BOOKS_ONLY.map((book) => (
-                <DropdownMenuItem
-                  key={book.id}
-                  onSelect={(e) => e.preventDefault()}
-                  className="cursor-pointer"
-                >
-                  <label className="flex w-full cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={selectedBookIds.includes(book.id)}
-                      onChange={() => toggleBook(book.id)}
-                    />
-                    <span>{book.name}</span>
-                  </label>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-[140px] justify-between">
-                {selectedExchangeIds.length === 0
-                  ? 'Exchange'
-                  : selectedExchangeIds.length === 1
-                    ? (ODDSMATCHER_EXCHANGES_ONLY.find((e) => e.id === selectedExchangeIds[0])
-                        ?.name ?? 'Exchange')
-                    : `${selectedExchangeIds.length} exchange`}
+                {exchangeButtonLabel}
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -326,7 +327,7 @@ export function OddsmatcherTable() {
     )
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !isRefetching) {
     return (
       <div className="space-y-4">
         {filtersBarSlim}
@@ -389,6 +390,10 @@ export function OddsmatcherTable() {
   if (endDate.trim() !== '') {
     filteredRows = filteredRows.filter((row) => row.date <= endDate)
   }
+  const exchangeSet = new Set(selectedExchangeIds)
+  filteredRows = filteredRows.filter(
+    (row) => exchangeSet.has(row.id_book_1) || exchangeSet.has(row.id_book_2),
+  )
 
   const sortedRows = [...filteredRows].sort(
     (a, b) => ratingValue(b.back_odd, b.lay_odd) - ratingValue(a.back_odd, a.lay_odd),
@@ -400,71 +405,95 @@ export function OddsmatcherTable() {
         <SlidersHorizontal className="h-3.5 w-3.5" />
         Filtri avanzati
       </p>
-      <div className="flex min-w-0 flex-wrap items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[100px] justify-between">
-              {selectedSportIds.length === 0
-                ? 'Sport'
-                : selectedSportIds.length === 1
-                  ? selectedSportIds[0]
-                  : `${selectedSportIds.length} sport`}
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-            {sports.map((s) => (
-              <DropdownMenuItem
-                key={s}
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer"
-              >
-                <label className="flex w-full cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selectedSportIds.includes(s)}
-                    onChange={() => toggleSport(s)}
-                  />
-                  <span>Sport {s}</span>
-                </label>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[100px] justify-between">
-              {selectedMarkets.length === 0
-                ? 'Mercati'
-                : selectedMarkets.length === 1
-                  ? selectedMarkets[0]
-                  : `${selectedMarkets.length} mercati`}
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-            {markets.map((m) => (
-              <DropdownMenuItem
-                key={m}
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer"
-              >
-                <label className="flex w-full cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selectedMarkets.includes(m)}
-                    onChange={() => toggleMarket(m)}
-                  />
-                  <span>{m}</span>
-                </label>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="flex items-center gap-2">
+      <div className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+        {/* Riga 1: Sport | Quota min | Da | Liq. min — allineati orizzontalmente */}
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">Sport</Label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-9 w-full min-w-0 justify-between">
+                {selectedSportIds.length === 0
+                  ? 'Sport'
+                  : selectedSportIds.length === 1
+                    ? (() => {
+                        const { icon, label } = getSportDisplay(selectedSportIds[0])
+                        return icon ? `${icon} ${label}` : selectedSportIds[0]
+                      })()
+                    : `${selectedSportIds.length} sport`}
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
+              {sports.map((s) => {
+                const { icon, label } = getSportDisplay(s)
+                return (
+                  <DropdownMenuItem
+                    key={s}
+                    onSelect={(e) => e.preventDefault()}
+                    className="cursor-pointer"
+                  >
+                    <label className="flex w-full cursor-pointer items-center gap-2">
+                      <Checkbox
+                        checked={selectedSportIds.includes(s)}
+                        onChange={() => toggleSport(s)}
+                      />
+                      {icon && (
+                        <span className="text-base" aria-hidden>
+                          {icon}
+                        </span>
+                      )}
+                      <span>{label}</span>
+                    </label>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor="oddsmatcher-quota-min" className="text-xs text-muted-foreground">
+            Quota min
+          </Label>
+          <Input
+            id="oddsmatcher-quota-min"
+            type="number"
+            placeholder="min"
+            value={minOdds}
+            onChange={(e) => setMinOdds(e.target.value)}
+            className="h-9 w-full min-w-0"
+            min={1}
+            step={0.01}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor="oddsmatcher-date-from" className="text-xs text-muted-foreground">
+            Data evento da
+          </Label>
+          <div className="relative">
+            <Input
+              ref={startDateInputRef}
+              id="oddsmatcher-date-from"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-9 w-full min-w-0 pr-9"
+            />
+            <button
+              type="button"
+              onClick={() => startDateInputRef.current?.showPicker?.()}
+              className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              aria-label="Apri selettore data"
+            >
+              <Calendar className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label
             htmlFor="oddsmatcher-liq-min"
-            className="flex items-center gap-1.5 text-muted-foreground"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
           >
-            <Euro className="h-3.5 w-3.5" />
+            <Euro className="h-3.5 w-3.5 shrink-0" />
             Liq. min
           </Label>
           <Input
@@ -473,18 +502,89 @@ export function OddsmatcherTable() {
             placeholder="€"
             value={minLiquidity}
             onChange={(e) => setMinLiquidity(e.target.value)}
-            className="w-20"
+            className="h-9 w-full min-w-0"
             min={0}
             step={1}
           />
         </div>
-        <div className="flex items-center gap-2">
+        {/* Riga 2: Mercati | Quota max | A | Rating min — allineati orizzontalmente */}
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground">Mercati</Label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-9 w-full min-w-0 justify-between">
+                {selectedMarkets.length === 0
+                  ? 'Mercati'
+                  : selectedMarkets.length === 1
+                    ? selectedMarkets[0]
+                    : `${selectedMarkets.length} mercati`}
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
+              {markets.map((m) => (
+                <DropdownMenuItem
+                  key={m}
+                  onSelect={(e) => e.preventDefault()}
+                  className="cursor-pointer"
+                >
+                  <label className="flex w-full cursor-pointer items-center gap-2">
+                    <Checkbox
+                      checked={selectedMarkets.includes(m)}
+                      onChange={() => toggleMarket(m)}
+                    />
+                    <span>{m}</span>
+                  </label>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor="oddsmatcher-quota-max" className="text-xs text-muted-foreground">
+            Quota max
+          </Label>
+          <Input
+            id="oddsmatcher-quota-max"
+            type="number"
+            placeholder="max"
+            value={maxOdds}
+            onChange={(e) => setMaxOdds(e.target.value)}
+            className="h-9 w-full min-w-0"
+            min={1}
+            step={0.01}
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor="oddsmatcher-date-to" className="text-xs text-muted-foreground">
+            Data evento a
+          </Label>
+          <div className="relative">
+            <Input
+              ref={endDateInputRef}
+              id="oddsmatcher-date-to"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-9 w-full min-w-0 pr-9"
+            />
+            <button
+              type="button"
+              onClick={() => endDateInputRef.current?.showPicker?.()}
+              className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              aria-label="Apri selettore data"
+            >
+              <Calendar className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label
             htmlFor="oddsmatcher-rating-min"
-            className="flex items-center gap-1.5 text-muted-foreground"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
           >
-            <Percent className="h-3.5 w-3.5" />
-            Rating min %
+            <Percent className="h-3.5 w-3.5 shrink-0" />
+            Rating min
           </Label>
           <Input
             id="oddsmatcher-rating-min"
@@ -492,74 +592,10 @@ export function OddsmatcherTable() {
             placeholder="%"
             value={minRating}
             onChange={(e) => setMinRating(e.target.value)}
-            className="w-16"
+            className="h-9 w-full min-w-0"
             min={0}
             max={100}
             step={0.1}
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label
-              htmlFor="oddsmatcher-quota-min"
-              className="whitespace-nowrap text-muted-foreground"
-            >
-              Quota min
-            </Label>
-            <Input
-              id="oddsmatcher-quota-min"
-              type="number"
-              placeholder="min"
-              value={minOdds}
-              onChange={(e) => setMinOdds(e.target.value)}
-              className="w-16"
-              min={1}
-              step={0.01}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Label
-              htmlFor="oddsmatcher-quota-max"
-              className="whitespace-nowrap text-muted-foreground"
-            >
-              Quota max
-            </Label>
-            <Input
-              id="oddsmatcher-quota-max"
-              type="number"
-              placeholder="max"
-              value={maxOdds}
-              onChange={(e) => setMaxOdds(e.target.value)}
-              className="w-16"
-              min={1}
-              step={0.01}
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Label
-            htmlFor="oddsmatcher-date-from"
-            className="flex items-center gap-1.5 text-muted-foreground"
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            Da
-          </Label>
-          <Input
-            id="oddsmatcher-date-from"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-36"
-          />
-          <Label htmlFor="oddsmatcher-date-to" className="whitespace-nowrap text-muted-foreground">
-            A
-          </Label>
-          <Input
-            id="oddsmatcher-date-to"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-36"
           />
         </div>
       </div>
@@ -569,8 +605,8 @@ export function OddsmatcherTable() {
   const multiplaSection = (
     <div className="space-y-3">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Multipla</p>
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="multipla-n-eventi" className="text-xs text-muted-foreground">
             N. Eventi
           </Label>
@@ -578,7 +614,7 @@ export function OddsmatcherTable() {
             id="multipla-n-eventi"
             value={multiplaNumEventi}
             onChange={(e) => setMultiplaNumEventi(Number(e.target.value))}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
           >
             {[2, 3, 4, 5, 6, 7, 8].map((n) => (
               <option key={n} value={n}>
@@ -587,7 +623,7 @@ export function OddsmatcherTable() {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="multipla-quota-min-evento" className="text-xs text-muted-foreground">
             Quota min evento
           </Label>
@@ -597,12 +633,12 @@ export function OddsmatcherTable() {
             placeholder="—"
             value={multiplaQuotaMinEvento}
             onChange={(e) => setMultiplaQuotaMinEvento(e.target.value)}
-            className="w-24"
+            className="w-full min-w-0"
             min={1}
             step={0.01}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="multipla-quota-min-totale" className="text-xs text-muted-foreground">
             Quota min totale
           </Label>
@@ -611,34 +647,56 @@ export function OddsmatcherTable() {
             type="number"
             value={multiplaQuotaMinTotale}
             onChange={(e) => setMultiplaQuotaMinTotale(e.target.value)}
-            className="w-24"
+            className="w-full min-w-0"
             min={1}
             step={0.01}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="multipla-data-inizio" className="text-xs text-muted-foreground">
             Data inizio
           </Label>
-          <Input
-            id="multipla-data-inizio"
-            type="date"
-            value={multiplaDataInizio}
-            onChange={(e) => setMultiplaDataInizio(e.target.value)}
-            className="w-36"
-          />
+          <div className="relative">
+            <Input
+              ref={multiplaDataInizioRef}
+              id="multipla-data-inizio"
+              type="date"
+              value={multiplaDataInizio}
+              onChange={(e) => setMultiplaDataInizio(e.target.value)}
+              className="w-full min-w-0 pr-9"
+            />
+            <button
+              type="button"
+              onClick={() => multiplaDataInizioRef.current?.showPicker?.()}
+              className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              aria-label="Apri selettore data"
+            >
+              <Calendar className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="multipla-data-fine" className="text-xs text-muted-foreground">
             Data fine
           </Label>
-          <Input
-            id="multipla-data-fine"
-            type="date"
-            value={multiplaDataFine}
-            onChange={(e) => setMultiplaDataFine(e.target.value)}
-            className="w-36"
-          />
+          <div className="relative">
+            <Input
+              ref={multiplaDataFineRef}
+              id="multipla-data-fine"
+              type="date"
+              value={multiplaDataFine}
+              onChange={(e) => setMultiplaDataFine(e.target.value)}
+              className="w-full min-w-0 pr-9"
+            />
+            <button
+              type="button"
+              onClick={() => multiplaDataFineRef.current?.showPicker?.()}
+              className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+              aria-label="Apri selettore data"
+            >
+              <Calendar className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -728,6 +786,12 @@ export function OddsmatcherTable() {
     return (
       <div className="space-y-4">
         {mainCard}
+        {filtersBarSlim}
+        {selectedBookIds.length !== 1 && (
+          <div className="rounded-md border border-border bg-muted/30 p-6 text-center text-muted-foreground">
+            Seleziona un solo book dalla tendina per compilare la multipla.
+          </div>
+        )}
         <div className="rounded-md border border-border bg-card p-8 text-center text-muted-foreground">
           Nessun risultato
           {searchQuery.trim() && ` per "${searchQuery.trim()}"`}. Prova a modificare ricerca o
@@ -750,7 +814,8 @@ export function OddsmatcherTable() {
   const oneBookId = selectedBookIds.length === 1 ? selectedBookIds[0] : null
   let multiplaAvailableRows: OddsmatcherRow[] = []
   if (oneBookId) {
-    multiplaAvailableRows = rows.filter((r) => r.id_book_1 === oneBookId)
+    // Partire dai dati già filtrati (sortedRows) così i filtri avanzati restano applicati
+    multiplaAvailableRows = sortedRows.filter((r) => r.id_book_1 === oneBookId)
     if (multiplaSelectedEvents.length > 0) {
       const last = multiplaSelectedEvents[multiplaSelectedEvents.length - 1]
       multiplaAvailableRows = multiplaAvailableRows.filter((row) =>
@@ -809,20 +874,23 @@ export function OddsmatcherTable() {
         </div>
       )}
       <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[900px] text-sm">
+        <table className="w-full min-w-[900px] text-sm [&_tbody_td]:border-b [&_tbody_td]:border-border [&_td:not(:last-child)]:relative [&_td:not(:last-child)]:after:absolute [&_td:not(:last-child)]:after:bottom-2 [&_td:not(:last-child)]:after:right-0 [&_td:not(:last-child)]:after:top-2 [&_td:not(:last-child)]:after:w-px [&_td:not(:last-child)]:after:bg-border/60 [&_td:not(:last-child)]:after:content-[''] [&_th:not(:last-child)]:relative [&_th:not(:last-child)]:after:absolute [&_th:not(:last-child)]:after:bottom-2 [&_th:not(:last-child)]:after:right-0 [&_th:not(:last-child)]:after:top-2 [&_th:not(:last-child)]:after:w-px [&_th:not(:last-child)]:after:bg-border/60 [&_th:not(:last-child)]:after:content-['']">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-muted-foreground">
               <th className="w-10 p-3 text-center font-medium" aria-label="Seleziona" />
               <th className="whitespace-nowrap p-3 text-left font-medium">Data</th>
+              <th className="w-12 p-3 text-center font-medium" aria-label="Sport">
+                Sport
+              </th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Evento</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Torneo</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Mercato</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Esito</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Book</th>
-              <th className="whitespace-nowrap p-3 text-right font-medium">Punta</th>
-              <th className="whitespace-nowrap p-3 text-right font-medium">Banca</th>
+              <th className="whitespace-nowrap p-3 text-center font-medium">Punta</th>
+              <th className="whitespace-nowrap p-3 text-center font-medium">Banca</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Exchange</th>
-              <th className="whitespace-nowrap p-3 text-right font-medium">LiquiditÃ </th>
+              <th className="whitespace-nowrap p-3 text-right font-medium">Liquidità</th>
               <th className="whitespace-nowrap p-3 text-right font-medium">Rating</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Aggiornamento</th>
               <th className="whitespace-nowrap p-3 text-center font-medium">Calcolatore</th>
@@ -841,7 +909,7 @@ export function OddsmatcherTable() {
                 <tr
                   key={key}
                   className={cn(
-                    'cursor-pointer border-b border-border',
+                    'cursor-pointer',
                     index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
                   )}
                   onDoubleClick={() => setCalculatorRow(row)}
@@ -857,13 +925,25 @@ export function OddsmatcherTable() {
                   <td className="whitespace-nowrap p-3 text-muted-foreground">
                     {formatDate(row.date, row.hour)}
                   </td>
+                  <td className="p-3 text-center" title={getSportDisplay(row.sport).label}>
+                    {(() => {
+                      const { icon } = getSportDisplay(row.sport)
+                      return icon ? (
+                        <span className="text-lg leading-none" aria-hidden>
+                          {icon}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{row.sport}</span>
+                      )
+                    })()}
+                  </td>
                   <td className="p-3 font-medium">
                     {row.home} – {row.away}
                   </td>
                   <td className="p-3 text-muted-foreground">{row.competition}</td>
                   <td className="p-3">{row.market}</td>
                   <td className="p-3">{row.selection}</td>
-                  <td className="p-3">
+                  <td className="p-3 after:hidden">
                     <Image
                       src={`/loghi_book/${row.id_book_1}.png`}
                       alt={`Book ${row.id_book_1}`}
@@ -873,15 +953,11 @@ export function OddsmatcherTable() {
                       loading="lazy"
                     />
                   </td>
-                  <td className="p-3 text-right">
-                    <span className="inline-block rounded bg-primary/20 px-2 py-1 font-medium text-primary">
-                      {row.back_odd}
-                    </span>
+                  <td className="border-b-0 bg-primary/20 p-3 text-center font-medium text-primary after:hidden">
+                    {row.back_odd}
                   </td>
-                  <td className="p-3 text-right">
-                    <span className="inline-block rounded bg-destructive/20 px-2 py-1 font-medium text-destructive">
-                      {row.lay_odd}
-                    </span>
+                  <td className="border-b-0 bg-destructive/20 p-3 text-center font-medium text-destructive">
+                    {row.lay_odd}
                   </td>
                   <td className="p-3">
                     <Image

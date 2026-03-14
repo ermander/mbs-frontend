@@ -17,8 +17,8 @@ export function equivalentBackOdds(layOdds: number, commissionPercent: number): 
 
 /**
  * Lay stake (bancata) for equal profit regardless of outcome.
- * Equal profit when: backStake*(backOdds-1) - liability = layStake*(1-commission/100) - backStake.
- * => layStake = (Back odds × Back stake) / (Lay odds - commission/100)
+ * Formula: layStake = (Back odds × Back stake) / (Lay odds - commission/100)
+ * Con commission in percentuale (es. 3 per 3%). Stesso risultato se back vince o se lay vince.
  */
 export function layStake(
   backStake: number,
@@ -81,6 +81,29 @@ export function minGain(
     return null
   const gain = backStake * (backOdds - 1) - liabilityAmount
   return Number.isFinite(gain) ? gain : null
+}
+
+/**
+ * Lay stake con bonus free bet (stake non restituito).
+ * Profitto se vince puntata: (realStake*backOdds + bonus*(backOdds-1)) - realStake - liability.
+ * Profitto se vince bancata: layStake*(1-commission) - realStake.
+ * Uguagliando: layStake = (realStake*backOdds + bonus*(backOdds-1)) / (layOdds - commission/100).
+ */
+export function layStakeFreeBet(
+  realStake: number,
+  bonus: number,
+  backOdds: number,
+  layOdds: number,
+  commissionPercent: number,
+): number | null {
+  if (realStake < 0 || bonus < 0 || backOdds <= 0 || layOdds <= 0) return null
+  if (realStake === 0 && bonus === 0) return null
+  const denom = layOdds - commissionPercent / 100
+  if (denom <= 0) return null
+  const numerator = realStake * backOdds + bonus * (backOdds - 1)
+  if (numerator <= 0) return null
+  const stake = numerator / denom
+  return Number.isFinite(stake) ? stake : null
 }
 
 /**

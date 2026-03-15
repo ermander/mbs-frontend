@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { notFound, useParams, useRouter } from 'next/navigation'
 
+import { Ban } from 'lucide-react'
+
 import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { updateBet } from '@/services/api/profit-tracker-client'
@@ -70,7 +72,14 @@ export default function ArchivedBetDetailPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
-  const legs = useMemo(() => allLegs.filter((l) => l.betId === betId), [allLegs, betId])
+  const legs = useMemo(() => {
+    const filtered = allLegs.filter((l) => l.betId === betId)
+    return filtered.sort((a, b) => {
+      if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
+      if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
+      return new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+    })
+  }, [allLegs, betId])
   const loading = betId !== '' && !bet && !loadError
 
   const resolveAccountLabel = useCallback(
@@ -185,7 +194,8 @@ export default function ArchivedBetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Quota</th>
+              <th className="px-3 py-2 text-left">Q. Punta</th>
+              <th className="px-3 py-2 text-left">Q. Banca</th>
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -206,17 +216,34 @@ export default function ArchivedBetDetailPage() {
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
                 <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
-                  {TIPO_BONUS_LABEL[leg.tipoBonus]}
+                  {leg.metodo === 'punta' ? (
+                    TIPO_BONUS_LABEL[leg.tipoBonus]
+                  ) : (
+                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                  )}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {resolveAccountLabel(leg.accountId)}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.stake.toFixed(2)}</td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.quota.toFixed(2)}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
-                  {leg.commissionePercentuale != null
-                    ? `${leg.commissionePercentuale.toFixed(1)}%`
-                    : '—'}
+                  {leg.metodo === 'punta'
+                    ? leg.quota.toFixed(2)
+                    : leg.quotaRiferimento != null && leg.quotaRiferimento !== 0
+                      ? leg.quotaRiferimento.toFixed(2)
+                      : '—'}
+                </td>
+                <td className="px-3 py-2 text-xs text-foreground">
+                  {leg.metodo === 'punta' ? '—' : leg.quota.toFixed(2)}
+                </td>
+                <td className="px-3 py-2 text-xs text-foreground">
+                  {leg.metodo === 'punta' ? (
+                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                  ) : leg.commissionePercentuale != null ? (
+                    `${leg.commissionePercentuale.toFixed(1)}%`
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.rischio.toFixed(2)} €</td>
                 <td className="px-3 py-2 text-xs text-foreground">

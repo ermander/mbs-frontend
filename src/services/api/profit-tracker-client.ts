@@ -277,6 +277,7 @@ export interface CreateBetLegPayload {
   accountId: string
   stake: number
   quota: number
+  quotaRiferimento?: number
   rischio?: number
   bonusValore?: number
   rimborsoValore?: number
@@ -329,8 +330,10 @@ export async function updateBetLeg(
   payload: Partial<
     Pick<
       BetLeg,
+      | 'eventoNome'
       | 'stake'
       | 'quota'
+      | 'quotaRiferimento'
       | 'commissionePercentuale'
       | 'statoEvento'
       | 'tag'
@@ -339,6 +342,7 @@ export async function updateBetLeg(
       | 'bonusValore'
       | 'rimborsoValore'
       | 'accountId'
+      | 'rischio'
     >
   >,
 ): Promise<BetLeg> {

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { notFound, useParams, useRouter } from 'next/navigation'
-import { Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
+import { Ban, Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { BetLeg } from '@/types/profit-tracker'
 import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
@@ -44,7 +45,13 @@ function statoEventoClasses(stato: BetLeg['statoEvento']): string {
   }
 }
 
-type EditableField = 'stake' | 'quota' | 'commissionePercentuale' | 'bonusValore' | 'rimborsoValore'
+type EditableField =
+  | 'stake'
+  | 'quota'
+  | 'quotaRiferimento'
+  | 'commissionePercentuale'
+  | 'bonusValore'
+  | 'rimborsoValore'
 
 export default function BetDetailPage() {
   const params = useParams<{ betId: string }>()
@@ -65,6 +72,10 @@ export default function BetDetailPage() {
     null,
   )
   const [draftValue, setDraftValue] = useState<number>(0)
+  const [editingTextCell, setEditingTextCell] = useState<{ legId: string; field: string } | null>(
+    null,
+  )
+  const [draftTextValue, setDraftTextValue] = useState('')
 
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
@@ -80,7 +91,14 @@ export default function BetDetailPage() {
   const removeOngoingBet = useProfitTrackerStore((s) => s.removeOngoingBet)
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
-  const legs = useMemo(() => allLegs.filter((l) => l.betId === betId), [allLegs, betId])
+  const legs = useMemo(() => {
+    const filtered = allLegs.filter((l) => l.betId === betId)
+    return filtered.sort((a, b) => {
+      if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
+      if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
+      return new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+    })
+  }, [allLegs, betId])
 
   const resolveAccountLabel = useCallback(
     (accountId: string) => {
@@ -182,6 +200,7 @@ export default function BetDetailPage() {
       accountId: leg.accountId,
       stake: leg.stake,
       quota: leg.quota,
+      quotaRiferimento: leg.quotaRiferimento,
       rischio: leg.rischio,
       bonusValore: leg.bonusValore,
       rimborsoValore: leg.rimborsoValore,
@@ -230,10 +249,85 @@ export default function BetDetailPage() {
           : 0
         : draftValue
     try {
-      await updateBetLeg(betId, leg.id, {
-        [editingCell.field]: value,
-      })
+      const patch: Record<string, unknown> = { [editingCell.field]: value }
+      if (editingCell.field === 'stake' && leg.metodo === 'punta') {
+        patch.rischio = value
+      }
+      await updateBetLeg(betId, leg.id, patch as Parameters<typeof updateBetLeg>[2])
       setEditingCell(null)
+
+      const puntaLeg = legs.find((l) => l.metodo === 'punta')
+      const bancaLegs = legs
+        .filter((l) => l.metodo === 'banca')
+        .sort((a, b) => new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime())
+      const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
+
+      if (isMultipla) {
+        const field = editingCell.field
+        const editedIsBanca = leg.metodo === 'banca'
+        const needsRecalc =
+          (field === 'quotaRiferimento' && editedIsBanca) ||
+          (field === 'quota' && editedIsBanca) ||
+          (field === 'commissionePercentuale' && editedIsBanca)
+        const puntaQuotaChanged = field === 'quota' && !editedIsBanca
+
+        if (needsRecalc) {
+          const updatedBancaLegs = bancaLegs.map((l) => {
+            if (l.id !== leg.id) return l
+            return { ...l, [field]: value }
+          })
+
+          if (field === 'quotaRiferimento') {
+            const newTotalOdds =
+              Math.round(
+                updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
+              ) / 100
+            await updateBetLeg(betId, puntaLeg.id, { quota: newTotalOdds })
+          }
+
+          const totalBackOdds =
+            field === 'quotaRiferimento'
+              ? Math.round(
+                  updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
+                ) / 100
+              : puntaLeg.quota
+
+          const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
+
+          const eventsForCalc = updatedBancaLegs.map((l) => ({
+            layOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? 3,
+          }))
+
+          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
+
+          for (let i = 0; i < updatedBancaLegs.length; i++) {
+            const bl = updatedBancaLegs[i]!
+            const r = results[i]!
+            await updateBetLeg(betId, bl.id, {
+              stake: r.layStake,
+              rischio: r.liability,
+            })
+          }
+        } else if (puntaQuotaChanged) {
+          const totalBackOdds = value as number
+          const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
+          const eventsForCalc = bancaLegs.map((l) => ({
+            layOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? 3,
+          }))
+          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
+          for (let i = 0; i < bancaLegs.length; i++) {
+            const bl = bancaLegs[i]!
+            const r = results[i]!
+            await updateBetLeg(betId, bl.id, {
+              stake: r.layStake,
+              rischio: r.liability,
+            })
+          }
+        }
+      }
+
       await fetchBetWithLegs(betId)
     } catch (err) {
       window.alert(getErrorMessage(err) ?? 'Errore nel salvataggio.')
@@ -270,9 +364,9 @@ export default function BetDetailPage() {
   }
 
   const isLegEditable = (leg: BetLeg) => leg.statoEvento === 'bozza'
-  const totalRischio =
-    legs.filter((l) => l.metodo === 'punta').reduce((s, l) => s + l.stake, 0) +
-    legs.filter((l) => l.metodo === 'banca').reduce((s, l) => s + l.rischio, 0)
+  const totalRischio = legs
+    .filter((l) => l.metodo === 'banca')
+    .reduce((s, l) => s + (l.rischio ?? 0), 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const hasPuntaAndBanca =
     legs.some((l) => l.metodo === 'punta') && legs.some((l) => l.metodo === 'banca')
@@ -314,7 +408,7 @@ export default function BetDetailPage() {
       const step =
         field === 'commissionePercentuale'
           ? 0.1
-          : field === 'quota'
+          : field === 'quota' || field === 'quotaRiferimento'
             ? 0.01
             : field === 'bonusValore' || field === 'rimborsoValore'
               ? 0.01
@@ -370,6 +464,78 @@ export default function BetDetailPage() {
         onClick={() => handleStartEdit(leg.id, field, displayValue)}
       >
         {format(displayValue)}
+      </button>
+    )
+  }
+
+  const handleStartTextEdit = (legId: string, field: string, currentValue: string) => {
+    setEditingTextCell({ legId, field })
+    setDraftTextValue(currentValue)
+  }
+
+  const handleConfirmTextEdit = async () => {
+    if (!editingTextCell) return
+    const leg = legs.find((l) => l.id === editingTextCell.legId)
+    if (!leg) {
+      setEditingTextCell(null)
+      return
+    }
+    try {
+      await updateBetLeg(betId, leg.id, {
+        [editingTextCell.field]: draftTextValue,
+      } as Parameters<typeof updateBetLeg>[2])
+      setEditingTextCell(null)
+      await fetchBetWithLegs(betId)
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Errore nel salvataggio.')
+    }
+  }
+
+  const renderEditableTextCell = (leg: BetLeg, field: string, displayValue: string) => {
+    const isEditing = editingTextCell?.legId === leg.id && editingTextCell?.field === field
+    if (!isLegEditable(leg)) {
+      return <span className="text-xs text-muted-foreground">{displayValue}</span>
+    }
+    if (isEditing) {
+      return (
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            className="w-40 rounded-md border border-border bg-background px-2 py-1 text-xs"
+            value={draftTextValue}
+            onChange={(e) => setDraftTextValue(e.target.value)}
+            autoFocus
+          />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setEditingTextCell(null)}
+              title="Annulla"
+              aria-label="Annulla"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+              onClick={handleConfirmTextEdit}
+              title="Conferma e salva"
+              aria-label="Conferma e salva"
+            >
+              <Check className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <button
+        type="button"
+        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        onClick={() => handleStartTextEdit(leg.id, field, displayValue)}
+      >
+        {displayValue}
       </button>
     )
   }
@@ -486,7 +652,8 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Quota</th>
+              <th className="px-3 py-2 text-left">Q. Punta</th>
+              <th className="px-3 py-2 text-left">Q. Banca</th>
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -508,25 +675,31 @@ export default function BetDetailPage() {
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {formatEventDate(leg.eventoData)}
                 </td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.eventoNome}</td>
+                <td className="px-3 py-2">
+                  {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
                 <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
                 <td className="px-3 py-2">
-                  <select
-                    value={leg.tipoBonus}
-                    onChange={(e) =>
-                      handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
-                    }
-                    disabled={leg.statoEvento !== 'bozza'}
-                    className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {TIPO_BONUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  {leg.metodo === 'punta' ? (
+                    <select
+                      value={leg.tipoBonus}
+                      onChange={(e) =>
+                        handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
+                      }
+                      disabled={leg.statoEvento !== 'bozza'}
+                      className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {TIPO_BONUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <div className="max-w-[260px]">
@@ -547,17 +720,38 @@ export default function BetDetailPage() {
                   {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                 </td>
                 <td className="px-3 py-2">
-                  {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))}
+                  {leg.metodo === 'punta'
+                    ? renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    : renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento ?? 0, (v) =>
+                        v == null || v === 0 ? '—' : Number(v).toFixed(2),
+                      )}
                 </td>
                 <td className="px-3 py-2">
-                  {renderEditableCell(
-                    leg,
-                    'commissionePercentuale',
-                    leg.commissionePercentuale ?? 0,
-                    (v) => `${v.toFixed(1)}%`,
+                  {leg.metodo === 'punta' ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : (
+                    renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.rischio.toFixed(2)} €</td>
+                <td className="px-3 py-2">
+                  {leg.metodo === 'punta' ? (
+                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                  ) : (
+                    renderEditableCell(
+                      leg,
+                      'commissionePercentuale',
+                      leg.commissionePercentuale ?? 0,
+                      (v) => `${v.toFixed(1)}%`,
+                    )
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-foreground">
+                  {(leg.metodo === 'punta' && (leg.rischio ?? 0) === 0
+                    ? leg.stake
+                    : (leg.rischio ?? 0)
+                  ).toFixed(2)}{' '}
+                  €
+                </td>
                 <td className="px-3 py-2">
                   {renderEditableCell(leg, 'bonusValore', leg.bonusValore ?? 0, (v) =>
                     v !== 0 ? `${v.toFixed(2)} €` : '—',

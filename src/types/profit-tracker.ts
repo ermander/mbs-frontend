@@ -88,6 +88,7 @@ export interface BetLeg {
   accountId: string
   stake: number
   quota: number
+  quotaRiferimento?: number
   rischio: number
   bonusValore?: number
   rimborsoValore?: number

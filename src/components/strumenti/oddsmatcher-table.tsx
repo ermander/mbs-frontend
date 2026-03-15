@@ -33,9 +33,11 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { OddsmatcherCalculatorModal } from '@/components/strumenti/oddsmatcher-calculator-modal'
+import { OddsmatcherMultiplaSaveModal } from '@/components/strumenti/oddsmatcher-multipla-save-modal'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
+const EXCHANGE_COMMISSION = 0.03
 
 /** 0 = Calcio, 1 = Tennis, 2 = Basket */
 const SPORT_LABELS: Record<string, { label: string; icon: string }> = {
@@ -63,7 +65,9 @@ function ratingValue(backOdd: string, layOdd: string): number {
   const back = parseFloat(backOdd)
   const lay = parseFloat(layOdd)
   if (Number.isNaN(back) || Number.isNaN(lay) || back <= 0 || lay <= 0) return 0
-  return (back / lay) * 100
+  const layEffective = lay - EXCHANGE_COMMISSION
+  if (layEffective <= 0) return 0
+  return ((back * (1 - EXCHANGE_COMMISSION)) / layEffective) * 100
 }
 
 function computeRating(backOdd: string, layOdd: string): string {
@@ -89,7 +93,9 @@ function ratingMultipla(selected: OddsmatcherRow[]): number | null {
     const back = parseFloat(row.back_odd)
     const lay = parseFloat(row.lay_odd)
     if (Number.isNaN(back) || Number.isNaN(lay) || lay <= 0) return null
-    product *= back / lay
+    const layEffective = lay - EXCHANGE_COMMISSION
+    if (layEffective <= 0) return null
+    product *= (back * (1 - EXCHANGE_COMMISSION)) / layEffective
   }
   return product * 100
 }
@@ -102,6 +108,8 @@ function formatDateShort(date: string, hour: string): string {
 export function OddsmatcherTable() {
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
+  const [sharedStake, setSharedStake] = useState('')
+  const [sharedBonus, setSharedBonus] = useState('')
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
   const [selectedExchangeIds, setSelectedExchangeIds] = useState<string[]>(() =>
     ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id),
@@ -125,6 +133,7 @@ export function OddsmatcherTable() {
   const multiplaDataInizioRef = useRef<HTMLInputElement>(null)
   const multiplaDataFineRef = useRef<HTMLInputElement>(null)
   const [multiplaSelectedEvents, setMultiplaSelectedEvents] = useState<OddsmatcherRow[]>([])
+  const [multiplaSaveModalOpen, setMultiplaSaveModalOpen] = useState(false)
   const apiParams = {
     id_book: selectedBookIds.length > 0 ? selectedBookIds : undefined,
     id_exchange: selectedExchangeIds.length > 0 ? selectedExchangeIds : undefined,
@@ -147,6 +156,10 @@ export function OddsmatcherTable() {
     startDate,
     endDate,
   ])
+
+  useEffect(() => {
+    if (selectedBookIds.length === 1) queueMicrotask(() => setPage(1))
+  }, [multiplaSelectedEvents, selectedBookIds.length])
 
   const resetFilters = () => {
     setSearchQuery('')
@@ -233,6 +246,44 @@ export function OddsmatcherTable() {
               aria-label="Cerca per nome evento o torneo"
             />
           </div>
+          <div className="flex items-center gap-2 border-l border-border pl-4">
+            <Label
+              htmlFor="oddsmatcher-shared-stake"
+              className="whitespace-nowrap text-sm text-muted-foreground"
+            >
+              Puntata €
+            </Label>
+            <Input
+              id="oddsmatcher-shared-stake"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              placeholder="0"
+              value={sharedStake}
+              onChange={(e) => setSharedStake(e.target.value)}
+              className="w-24"
+              aria-label="Stake condiviso per calcolatore e multipla"
+            />
+            <Label
+              htmlFor="oddsmatcher-shared-bonus"
+              className="whitespace-nowrap text-sm text-muted-foreground"
+            >
+              Bonus €
+            </Label>
+            <Input
+              id="oddsmatcher-shared-bonus"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              placeholder="0"
+              value={sharedBonus}
+              onChange={(e) => setSharedBonus(e.target.value)}
+              className="w-24"
+              aria-label="Bonus condiviso per calcolatore e multipla"
+            />
+          </div>
           <SearchableMultiSelect
             options={ODDSMATCHER_BOOKS_ONLY}
             selectedIds={selectedBookIds}
@@ -300,6 +351,8 @@ export function OddsmatcherTable() {
           open={calculatorRow != null}
           onOpenChange={(open) => !open && setCalculatorRow(null)}
           row={calculatorRow}
+          defaultPuntata={sharedStake}
+          defaultBonus={sharedBonus}
         />
       </div>
     )
@@ -322,6 +375,8 @@ export function OddsmatcherTable() {
           open={calculatorRow != null}
           onOpenChange={(open) => !open && setCalculatorRow(null)}
           row={calculatorRow}
+          defaultPuntata={sharedStake}
+          defaultBonus={sharedBonus}
         />
       </div>
     )
@@ -338,6 +393,8 @@ export function OddsmatcherTable() {
           open={calculatorRow != null}
           onOpenChange={(open) => !open && setCalculatorRow(null)}
           row={calculatorRow}
+          defaultPuntata={sharedStake}
+          defaultBonus={sharedBonus}
         />
       </div>
     )
@@ -746,10 +803,21 @@ export function OddsmatcherTable() {
         <Button variant="outline" size="sm" onClick={resetMultiplaFilters}>
           <RotateCcw className="h-3.5 w-3.5" /> RESET
         </Button>
-        <Button variant="outline" size="sm" onClick={eliminaMultipla}>
+        <Button variant="destructive" size="sm" onClick={eliminaMultipla}>
           <X className="h-3.5 w-3.5" /> ELIMINA
         </Button>
-        <Button variant="outline" size="sm" disabled aria-label="Salva (non implementato)">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white"
+          disabled={
+            multiplaSelectedEvents.length !== multiplaNumEventi ||
+            ((Number.parseFloat(sharedStake) || 0) <= 0 &&
+              (Number.parseFloat(sharedBonus) || 0) <= 0)
+          }
+          aria-label="Salva multipla"
+          onClick={() => setMultiplaSaveModalOpen(true)}
+        >
           SALVA
         </Button>
       </div>
@@ -777,6 +845,8 @@ export function OddsmatcherTable() {
           open={calculatorRow != null}
           onOpenChange={(open) => !open && setCalculatorRow(null)}
           row={calculatorRow}
+          defaultPuntata={sharedStake}
+          defaultBonus={sharedBonus}
         />
       </div>
     )
@@ -801,6 +871,8 @@ export function OddsmatcherTable() {
           open={calculatorRow != null}
           onOpenChange={(open) => !open && setCalculatorRow(null)}
           row={calculatorRow}
+          defaultPuntata={sharedStake}
+          defaultBonus={sharedBonus}
         />
       </div>
     )
@@ -841,13 +913,19 @@ export function OddsmatcherTable() {
       (a, b) => ratingValue(b.back_odd, b.lay_odd) - ratingValue(a.back_odd, a.lay_odd),
     )
   }
-  const multiplaTotalPages = Math.ceil(multiplaAvailableRows.length / PAGE_SIZE)
-  const multiplaPaginatedRows = multiplaAvailableRows.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
-  )
-  const multiplaStart = (page - 1) * PAGE_SIZE + 1
-  const multiplaEnd = Math.min(page * PAGE_SIZE, multiplaAvailableRows.length)
+  // Eventi selezionati ancorati in cima, in ordine cronologico
+  const anchoredRows =
+    oneBookId && multiplaSelectedEvents.length > 0
+      ? [...multiplaSelectedEvents].sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date)
+          return a.hour.localeCompare(b.hour)
+        })
+      : []
+  const fullMultiplaRows = oneBookId ? [...anchoredRows, ...multiplaAvailableRows] : []
+  const multiplaTotalPages = Math.ceil(fullMultiplaRows.length / PAGE_SIZE)
+  const multiplaPaginatedRows = fullMultiplaRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const multiplaStart = fullMultiplaRows.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const multiplaEnd = Math.min(page * PAGE_SIZE, fullMultiplaRows.length)
 
   const toggleMultiplaEvent = (row: OddsmatcherRow) => {
     const key = rowToKey(row)
@@ -859,7 +937,7 @@ export function OddsmatcherTable() {
   }
 
   const tableRows = oneBookId ? multiplaPaginatedRows : paginatedRows
-  const tableTotal = oneBookId ? multiplaAvailableRows.length : sortedRows.length
+  const tableTotal = oneBookId ? fullMultiplaRows.length : sortedRows.length
   const tablePages = oneBookId ? multiplaTotalPages : totalPages
   const tableStart = oneBookId ? multiplaStart : start
   const tableEnd = oneBookId ? multiplaEnd : end
@@ -1028,6 +1106,17 @@ export function OddsmatcherTable() {
         open={calculatorRow != null}
         onOpenChange={(open) => !open && setCalculatorRow(null)}
         row={calculatorRow}
+        defaultPuntata={sharedStake}
+        defaultBonus={sharedBonus}
+      />
+      <OddsmatcherMultiplaSaveModal
+        open={multiplaSaveModalOpen}
+        onOpenChange={setMultiplaSaveModalOpen}
+        selectedEvents={multiplaSelectedEvents}
+        bookOddsId={oneBookId ?? ''}
+        exchangeOddsId={multiplaSelectedEvents[0]?.id_book_2 ?? ''}
+        sharedStake={sharedStake}
+        sharedBonus={sharedBonus}
       />
     </div>
   )

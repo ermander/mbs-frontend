@@ -70,12 +70,18 @@ export interface OddsmatcherCalculatorModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   row: OddsmatcherRow | null
+  /** Valore precompilato per il campo Puntata (condiviso con la barra filtri Oddsmatcher). */
+  defaultPuntata?: string
+  /** Valore precompilato per il campo Bonus (condiviso con la barra filtri Oddsmatcher). */
+  defaultBonus?: string
 }
 
 export function OddsmatcherCalculatorModal({
   open,
   onOpenChange,
   row,
+  defaultPuntata = '',
+  defaultBonus = '',
 }: OddsmatcherCalculatorModalProps) {
   const books = useProfitTrackerStore((s) => s.books)
   const holders = useProfitTrackerStore((s) => s.holders)
@@ -109,9 +115,11 @@ export function OddsmatcherCalculatorModal({
       queueMicrotask(() => {
         setQuotaPunta(back)
         setQuotaBanca(lay)
+        setPuntata(defaultPuntata)
+        setBonus(defaultBonus)
       })
     }
-  }, [open, row])
+  }, [open, row, defaultPuntata, defaultBonus])
 
   useEffect(() => {
     if (wasOpenRef.current && !open) {
@@ -368,6 +376,7 @@ export function OddsmatcherCalculatorModal({
           accountId: accountIdBanca,
           stake: layStakeValue,
           quota: quotaBancaNum,
+          quotaRiferimento: quotaPuntaNum,
           rischio: responsabilita,
           bonusValore: undefined,
           rimborsoValore: undefined,

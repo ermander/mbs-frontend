@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
+import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
 
 const slugToTitle: Record<string, string> = {
   'punta-banca': 'Punta-Banca',
@@ -29,6 +30,23 @@ export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug
               Calcolatore Punta - Banca
             </h1>
             <PuntaBancaCalculator />
+          </Container>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  if (slug === 'punta-punta') {
+    return (
+      <>
+        <Header />
+        <main className="py-12 sm:py-16">
+          <Container className="max-w-3xl space-y-8">
+            <h1 className="text-center text-3xl font-bold tracking-tight text-foreground">
+              Calcolatore Punta - Punta
+            </h1>
+            <PuntaPuntaCalculator />
           </Container>
         </main>
         <Footer />

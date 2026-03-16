@@ -130,3 +130,23 @@ export interface WalletMovement {
   dataRegistrazione: string
   descrizione?: string
 }
+
+export type ReminderPeriod = '24h' | '12h' | 'scadenza'
+export type ReminderStatus = 'attivo' | 'completato' | 'scaduto'
+
+export interface Reminder {
+  id: string
+  accountId?: string
+  descrizione: string
+  dataScadenza: string
+  periodoNotifica: ReminderPeriod
+  notificaInviata: boolean
+  stato: ReminderStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TelegramStatus {
+  linked: boolean
+  linkedAt?: string
+}

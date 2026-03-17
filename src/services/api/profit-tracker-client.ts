@@ -43,11 +43,15 @@ export interface CreateBookPayload {
   nome: string
   descrizione?: string
   isExchange: boolean
+  genericUrl?: string | null
+  externalId?: string | null
 }
 
 export interface UpdateBookPayload {
   descrizione?: string
   isExchange?: boolean
+  genericUrl?: string | null
+  externalId?: string | null
 }
 
 export interface GetBooksParams {

@@ -8,6 +8,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
+import { AccountEditModal } from '@/components/profit-tracker/account-edit-modal'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
 
 const PAGE_SIZE = 20
@@ -28,6 +29,7 @@ export default function ContiPage() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [movementForAccount, setMovementForAccount] = useState<string | undefined>(undefined)
+  const [editingAccountId, setEditingAccountId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [holderId, setHolderId] = useState<string>('')
   const [bookId, setBookId] = useState<string>('')
@@ -209,6 +211,13 @@ export default function ContiPage() {
                       >
                         Nuovo movimento
                       </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        onClick={() => setEditingAccountId(account.id)}
+                      >
+                        Modifica
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -266,6 +275,18 @@ export default function ContiPage() {
         }}
         defaultAccountId={movementForAccount}
       />
+      {editingAccountId && (
+        <AccountEditModal
+          open={editingAccountId != null}
+          onOpenChange={(open) => {
+            if (!open) setEditingAccountId(undefined)
+          }}
+          account={
+            accounts.find((a) => a.id === editingAccountId) ??
+            allAccounts.find((a) => a.id === editingAccountId)!
+          }
+        />
+      )}
     </section>
   )
 }

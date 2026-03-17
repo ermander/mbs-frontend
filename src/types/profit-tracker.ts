@@ -37,6 +37,9 @@ export interface Book {
   nome: string
   descrizione?: string
   isExchange: boolean
+  genericUrl?: string | null
+  externalId?: string | null
+  isGlobal?: boolean
 }
 
 export interface Account {

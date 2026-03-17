@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function LoginForm() {
+interface LoginFormProps {
+  redirectTo?: string
+}
+
+export function LoginForm({ redirectTo = '/' }: LoginFormProps) {
   const router = useRouter()
   const setUser = useAuthStore((s) => s.setUser)
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
@@ -43,7 +47,7 @@ export function LoginForm() {
         setUser(response.user)
         setSubmitStatus('success')
         setSubmitMessage('Accesso effettuato.')
-        router.push('/')
+        router.push(redirectTo)
       } catch (err) {
         setSubmitStatus('error')
         setSubmitMessage(
@@ -54,7 +58,7 @@ export function LoginForm() {
         )
       }
     },
-    [router, setUser],
+    [router, setUser, redirectTo],
   )
 
   return (

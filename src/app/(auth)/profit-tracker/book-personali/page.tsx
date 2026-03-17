@@ -61,9 +61,10 @@ export default function BookPersonaliPage() {
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Book personali</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Bookmaker</h1>
           <p className="text-muted-foreground">
-            Crea e gestisci i bookmaker personali che puoi poi assegnare ai tuoi conti.
+            I bookmaker globali sono disponibili per tutti e non modificabili. Puoi anche creare i
+            tuoi book personali.
           </p>
         </div>
         <Button type="button" onClick={() => setCreateOpen(true)}>
@@ -127,7 +128,16 @@ export default function BookPersonaliPage() {
           <tbody>
             {books.map((book) => (
               <tr key={book.id} className="border-b border-border/40 last:border-b-0">
-                <td className="px-3 py-2 text-sm text-foreground">{book.nome}</td>
+                <td className="px-3 py-2 text-sm text-foreground">
+                  <span className="flex items-center gap-2">
+                    {book.nome}
+                    {book.isGlobal && (
+                      <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                        Globale
+                      </span>
+                    )}
+                  </span>
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {book.descrizione ?? '—'}
                 </td>
@@ -144,13 +154,17 @@ export default function BookPersonaliPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                      onClick={() => setEditBookId(book.id)}
-                    >
-                      Modifica
-                    </button>
+                    {book.isGlobal ? (
+                      <span className="px-2 py-1 text-xs text-muted-foreground">Sola lettura</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        onClick={() => setEditBookId(book.id)}
+                      >
+                        Modifica
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -270,6 +270,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           nome: book.nome,
           descrizione: book.descrizione,
           isExchange: book.isExchange,
+          genericUrl: book.genericUrl ?? null,
+          externalId: book.externalId ?? null,
         })
         set((state) => ({
           books: [...state.books, created],
@@ -292,6 +294,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         const updated = await apiUpdateBook(id, {
           descrizione: patch.descrizione,
           isExchange: patch.isExchange,
+          genericUrl: patch.genericUrl ?? null,
+          externalId: patch.externalId ?? null,
         })
         set((state) => ({
           books: state.books.map((b) => (b.id === id ? updated : b)),

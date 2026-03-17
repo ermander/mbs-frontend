@@ -646,11 +646,11 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       }
 
       const importo = movement.valore
-      if (!Number.isFinite(importo) || importo <= 0) {
+      if (!Number.isFinite(importo) || importo === 0) {
         set((s) => ({
           ...s,
           isSavingAccountMovement: false,
-          accountMovementsError: "L'importo deve essere maggiore di zero",
+          accountMovementsError: "L'importo deve essere diverso da zero",
         }))
         return
       }

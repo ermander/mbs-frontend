@@ -76,6 +76,8 @@ export default function BetDetailPage() {
     null,
   )
   const [draftTextValue, setDraftTextValue] = useState('')
+  const [editingDateLegId, setEditingDateLegId] = useState<string | null>(null)
+  const [draftDateLocal, setDraftDateLocal] = useState('')
 
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
@@ -540,6 +542,50 @@ export default function BetDetailPage() {
     )
   }
 
+  const canEditLegEventDate = (leg: BetLeg) =>
+    leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso'
+
+  const toDatetimeLocalValue = (iso: string) => {
+    const d = new Date(iso)
+    if (!Number.isFinite(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    const mm = pad(d.getMonth() + 1)
+    const dd = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const min = pad(d.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+  }
+
+  const handleStartDateEdit = (leg: BetLeg) => {
+    setEditingDateLegId(leg.id)
+    setDraftDateLocal(toDatetimeLocalValue(leg.eventoData))
+  }
+
+  const handleCancelDateEdit = () => {
+    setEditingDateLegId(null)
+    setDraftDateLocal('')
+  }
+
+  const handleConfirmDateEdit = async () => {
+    if (!editingDateLegId) return
+    const leg = legs.find((l) => l.id === editingDateLegId)
+    if (!leg) {
+      handleCancelDateEdit()
+      return
+    }
+    const parsed = new Date(draftDateLocal)
+    if (!Number.isFinite(parsed.getTime())) return
+
+    try {
+      await updateBetLeg(betId, leg.id, { eventoData: parsed.toISOString() })
+      handleCancelDateEdit()
+      await fetchBetWithLegs(betId)
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Errore nel salvataggio.')
+    }
+  }
+
   return (
     <section className="space-y-6">
       <header className="space-y-1">
@@ -673,7 +719,49 @@ export default function BetDetailPage() {
                 }`}
               >
                 <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {formatEventDate(leg.eventoData)}
+                  {editingDateLegId === leg.id ? (
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="datetime-local"
+                        className="w-[11.5rem] rounded-md border border-border bg-background px-2 py-1 text-xs"
+                        value={draftDateLocal}
+                        onChange={(e) => setDraftDateLocal(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={handleCancelDateEdit}
+                          title="Annulla"
+                          aria-label="Annulla"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                          onClick={() => void handleConfirmDateEdit()}
+                          title="Conferma e salva"
+                          aria-label="Conferma e salva"
+                          disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : canEditLegEventDate(leg) ? (
+                    <button
+                      type="button"
+                      className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+                      onClick={() => handleStartDateEdit(leg)}
+                      title="Modifica data evento"
+                    >
+                      {formatEventDate(leg.eventoData)}
+                    </button>
+                  ) : (
+                    formatEventDate(leg.eventoData)
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}

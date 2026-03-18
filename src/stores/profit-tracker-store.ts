@@ -141,6 +141,7 @@ interface ProfitTrackerState {
     patch: Partial<
       Pick<
         BetLeg,
+        | 'eventoData'
         | 'eventoNome'
         | 'stake'
         | 'quota'

@@ -93,7 +93,7 @@ export default function GiocateRapidePage() {
                     {bet.nota ?? '—'}
                   </td>
                   <td
-                    className={`px-3 py-2 align-top text-xs font-medium ${
+                    className={`whitespace-nowrap px-3 py-2 align-top text-xs font-medium ${
                       bet.movimento >= 0 ? 'text-emerald-600' : 'text-red-500'
                     }`}
                   >

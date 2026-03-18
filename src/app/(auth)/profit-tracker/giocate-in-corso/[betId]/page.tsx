@@ -6,21 +6,20 @@ import { notFound, useParams, useRouter } from 'next/navigation'
 import { Ban, Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatEventDateDisplay } from '@/lib/utils'
 import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { BetLeg } from '@/types/profit-tracker'
 import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 
-/** Formatta data e ora senza secondi (es. 14/03/2026, 18:00) */
-function formatEventDate(date: string) {
-  return new Date(date).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function renderEventDateCell(date: string) {
+  const { datePart, timePart } = formatEventDateDisplay(date)
+  return (
+    <span className="whitespace-nowrap">
+      {datePart} {timePart}
+    </span>
+  )
 }
 
 const TIPO_BONUS_OPTIONS: { value: BetLeg['tipoBonus']; label: string }[] = [
@@ -496,7 +495,7 @@ export default function BetDetailPage() {
   const renderEditableTextCell = (leg: BetLeg, field: string, displayValue: string) => {
     const isEditing = editingTextCell?.legId === leg.id && editingTextCell?.field === field
     if (!isLegEditable(leg)) {
-      return <span className="text-xs text-muted-foreground">{displayValue}</span>
+      return <span className="whitespace-nowrap text-xs text-muted-foreground">{displayValue}</span>
     }
     if (isEditing) {
       return (
@@ -534,7 +533,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        className="whitespace-nowrap rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
         onClick={() => handleStartTextEdit(leg.id, field, displayValue)}
       >
         {displayValue}
@@ -592,9 +591,6 @@ export default function BetDetailPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Dettaglio puntata {bet.eventoNome}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Gestisci le informazioni complete della giocata, inclusi stake, quota, comm% e movimento.
-        </p>
       </header>
 
       <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
@@ -713,7 +709,7 @@ export default function BetDetailPage() {
           <tbody>
             {legs.map((leg) => {
               const shouldHighlightLeg =
-                bet.eventoNotificato &&
+                Boolean(leg.eventoNotificato) &&
                 (leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso')
 
               return (
@@ -723,7 +719,7 @@ export default function BetDetailPage() {
                     shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
                   } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
                 >
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                  <td className="px-3 py-2 text-center text-xs text-muted-foreground">
                     {editingDateLegId === leg.id ? (
                       <div className="flex flex-col gap-1">
                         <input
@@ -758,17 +754,17 @@ export default function BetDetailPage() {
                     ) : canEditLegEventDate(leg) ? (
                       <button
                         type="button"
-                        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+                        className="rounded bg-sky-50 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
                         onClick={() => handleStartDateEdit(leg)}
                         title="Modifica data evento"
                       >
-                        {formatEventDate(leg.eventoData)}
+                        {renderEventDateCell(leg.eventoData)}
                       </button>
                     ) : (
-                      formatEventDate(leg.eventoData)
+                      renderEventDateCell(leg.eventoData)
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="whitespace-nowrap px-3 py-2">
                     {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
@@ -843,7 +839,7 @@ export default function BetDetailPage() {
                       )
                     )}
                   </td>
-                  <td className="px-3 py-2 text-xs text-foreground">
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
                     {(leg.metodo === 'punta' && (leg.rischio ?? 0) === 0
                       ? leg.stake
                       : (leg.rischio ?? 0)
@@ -860,7 +856,7 @@ export default function BetDetailPage() {
                       v !== 0 ? `${v.toFixed(2)} €` : '—',
                     )}
                   </td>
-                  <td className="px-3 py-2 text-xs font-medium text-foreground">
+                  <td className="whitespace-nowrap px-3 py-2 text-xs font-medium text-foreground">
                     {leg.movimento.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2">

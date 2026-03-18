@@ -99,6 +99,7 @@ export interface BetLeg {
   rimborsoValore?: number
   commissionePercentuale?: number
   movimento: number
+  eventoNotificato?: boolean
   statoEvento: BetStatus
   tag?: string
 }

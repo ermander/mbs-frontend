@@ -534,9 +534,30 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     updateBetLeg: async (betId, legId, patch) => {
       try {
         const updated = await apiUpdateBetLeg(betId, legId, patch)
-        set((state) => ({
-          betLegs: state.betLegs.map((l) => (l.id === legId ? updated : l)),
-        }))
+        set((state) => {
+          const newBetLegs = state.betLegs.map((l) => (l.id === legId ? updated : l))
+          const legsOfBet = newBetLegs.filter((l) => l.betId === betId)
+          const hasOpenLegs = legsOfBet.some(
+            (l) => l.statoEvento === 'bozza' || l.statoEvento === 'in_corso',
+          )
+          const hasNotifiedOpenLegs = legsOfBet.some(
+            (l) =>
+              l.eventoNotificato && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'),
+          )
+
+          return {
+            betLegs: newBetLegs,
+            ongoingBets: state.ongoingBets.map((b) =>
+              b.id === betId
+                ? {
+                    ...b,
+                    hasOpenLegs,
+                    eventoNotificato: hasNotifiedOpenLegs,
+                  }
+                : b,
+            ),
+          }
+        })
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'aggiornamento del leg"
         set((s) => ({ ...s, ongoingBetsError: message }))

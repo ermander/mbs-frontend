@@ -4,20 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatEventDateDisplay } from '@/lib/utils'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { OngoingBet } from '@/types/profit-tracker'
-
-/** Formatta data e ora senza secondi (es. 14/03/2026, 16:00) */
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 /** Icone sport già usate nel progetto (oddsmatcher) */
 const SPORT_ICON: Record<string, string> = {
@@ -142,13 +132,22 @@ export default function GiocateInCorsoPage() {
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                     {bet.id}
                   </td>
-                  <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                    {formatDate(bet.eventoData)}
+                  <td className="px-3 py-2 text-center align-top text-xs text-muted-foreground">
+                    {(() => {
+                      const { datePart, timePart } = formatEventDateDisplay(bet.eventoData)
+                      return (
+                        <span className="whitespace-nowrap">
+                          {datePart} {timePart}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-2 align-top text-muted-foreground" title={bet.sport}>
                     <span aria-hidden>{getSportIcon(bet.sport)}</span>
                   </td>
-                  <td className="px-3 py-2 align-top text-sm text-foreground">{bet.eventoNome}</td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
+                    {bet.eventoNome}
+                  </td>
                   <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
                     {bet.modalitaSaldo}
                   </td>

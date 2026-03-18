@@ -7,19 +7,10 @@ import { notFound, useParams, useRouter } from 'next/navigation'
 import { Ban } from 'lucide-react'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatEventDateDisplay } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { updateBet } from '@/services/api/profit-tracker-client'
 import type { BetLeg } from '@/types/profit-tracker'
-
-function formatEventDate(date: string) {
-  return new Date(date).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 const TIPO_BONUS_LABEL: Record<BetLeg['tipoBonus'], string> = {
   none: 'Nessuno',
@@ -208,10 +199,19 @@ export default function ArchivedBetDetailPage() {
           <tbody>
             {legs.map((leg) => (
               <tr key={leg.id} className="border-b border-border/40 align-top last:border-b-0">
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {formatEventDate(leg.eventoData)}
+                <td className="px-3 py-2 text-center text-xs text-muted-foreground">
+                  {(() => {
+                    const { datePart, timePart } = formatEventDateDisplay(leg.eventoData)
+                    return (
+                      <span className="whitespace-nowrap">
+                        {datePart} {timePart}
+                      </span>
+                    )
+                  })()}
                 </td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.eventoNome}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
+                  {leg.eventoNome}
+                </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
                 <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
@@ -245,7 +245,9 @@ export default function ArchivedBetDetailPage() {
                     '—'
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.rischio.toFixed(2)} €</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
+                  {leg.rischio.toFixed(2)} €
+                </td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {leg.bonusValore != null && leg.bonusValore !== 0
                     ? `${leg.bonusValore.toFixed(2)} €`
@@ -256,7 +258,7 @@ export default function ArchivedBetDetailPage() {
                     ? `${leg.rimborsoValore.toFixed(2)} €`
                     : '—'}
                 </td>
-                <td className="px-3 py-2 text-xs font-medium text-foreground">
+                <td className="whitespace-nowrap px-3 py-2 text-xs font-medium text-foreground">
                   {leg.movimento.toFixed(2)} €
                 </td>
                 <td className="px-3 py-2">

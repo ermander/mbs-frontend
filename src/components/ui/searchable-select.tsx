@@ -134,99 +134,100 @@ export function SearchableSelect({
     }
   }, [open])
 
-  const portalTarget = portalContainer ?? document.body
+  const portalTarget = typeof document !== 'undefined' ? (portalContainer ?? document.body) : null
 
-  const dropdownPanel = open
-    ? createPortal(
-        <div
-          ref={dropdownRef}
-          role="listbox"
-          data-searchable-select
-          className={cn(
-            'pointer-events-auto z-[9999] overflow-hidden rounded-md border border-border bg-popover shadow-lg',
-            dropdownPos.useAbsolute ? 'absolute' : 'fixed',
-          )}
-          style={{
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            width: dropdownPos.width,
-          }}
-        >
-          <div className="border-b border-border p-1.5">
-            <Input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onMouseDown={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && filteredOptions.length === 1) {
-                  onChange(filteredOptions[0].value)
-                  setOpen(false)
-                }
-              }}
-              placeholder={searchPlaceholder}
-              className={cn(
-                'border-0 bg-muted/50 focus-visible:ring-1',
-                isSmall ? 'h-6 text-xs' : 'h-8 text-sm',
-              )}
-              aria-autocomplete="list"
-              aria-controls="searchable-select-list"
-              aria-activedescendant={undefined}
-            />
-          </div>
-          <ul id="searchable-select-list" className="max-h-56 overflow-auto py-1" role="listbox">
-            {allowEmpty && (
-              <li role="option" aria-selected={value === ''}>
-                <button
-                  type="button"
-                  className={cn(
-                    'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
-                    isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
-                    !value && 'bg-muted/50 font-medium',
-                  )}
-                  onClick={() => {
-                    onChange('')
-                    setOpen(false)
-                  }}
-                >
-                  {placeholder}
-                </button>
-              </li>
+  const dropdownPanel =
+    open && portalTarget
+      ? createPortal(
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            data-searchable-select
+            className={cn(
+              'pointer-events-auto z-[9999] overflow-hidden rounded-md border border-border bg-popover shadow-lg',
+              dropdownPos.useAbsolute ? 'absolute' : 'fixed',
             )}
-            {filteredOptions.map((opt) => (
-              <li key={opt.value} role="option" aria-selected={value === opt.value}>
-                <button
-                  type="button"
-                  className={cn(
-                    'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
-                    isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
-                    value === opt.value && 'bg-muted/50 font-medium',
-                  )}
-                  onClick={() => {
-                    onChange(opt.value)
+            style={{
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+            }}
+          >
+            <div className="border-b border-border p-1.5">
+              <Input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredOptions.length === 1) {
+                    onChange(filteredOptions[0].value)
                     setOpen(false)
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
-            {filteredOptions.length === 0 && query.trim() && (
-              <li
+                  }
+                }}
+                placeholder={searchPlaceholder}
                 className={cn(
-                  'text-center text-muted-foreground',
-                  isSmall ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm',
+                  'border-0 bg-muted/50 focus-visible:ring-1',
+                  isSmall ? 'h-6 text-xs' : 'h-8 text-sm',
                 )}
-              >
-                Nessun risultato
-              </li>
-            )}
-          </ul>
-        </div>,
-        portalTarget,
-      )
-    : null
+                aria-autocomplete="list"
+                aria-controls="searchable-select-list"
+                aria-activedescendant={undefined}
+              />
+            </div>
+            <ul id="searchable-select-list" className="max-h-56 overflow-auto py-1" role="listbox">
+              {allowEmpty && (
+                <li role="option" aria-selected={value === ''}>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
+                      isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
+                      !value && 'bg-muted/50 font-medium',
+                    )}
+                    onClick={() => {
+                      onChange('')
+                      setOpen(false)
+                    }}
+                  >
+                    {placeholder}
+                  </button>
+                </li>
+              )}
+              {filteredOptions.map((opt) => (
+                <li key={opt.value} role="option" aria-selected={value === opt.value}>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
+                      isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
+                      value === opt.value && 'bg-muted/50 font-medium',
+                    )}
+                    onClick={() => {
+                      onChange(opt.value)
+                      setOpen(false)
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                </li>
+              ))}
+              {filteredOptions.length === 0 && query.trim() && (
+                <li
+                  className={cn(
+                    'text-center text-muted-foreground',
+                    isSmall ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm',
+                  )}
+                >
+                  Nessun risultato
+                </li>
+              )}
+            </ul>
+          </div>,
+          portalTarget,
+        )
+      : null
 
   return (
     <div className={cn('relative', className)}>

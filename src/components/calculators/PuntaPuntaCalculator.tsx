@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { ChevronDown, Loader2, Send, X } from 'lucide-react'
 import { equalProfit, ratingPercent, stakeBFromStakeA } from '@/lib/calculators/punta-punta'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { Account } from '@/types/profit-tracker'
+import { getAccounts } from '@/services/api/profit-tracker-client'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import type { Account, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -69,12 +71,17 @@ function defaultEventoData(): string {
   return `${y}-${m}-${d}T${h}:${min}`
 }
 
+function getHolderName(holders: Holder[], holderId: string | undefined): string {
+  if (!holderId) return ''
+  const h = holders.find((x) => x.id === holderId)
+  return h?.nome ?? ''
+}
+
 export function PuntaPuntaCalculator() {
-  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const books = useProfitTrackerStore((s) => s.books)
   const holders = useProfitTrackerStore((s) => s.holders)
   const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
+  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [tipologia, setTipologia] = useState<(typeof TIPOLOGIE)[number]>('NORMALE')
@@ -83,6 +90,10 @@ export function PuntaPuntaCalculator() {
   const [quotaB, setQuotaB] = useState('2.5')
   const [bonus, setBonus] = useState('')
   const [holderModalOpen, setHolderModalOpen] = useState(false)
+  const [holderIdPuntaA, setHolderIdPuntaA] = useState('')
+  const [holderIdPuntaB, setHolderIdPuntaB] = useState('')
+  const [accountsPuntaA, setAccountsPuntaA] = useState<Account[]>([])
+  const [accountsPuntaB, setAccountsPuntaB] = useState<Account[]>([])
   const [accountIdPuntaA, setAccountIdPuntaA] = useState('')
   const [accountIdPuntaB, setAccountIdPuntaB] = useState('')
   const [eventoData, setEventoData] = useState(() => defaultEventoData())
@@ -92,6 +103,7 @@ export function PuntaPuntaCalculator() {
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   const puntataANum = parseNum(puntataA)
   const bonusNum = parseNum(bonus) ?? 0
@@ -125,29 +137,79 @@ export function PuntaPuntaCalculator() {
     stakeB != null &&
     guadagnoMinimo != null
 
-  const loadAccounts = useCallback(async () => {
-    if (holders.length === 0) await fetchHolders()
-    await fetchAllAccounts()
-  }, [holders.length, fetchHolders, fetchAllAccounts])
+  const loadAccountsForHolder = useCallback(async (holderId: string) => {
+    if (!holderId) return []
+    const res = await getAccounts({ holderId, status: 'abilitato' })
+    if (!res.items.length) return []
+    const currentBooks = useProfitTrackerStore.getState().books
+    return res.items.filter((acc) => {
+      const book = currentBooks.find((b) => b.id === acc.bookId)
+      if (!book) return false
+      return !book.isExchange
+    })
+  }, [])
+
+  const handleChangeHolderPuntaA = useCallback(
+    async (holderId: string) => {
+      setHolderIdPuntaA(holderId)
+      setAccountsPuntaA([])
+      setAccountIdPuntaA('')
+      if (!holderId) return
+      try {
+        const list = await loadAccountsForHolder(holderId)
+        setAccountsPuntaA(list)
+      } catch (err) {
+        setHolderModalError(err instanceof Error ? err.message : 'Errore nel caricamento dei conti')
+      }
+    },
+    [loadAccountsForHolder],
+  )
+
+  const handleChangeHolderPuntaB = useCallback(
+    async (holderId: string) => {
+      setHolderIdPuntaB(holderId)
+      setAccountsPuntaB([])
+      setAccountIdPuntaB('')
+      if (!holderId) return
+      try {
+        const list = await loadAccountsForHolder(holderId)
+        setAccountsPuntaB(list)
+      } catch (err) {
+        setHolderModalError(err instanceof Error ? err.message : 'Errore nel caricamento dei conti')
+      }
+    },
+    [loadAccountsForHolder],
+  )
 
   useEffect(() => {
-    if (holderModalOpen && !savedBetId) {
-      void loadAccounts()
+    if (!holderModalOpen || savedBetId) return
+    const loadBasics = async () => {
+      if (holders.length === 0) await fetchHolders()
+      if (books.length === 0) await fetchBooks()
     }
-  }, [holderModalOpen, savedBetId, loadAccounts])
+    void loadBasics()
+  }, [holderModalOpen, savedBetId, holders.length, books.length, fetchHolders, fetchBooks])
 
-  const handleOpenModal = () => {
+  const resetModalState = useCallback(() => {
+    setHolderIdPuntaA('')
+    setHolderIdPuntaB('')
+    setAccountsPuntaA([])
+    setAccountsPuntaB([])
+    setAccountIdPuntaA('')
+    setAccountIdPuntaB('')
     setHolderModalError(null)
     setSavedBetId(null)
+  }, [])
+
+  const handleOpenModal = () => {
+    resetModalState()
     setEventoData(defaultEventoData())
     setHolderModalOpen(true)
   }
 
-  const handleSendToProfitTracker = async () => {
-    if (!accountIdPuntaA || !accountIdPuntaB) {
-      setHolderModalError('Seleziona il conto per entrambe le puntate.')
-      return
-    }
+  const canSave = useMemo(() => {
+    if (!eventoNome.trim()) return false
+    if (!accountIdPuntaA || !accountIdPuntaB) return false
     if (
       puntataEffettivaA <= 0 ||
       quotaANum == null ||
@@ -155,10 +217,24 @@ export function PuntaPuntaCalculator() {
       stakeB == null ||
       guadagnoMinimo == null
     )
-      return
+      return false
+    return true
+  }, [
+    eventoNome,
+    accountIdPuntaA,
+    accountIdPuntaB,
+    puntataEffettivaA,
+    quotaANum,
+    quotaBNum,
+    stakeB,
+    guadagnoMinimo,
+  ])
+
+  const handleSendToProfitTracker = async () => {
+    if (!canSave) return
     const eventoDataIso = new Date(eventoData).toISOString()
     const eventoNomeVal = eventoNome.trim() || 'Punta-Punta'
-    const competizione = ''
+    const competizione = 'N/D'
     setIsSaving(true)
     setHolderModalError(null)
     try {
@@ -220,14 +296,6 @@ export function PuntaPuntaCalculator() {
     }
   }
 
-  const resolveAccountLabel = (acc: Account) => {
-    const book = books.find((b) => b.id === acc.bookId)
-    const holder = holders.find((h) => h.id === acc.holderId)
-    const bookName = book?.nome ?? ''
-    const holderName = holder?.nome ?? acc.nome
-    return bookName ? `${bookName} (${holderName})` : holderName
-  }
-
   const realOutlay = (puntataANum ?? 0) + (stakeB ?? 0)
   const profitIfAWins =
     quotaANum != null && stakeB != null ? puntataEffettivaA * quotaANum - realOutlay : null
@@ -271,7 +339,7 @@ export function PuntaPuntaCalculator() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata-a">Puntata A</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="puntata-a"
                 type="number"
@@ -279,14 +347,16 @@ export function PuntaPuntaCalculator() {
                 placeholder="0"
                 value={puntataA}
                 onChange={(e) => setPuntataA(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">€</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                €
+              </span>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="quota-a">Quota Punta A</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="quota-a"
                 type="number"
@@ -295,14 +365,16 @@ export function PuntaPuntaCalculator() {
                 placeholder="0"
                 value={quotaA}
                 onChange={(e) => setQuotaA(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">@</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                @
+              </span>
             </div>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="quota-b">Quota Punta B</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="quota-b"
                 type="number"
@@ -311,14 +383,16 @@ export function PuntaPuntaCalculator() {
                 placeholder="0"
                 value={quotaB}
                 onChange={(e) => setQuotaB(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">@</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                @
+              </span>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="bonus">Saldo bonus (opz.)</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="bonus"
                 type="number"
@@ -326,9 +400,11 @@ export function PuntaPuntaCalculator() {
                 placeholder="0"
                 value={bonus}
                 onChange={(e) => setBonus(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">€</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                €
+              </span>
             </div>
           </div>
         </div>
@@ -377,14 +453,67 @@ export function PuntaPuntaCalculator() {
             <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               Tabella dei profitti
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+
+            {/* Layout a card solo su mobile (< sm) */}
+            <div className="block space-y-3 p-4 sm:hidden">
+              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book A:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book A</span>
+                    <span className="text-primary">
+                      {formatSigned(
+                        bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
+                      )}{' '}
+                      €
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book B</span>
+                    <span className="text-destructive">{formatSigned(-(stakeB ?? 0))} €</span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                    <span className="text-foreground">Totale</span>
+                    <span className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}>
+                      = {formatSigned(profitIfAWins)} €
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book B:</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book A</span>
+                    <span className="text-destructive">
+                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)} €
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book B</span>
+                    <span className="text-primary">
+                      {formatSigned((returnB ?? 0) - (stakeB ?? 0))} €
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                    <span className="text-foreground">Totale</span>
+                    <span className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}>
+                      = {formatSigned(profitIfBWins)} €
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabella da sm in su */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-white/10 text-muted-foreground">
-                    <th className="p-3 text-left font-normal"></th>
-                    <th className="p-3 text-right font-normal">Book A</th>
-                    <th className="p-3 text-right font-normal">Book B</th>
-                    <th className="p-3 text-right font-normal">Totale</th>
+                    <th className="w-[50%] p-3 text-left font-normal"></th>
+                    <th className="w-[16%] p-3 text-right font-normal">Book A</th>
+                    <th className="w-[16%] p-3 text-right font-normal">Book B</th>
+                    <th className="w-[18%] min-w-[5.5rem] p-3 text-right font-normal">Totale</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -398,7 +527,7 @@ export function PuntaPuntaCalculator() {
                     <td className="p-3 text-right text-destructive">
                       {formatSigned(-(stakeB ?? 0))}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                       <span
                         className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}
                       >
@@ -414,7 +543,7 @@ export function PuntaPuntaCalculator() {
                     <td className="p-3 text-right text-primary">
                       {formatSigned((returnB ?? 0) - (stakeB ?? 0))}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                       <span
                         className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}
                       >
@@ -440,10 +569,15 @@ export function PuntaPuntaCalculator() {
         open={holderModalOpen}
         onOpenChange={(open) => {
           setHolderModalOpen(open)
-          if (!open) setSavedBetId(null)
+          if (!open) resetModalState()
         }}
       >
-        <DialogContent className="max-w-md gap-0 overflow-hidden p-0" showClose={true}>
+        <DialogContent className="max-h-[85vh] max-w-lg gap-0 overflow-y-auto p-0" showClose={true}>
+          <div
+            ref={setDropdownPortalEl}
+            className="pointer-events-none fixed inset-0 z-[9998]"
+            aria-hidden
+          />
           {savedBetId ? (
             <>
               <div className="px-6 pb-4 pt-6">
@@ -478,33 +612,33 @@ export function PuntaPuntaCalculator() {
             <>
               <div className="px-6 pb-1 pt-6">
                 <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
-                  Assegna intestatari e dati evento
+                  Salva giocata Punta-Punta
                 </DialogTitle>
                 <p className="mt-1.5 text-sm text-muted-foreground">
-                  Inserisci i dati dell&apos;evento e scegli il conto per la puntata e per la
-                  copertura.
+                  Compila i dettagli dell&apos;evento e assegna gli intestatari per puntata 1 e
+                  puntata 2.
                 </p>
               </div>
 
               <div className="grid gap-4 px-6 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor="pp-modal-data">Data evento</Label>
+                  <Label htmlFor="pp-modal-evento">Nome evento</Label>
+                  <Input
+                    id="pp-modal-evento"
+                    type="text"
+                    placeholder="Es. Juventus - Milan"
+                    value={eventoNome}
+                    onChange={(e) => setEventoNome(e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pp-modal-data">Data e ora evento</Label>
                   <Input
                     id="pp-modal-data"
                     type="datetime-local"
                     value={eventoData}
                     onChange={(e) => setEventoData(e.target.value)}
-                    className="h-10"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pp-modal-evento">Evento</Label>
-                  <Input
-                    id="pp-modal-evento"
-                    type="text"
-                    placeholder="Es. Milan vs Inter"
-                    value={eventoNome}
-                    onChange={(e) => setEventoNome(e.target.value)}
                     className="h-10"
                   />
                 </div>
@@ -540,87 +674,146 @@ export function PuntaPuntaCalculator() {
                     ))}
                   </select>
                 </div>
-                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Intestatario Punta 1
-                  </Label>
-                  <div className="relative">
-                    <select
-                      value={accountIdPuntaA}
-                      onChange={(e) => setAccountIdPuntaA(e.target.value)}
-                      className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                    >
-                      <option value="">Seleziona intestatario</option>
-                      {allAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {resolveAccountLabel(acc)}
-                        </option>
-                      ))}
-                    </select>
-                    <span
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Intestatario Punta 2 (copertura)
-                  </Label>
-                  <div className="relative">
-                    <select
-                      value={accountIdPuntaB}
-                      onChange={(e) => setAccountIdPuntaB(e.target.value)}
-                      className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                    >
-                      <option value="">Seleziona intestatario</option>
-                      {allAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {resolveAccountLabel(acc)}
-                        </option>
-                      ))}
-                    </select>
-                    <span
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              {holderModalError && (
-                <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
-                  <p className="text-sm text-destructive">{holderModalError}</p>
+                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                      Intestatario Punta 1
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Seleziona intestatario</Label>
+                    <SearchableSelect
+                      id="holder-punta-a"
+                      placeholder="Seleziona intestatario"
+                      searchPlaceholder="Cerca intestatario..."
+                      options={holders
+                        .filter((h) => h.stato === 'abilitato')
+                        .map((h) => ({ value: h.id, label: h.nome }))}
+                      value={holderIdPuntaA}
+                      onChange={(val) => void handleChangeHolderPuntaA(val)}
+                      allowEmpty={false}
+                      size="sm"
+                      className="w-full"
+                      portalContainer={dropdownPortalEl}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Conto punta 1</Label>
+                    <SearchableSelect
+                      id="account-punta-a"
+                      placeholder={
+                        holderIdPuntaA ? 'Seleziona conto' : 'Seleziona prima un intestatario'
+                      }
+                      searchPlaceholder="Cerca conto..."
+                      options={accountsPuntaA.map((acc) => {
+                        const holderName = getHolderName(holders, acc.holderId)
+                        const book = books.find((b) => b.id === acc.bookId)
+                        return {
+                          value: acc.id,
+                          label: `${holderName} • ${book?.nome ?? acc.nome}`,
+                        }
+                      })}
+                      value={accountIdPuntaA}
+                      onChange={setAccountIdPuntaA}
+                      disabled={!holderIdPuntaA || accountsPuntaA.length === 0}
+                      allowEmpty={false}
+                      size="sm"
+                      className="w-full"
+                      portalContainer={dropdownPortalEl}
+                    />
+                    {holderIdPuntaA && accountsPuntaA.length === 0 && (
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                        Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
+                        Profit Tracker → Conti.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                    Intestatario Punta 2
+                  </Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Seleziona intestatario</Label>
+                    <SearchableSelect
+                      id="holder-punta-b"
+                      placeholder="Seleziona intestatario"
+                      searchPlaceholder="Cerca intestatario..."
+                      options={holders
+                        .filter((h) => h.stato === 'abilitato')
+                        .map((h) => ({ value: h.id, label: h.nome }))}
+                      value={holderIdPuntaB}
+                      onChange={(val) => void handleChangeHolderPuntaB(val)}
+                      allowEmpty={false}
+                      size="sm"
+                      className="w-full"
+                      portalContainer={dropdownPortalEl}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Conto punta 2 (copertura)
+                    </Label>
+                    <SearchableSelect
+                      id="account-punta-b"
+                      placeholder={
+                        holderIdPuntaB ? 'Seleziona conto' : 'Seleziona prima un intestatario'
+                      }
+                      searchPlaceholder="Cerca conto..."
+                      options={accountsPuntaB.map((acc) => {
+                        const holderName = getHolderName(holders, acc.holderId)
+                        const book = books.find((b) => b.id === acc.bookId)
+                        return {
+                          value: acc.id,
+                          label: `${holderName} • ${book?.nome ?? acc.nome}`,
+                        }
+                      })}
+                      value={accountIdPuntaB}
+                      onChange={setAccountIdPuntaB}
+                      disabled={!holderIdPuntaB || accountsPuntaB.length === 0}
+                      allowEmpty={false}
+                      size="sm"
+                      className="w-full"
+                      portalContainer={dropdownPortalEl}
+                    />
+                    {holderIdPuntaB && accountsPuntaB.length === 0 && (
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                        Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
+                        Profit Tracker → Conti.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {showSummary && (
+                  <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">Riepilogo importi</p>
+                    <p className="mt-1">
+                      Punta 1: <span className="font-mono">{puntataEffettivaA.toFixed(2)} €</span> a
+                      quota <span className="font-mono">{quotaANum?.toFixed(2)}</span>
+                    </p>
+                    <p>
+                      Punta 2 (copertura):{' '}
+                      <span className="font-mono">{(stakeB ?? 0).toFixed(2)} €</span> a quota{' '}
+                      <span className="font-mono">{quotaBNum?.toFixed(2)}</span>.
+                    </p>
+                    {guadagnoMinimo != null && (
+                      <p>
+                        Guadagno minimo:{' '}
+                        <span className="font-mono">{formatSigned(guadagnoMinimo)} €</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {holderModalError && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {holderModalError}
+                  </div>
+                )}
+              </div>
 
               <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
                 <Button
@@ -633,10 +826,10 @@ export function PuntaPuntaCalculator() {
                   Annulla
                 </Button>
                 <Button
-                  variant="default"
+                  variant="success"
                   className="sm:min-w-[120px]"
-                  onClick={handleSendToProfitTracker}
-                  disabled={isSaving || !accountIdPuntaA || !accountIdPuntaB}
+                  onClick={() => void handleSendToProfitTracker()}
+                  disabled={isSaving || !canSave}
                 >
                   {isSaving ? (
                     <>
@@ -646,7 +839,7 @@ export function PuntaPuntaCalculator() {
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Invia
+                      Salva nel Profit Tracker
                     </>
                   )}
                 </Button>

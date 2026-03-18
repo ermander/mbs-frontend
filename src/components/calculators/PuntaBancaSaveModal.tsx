@@ -391,16 +391,9 @@ export function PuntaBancaSaveModal({
               </div>
 
               <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Intestatario Punta
-                  </Label>
-                  {holderIdPunta && (
-                    <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                      {getHolderName(holders, holderIdPunta) || '—'}
-                    </span>
-                  )}
-                </div>
+                <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                  Intestatario Punta
+                </Label>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Seleziona intestatario</Label>
                   <SearchableSelect
@@ -453,16 +446,9 @@ export function PuntaBancaSaveModal({
               </div>
 
               <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
-                    Intestatario Banca (Exchange)
-                  </Label>
-                  {holderIdBanca && (
-                    <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
-                      {getHolderName(holders, holderIdBanca) || '—'}
-                    </span>
-                  )}
-                </div>
+                <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
+                  Intestatario Banca
+                </Label>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Seleziona intestatario</Label>
                   <SearchableSelect

@@ -276,7 +276,7 @@ export function PuntaBancaCalculator() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata">Puntata</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="puntata"
                 type="number"
@@ -284,14 +284,16 @@ export function PuntaBancaCalculator() {
                 placeholder="0"
                 value={puntata}
                 onChange={(e) => setPuntata(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">€</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                €
+              </span>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="quota-punta">Quota Punta</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="quota-punta"
                 type="number"
@@ -299,15 +301,17 @@ export function PuntaBancaCalculator() {
                 placeholder="0"
                 value={quotaPunta}
                 onChange={(e) => setQuotaPunta(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">@</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                @
+              </span>
             </div>
           </div>
           {tipologia === 'RIMBORSO (CR%)' && (
             <div className="space-y-2">
               <Label htmlFor="rimborso">Rimborso</Label>
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <Input
                   id="rimborso"
                   type="number"
@@ -315,9 +319,11 @@ export function PuntaBancaCalculator() {
                   placeholder="0"
                   value={rimborso}
                   onChange={(e) => setRimborso(e.target.value)}
-                  className="flex-1"
+                  className="pr-8"
                 />
-                <span className="text-muted-foreground">€</span>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  €
+                </span>
               </div>
             </div>
           )}
@@ -326,7 +332,7 @@ export function PuntaBancaCalculator() {
               <Label htmlFor="bonus">
                 {tipologia === 'NORMALE' ? 'Saldo bonus (opz.)' : 'Bonus'}
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <Input
                   id="bonus"
                   type="number"
@@ -334,9 +340,11 @@ export function PuntaBancaCalculator() {
                   placeholder="0"
                   value={bonus}
                   onChange={(e) => setBonus(e.target.value)}
-                  className="flex-1"
+                  className="pr-8"
                 />
-                <span className="text-muted-foreground">€</span>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  €
+                </span>
               </div>
             </div>
           )}
@@ -354,16 +362,18 @@ export function PuntaBancaCalculator() {
               </Label>
             </div>
             {puntataPotenziata && (
-              <div className="flex items-center gap-2">
+              <div className="relative w-20">
                 <Input
                   type="number"
                   inputMode="decimal"
                   placeholder="0"
                   value={puntataPotenziataPercent}
                   onChange={(e) => setPuntataPotenziataPercent(e.target.value)}
-                  className="w-20"
+                  className="pr-7"
                 />
-                <span className="text-muted-foreground">%</span>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  %
+                </span>
               </div>
             )}
           </div>
@@ -375,7 +385,7 @@ export function PuntaBancaCalculator() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="commissione">Commissione</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="commissione"
                 type="number"
@@ -383,14 +393,16 @@ export function PuntaBancaCalculator() {
                 placeholder="0"
                 value={commissione}
                 onChange={(e) => setCommissione(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">%</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                %
+              </span>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="quota-banca">Quota Banca</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="quota-banca"
                 type="number"
@@ -398,24 +410,28 @@ export function PuntaBancaCalculator() {
                 placeholder="0"
                 value={quotaBanca}
                 onChange={(e) => setQuotaBanca(e.target.value)}
-                className="flex-1"
+                className="pr-8"
               />
-              <span className="text-muted-foreground">@</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                @
+              </span>
             </div>
           </div>
         </div>
         {isAvanzato && (
           <div className="mt-4 space-y-2">
             <Label htmlFor="quota-punta-equiv">Quota Punta Equivalente</Label>
-            <div className="flex items-center gap-2">
+            <div className="relative">
               <Input
                 id="quota-punta-equiv"
                 readOnly
                 aria-readonly
                 value={formatNum(quotaPuntaEquivalente)}
-                className="flex-1 bg-muted/50"
+                className="bg-muted/50 pr-8"
               />
-              <span className="text-muted-foreground">@</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                @
+              </span>
             </div>
           </div>
         )}
@@ -528,7 +544,7 @@ export function PuntaBancaCalculator() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="abbinata">Abbinata</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="relative">
                     <Input
                       id="abbinata"
                       type="number"
@@ -536,14 +552,16 @@ export function PuntaBancaCalculator() {
                       placeholder="0"
                       value={abbinata}
                       onChange={(e) => setAbbinata(e.target.value)}
-                      className="flex-1"
+                      className="pr-8"
                     />
-                    <span className="text-muted-foreground">€</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      €
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="nuova-quota">Nuova Quota</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="relative">
                     <Input
                       id="nuova-quota"
                       type="number"
@@ -551,14 +569,16 @@ export function PuntaBancaCalculator() {
                       placeholder="0"
                       value={nuovaQuota}
                       onChange={(e) => setNuovaQuota(e.target.value)}
-                      className="flex-1"
+                      className="pr-8"
                     />
-                    <span className="text-muted-foreground">@</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      @
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="banca">Banca (stake da abbinare)</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="relative">
                     <Input
                       id="banca"
                       type="number"
@@ -567,14 +587,16 @@ export function PuntaBancaCalculator() {
                       value={bancaParziale != null ? bancaParziale.toFixed(2) : ''}
                       readOnly
                       aria-readonly
-                      className="flex-1 bg-muted/50"
+                      className="bg-muted/50 pr-8"
                     />
-                    <span className="text-muted-foreground">€</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      €
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="responsabilita-abbinata">Responsabilità</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="relative">
                     <Input
                       id="responsabilita-abbinata"
                       type="number"
@@ -585,9 +607,11 @@ export function PuntaBancaCalculator() {
                       }
                       readOnly
                       aria-readonly
-                      className="flex-1 bg-muted/50"
+                      className="bg-muted/50 pr-8"
                     />
-                    <span className="text-muted-foreground">€</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      €
+                    </span>
                   </div>
                 </div>
               </div>
@@ -612,17 +636,135 @@ export function PuntaBancaCalculator() {
                   : ''}
               Tabella dei profitti
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            {/* Layout a card solo su mobile (< sm) */}
+            <div className="block space-y-3 p-4 sm:hidden">
+              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+                <p className="mb-3 text-sm font-medium text-foreground">
+                  Se vinci la puntata sul Book:
+                </p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book</span>
+                    <span className="text-primary">
+                      {tipologia === 'RIMBORSO (CR%)'
+                        ? formatSigned((puntataNum ?? 0) * ((quotaPuntaNum ?? 0) - 1))
+                        : formatSigned(
+                            bonusNum > 0
+                              ? puntataEffettiva * (quotaPuntaNum ?? 0) - (puntataNum ?? 0)
+                              : puntataEffettiva * ((quotaPuntaNum ?? 0) - 1),
+                          )}{' '}
+                      €
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Exchange</span>
+                    <span className="text-destructive">
+                      {formatSigned(-(effectiveLiability ?? 0))} €
+                    </span>
+                  </div>
+                  {tipologia === 'RIMBORSO (CR%)' && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Rimborso</span>
+                      <span className="text-muted-foreground">{formatSigned(0)} €</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                    <span className="text-foreground">Totale</span>
+                    <span
+                      className={cn(
+                        totalSeVinciPuntata != null && totalSeVinciPuntata >= 0
+                          ? 'text-primary'
+                          : 'text-destructive',
+                      )}
+                    >
+                      = {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'} €
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-destructive/10 p-4">
+                <p className="mb-3 text-sm font-medium text-foreground">
+                  Se vinci la bancata sull&apos;Exchange:
+                </p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Book</span>
+                    <span className="text-destructive">
+                      {formatSigned(
+                        tipologia === 'RIMBORSO (CR%)'
+                          ? -(puntataNum ?? 0)
+                          : bonusNum > 0
+                            ? -(puntataNum ?? 0)
+                            : -puntataEffettiva,
+                      )}{' '}
+                      €
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Exchange</span>
+                    <span className="text-primary">
+                      {effectiveExchangeProfit != null
+                        ? formatSigned(effectiveExchangeProfit)
+                        : '—'}{' '}
+                      €
+                    </span>
+                  </div>
+                  {tipologia === 'RIMBORSO (CR%)' && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Rimborso</span>
+                      <span className="text-primary">{formatSigned(rimborsoNum)} €</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                    <span className="text-foreground">Totale</span>
+                    <span
+                      className={cn(
+                        totalSeVinciBancata != null && totalSeVinciBancata >= 0
+                          ? 'text-primary'
+                          : 'text-destructive',
+                      )}
+                    >
+                      = {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'} €
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabella da sm in su */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-white/10 text-muted-foreground">
-                    <th className="p-3 text-left font-normal"></th>
-                    <th className="p-3 text-right font-normal">Book</th>
-                    <th className="p-3 text-right font-normal">Exchange</th>
+                    <th
+                      className={
+                        tipologia === 'RIMBORSO (CR%)'
+                          ? 'w-[40%] p-3 text-left font-normal'
+                          : 'w-[50%] p-3 text-left font-normal'
+                      }
+                    ></th>
+                    <th
+                      className={
+                        tipologia === 'RIMBORSO (CR%)'
+                          ? 'w-[14%] p-3 text-right font-normal'
+                          : 'w-[16%] p-3 text-right font-normal'
+                      }
+                    >
+                      Book
+                    </th>
+                    <th
+                      className={
+                        tipologia === 'RIMBORSO (CR%)'
+                          ? 'w-[14%] p-3 text-right font-normal'
+                          : 'w-[16%] p-3 text-right font-normal'
+                      }
+                    >
+                      Exchange
+                    </th>
                     {tipologia === 'RIMBORSO (CR%)' && (
-                      <th className="p-3 text-right font-normal">Rimborso</th>
+                      <th className="w-[14%] p-3 text-right font-normal">Rimborso</th>
                     )}
-                    <th className="p-3 text-right font-normal">Totale</th>
+                    <th className="w-[18%] min-w-[5.5rem] p-3 text-right font-normal">Totale</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -637,7 +779,7 @@ export function PuntaBancaCalculator() {
                           {formatSigned(-(effectiveLiability ?? 0))}
                         </td>
                         <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
-                        <td className="p-3 text-right">
+                        <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                           <span
                             className={cn(
                               totalSeVinciPuntata != null && totalSeVinciPuntata >= 0
@@ -662,7 +804,7 @@ export function PuntaBancaCalculator() {
                             : '—'}
                         </td>
                         <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
-                        <td className="p-3 text-right">
+                        <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                           <span
                             className={cn(
                               totalSeVinciBancata != null && totalSeVinciBancata >= 0
@@ -691,7 +833,7 @@ export function PuntaBancaCalculator() {
                         <td className="p-3 text-right text-destructive">
                           {formatSigned(-(effectiveLiability ?? 0))}
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                           <span
                             className={cn(
                               totalSeVinciPuntata != null && totalSeVinciPuntata >= 0
@@ -715,7 +857,7 @@ export function PuntaBancaCalculator() {
                             ? formatSigned(effectiveExchangeProfit)
                             : '—'}
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                           <span
                             className={cn(
                               totalSeVinciBancata != null && totalSeVinciBancata >= 0

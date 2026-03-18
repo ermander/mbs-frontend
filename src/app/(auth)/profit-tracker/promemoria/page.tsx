@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { ReminderModal } from '@/components/profit-tracker/reminder-modal'
 import { TelegramLinkWidget } from '@/components/profit-tracker/telegram-link-widget'
@@ -72,19 +73,15 @@ export default function PromemoriaPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Promemoria</h1>
-          <p className="text-sm text-muted-foreground">
-            Crea promemoria collegati ai conti del Profit Tracker e ricevi notifiche su Telegram.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Promemoria"
+      sectionDescription="Gestisci i promemoria collegati ai conti e alle notifiche Telegram."
+      actions={
         <Button size="sm" type="button" onClick={handleNew}>
           Nuovo promemoria
         </Button>
-      </div>
-
+      }
+    >
       <TelegramLinkWidget botUsername={BOT_USERNAME} />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -92,7 +89,7 @@ export default function PromemoriaPage() {
         <Button
           type="button"
           variant={filterStatus === 'attivo' ? 'default' : 'outline'}
-          size="xs"
+          size="sm"
           onClick={() => setFilterStatus('attivo')}
         >
           Attivi
@@ -100,7 +97,7 @@ export default function PromemoriaPage() {
         <Button
           type="button"
           variant={filterStatus === 'completato' ? 'default' : 'outline'}
-          size="xs"
+          size="sm"
           onClick={() => setFilterStatus('completato')}
         >
           Completati
@@ -108,7 +105,7 @@ export default function PromemoriaPage() {
         <Button
           type="button"
           variant={filterStatus === 'scaduto' ? 'default' : 'outline'}
-          size="xs"
+          size="sm"
           onClick={() => setFilterStatus('scaduto')}
         >
           Scaduti
@@ -116,7 +113,7 @@ export default function PromemoriaPage() {
         <Button
           type="button"
           variant={filterStatus === 'tutti' ? 'default' : 'outline'}
-          size="xs"
+          size="sm"
           onClick={() => setFilterStatus('tutti')}
         >
           Tutti
@@ -182,7 +179,7 @@ export default function PromemoriaPage() {
                         {rem.stato === 'attivo' && (
                           <Button
                             variant="outline"
-                            size="xs"
+                            size="sm"
                             type="button"
                             onClick={() => void completeReminder(rem.id)}
                           >
@@ -191,7 +188,7 @@ export default function PromemoriaPage() {
                         )}
                         <Button
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           type="button"
                           onClick={() => handleClone(rem.id)}
                         >
@@ -199,7 +196,7 @@ export default function PromemoriaPage() {
                         </Button>
                         <Button
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           type="button"
                           onClick={() => handleEdit(rem.id)}
                         >
@@ -207,7 +204,7 @@ export default function PromemoriaPage() {
                         </Button>
                         <Button
                           variant="destructive"
-                          size="xs"
+                          size="sm"
                           type="button"
                           onClick={() => void deleteReminder(rem.id)}
                         >
@@ -230,6 +227,6 @@ export default function PromemoriaPage() {
         onOpenChange={setModalOpen}
         editingReminder={editingReminder ?? undefined}
       />
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

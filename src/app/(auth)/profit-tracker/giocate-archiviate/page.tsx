@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getBets, updateBet } from '@/services/api/profit-tracker-client'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import type { OngoingBet } from '@/types/profit-tracker'
 
 /** Formatta data e ora senza secondi (es. 14/03/2026, 16:00) */
@@ -89,16 +90,10 @@ export default function GiocateArchiviatePage() {
   }
 
   return (
-    <section className="min-h-[50vh] space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Giocate archiviate
-        </h1>
-        <p className="text-muted-foreground">
-          Elenco delle giocate archiviate. Apri il dettaglio per vedere profitti/perdite e totali.
-        </p>
-      </header>
-
+    <ProfitTrackerPageShell
+      sectionTitle="Giocate archiviate"
+      sectionDescription="Storico delle giocate chiuse, con accesso rapido a profitti e dettagli."
+    >
       {loading && (
         <p className="text-sm text-muted-foreground">Caricamento giocate archiviate...</p>
       )}
@@ -183,6 +178,6 @@ export default function GiocateArchiviatePage() {
           </tbody>
         </table>
       </div>
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

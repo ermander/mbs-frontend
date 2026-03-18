@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BookCreateModal, BookEditModal } from '@/components/profit-tracker/book-modals'
 
@@ -58,20 +59,15 @@ export default function BookPersonaliPage() {
   }
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Bookmaker</h1>
-          <p className="text-muted-foreground">
-            I bookmaker globali sono disponibili per tutti e non modificabili. Puoi anche creare i
-            tuoi book personali.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Book personali"
+      sectionDescription="Gestisci i bookmaker personali oltre a quelli globali preconfigurati."
+      actions={
         <Button type="button" onClick={() => setCreateOpen(true)}>
           Nuovo book
         </Button>
-      </header>
-
+      }
+    >
       {isLoadingBooks && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -227,6 +223,6 @@ export default function BookPersonaliPage() {
         }}
         book={currentBook}
       />
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

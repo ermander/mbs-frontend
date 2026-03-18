@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 
-const items = [
+export const profitTrackerNavItems = [
   { href: '/profit-tracker/dashboard', label: 'Dashboard' },
   { href: '/profit-tracker/giocate-in-corso', label: 'Giocate in corso' },
   { href: '/profit-tracker/giocate-archiviate', label: 'Giocate archiviate' },
@@ -25,7 +25,7 @@ export function ProfitTrackerNav() {
       aria-label="Navigazione Profit Tracker"
       className="mb-6 flex flex-wrap gap-2 rounded-lg border border-border bg-background/60 p-1 text-sm"
     >
-      {items.map((item) => {
+      {profitTrackerNavItems.map((item) => {
         const isActive =
           pathname === item.href ||
           (item.href !== '/profit-tracker/dashboard' && pathname.startsWith(item.href))

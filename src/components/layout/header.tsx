@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ChevronDown, Menu, X } from 'lucide-react'
 
 import {
@@ -33,10 +33,13 @@ const navLinkClass =
 
 export function Header() {
   const router = useRouter()
+  const pathname = usePathname()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null)
+
+  const isProfitTrackerActive = pathname.startsWith('/profit-tracker')
 
   const handleLogout = React.useCallback(() => {
     logout()
@@ -121,15 +124,7 @@ export function Header() {
                 </div>
               ))}
               {authenticatedNavLinksAfterDropdowns.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    navLinkClass,
-                    label === 'PROFIT TRACKER' &&
-                      'bg-primary/20 font-medium text-primary hover:bg-primary/30 hover:text-primary',
-                  )}
-                >
+                <Link key={href} href={href} className={navLinkClass}>
                   {label}
                 </Link>
               ))}
@@ -146,9 +141,7 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          {isAuthenticated ? (
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
-          ) : (
+          {!isAuthenticated && (
             <>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/login">Accedi</Link>
@@ -221,10 +214,7 @@ export function Header() {
                   <Link
                     key={href}
                     href={href}
-                    className={cn(
-                      'rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground',
-                      label === 'PROFIT TRACKER' && 'bg-primary/20 font-medium text-primary',
-                    )}
+                    className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
                     onClick={() => setMobileOpen(false)}
                   >
                     {label}

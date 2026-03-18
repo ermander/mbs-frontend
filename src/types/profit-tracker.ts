@@ -68,6 +68,8 @@ export type ModalitaSaldo = 'reale' | 'bonus' | 'rimborso'
 export interface OngoingBet {
   id: string
   eventoData: string
+  eventoNotificato?: boolean
+  hasOpenLegs?: boolean
   sport: SportType
   eventoNome: string
   modalitaSaldo: ModalitaSaldo

@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from 'react'
 import { Scale, Wallet, Loader2, Banknote } from 'lucide-react'
 
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 
 function formatCurrency(value: number): string {
@@ -56,9 +57,14 @@ export default function ProfitTrackerDashboardPage() {
     .slice(0, 5)
 
   return (
-    <section className="space-y-8">
-      <div>
-        <h2 className="mb-4 text-xl font-bold text-foreground">Bilancio</h2>
+    <ProfitTrackerPageShell
+      sectionTitle="Dashboard"
+      sectionDescription="Quadro sintetico di saldi, performance e attività recenti."
+    >
+      <div className="space-y-4">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Bilancio
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div>
@@ -241,6 +247,6 @@ export default function ProfitTrackerDashboardPage() {
           </div>
         </div>
       </div>
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

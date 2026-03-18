@@ -260,6 +260,7 @@ export interface GetBetsParams {
 
 export interface CreateBetPayload {
   eventoData: string
+  source?: 'oddsmatcher'
   sport: string
   eventoNome: string
   modalitaSaldo: string

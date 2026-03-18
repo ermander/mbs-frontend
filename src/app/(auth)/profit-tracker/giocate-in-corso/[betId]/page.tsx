@@ -711,184 +711,195 @@ export default function BetDetailPage() {
             </tr>
           </thead>
           <tbody>
-            {legs.map((leg) => (
-              <tr
-                key={leg.id}
-                className={`border-b border-border/40 align-top last:border-b-0 ${
-                  leg.statoEvento !== 'bozza' ? 'opacity-75' : ''
-                }`}
-              >
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {editingDateLegId === leg.id ? (
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="datetime-local"
-                        className="w-[11.5rem] rounded-md border border-border bg-background px-2 py-1 text-xs"
-                        value={draftDateLocal}
-                        onChange={(e) => setDraftDateLocal(e.target.value)}
-                        autoFocus
-                      />
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          onClick={handleCancelDateEdit}
-                          title="Annulla"
-                          aria-label="Annulla"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
-                          onClick={() => void handleConfirmDateEdit()}
-                          title="Conferma e salva"
-                          aria-label="Conferma e salva"
-                          disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
+            {legs.map((leg) => {
+              const shouldHighlightLeg =
+                bet.eventoNotificato &&
+                (leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso')
+
+              return (
+                <tr
+                  key={leg.id}
+                  className={`border-b border-border/40 align-top last:border-b-0 ${
+                    shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                  } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
+                >
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                    {editingDateLegId === leg.id ? (
+                      <div className="flex flex-col gap-1">
+                        <input
+                          type="datetime-local"
+                          className="w-[11.5rem] rounded-md border border-border bg-background px-2 py-1 text-xs"
+                          value={draftDateLocal}
+                          onChange={(e) => setDraftDateLocal(e.target.value)}
+                          autoFocus
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            onClick={handleCancelDateEdit}
+                            title="Annulla"
+                            aria-label="Annulla"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                            onClick={() => void handleConfirmDateEdit()}
+                            title="Conferma e salva"
+                            aria-label="Conferma e salva"
+                            disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
+                    ) : canEditLegEventDate(leg) ? (
+                      <button
+                        type="button"
+                        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+                        onClick={() => handleStartDateEdit(leg)}
+                        title="Modifica data evento"
+                      >
+                        {formatEventDate(leg.eventoData)}
+                      </button>
+                    ) : (
+                      formatEventDate(leg.eventoData)
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
+                  <td className="px-3 py-2 text-xs capitalize text-muted-foreground">
+                    {leg.metodo}
+                  </td>
+                  <td className="px-3 py-2">
+                    {leg.metodo === 'punta' ? (
+                      <select
+                        value={leg.tipoBonus}
+                        onChange={(e) =>
+                          handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
+                        }
+                        disabled={leg.statoEvento !== 'bozza'}
+                        className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {TIPO_BONUS_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="max-w-[260px]">
+                      <SearchableSelect
+                        options={accountSelectOptions}
+                        value={leg.accountId}
+                        onChange={(value) => handleAccountChange(leg.id, value)}
+                        placeholder="Seleziona conto"
+                        searchPlaceholder="Cerca conto..."
+                        allowEmpty={false}
+                        disabled={leg.statoEvento !== 'bozza'}
+                        size="sm"
+                        className="w-full"
+                      />
                     </div>
-                  ) : canEditLegEventDate(leg) ? (
-                    <button
-                      type="button"
-                      className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
-                      onClick={() => handleStartDateEdit(leg)}
-                      title="Modifica data evento"
-                    >
-                      {formatEventDate(leg.eventoData)}
-                    </button>
-                  ) : (
-                    formatEventDate(leg.eventoData)
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
-                <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
-                <td className="px-3 py-2">
-                  {leg.metodo === 'punta' ? (
+                  </td>
+                  <td className="px-3 py-2">
+                    {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
+                  </td>
+                  <td className="px-3 py-2">
+                    {leg.metodo === 'punta'
+                      ? renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                      : renderEditableCell(
+                          leg,
+                          'quotaRiferimento',
+                          leg.quotaRiferimento ?? 0,
+                          (v) => (v == null || v === 0 ? '—' : Number(v).toFixed(2)),
+                        )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {leg.metodo === 'punta' ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {leg.metodo === 'punta' ? (
+                      <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
+                    ) : (
+                      renderEditableCell(
+                        leg,
+                        'commissionePercentuale',
+                        leg.commissionePercentuale ?? 0,
+                        (v) => `${v.toFixed(1)}%`,
+                      )
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-foreground">
+                    {(leg.metodo === 'punta' && (leg.rischio ?? 0) === 0
+                      ? leg.stake
+                      : (leg.rischio ?? 0)
+                    ).toFixed(2)}{' '}
+                    €
+                  </td>
+                  <td className="px-3 py-2">
+                    {renderEditableCell(leg, 'bonusValore', leg.bonusValore ?? 0, (v) =>
+                      v !== 0 ? `${v.toFixed(2)} €` : '—',
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {renderEditableCell(leg, 'rimborsoValore', leg.rimborsoValore ?? 0, (v) =>
+                      v !== 0 ? `${v.toFixed(2)} €` : '—',
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs font-medium text-foreground">
+                    {leg.movimento.toFixed(2)} €
+                  </td>
+                  <td className="px-3 py-2">
                     <select
-                      value={leg.tipoBonus}
+                      value={leg.statoEvento}
                       onChange={(e) =>
-                        handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
+                        handleLegStatoChange(leg.id, e.target.value as BetLeg['statoEvento'])
                       }
-                      disabled={leg.statoEvento !== 'bozza'}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70"
+                      className={`rounded-md border px-2 py-1 text-xs font-medium ${statoEventoClasses(leg.statoEvento)}`}
                     >
-                      {TIPO_BONUS_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
+                      <option value="bozza">Bozza</option>
+                      <option value="in_corso">In corso</option>
+                      <option value="vinto">Vinto</option>
+                      <option value="perso">Perso</option>
+                      <option value="annullato">Annullato</option>
                     </select>
-                  ) : (
-                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="max-w-[260px]">
-                    <SearchableSelect
-                      options={accountSelectOptions}
-                      value={leg.accountId}
-                      onChange={(value) => handleAccountChange(leg.id, value)}
-                      placeholder="Seleziona conto"
-                      searchPlaceholder="Cerca conto..."
-                      allowEmpty={false}
-                      disabled={leg.statoEvento !== 'bozza'}
-                      size="sm"
-                      className="w-full"
-                    />
-                  </div>
-                </td>
-                <td className="px-3 py-2">
-                  {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
-                </td>
-                <td className="px-3 py-2">
-                  {leg.metodo === 'punta'
-                    ? renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
-                    : renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento ?? 0, (v) =>
-                        v == null || v === 0 ? '—' : Number(v).toFixed(2),
-                      )}
-                </td>
-                <td className="px-3 py-2">
-                  {leg.metodo === 'punta' ? (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  ) : (
-                    renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {leg.metodo === 'punta' ? (
-                    <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
-                  ) : (
-                    renderEditableCell(
-                      leg,
-                      'commissionePercentuale',
-                      leg.commissionePercentuale ?? 0,
-                      (v) => `${v.toFixed(1)}%`,
-                    )
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-foreground">
-                  {(leg.metodo === 'punta' && (leg.rischio ?? 0) === 0
-                    ? leg.stake
-                    : (leg.rischio ?? 0)
-                  ).toFixed(2)}{' '}
-                  €
-                </td>
-                <td className="px-3 py-2">
-                  {renderEditableCell(leg, 'bonusValore', leg.bonusValore ?? 0, (v) =>
-                    v !== 0 ? `${v.toFixed(2)} €` : '—',
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {renderEditableCell(leg, 'rimborsoValore', leg.rimborsoValore ?? 0, (v) =>
-                    v !== 0 ? `${v.toFixed(2)} €` : '—',
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs font-medium text-foreground">
-                  {leg.movimento.toFixed(2)} €
-                </td>
-                <td className="px-3 py-2">
-                  <select
-                    value={leg.statoEvento}
-                    onChange={(e) =>
-                      handleLegStatoChange(leg.id, e.target.value as BetLeg['statoEvento'])
-                    }
-                    className={`rounded-md border px-2 py-1 text-xs font-medium ${statoEventoClasses(leg.statoEvento)}`}
-                  >
-                    <option value="bozza">Bozza</option>
-                    <option value="in_corso">In corso</option>
-                    <option value="vinto">Vinto</option>
-                    <option value="perso">Perso</option>
-                    <option value="annullato">Annullato</option>
-                  </select>
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{leg.tag ?? '—'}</td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-                      onClick={() => handleCloneLeg(leg)}
-                    >
-                      Clona
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20"
-                      onClick={() => handleDeleteLeg(leg.id)}
-                    >
-                      Elimina
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{leg.tag ?? '—'}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-border bg-muted/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                        onClick={() => handleCloneLeg(leg)}
+                      >
+                        Clona
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20"
+                        onClick={() => handleDeleteLeg(leg.id)}
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {legs.length === 0 && (
               <tr>
                 <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={17}>

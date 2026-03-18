@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { QuickBetModal } from '@/components/profit-tracker/quick-bet-modal'
 
@@ -33,19 +34,15 @@ export default function GiocateRapidePage() {
     allAccounts.find((a) => a.id === accountId)?.nome ?? '—'
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Giocate rapide</h1>
-          <p className="text-muted-foreground">
-            Registra e gestisci risultati veloci come sessioni casino, slot e giochi veloci.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Giocate rapide"
+      sectionDescription="Registra e controlla risultati veloci come sessioni casino, slot e giochi rapidi."
+      actions={
         <Button type="button" onClick={() => setModalOpen(true)}>
           Nuova giocata
         </Button>
-      </header>
-
+      }
+    >
       {quickBetsError && (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {quickBetsError}
@@ -139,6 +136,6 @@ export default function GiocateRapidePage() {
       </div>
 
       <QuickBetModal open={modalOpen} onOpenChange={setModalOpen} />
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

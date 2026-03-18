@@ -369,20 +369,6 @@ export default function BetDetailPage() {
     .filter((l) => l.metodo === 'banca')
     .reduce((s, l) => s + (l.rischio ?? 0), 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
-  const hasPuntaAndBanca =
-    legs.some((l) => l.metodo === 'punta') && legs.some((l) => l.metodo === 'banca')
-  const countPunta = legs.filter((l) => l.metodo === 'punta').length
-  const countBanca = legs.filter((l) => l.metodo === 'banca').length
-  const legsSummary =
-    countPunta > 0 || countBanca > 0
-      ? [
-          countPunta > 0 && `${countPunta} puntat${countPunta === 1 ? 'a' : 'e'}`,
-          countBanca > 0 && `${countBanca} bancat${countBanca === 1 ? 'a' : 'e'}`,
-        ]
-          .filter(Boolean)
-          .join(', ')
-      : ''
-
   const canEditField = (leg: BetLeg, field: EditableField) => {
     if (field === 'bonusValore') return leg.tipoBonus === 'bonus'
     if (field === 'rimborsoValore') return leg.tipoBonus === 'rimborso'
@@ -601,78 +587,67 @@ export default function BetDetailPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <div className="relative">
           <input
             type="text"
             placeholder="Inserisci una nota"
-            className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-border bg-background px-2 py-1.5 pr-8 text-sm"
             value={notaLocal}
             onChange={(e) => setNotaLocal(e.target.value)}
             onBlur={handleNotaBlur}
           />
+          <Pencil
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-              onClick={() => {
-                setAddLegMethod('punta')
-                setAddLegOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nuova Puntata
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-              onClick={() => {
-                setAddLegMethod('banca')
-                setAddLegOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nuova Bancata
-            </button>
-            <Link
-              href="/profit-tracker/conti"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              <Plus className="h-4 w-4" />
-              Nuovo Deposito
-            </Link>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasPuntaAndBanca && (
-              <span className="inline-flex items-center gap-2">
-                <span className="rounded-md bg-green-500/20 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-                  Abbinata
-                </span>
-                {legsSummary && (
-                  <span className="text-xs text-muted-foreground">({legsSummary})</span>
-                )}
-              </span>
-            )}
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-              onClick={handleArchive}
-            >
-              <Archive className="h-4 w-4" />
-              Archivia
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
-              onClick={handleDeleteBet}
-            >
-              <Trash2 className="h-4 w-4" />
-              Elimina
-            </button>
-          </div>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            onClick={() => {
+              setAddLegMethod('punta')
+              setAddLegOpen(true)
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nuova Puntata
+          </button>
+          <button
+            type="button"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            onClick={() => {
+              setAddLegMethod('banca')
+              setAddLegOpen(true)
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nuova Bancata
+          </button>
+          <Link
+            href="/profit-tracker/conti"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <Plus className="h-4 w-4" />
+            Nuovo Deposito
+          </Link>
+          <button
+            type="button"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            onClick={handleArchive}
+          >
+            <Archive className="h-4 w-4" />
+            Archivia
+          </button>
+          <button
+            type="button"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+            onClick={handleDeleteBet}
+          >
+            <Trash2 className="h-4 w-4" />
+            Elimina
+          </button>
         </div>
       </div>
 

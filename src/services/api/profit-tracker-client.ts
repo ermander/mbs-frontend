@@ -334,6 +334,7 @@ export async function updateBetLeg(
   payload: Partial<
     Pick<
       BetLeg,
+      | 'eventoData'
       | 'eventoNome'
       | 'stake'
       | 'quota'

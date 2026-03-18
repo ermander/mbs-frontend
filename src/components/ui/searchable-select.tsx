@@ -25,6 +25,8 @@ interface SearchableSelectProps {
   allowEmpty?: boolean
   disabled?: boolean
   size?: 'default' | 'sm'
+  /** When inside a modal (e.g. Radix Dialog), pass the container element so the dropdown is portaled there and receives pointer events. Use a callback ref to capture: ref={(el) => setPortalContainer(el)}. */
+  portalContainer?: HTMLElement | null
 }
 
 export function SearchableSelect({
@@ -39,15 +41,17 @@ export function SearchableSelect({
   allowEmpty = true,
   disabled = false,
   size = 'default',
+  portalContainer,
 }: SearchableSelectProps) {
   const isSmall = size === 'sm'
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number }>({
-    top: 0,
-    left: 0,
-    width: 0,
-  })
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number
+    left: number
+    width: number
+    useAbsolute?: boolean
+  }>({ top: 0, left: 0, width: 0 })
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -64,18 +68,31 @@ export function SearchableSelect({
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
-    setDropdownPos({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: Math.max(rect.width, 220),
-    })
-  }, [])
+    if (portalContainer) {
+      const portalEl = portalContainer
+      const portalRect = portalEl.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom - portalRect.top + 4,
+        left: rect.left - portalRect.left,
+        width: Math.max(rect.width, 220),
+        useAbsolute: true,
+      })
+    }
+    if (!portalContainer) {
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: Math.max(rect.width, 220),
+        useAbsolute: false,
+      })
+    }
+  }, [portalContainer])
 
   useEffect(() => {
     if (!open) return
     updatePosition()
-    const t = requestAnimationFrame(() => inputRef.current?.focus())
-    return () => cancelAnimationFrame(t)
+    const t = setTimeout(() => inputRef.current?.focus(), 0)
+    return () => clearTimeout(t)
   }, [open, updatePosition])
 
   useEffect(() => {
@@ -101,6 +118,9 @@ export function SearchableSelect({
       if (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target)) {
         return
       }
+      if (target instanceof Element && target.closest?.('[data-searchable-select]')) {
+        return
+      }
       setOpen(false)
     }
     const handleEscape = (e: KeyboardEvent) => {
@@ -114,12 +134,18 @@ export function SearchableSelect({
     }
   }, [open])
 
+  const portalTarget = portalContainer ?? document.body
+
   const dropdownPanel = open
     ? createPortal(
         <div
           ref={dropdownRef}
           role="listbox"
-          className="fixed z-[9999] overflow-hidden rounded-md border border-border bg-popover shadow-lg"
+          data-searchable-select
+          className={cn(
+            'pointer-events-auto z-[9999] overflow-hidden rounded-md border border-border bg-popover shadow-lg',
+            dropdownPos.useAbsolute ? 'absolute' : 'fixed',
+          )}
           style={{
             top: dropdownPos.top,
             left: dropdownPos.left,
@@ -132,6 +158,7 @@ export function SearchableSelect({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && filteredOptions.length === 1) {
                   onChange(filteredOptions[0].value)
@@ -197,7 +224,7 @@ export function SearchableSelect({
             )}
           </ul>
         </div>,
-        document.body,
+        portalTarget,
       )
     : null
 

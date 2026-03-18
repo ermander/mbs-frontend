@@ -689,7 +689,7 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
-              <th className="px-3 py-2 text-left">Mercato</th>
+              <th className="whitespace-nowrap px-3 py-2 text-left">Mercato</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
@@ -709,8 +709,9 @@ export default function BetDetailPage() {
           <tbody>
             {legs.map((leg) => {
               const shouldHighlightLeg =
-                Boolean(leg.eventoNotificato) &&
-                (leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso')
+                Boolean(bet?.eventoNotificato && bet?.hasOpenLegs) ||
+                (Boolean(leg.eventoNotificato) &&
+                  (leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso'))
 
               return (
                 <tr
@@ -768,7 +769,9 @@ export default function BetDetailPage() {
                     {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                    {leg.mercato}
+                  </td>
                   <td className="px-3 py-2 text-xs capitalize text-muted-foreground">
                     {leg.metodo}
                   </td>

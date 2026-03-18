@@ -180,7 +180,7 @@ export default function ArchivedBetDetailPage() {
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
-              <th className="px-3 py-2 text-left">Mercato</th>
+              <th className="whitespace-nowrap px-3 py-2 text-left">Mercato</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
@@ -213,7 +213,9 @@ export default function ArchivedBetDetailPage() {
                   {leg.eventoNome}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{leg.mercato}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                  {leg.mercato}
+                </td>
                 <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {leg.metodo === 'punta' ? (

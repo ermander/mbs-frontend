@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import {
   equivalentBackOdds,
@@ -12,8 +12,8 @@ import {
   ratingPercent,
   remainingLayStakeAtNewOdds,
 } from '@/lib/calculators/punta-banca'
-import type { TipologiaCalcolo, SbilanciamentoValue } from '@/stores/agenda-store'
-import { useAgendaStore } from '@/stores/agenda-store'
+import type { TipologiaCalcolo } from '@/stores/agenda-store'
+import { PuntaBancaSaveModal } from '@/components/calculators/PuntaBancaSaveModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,8 +47,6 @@ function formatSigned(n: number): string {
 }
 
 export function PuntaBancaCalculator() {
-  const addEntry = useAgendaStore((s) => s.addEntry)
-
   const [tipologia, setTipologia] = useState<TipologiaCalcolo>('NORMALE')
   const [isAvanzato, setIsAvanzato] = useState(false)
   const [puntata, setPuntata] = useState('')
@@ -63,7 +61,7 @@ export function PuntaBancaCalculator() {
   const [abbinata, setAbbinata] = useState('')
   const [nuovaQuota, setNuovaQuota] = useState('')
   const [showBancataParziale, setShowBancataParziale] = useState(false)
-  const [agendaMessage, setAgendaMessage] = useState<string | null>(null)
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
 
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
@@ -227,54 +225,13 @@ export function PuntaBancaCalculator() {
         layStake != null &&
         responsabilita != null
 
-  useEffect(() => {
-    if (
-      !showSummary ||
-      quotaPuntaNum == null ||
-      layStake == null ||
-      responsabilita == null ||
-      guadagnoMinimo == null ||
-      quotaBancaNum == null
-    )
-      return
-    const commissionePct = commissioneNum
-    const totalRow1 = puntataEffettiva * (quotaPuntaNum - 1) - responsabilita
-    const exchangeProfitAfterCommission = layStake * (1 - commissionePct / 100)
-    const totalRow2 = -puntataEffettiva + exchangeProfitAfterCommission
-    const ts = Date.now()
-  }, [
-    showSummary,
-    puntataEffettiva,
-    quotaPuntaNum,
-    layStake,
-    responsabilita,
-    guadagnoMinimo,
-    quotaBancaNum,
-    commissioneNum,
-  ])
-  // #endregion
-
-  const handleInviaAgenda = () => {
-    addEntry({
-      tipologia,
-      puntata: puntataNum ?? 0,
-      quotaPunta: quotaPuntaNum ?? 0,
-      rimborso: parseNum(rimborso) ?? undefined,
-      bonus: parseNum(bonus) ?? undefined,
-      commissione: commissioneNum,
-      quotaBanca: quotaBancaNum ?? 0,
-      quotaPuntaEquivalente,
-      layStake: layStake ?? null,
-      responsabilita,
-      sbilanciamento: imbalancePercent as SbilanciamentoValue,
-      abbinata: parseNum(abbinata) ?? undefined,
-      nuovaQuota: parseNum(nuovaQuota) ?? undefined,
-      banca: bancaParziale ?? undefined,
-      responsabilitaAbbinata: responsabilitaParziale ?? undefined,
-    })
-    setAgendaMessage('Aggiunto al Profit Tracker.')
-    setTimeout(() => setAgendaMessage(null), 3000)
-  }
+  const canOpenSaveModal =
+    showSummary &&
+    quotaPuntaNum != null &&
+    quotaBancaNum != null &&
+    layStake != null &&
+    responsabilita != null &&
+    puntataEffettiva > 0
 
   return (
     <div className="mx-auto max-w-2xl rounded-lg border border-white/10 bg-white/5 p-0 shadow-xl backdrop-blur-md">
@@ -782,11 +739,29 @@ export function PuntaBancaCalculator() {
 
       {/* Invia al Profit Tracker */}
       <div className="flex flex-col items-center gap-2 p-4">
-        <Button onClick={handleInviaAgenda} variant="default">
+        <Button
+          onClick={() => setSaveModalOpen(true)}
+          variant="default"
+          disabled={!canOpenSaveModal}
+        >
           Invia al Profit Tracker
         </Button>
-        {agendaMessage && <p className={cn('text-sm', 'text-primary')}>{agendaMessage}</p>}
       </div>
+
+      <PuntaBancaSaveModal
+        open={saveModalOpen}
+        onOpenChange={setSaveModalOpen}
+        tipologia={tipologia}
+        puntataEffettiva={puntataEffettiva}
+        puntataNum={puntataNum ?? 0}
+        bonusNum={bonusNum}
+        rimborsoNum={rimborsoNum}
+        quotaPuntaNum={quotaPuntaNum ?? 0}
+        quotaBancaNum={quotaBancaNum ?? 0}
+        layStake={layStake ?? 0}
+        responsabilita={effectiveLiability ?? responsabilita ?? 0}
+        commissioneNum={commissioneNum}
+      />
     </div>
   )
 }

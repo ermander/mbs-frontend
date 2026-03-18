@@ -36,6 +36,7 @@ export function Header() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [openDropdown, setOpenDropdown] = React.useState<string | null>(null)
 
   const handleLogout = React.useCallback(() => {
     logout()
@@ -68,39 +69,56 @@ export function Header() {
                 </Link>
               ))}
               {authenticatedNavDropdowns.map((dropdown) => (
-                <DropdownMenu key={dropdown.label}>
-                  <DropdownMenuTrigger
-                    className={cn(
-                      navLinkClass,
-                      'inline-flex items-center gap-1 border-0 bg-transparent p-0',
-                    )}
-                    aria-haspopup="menu"
+                <div
+                  key={dropdown.label}
+                  className="relative"
+                  onMouseEnter={() => setOpenDropdown(dropdown.label)}
+                  onMouseLeave={() =>
+                    setOpenDropdown((current) => (current === dropdown.label ? null : current))
+                  }
+                >
+                  <DropdownMenu
+                    open={openDropdown === dropdown.label}
+                    onOpenChange={(open) =>
+                      setOpenDropdown((current) =>
+                        open ? dropdown.label : current === dropdown.label ? null : current,
+                      )
+                    }
+                    modal={false}
                   >
-                    {dropdown.label}
-                    <ChevronDown className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[12rem]">
-                    {dropdown.items.map((item) => (
-                      <DropdownMenuItem key={item.href} asChild>
-                        <Link href={item.href}>{item.label}</Link>
-                      </DropdownMenuItem>
-                    ))}
-                    {dropdown.label === 'ACCOUNT' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onSelect={(e) => {
-                            e.preventDefault()
-                            handleLogout()
-                          }}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          Logout
+                    <DropdownMenuTrigger
+                      className={cn(
+                        navLinkClass,
+                        'inline-flex items-center gap-1 border-0 bg-transparent p-0',
+                      )}
+                      aria-haspopup="menu"
+                    >
+                      {dropdown.label}
+                      <ChevronDown className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[12rem]">
+                      {dropdown.items.map((item) => (
+                        <DropdownMenuItem key={item.href} asChild>
+                          <Link href={item.href}>{item.label}</Link>
                         </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      ))}
+                      {dropdown.label === 'ACCOUNT' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault()
+                              handleLogout()
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            Logout
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               ))}
               {authenticatedNavLinksAfterDropdowns.map(({ href, label }) => (
                 <Link

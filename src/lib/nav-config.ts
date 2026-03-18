@@ -3,6 +3,7 @@
  * Used by Header for dropdowns and mobile nav.
  */
 
+import { profitTrackerNavItems } from '@/components/profit-tracker/profit-tracker-nav'
 export interface NavLinkItem {
   label: string
   href: string
@@ -46,11 +47,16 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     ],
   },
   {
+    label: 'PROFIT TRACKER',
+    items: profitTrackerNavItems.map((item) => ({
+      label: item.label,
+      href: item.href,
+    })),
+  },
+  {
     label: 'ACCOUNT',
     items: [
       { label: 'Profilo', href: '/account/profilo' },
-      { label: 'Profit Tracker', href: '/account/agenda-guadagni' },
-      { label: 'Fogli Excel', href: '/account/fogli-excel' },
       { label: 'Area affiliato', href: '/account/affiliato' },
       // Logout is handled as action in Header, not a link
     ],
@@ -63,6 +69,5 @@ export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'GUIDE', href: '/guide' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = [
-  { label: 'PROFIT TRACKER', href: '/profit-tracker' }, // highlighted
   { label: 'FORUM', href: '/forum' },
 ]

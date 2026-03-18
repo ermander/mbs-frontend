@@ -4,20 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatEventDateDisplay } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getBets, updateBet } from '@/services/api/profit-tracker-client'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import type { OngoingBet } from '@/types/profit-tracker'
-
-/** Formatta data e ora senza secondi (es. 14/03/2026, 16:00) */
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 const SPORT_ICON: Record<string, string> = {
   calcio: '⚽',
@@ -89,16 +80,10 @@ export default function GiocateArchiviatePage() {
   }
 
   return (
-    <section className="min-h-[50vh] space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Giocate archiviate
-        </h1>
-        <p className="text-muted-foreground">
-          Elenco delle giocate archiviate. Apri il dettaglio per vedere profitti/perdite e totali.
-        </p>
-      </header>
-
+    <ProfitTrackerPageShell
+      sectionTitle="Giocate archiviate"
+      sectionDescription="Storico delle giocate chiuse, con accesso rapido a profitti e dettagli."
+    >
       {loading && (
         <p className="text-sm text-muted-foreground">Caricamento giocate archiviate...</p>
       )}
@@ -124,13 +109,22 @@ export default function GiocateArchiviatePage() {
                 <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                   {bet.id}
                 </td>
-                <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                  {formatDate(bet.eventoData)}
+                <td className="px-3 py-2 text-center align-top text-xs text-muted-foreground">
+                  {(() => {
+                    const { datePart, timePart } = formatEventDateDisplay(bet.eventoData)
+                    return (
+                      <span className="whitespace-nowrap">
+                        {datePart} {timePart}
+                      </span>
+                    )
+                  })()}
                 </td>
                 <td className="px-3 py-2 align-top text-muted-foreground" title={bet.sport}>
                   <span aria-hidden>{getSportIcon(bet.sport)}</span>
                 </td>
-                <td className="px-3 py-2 align-top text-sm text-foreground">{bet.eventoNome}</td>
+                <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
+                  {bet.eventoNome}
+                </td>
                 <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
                   {bet.modalitaSaldo}
                 </td>
@@ -183,6 +177,6 @@ export default function GiocateArchiviatePage() {
           </tbody>
         </table>
       </div>
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

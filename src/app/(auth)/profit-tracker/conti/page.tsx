@@ -5,6 +5,7 @@ import { useEffect, useCallback, useMemo, useState } from 'react'
 import { Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
@@ -72,19 +73,15 @@ export default function ContiPage() {
   const showEmptyState = !isLoadingAccounts && !accountsError && accounts.length === 0
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Conti</h1>
-          <p className="text-muted-foreground">
-            Gestisci i conti collegati ai tuoi bookmaker e tieni traccia dei saldi.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Conti"
+      sectionDescription="Gestisci i conti collegati ai bookmaker e monitora i saldi disponibili."
+      actions={
         <Button type="button" onClick={() => setCreateOpen(true)}>
           Nuovo conto
         </Button>
-      </header>
-
+      }
+    >
       <div
         className="flex w-fit items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5"
         role="status"
@@ -287,6 +284,6 @@ export default function ContiPage() {
           }
         />
       )}
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

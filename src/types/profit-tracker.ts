@@ -68,6 +68,8 @@ export type ModalitaSaldo = 'reale' | 'bonus' | 'rimborso'
 export interface OngoingBet {
   id: string
   eventoData: string
+  eventoNotificato?: boolean
+  hasOpenLegs?: boolean
   sport: SportType
   eventoNome: string
   modalitaSaldo: ModalitaSaldo
@@ -97,6 +99,7 @@ export interface BetLeg {
   rimborsoValore?: number
   commissionePercentuale?: number
   movimento: number
+  eventoNotificato?: boolean
   statoEvento: BetStatus
   tag?: string
 }
@@ -132,4 +135,24 @@ export interface WalletMovement {
   valore: number
   dataRegistrazione: string
   descrizione?: string
+}
+
+export type ReminderPeriod = '24h' | '12h' | 'scadenza'
+export type ReminderStatus = 'attivo' | 'completato' | 'scaduto'
+
+export interface Reminder {
+  id: string
+  accountId?: string
+  descrizione: string
+  dataScadenza: string
+  periodoNotifica: ReminderPeriod
+  notificaInviata: boolean
+  stato: ReminderStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TelegramStatus {
+  linked: boolean
+  linkedAt?: string
 }

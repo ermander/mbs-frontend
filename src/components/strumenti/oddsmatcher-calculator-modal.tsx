@@ -338,6 +338,7 @@ export function OddsmatcherCalculatorModal({
     try {
       const betPayload = {
         eventoData: eventoDataIso,
+        source: 'oddsmatcher' as const,
         sport: 'calcio' as const,
         eventoNome,
         modalitaSaldo: 'reale' as const,

@@ -4,19 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { getErrorMessage } from '@/lib/error-utils'
+import { formatEventDateDisplay } from '@/lib/utils'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { OngoingBet } from '@/types/profit-tracker'
-
-/** Formatta data e ora senza secondi (es. 14/03/2026, 16:00) */
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 /** Icone sport già usate nel progetto (oddsmatcher) */
 const SPORT_ICON: Record<string, string> = {
@@ -101,14 +92,10 @@ export default function GiocateInCorsoPage() {
   }
 
   return (
-    <section className="min-h-[50vh] space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Giocate in corso</h1>
-        <p className="text-muted-foreground">
-          Elenco delle giocate attualmente aperte salvate nel Profit Tracker.
-        </p>
-      </header>
-
+    <ProfitTrackerPageShell
+      sectionTitle="Giocate in corso"
+      sectionDescription="Elenco operativo delle giocate attualmente aperte nel Profit Tracker."
+    >
       {isLoadingOngoingBets && (
         <p className="text-sm text-muted-foreground">Caricamento giocate...</p>
       )}
@@ -129,129 +116,146 @@ export default function GiocateInCorsoPage() {
               </th>
               <th className="px-3 py-2 text-left">Tag</th>
               <th className="px-3 py-2 text-left">Nota</th>
-              <th className="px-3 py-2 text-left">Stato</th>
               <th className="px-3 py-2 text-right">Azioni</th>
             </tr>
           </thead>
           <tbody>
-            {bets.map((bet) => (
-              <tr key={bet.id} className="border-b border-border/40 last:border-b-0">
-                <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
-                  {bet.id}
-                </td>
-                <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                  {formatDate(bet.eventoData)}
-                </td>
-                <td className="px-3 py-2 align-top text-muted-foreground" title={bet.sport}>
-                  <span aria-hidden>{getSportIcon(bet.sport)}</span>
-                </td>
-                <td className="px-3 py-2 align-top text-sm text-foreground">{bet.eventoNome}</td>
-                <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
-                  {bet.modalitaSaldo}
-                </td>
-                <td className="px-3 py-2 align-top text-xs text-foreground">
-                  {resolveAccountLabel(bet.accountId)}
-                </td>
-                <td className="px-3 py-2 align-top">
-                  {editingCell?.betId === bet.id && editingCell?.field === 'tag' ? (
-                    <input
-                      type="text"
-                      className="w-full min-w-[6rem] rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={editingCell.value}
-                      onChange={(e) =>
-                        setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
-                      }
-                      onBlur={() => handleCellBlur(bet)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                      autoFocus
-                      placeholder="Tag"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full min-w-[6rem] rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                      onClick={() =>
-                        setEditingCell({
-                          betId: bet.id,
-                          field: 'tag',
-                          value: bet.tag ?? '',
-                        })
-                      }
-                    >
-                      {bet.tag ?? '—'}
-                    </button>
-                  )}
-                </td>
-                <td className="px-3 py-2 align-top">
-                  {editingCell?.betId === bet.id && editingCell?.field === 'nota' ? (
-                    <input
-                      type="text"
-                      className="w-full min-w-[8rem] rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={editingCell.value}
-                      onChange={(e) =>
-                        setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
-                      }
-                      onBlur={() => handleCellBlur(bet)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                      autoFocus
-                      placeholder="Nota"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full min-w-[8rem] rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                      onClick={() =>
-                        setEditingCell({
-                          betId: bet.id,
-                          field: 'nota',
-                          value: bet.nota ?? '',
-                        })
-                      }
-                    >
-                      {bet.nota ?? '—'}
-                    </button>
-                  )}
-                </td>
-                <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
-                  {bet.statoEvento.replace('_', ' ')}
-                </td>
-                <td className="px-3 py-2 align-top">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-                      onClick={() => router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)}
-                    >
-                      Dettaglio
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                      onClick={() => handleArchive(bet.id)}
-                    >
-                      Archivia
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                      onClick={() => handleClone(bet.id)}
-                    >
-                      Clona
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-destructive/40 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(bet.id)}
-                    >
-                      Elimina
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {bets.map((bet) => {
+              const shouldHighlight = bet.eventoNotificato && bet.hasOpenLegs
+              return (
+                <tr
+                  key={bet.id}
+                  className={`border-b border-border/40 last:border-b-0 ${
+                    shouldHighlight ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                  }`}
+                >
+                  <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
+                    {bet.id}
+                  </td>
+                  <td className="px-3 py-2 text-center align-top text-xs text-muted-foreground">
+                    {(() => {
+                      const { datePart, timePart } = formatEventDateDisplay(bet.eventoData)
+                      return (
+                        <span className="whitespace-nowrap">
+                          {datePart} {timePart}
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="px-3 py-2 align-top text-muted-foreground" title={bet.sport}>
+                    <span aria-hidden>{getSportIcon(bet.sport)}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
+                    {bet.eventoNome}
+                  </td>
+                  <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
+                    {bet.modalitaSaldo}
+                  </td>
+                  <td className="px-3 py-2 align-top text-xs text-foreground">
+                    {resolveAccountLabel(bet.accountId)}
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    {editingCell?.betId === bet.id && editingCell?.field === 'tag' ? (
+                      <input
+                        type="text"
+                        className="w-full min-w-[6rem] rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={editingCell.value}
+                        onChange={(e) =>
+                          setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
+                        }
+                        onBlur={() => handleCellBlur(bet)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && (e.target as HTMLInputElement).blur()
+                        }
+                        autoFocus
+                        placeholder="Tag"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="w-full min-w-[6rem] rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                        onClick={() =>
+                          setEditingCell({
+                            betId: bet.id,
+                            field: 'tag',
+                            value: bet.tag ?? '',
+                          })
+                        }
+                      >
+                        {bet.tag ?? '—'}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    {editingCell?.betId === bet.id && editingCell?.field === 'nota' ? (
+                      <input
+                        type="text"
+                        className="w-full min-w-[8rem] rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={editingCell.value}
+                        onChange={(e) =>
+                          setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
+                        }
+                        onBlur={() => handleCellBlur(bet)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && (e.target as HTMLInputElement).blur()
+                        }
+                        autoFocus
+                        placeholder="Nota"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="w-full min-w-[8rem] rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                        onClick={() =>
+                          setEditingCell({
+                            betId: bet.id,
+                            field: 'nota',
+                            value: bet.nota ?? '',
+                          })
+                        }
+                      >
+                        {bet.nota ?? '—'}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                        onClick={() => router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)}
+                      >
+                        Dettaglio
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        onClick={() => handleArchive(bet.id)}
+                      >
+                        Archivia
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        onClick={() => handleClone(bet.id)}
+                      >
+                        Clona
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-destructive/40 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(bet.id)}
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {bets.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={10}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={9}>
                   Nessuna giocata in corso. Aggiungi una giocata dai calcolatori o dagli strumenti.
                 </td>
               </tr>
@@ -259,6 +263,6 @@ export default function GiocateInCorsoPage() {
           </tbody>
         </table>
       </div>
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

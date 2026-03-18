@@ -13,6 +13,9 @@ import type {
   Wallet,
   WalletMovement,
   WalletMovementType,
+  Reminder,
+  ReminderStatus,
+  TelegramStatus,
 } from '@/types/profit-tracker'
 
 export interface CreateHolderPayload {
@@ -257,6 +260,7 @@ export interface GetBetsParams {
 
 export interface CreateBetPayload {
   eventoData: string
+  source?: 'oddsmatcher'
   sport: string
   eventoNome: string
   modalitaSaldo: string
@@ -334,6 +338,7 @@ export async function updateBetLeg(
   payload: Partial<
     Pick<
       BetLeg,
+      | 'eventoData'
       | 'eventoNome'
       | 'stake'
       | 'quota'
@@ -359,4 +364,74 @@ export async function updateBetLeg(
 
 export async function deleteBetLeg(betId: string, legId: string): Promise<void> {
   await apiClient.delete(`/profit-tracker/bets/${betId}/legs/${legId}`)
+}
+
+// Reminders
+
+export interface GetRemindersParams {
+  stato?: ReminderStatus
+}
+
+export interface CreateReminderPayload {
+  accountId?: string
+  descrizione: string
+  dataScadenza: string
+  periodoNotifica: '24h' | '12h' | 'scadenza'
+}
+
+export type UpdateReminderPayload = Partial<CreateReminderPayload> & {
+  stato?: ReminderStatus
+}
+
+export async function getReminders(params?: GetRemindersParams): Promise<Reminder[]> {
+  const response = await apiClient.get<Reminder[]>('/profit-tracker/reminders', {
+    params: params ?? {},
+  })
+  return response.data
+}
+
+export async function createReminder(payload: CreateReminderPayload): Promise<Reminder> {
+  const response = await apiClient.post<Reminder>('/profit-tracker/reminders', payload)
+  return response.data
+}
+
+export async function updateReminder(
+  id: string,
+  payload: UpdateReminderPayload,
+): Promise<Reminder> {
+  const response = await apiClient.put<Reminder>(`/profit-tracker/reminders/${id}`, payload)
+  return response.data
+}
+
+export async function deleteReminder(id: string): Promise<void> {
+  await apiClient.delete(`/profit-tracker/reminders/${id}`)
+}
+
+export async function completeReminder(id: string): Promise<Reminder> {
+  const response = await apiClient.patch<Reminder>(`/profit-tracker/reminders/${id}/complete`, {})
+  return response.data
+}
+
+// Telegram linking
+
+export interface GenerateTelegramCodeResponse {
+  code: string
+  expiresAt: string
+}
+
+export async function generateTelegramCode(): Promise<GenerateTelegramCodeResponse> {
+  const response = await apiClient.post<GenerateTelegramCodeResponse>(
+    '/profit-tracker/telegram/generate-code',
+    {},
+  )
+  return response.data
+}
+
+export async function getTelegramStatus(): Promise<TelegramStatus> {
+  const response = await apiClient.get<TelegramStatus>('/profit-tracker/telegram/status')
+  return response.data
+}
+
+export async function unlinkTelegram(): Promise<void> {
+  await apiClient.delete('/profit-tracker/telegram/unlink')
 }

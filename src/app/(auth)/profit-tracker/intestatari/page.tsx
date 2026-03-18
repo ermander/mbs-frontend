@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { HolderCreateModal, HolderEditModal } from '@/components/profit-tracker/holder-modals'
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
@@ -28,19 +29,15 @@ export default function IntestatariPage() {
   }, [fetchHolders, holders.length])
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Intestatari</h1>
-          <p className="text-muted-foreground">
-            Gestisci gli intestatari collegati ai tuoi conti e metodi di pagamento.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Intestatari"
+      sectionDescription="Gestisci gli intestatari collegati a conti e wallet."
+      actions={
         <Button type="button" onClick={() => setCreateOpen(true)}>
           Nuovo intestatario
         </Button>
-      </header>
-
+      }
+    >
       <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
         <table className="min-w-full text-sm">
           <thead>
@@ -144,6 +141,6 @@ export default function IntestatariPage() {
         }}
         defaultHolderId={newWalletHolderId ?? undefined}
       />
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

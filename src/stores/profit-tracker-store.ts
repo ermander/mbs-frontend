@@ -12,6 +12,8 @@ import type {
   QuickBet,
   Wallet,
   WalletMovement,
+  Reminder,
+  TelegramStatus,
 } from '@/types/profit-tracker'
 import type {
   CreateBetLegPayload,
@@ -38,6 +40,14 @@ import {
   getHolders as apiGetHolders,
   getQuickBets as apiGetQuickBets,
   getWallets as apiGetWallets,
+  getReminders as apiGetReminders,
+  createReminder as apiCreateReminder,
+  updateReminder as apiUpdateReminder,
+  deleteReminder as apiDeleteReminder,
+  completeReminder as apiCompleteReminder,
+  getTelegramStatus as apiGetTelegramStatus,
+  generateTelegramCode as apiGenerateTelegramCode,
+  unlinkTelegram as apiUnlinkTelegram,
   updateAccount as apiUpdateAccount,
   updateBet as apiUpdateBet,
   updateBetLeg as apiUpdateBetLeg,
@@ -75,6 +85,16 @@ interface ProfitTrackerState {
   accountMovementsError?: string
   isSavingWalletMovement: boolean
   walletMovementsError?: string
+
+  reminders: Reminder[]
+  isLoadingReminders: boolean
+  remindersError?: string
+
+  telegramStatus: TelegramStatus | null
+  telegramStatusError?: string
+  isLoadingTelegramStatus: boolean
+  isGeneratingTelegramCode: boolean
+  generatedTelegramCode?: string
 
   fetchHolders: () => Promise<void>
   fetchQuickBets: () => Promise<void>
@@ -121,6 +141,7 @@ interface ProfitTrackerState {
     patch: Partial<
       Pick<
         BetLeg,
+        | 'eventoData'
         | 'eventoNome'
         | 'stake'
         | 'quota'
@@ -156,6 +177,21 @@ interface ProfitTrackerState {
     descrizione?: string
   }) => Promise<void>
   addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => Promise<void>
+
+  fetchReminders: (params?: { stato?: Reminder['stato'] }) => Promise<void>
+  createReminder: (payload: {
+    accountId?: string
+    descrizione: string
+    dataScadenza: string
+    periodoNotifica: '24h' | '12h' | 'scadenza'
+  }) => Promise<void>
+  updateReminder: (id: string, patch: Partial<Reminder>) => Promise<void>
+  deleteReminder: (id: string) => Promise<void>
+  completeReminder: (id: string) => Promise<void>
+
+  fetchTelegramStatus: () => Promise<void>
+  generateTelegramCode: () => Promise<string | undefined>
+  unlinkTelegram: () => Promise<void>
 }
 
 function generateId(prefix: string): string {
@@ -205,6 +241,16 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     accountMovementsError: undefined,
     isSavingWalletMovement: false,
     walletMovementsError: undefined,
+
+    reminders: [],
+    isLoadingReminders: false,
+    remindersError: undefined,
+
+    telegramStatus: null,
+    telegramStatusError: undefined,
+    isLoadingTelegramStatus: false,
+    isGeneratingTelegramCode: false,
+    generatedTelegramCode: undefined,
 
     fetchHolders: async () => {
       set(() => ({ isLoadingHolders: true, holdersError: undefined }))
@@ -488,9 +534,30 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     updateBetLeg: async (betId, legId, patch) => {
       try {
         const updated = await apiUpdateBetLeg(betId, legId, patch)
-        set((state) => ({
-          betLegs: state.betLegs.map((l) => (l.id === legId ? updated : l)),
-        }))
+        set((state) => {
+          const newBetLegs = state.betLegs.map((l) => (l.id === legId ? updated : l))
+          const legsOfBet = newBetLegs.filter((l) => l.betId === betId)
+          const hasOpenLegs = legsOfBet.some(
+            (l) => l.statoEvento === 'bozza' || l.statoEvento === 'in_corso',
+          )
+          const hasNotifiedOpenLegs = legsOfBet.some(
+            (l) =>
+              l.eventoNotificato && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'),
+          )
+
+          return {
+            betLegs: newBetLegs,
+            ongoingBets: state.ongoingBets.map((b) =>
+              b.id === betId
+                ? {
+                    ...b,
+                    hasOpenLegs,
+                    eventoNotificato: hasNotifiedOpenLegs,
+                  }
+                : b,
+            ),
+          }
+        })
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'aggiornamento del leg"
         set((s) => ({ ...s, ongoingBetsError: message }))
@@ -803,6 +870,146 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           ...s,
           isSavingWalletMovement: false,
           walletMovementsError: message,
+        }))
+      }
+    },
+
+    fetchReminders: async (params) => {
+      set(() => ({ isLoadingReminders: true, remindersError: undefined }))
+      try {
+        const reminders = await apiGetReminders({
+          stato: params?.stato,
+        })
+        set(() => ({
+          reminders,
+          isLoadingReminders: false,
+          remindersError: undefined,
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingReminders: false,
+          remindersError: getErrorMessage(error) || 'Errore nel caricamento dei promemoria',
+        }))
+      }
+    },
+
+    createReminder: async (payload) => {
+      set(() => ({ remindersError: undefined }))
+      try {
+        const created = await apiCreateReminder(payload)
+        set((state) => ({
+          reminders: [...state.reminders, created],
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          remindersError: getErrorMessage(error) || 'Errore nel salvataggio del promemoria',
+        }))
+      }
+    },
+
+    updateReminder: async (id, patch) => {
+      set(() => ({ remindersError: undefined }))
+      try {
+        const updated = await apiUpdateReminder(id, {
+          accountId: patch.accountId,
+          descrizione: patch.descrizione ?? '',
+          dataScadenza: patch.dataScadenza ?? '',
+          periodoNotifica: patch.periodoNotifica ?? 'scadenza',
+          stato: patch.stato,
+        })
+        set((state) => ({
+          reminders: state.reminders.map((r) => (r.id === id ? updated : r)),
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          remindersError: getErrorMessage(error) || 'Errore nell’aggiornamento del promemoria',
+        }))
+      }
+    },
+
+    deleteReminder: async (id) => {
+      set(() => ({ remindersError: undefined }))
+      try {
+        await apiDeleteReminder(id)
+        set((state) => ({
+          reminders: state.reminders.filter((r) => r.id !== id),
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          remindersError: getErrorMessage(error) || 'Errore nella cancellazione del promemoria',
+        }))
+      }
+    },
+
+    completeReminder: async (id) => {
+      set(() => ({ remindersError: undefined }))
+      try {
+        const updated = await apiCompleteReminder(id)
+        set((state) => ({
+          reminders: state.reminders.map((r) => (r.id === id ? updated : r)),
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          remindersError: getErrorMessage(error) || 'Errore nel completamento del promemoria',
+        }))
+      }
+    },
+
+    fetchTelegramStatus: async () => {
+      set(() => ({
+        isLoadingTelegramStatus: true,
+        telegramStatusError: undefined,
+      }))
+      try {
+        const status = await apiGetTelegramStatus()
+        set(() => ({
+          telegramStatus: status,
+          isLoadingTelegramStatus: false,
+          telegramStatusError: undefined,
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingTelegramStatus: false,
+          telegramStatusError:
+            getErrorMessage(error) || 'Errore nel caricamento dello stato Telegram',
+        }))
+      }
+    },
+
+    generateTelegramCode: async () => {
+      set(() => ({
+        isGeneratingTelegramCode: true,
+        telegramStatusError: undefined,
+        generatedTelegramCode: undefined,
+      }))
+      try {
+        const { code } = await apiGenerateTelegramCode()
+        set(() => ({
+          isGeneratingTelegramCode: false,
+          generatedTelegramCode: code,
+        }))
+        return code
+      } catch (error: unknown) {
+        set(() => ({
+          isGeneratingTelegramCode: false,
+          telegramStatusError:
+            getErrorMessage(error) || 'Errore nella generazione del codice Telegram',
+        }))
+        return undefined
+      }
+    },
+
+    unlinkTelegram: async () => {
+      set(() => ({ telegramStatusError: undefined }))
+      try {
+        await apiUnlinkTelegram()
+        set(() => ({
+          telegramStatus: { linked: false },
+          generatedTelegramCode: undefined,
+        }))
+      } catch (error: unknown) {
+        set(() => ({
+          telegramStatusError: getErrorMessage(error) || 'Errore nello scollegamento di Telegram',
         }))
       }
     },

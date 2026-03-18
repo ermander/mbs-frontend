@@ -6,6 +6,7 @@ import { Wallet as WalletIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { WalletCreateModal } from '@/components/profit-tracker/wallet-create-modal'
 import { WalletEditModal } from '@/components/profit-tracker/wallet-edit-modal'
@@ -101,14 +102,10 @@ export default function WalletsPage() {
     }) + ' €'
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Wallets</h1>
-          <p className="text-muted-foreground">
-            Configura e monitora i tuoi metodi di pagamento e i relativi saldi.
-          </p>
-        </div>
+    <ProfitTrackerPageShell
+      sectionTitle="Wallets"
+      sectionDescription="Configura e monitora i metodi di pagamento e la liquidità disponibile."
+      actions={
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" type="button" onClick={() => setTransferOpen(true)}>
             Trasferisci
@@ -120,8 +117,8 @@ export default function WalletsPage() {
             Nuovo wallet
           </Button>
         </div>
-      </header>
-
+      }
+    >
       <div
         className="flex w-fit items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5"
         role="status"
@@ -313,6 +310,6 @@ export default function WalletsPage() {
       />
       <WalletTransferModal open={transferOpen} onOpenChange={setTransferOpen} />
       <WalletTopupExpenseModal open={topupOpen} onOpenChange={setTopupOpen} />
-    </section>
+    </ProfitTrackerPageShell>
   )
 }

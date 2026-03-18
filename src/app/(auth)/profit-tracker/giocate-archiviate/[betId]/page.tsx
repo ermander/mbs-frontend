@@ -185,8 +185,7 @@ export default function ArchivedBetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Q. Punta</th>
-              <th className="px-3 py-2 text-left">Q. Banca</th>
+              <th className="px-3 py-2 text-left">Quota</th>
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -228,16 +227,7 @@ export default function ArchivedBetDetailPage() {
                   {resolveAccountLabel(leg.accountId)}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.stake.toFixed(2)}</td>
-                <td className="px-3 py-2 text-xs text-foreground">
-                  {leg.metodo === 'punta'
-                    ? leg.quota.toFixed(2)
-                    : leg.quotaRiferimento != null && leg.quotaRiferimento !== 0
-                      ? leg.quotaRiferimento.toFixed(2)
-                      : '—'}
-                </td>
-                <td className="px-3 py-2 text-xs text-foreground">
-                  {leg.metodo === 'punta' ? '—' : leg.quota.toFixed(2)}
-                </td>
+                <td className="px-3 py-2 text-xs text-foreground">{leg.quota.toFixed(2)}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {leg.metodo === 'punta' ? (
                     <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />
@@ -273,7 +263,7 @@ export default function ArchivedBetDetailPage() {
             ))}
             {legs.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={15}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={16}>
                   Nessun esito registrato per questa giocata.
                 </td>
               </tr>

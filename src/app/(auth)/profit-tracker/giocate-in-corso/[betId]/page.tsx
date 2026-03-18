@@ -694,8 +694,7 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Q. Punta</th>
-              <th className="px-3 py-2 text-left">Q. Banca</th>
+              <th className="px-3 py-2 text-left">Quota</th>
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -814,21 +813,7 @@ export default function BetDetailPage() {
                     {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                   </td>
                   <td className="px-3 py-2">
-                    {leg.metodo === 'punta'
-                      ? renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
-                      : renderEditableCell(
-                          leg,
-                          'quotaRiferimento',
-                          leg.quotaRiferimento ?? 0,
-                          (v) => (v == null || v === 0 ? '—' : Number(v).toFixed(2)),
-                        )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {leg.metodo === 'punta' ? (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ) : (
-                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
-                    )}
+                    {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))}
                   </td>
                   <td className="px-3 py-2">
                     {leg.metodo === 'punta' ? (
@@ -901,7 +886,7 @@ export default function BetDetailPage() {
             })}
             {legs.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={17}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={16}>
                   Nessun esito registrato per questa giocata.
                 </td>
               </tr>

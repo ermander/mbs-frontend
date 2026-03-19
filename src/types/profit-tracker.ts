@@ -80,6 +80,75 @@ export interface OngoingBet {
   archiviata?: boolean
 }
 
+export type BetLegRealizedLedgerEntryType = 'settlement_delta' | 'account_transfer'
+
+export interface BetLegRealizedLedgerMetadata {
+  sport: string
+  source?: string | null
+  modalitaSaldo: string
+  metodo: BetMethod
+  competizione: string
+  mercato: string
+  isMultipla: boolean
+  stake: number
+  quota: number
+}
+
+export interface BetLegRealizedLedgerEntry {
+  id: string
+  userId: string
+  betId: string
+  betLegId: string
+  accountId: string
+  bookId: string
+  entryType: BetLegRealizedLedgerEntryType
+  amount: number
+  recordedAt: string
+  previousStatoEvento: BetStatus
+  newStatoEvento: BetStatus
+  previousMovimento: number
+  newMovimento: number
+  metadata: BetLegRealizedLedgerMetadata
+}
+
+export interface BetLegRealizedLedgerListFilters {
+  fromDate?: string
+  toDate?: string
+  accountId?: string
+  bookId?: string
+  betId?: string
+  page?: number
+  limit?: number
+}
+
+export interface BetLegRealizedLedgerListResult {
+  items: BetLegRealizedLedgerEntry[]
+  total: number
+  page: number
+  limit: number
+}
+
+export type BetLegRealizedLedgerGranularity = 'day' | 'week' | 'month'
+
+export interface BetLegRealizedLedgerSummaryParams {
+  granularity: BetLegRealizedLedgerGranularity
+  fromDate?: string
+  toDate?: string
+  accountId?: string
+  bookId?: string
+}
+
+export interface BetLegRealizedLedgerSummaryBucket {
+  periodStart: string
+  total: number
+}
+
+export interface BetLegRealizedLedgerSummaryResult {
+  granularity: BetLegRealizedLedgerGranularity
+  rangeTotal: number
+  buckets: BetLegRealizedLedgerSummaryBucket[]
+}
+
 export interface BetLeg {
   id: string
   betId: string

@@ -173,7 +173,75 @@ export default function WalletsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      <div className="block space-y-4 sm:hidden">
+        {visible.map((wallet) => (
+          <div key={wallet.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div className="grid gap-2 text-xs">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Intestatario</span>
+                <span className="text-right text-foreground">
+                  {resolveHolderName(wallet.holderId)}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Nome</span>
+                <span className="text-right text-foreground">{wallet.nome}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Descrizione</span>
+                <span className="text-right text-muted-foreground">
+                  {wallet.descrizione ?? '—'}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2 border-t border-border/50 pt-2">
+                <span className="text-muted-foreground">Saldo attuale</span>
+                <span className="font-medium text-foreground">
+                  {wallet.saldoAttuale.toFixed(2)} €
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Stato</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateWallet(wallet.id, {
+                      stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                    })
+                  }
+                >
+                  <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
+                    {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                  </StatusBadge>
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 border-t border-border/60 pt-3">
+              <button
+                type="button"
+                className="w-full rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                onClick={() => {
+                  setSelectedWallet(wallet)
+                  setEditOpen(true)
+                }}
+              >
+                Modifica
+              </button>
+            </div>
+          </div>
+        ))}
+        {wallets.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun wallet registrato. Usa &quot;Nuovo wallet&quot; per crearne uno.
+          </div>
+        )}
+        {wallets.length > 0 && visible.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun wallet corrisponde ai filtri.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">

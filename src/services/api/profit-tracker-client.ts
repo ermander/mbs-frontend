@@ -5,6 +5,10 @@ import type {
   AccountMovement,
   AccountMovementType,
   BetLeg,
+  BetLegRealizedLedgerListFilters,
+  BetLegRealizedLedgerListResult,
+  BetLegRealizedLedgerSummaryParams,
+  BetLegRealizedLedgerSummaryResult,
   Book,
   EnabledStatus,
   Holder,
@@ -409,6 +413,28 @@ export async function deleteReminder(id: string): Promise<void> {
 
 export async function completeReminder(id: string): Promise<Reminder> {
   const response = await apiClient.patch<Reminder>(`/profit-tracker/reminders/${id}/complete`, {})
+  return response.data
+}
+
+// Bet leg realized P/L ledger
+
+export async function getBetLegRealizedLedger(
+  params?: BetLegRealizedLedgerListFilters,
+): Promise<BetLegRealizedLedgerListResult> {
+  const response = await apiClient.get<BetLegRealizedLedgerListResult>(
+    '/profit-tracker/bet-leg-ledger',
+    { params: params ?? {} },
+  )
+  return response.data
+}
+
+export async function getBetLegRealizedLedgerSummary(
+  params: BetLegRealizedLedgerSummaryParams,
+): Promise<BetLegRealizedLedgerSummaryResult> {
+  const response = await apiClient.get<BetLegRealizedLedgerSummaryResult>(
+    '/profit-tracker/bet-leg-ledger/summary',
+    { params },
+  )
   return response.data
 }
 

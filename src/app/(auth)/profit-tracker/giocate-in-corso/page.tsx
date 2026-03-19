@@ -8,6 +8,7 @@ import { formatEventDateDisplay } from '@/lib/utils'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { OngoingBet } from '@/types/profit-tracker'
+import { cn } from '@/lib/utils'
 
 /** Icone sport già usate nel progetto (oddsmatcher) */
 const SPORT_ICON: Record<string, string> = {
@@ -99,7 +100,157 @@ export default function GiocateInCorsoPage() {
       {isLoadingOngoingBets && (
         <p className="text-sm text-muted-foreground">Caricamento giocate...</p>
       )}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+
+      <div className="block space-y-4 sm:hidden">
+        {bets.map((bet) => {
+          const shouldHighlight = bet.eventoNotificato && bet.hasOpenLegs
+          const { datePart, timePart } = formatEventDateDisplay(bet.eventoData)
+          return (
+            <div
+              key={bet.id}
+              className={cn(
+                'rounded-xl border border-border bg-card/70 p-4 shadow-sm',
+                shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+              )}
+            >
+              <h2 className="text-base font-semibold leading-snug text-foreground">
+                {bet.eventoNome}
+              </h2>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                  {datePart} {timePart}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-xs capitalize text-muted-foreground"
+                  title={bet.sport}
+                >
+                  <span aria-hidden>{getSportIcon(bet.sport)}</span>
+                  {bet.sport}
+                </span>
+                <span className="rounded-md bg-muted/40 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                  ID {bet.id}
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-3 text-xs">
+                <div className="flex justify-between gap-3 border-b border-border/40 pb-2">
+                  <span className="shrink-0 text-muted-foreground">Modalità saldo</span>
+                  <span className="text-right capitalize text-foreground">{bet.modalitaSaldo}</span>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-border/40 pb-2">
+                  <span className="shrink-0 text-muted-foreground">Conto principale</span>
+                  <span className="min-w-0 text-right text-foreground">
+                    {resolveAccountLabel(bet.accountId)}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground">Tag</span>
+                  {editingCell?.betId === bet.id && editingCell?.field === 'tag' ? (
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={editingCell.value}
+                      onChange={(e) =>
+                        setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
+                      }
+                      onBlur={() => handleCellBlur(bet)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                      autoFocus
+                      placeholder="Tag"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full rounded-md border border-transparent bg-muted/30 px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                      onClick={() =>
+                        setEditingCell({
+                          betId: bet.id,
+                          field: 'tag',
+                          value: bet.tag ?? '',
+                        })
+                      }
+                    >
+                      {bet.tag ?? '—'}
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground">Nota</span>
+                  {editingCell?.betId === bet.id && editingCell?.field === 'nota' ? (
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={editingCell.value}
+                      onChange={(e) =>
+                        setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
+                      }
+                      onBlur={() => handleCellBlur(bet)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                      autoFocus
+                      placeholder="Nota"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full rounded-md border border-transparent bg-muted/30 px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                      onClick={() =>
+                        setEditingCell({
+                          betId: bet.id,
+                          field: 'nota',
+                          value: bet.nota ?? '',
+                        })
+                      }
+                    >
+                      {bet.nota ?? '—'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2 border-t border-border/60 pt-3">
+                <button
+                  type="button"
+                  className="inline-flex w-full items-center justify-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  onClick={() => router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)}
+                >
+                  Dettaglio
+                </button>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                    onClick={() => handleArchive(bet.id)}
+                  >
+                    Archivia
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                    onClick={() => handleClone(bet.id)}
+                  >
+                    Clona
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(bet.id)}
+                  >
+                    Elimina
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {!isLoadingOngoingBets && bets.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessuna giocata in corso. Aggiungi una giocata dai calcolatori o dagli strumenti.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">

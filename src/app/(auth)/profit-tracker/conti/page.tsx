@@ -129,7 +129,91 @@ export default function ContiPage() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      <div className="block space-y-4 sm:hidden">
+        {isLoadingAccounts && accounts.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Caricamento conti in corso...
+          </div>
+        )}
+        {!isLoadingAccounts &&
+          accounts.map((account) => (
+            <div
+              key={account.id}
+              className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+            >
+              <div className="grid gap-2 text-xs">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Creato il</span>
+                  <span className="text-foreground">
+                    {new Date(account.createdAt).toLocaleDateString('it-IT')}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Intestatario</span>
+                  <span className="text-right text-foreground">
+                    {resolveHolderName(account.holderId)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Book</span>
+                  <span className="text-right text-foreground">
+                    {resolveBookName(account.bookId)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Descrizione</span>
+                  <span className="text-right text-muted-foreground">
+                    {account.descrizione ?? '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2 border-t border-border/50 pt-2">
+                  <span className="text-muted-foreground">Saldo attuale</span>
+                  <span className="font-medium text-foreground">
+                    {account.saldoAttuale.toFixed(2)} €
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Stato</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateAccount(account.id, {
+                        stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                      })
+                    }
+                  >
+                    <StatusBadge variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}>
+                      {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                    </StatusBadge>
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setMovementForAccount(account.id)}
+                >
+                  Nuovo movimento
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setEditingAccountId(account.id)}
+                >
+                  Modifica
+                </button>
+              </div>
+            </div>
+          ))}
+        {showEmptyState && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun conto registrato. Usa &quot;Nuovo conto&quot; per crearne uno.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">

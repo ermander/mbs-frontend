@@ -68,7 +68,9 @@ export default function ArchivedBetDetailPage() {
     return filtered.sort((a, b) => {
       if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
       if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
-      return new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+      const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+      if (byDate !== 0) return byDate
+      return String(a.id).localeCompare(String(b.id))
     })
   }, [allLegs, betId])
   const loading = betId !== '' && !bet && !loadError

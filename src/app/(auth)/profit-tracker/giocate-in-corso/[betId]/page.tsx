@@ -97,7 +97,9 @@ export default function BetDetailPage() {
     return filtered.sort((a, b) => {
       if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
       if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
-      return new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+      const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+      if (byDate !== 0) return byDate
+      return String(a.id).localeCompare(String(b.id))
     })
   }, [allLegs, betId])
 
@@ -260,7 +262,11 @@ export default function BetDetailPage() {
       const puntaLeg = legs.find((l) => l.metodo === 'punta')
       const bancaLegs = legs
         .filter((l) => l.metodo === 'banca')
-        .sort((a, b) => new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime())
+        .sort((a, b) => {
+          const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+          if (byDate !== 0) return byDate
+          return String(a.id).localeCompare(String(b.id))
+        })
       const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
 
       if (isMultipla) {
@@ -719,13 +725,15 @@ export default function BetDetailPage() {
                       {renderEventDateCell(leg.eventoData)}
                     </span>
                   )}
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-                    {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
-                  </span>
                 </div>
 
                 <div className="grid gap-2 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Evento</span>
+                    <span className="min-w-0 text-right text-foreground">
+                      {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
+                    </span>
+                  </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Competizione</span>
                     <span className="text-foreground">{leg.competizione}</span>

@@ -4,6 +4,9 @@ import type {
   Account,
   AccountMovement,
   AccountMovementType,
+  ActivityFeedFilters,
+  ActivityFeedResult,
+  ActivityFeedSummary,
   BetLeg,
   BetLegRealizedLedgerListFilters,
   BetLegRealizedLedgerListResult,
@@ -13,6 +16,7 @@ import type {
   EnabledStatus,
   Holder,
   OngoingBet,
+  PuntateInCorsoTotale,
   QuickBet,
   Wallet,
   WalletMovement,
@@ -434,6 +438,46 @@ export async function getBetLegRealizedLedgerSummary(
   const response = await apiClient.get<BetLegRealizedLedgerSummaryResult>(
     '/profit-tracker/bet-leg-ledger/summary',
     { params },
+  )
+  return response.data
+}
+
+// Unified profit summary (bet_leg_realized_ledger + quick_bets)
+
+export async function getUnifiedProfitSummary(
+  params: BetLegRealizedLedgerSummaryParams,
+): Promise<BetLegRealizedLedgerSummaryResult> {
+  const response = await apiClient.get<BetLegRealizedLedgerSummaryResult>(
+    '/profit-tracker/unified-profit-summary',
+    { params },
+  )
+  return response.data
+}
+
+// Puntate in corso totale
+
+export async function getPuntateInCorsoTotale(): Promise<PuntateInCorsoTotale> {
+  const response = await apiClient.get<PuntateInCorsoTotale>(
+    '/profit-tracker/puntate-in-corso/totale',
+  )
+  return response.data
+}
+
+// Activity feed (unified transactions)
+
+export async function getActivityFeed(params?: ActivityFeedFilters): Promise<ActivityFeedResult> {
+  const response = await apiClient.get<ActivityFeedResult>('/profit-tracker/activity-feed', {
+    params: params ?? {},
+  })
+  return response.data
+}
+
+export async function getActivityFeedSummary(
+  params?: Omit<ActivityFeedFilters, 'page' | 'limit'>,
+): Promise<ActivityFeedSummary> {
+  const response = await apiClient.get<ActivityFeedSummary>(
+    '/profit-tracker/activity-feed/summary',
+    { params: params ?? {} },
   )
   return response.data
 }

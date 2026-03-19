@@ -1,16 +1,26 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Scale, Wallet, Loader2, Banknote } from 'lucide-react'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import {
+  getUnifiedProfitSummary,
+  getPuntateInCorsoTotale,
+  getBetLegRealizedLedger,
+} from '@/services/api/profit-tracker-client'
+import type {
+  BetLegRealizedLedgerSummaryResult,
+  BetLegRealizedLedgerEntry,
+} from '@/types/profit-tracker'
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
 
 const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/20 p-1.5 text-amber-600'
+const CURRENT_YEAR = new Date().getFullYear()
 
 export default function ProfitTrackerDashboardPage() {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
@@ -18,43 +28,78 @@ export default function ProfitTrackerDashboardPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
-  const quickBets = useProfitTrackerStore((s) => s.quickBets)
-  const accountMovements = useProfitTrackerStore((s) => s.accountMovements)
-  const walletMovements = useProfitTrackerStore((s) => s.walletMovements)
+  const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
+
+  const [ledgerSummary, setLedgerSummary] = useState<BetLegRealizedLedgerSummaryResult | null>(null)
+  const [recentLedgerEntries, setRecentLedgerEntries] = useState<BetLegRealizedLedgerEntry[]>([])
+  const [puntateInCorsoValue, setPuntateInCorsoValue] = useState(0)
 
   useEffect(() => {
     void fetchAllAccounts()
     void fetchWallets()
-  }, [fetchAllAccounts, fetchWallets])
+    void fetchOngoingBets()
+
+    const fromDate = `${CURRENT_YEAR}-01-01T00:00:00Z`
+    const toDate = `${CURRENT_YEAR}-12-31T23:59:59Z`
+
+    Promise.all([
+      getUnifiedProfitSummary({ granularity: 'month', fromDate, toDate }),
+      getBetLegRealizedLedger({ limit: 5, page: 1 }),
+      getPuntateInCorsoTotale(),
+    ])
+      .then(([summary, ledgerList, puntate]) => {
+        setLedgerSummary(summary)
+        setRecentLedgerEntries(ledgerList.items)
+        setPuntateInCorsoValue(puntate.totale)
+      })
+      .catch((err) => {
+        console.error('Dashboard data fetch error:', err)
+      })
+  }, [fetchAllAccounts, fetchWallets, fetchOngoingBets])
 
   const bilancio = useMemo(() => {
     const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
     const saldoWallets = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
-    const puntateInCorso = 0
-    const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorso
-    return { saldoBookmakers, saldoWallets, puntateInCorso, saldoTotale }
-  }, [allAccounts, wallets])
+    const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorsoValue
+    return { saldoBookmakers, saldoWallets, puntateInCorso: puntateInCorsoValue, saldoTotale }
+  }, [allAccounts, wallets, puntateInCorsoValue])
 
   const kpi = useMemo(() => {
-    const totalQuick = quickBets.reduce((sum, q) => sum + q.movimento, 0)
-    const totalAccount = accountMovements.reduce((sum, m) => sum + m.valore, 0)
-    const totalWallet = walletMovements.reduce((sum, m) => sum + m.valore, 0)
-    const totaleAnno = totalQuick + totalAccount + totalWallet
-
-    const mediaMensile = totaleAnno / 12
-
-    return {
-      totaleAnno,
-      mediaMensile,
-      meseAttuale: totaleAnno / 6,
+    if (!ledgerSummary) {
+      return { totaleAnno: 0, mediaMensile: 0, meseAttuale: 0 }
     }
-  }, [accountMovements, quickBets, walletMovements])
 
-  const fakeTrend = useMemo(() => [40, 80, 65, 120, 90, 140, 110, 160, 130, 170, 150, 180], [])
+    const totaleAnno = ledgerSummary.rangeTotal
 
-  const ultimeTransazioni = [...accountMovements, ...walletMovements]
-    .sort((a, b) => (a.dataRegistrazione > b.dataRegistrazione ? -1 : 1))
-    .slice(0, 5)
+    const now = new Date()
+    const currentBucket = ledgerSummary.buckets.find((b) => {
+      const d = new Date(b.periodStart)
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+    })
+    const meseAttuale = currentBucket?.total ?? 0
+
+    const elapsedMonths = now.getMonth() + 1
+    const mediaMensile = elapsedMonths > 0 ? totaleAnno / elapsedMonths : 0
+
+    return { totaleAnno, mediaMensile, meseAttuale }
+  }, [ledgerSummary])
+
+  const monthlyTrend = useMemo(() => {
+    const result = new Array(12).fill(0) as number[]
+    if (!ledgerSummary) return result
+
+    for (const bucket of ledgerSummary.buckets) {
+      const date = new Date(bucket.periodStart)
+      if (date.getFullYear() === CURRENT_YEAR) {
+        result[date.getMonth()] = bucket.total
+      }
+    }
+    return result
+  }, [ledgerSummary])
+
+  const activeOngoingBets = useMemo(() => ongoingBets.filter((b) => !b.archiviata), [ongoingBets])
+
+  const trendMax = Math.max(...monthlyTrend.map(Math.abs), 1)
 
   return (
     <ProfitTrackerPageShell
@@ -129,7 +174,9 @@ export default function ProfitTrackerDashboardPage() {
           <p className="mt-2 text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.meseAttuale)}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Guadagno stimato del mese in corso.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Profitto realizzato nel mese in corso.
+          </p>
         </div>
         <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -144,13 +191,13 @@ export default function ProfitTrackerDashboardPage() {
         </div>
         <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Totale anno 2026
+            Totale anno {CURRENT_YEAR}
           </p>
           <p className="mt-2 text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.totaleAnno)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Somma di tutte le movimentazioni registrate.
+            Somma di tutti i profitti realizzati.
           </p>
         </div>
       </div>
@@ -158,19 +205,24 @@ export default function ProfitTrackerDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">Trend guadagni 2026</p>
-            <p className="text-xs text-muted-foreground">Mock basato sui dati correnti</p>
+            <p className="text-sm font-medium text-foreground">Trend guadagni {CURRENT_YEAR}</p>
+            <p className="text-xs text-muted-foreground">Profitto mensile realizzato</p>
           </div>
           <div className="mt-2 h-40 rounded-md bg-muted/40 p-3">
             <div className="flex h-full items-end gap-1">
-              {fakeTrend.map((value, index) => (
-                <div key={index} className="flex-1">
-                  <div
-                    className="mx-auto w-3 rounded-full bg-primary/70"
-                    style={{ height: `${20 + value}%` }}
-                  />
-                </div>
-              ))}
+              {monthlyTrend.map((value, index) => {
+                const barHeight = (Math.abs(value) / trendMax) * 80
+                const isNegative = value < 0
+                return (
+                  <div key={index} className="flex h-full flex-1 flex-col items-center justify-end">
+                    <div
+                      className={`w-3 rounded-full ${isNegative ? 'bg-red-500/70' : 'bg-primary/70'}`}
+                      style={{ height: `${Math.max(barHeight, value !== 0 ? 5 : 2)}%` }}
+                      title={formatCurrency(value)}
+                    />
+                  </div>
+                )
+              })}
             </div>
             <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
               <span>Gen</span>
@@ -196,7 +248,7 @@ export default function ProfitTrackerDashboardPage() {
               Riepilogo rapido delle giocate ancora aperte.
             </p>
             <ul className="mt-3 space-y-2 text-sm">
-              {ongoingBets.slice(0, 3).map((bet) => (
+              {activeOngoingBets.slice(0, 3).map((bet) => (
                 <li
                   key={bet.id}
                   className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2"
@@ -205,7 +257,7 @@ export default function ProfitTrackerDashboardPage() {
                   <span className="text-xs uppercase text-muted-foreground">{bet.sport}</span>
                 </li>
               ))}
-              {ongoingBets.length === 0 && (
+              {activeOngoingBets.length === 0 && (
                 <li className="text-xs text-muted-foreground">
                   Nessuna giocata in corso registrata al momento.
                 </li>
@@ -216,29 +268,29 @@ export default function ProfitTrackerDashboardPage() {
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <p className="text-sm font-medium text-foreground">Ultime transazioni</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Gli ultimi movimenti su conti e wallet.
+              Ultimi profitti/perdite realizzati.
             </p>
             <ul className="mt-3 space-y-2 text-sm">
-              {ultimeTransazioni.map((t) => (
+              {recentLedgerEntries.map((entry) => (
                 <li
-                  key={t.id}
+                  key={entry.id}
                   className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2"
                 >
                   <span className="truncate text-foreground">
-                    {new Date(t.dataRegistrazione).toLocaleDateString('it-IT')}
+                    {new Date(entry.recordedAt).toLocaleDateString('it-IT')}
                   </span>
                   <span
                     className={
-                      t.valore >= 0
+                      entry.amount >= 0
                         ? 'text-xs font-medium text-emerald-600'
                         : 'text-xs font-medium text-red-500'
                     }
                   >
-                    {formatCurrency(t.valore)}
+                    {formatCurrency(entry.amount)}
                   </span>
                 </li>
               ))}
-              {ultimeTransazioni.length === 0 && (
+              {recentLedgerEntries.length === 0 && (
                 <li className="text-xs text-muted-foreground">
                   Non ci sono ancora movimenti registrati.
                 </li>

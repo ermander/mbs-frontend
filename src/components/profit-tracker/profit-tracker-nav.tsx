@@ -10,6 +10,7 @@ export const profitTrackerNavItems = [
   { href: '/profit-tracker/giocate-in-corso', label: 'Giocate in corso' },
   { href: '/profit-tracker/giocate-archiviate', label: 'Giocate archiviate' },
   { href: '/profit-tracker/giocate-rapide', label: 'Giocate rapide' },
+  { href: '/profit-tracker/storico-movimenti', label: 'Storico movimenti' },
   { href: '/profit-tracker/promemoria', label: 'Promemoria' },
   { href: '/profit-tracker/conti', label: 'Conti' },
   { href: '/profit-tracker/wallets', label: 'Wallets' },

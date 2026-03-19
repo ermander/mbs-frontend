@@ -225,3 +225,56 @@ export interface TelegramStatus {
   linked: boolean
   linkedAt?: string
 }
+
+// Activity feed (unified transactions)
+
+export type ActivityFeedSource =
+  | 'bet_settlement'
+  | 'quick_bet'
+  | 'deposito'
+  | 'prelievo'
+  | 'riconciliazione'
+  | 'ricarica'
+  | 'spesa'
+  | 'trasferimento'
+
+export interface ActivityFeedEntry {
+  id: string
+  source: ActivityFeedSource
+  data: string
+  importo: number
+  accountId: string | null
+  walletId: string | null
+  descrizione: string | null
+  eventoNome?: string | null
+  competizione?: string | null
+  mercato?: string | null
+  metodo?: string | null
+}
+
+export interface ActivityFeedSummary {
+  totaleEntrate: number
+  totaleUscite: number
+  saldoNetto: number
+}
+
+export interface PuntateInCorsoTotale {
+  totale: number
+}
+
+export interface ActivityFeedFilters {
+  source?: ActivityFeedSource
+  accountId?: string
+  walletId?: string
+  fromDate?: string
+  toDate?: string
+  page?: number
+  limit?: number
+}
+
+export interface ActivityFeedResult {
+  items: ActivityFeedEntry[]
+  total: number
+  page: number
+  limit: number
+}

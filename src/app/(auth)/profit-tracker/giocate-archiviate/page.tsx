@@ -127,12 +127,6 @@ export default function GiocateArchiviatePage() {
                     {resolveAccountLabel(bet.accountId)}
                   </span>
                 </div>
-                <div className="flex justify-between gap-3 border-b border-border/40 pb-2">
-                  <span className="shrink-0 text-muted-foreground">Stato</span>
-                  <span className="text-right capitalize text-foreground">
-                    {bet.statoEvento.replace('_', ' ')}
-                  </span>
-                </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground">Tag</span>
                   <p className="rounded-md bg-muted/30 px-2 py-1.5 text-muted-foreground">
@@ -194,7 +188,6 @@ export default function GiocateArchiviatePage() {
               <th className="px-3 py-2 text-left">Conto principale</th>
               <th className="px-3 py-2 text-left">Tag</th>
               <th className="px-3 py-2 text-left">Nota</th>
-              <th className="px-3 py-2 text-left">Stato</th>
               <th className="px-3 py-2 text-right">Azioni</th>
             </tr>
           </thead>
@@ -232,9 +225,6 @@ export default function GiocateArchiviatePage() {
                 <td className="px-3 py-2 align-top text-xs text-muted-foreground">
                   {bet.nota ?? '—'}
                 </td>
-                <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
-                  {bet.statoEvento.replace('_', ' ')}
-                </td>
                 <td className="px-3 py-2 align-top">
                   <div className="flex justify-end gap-2">
                     <button
@@ -264,7 +254,7 @@ export default function GiocateArchiviatePage() {
             ))}
             {!loading && bets.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={10}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={9}>
                   Nessuna giocata archiviata.
                 </td>
               </tr>

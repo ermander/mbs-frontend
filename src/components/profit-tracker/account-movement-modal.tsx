@@ -30,6 +30,7 @@ export function AccountMovementModal({
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
+  const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const addAccountMovement = useProfitTrackerStore((s) => s.addAccountMovement)
   const isSavingAccountMovement = useProfitTrackerStore((s) => s.isSavingAccountMovement)
   const accountMovementsError = useProfitTrackerStore((s) => s.accountMovementsError)
@@ -44,7 +45,8 @@ export function AccountMovementModal({
   useEffect(() => {
     if (!open) return
     void fetchAllAccounts()
-  }, [open, fetchAllAccounts])
+    void fetchWallets()
+  }, [open, fetchAllAccounts, fetchWallets])
 
   const effectiveAccountId =
     defaultAccountId ??

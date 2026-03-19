@@ -2,6 +2,7 @@
 import './globals.css'
 
 import { QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from 'sonner'
 import { queryClient } from '@/lib/react-query'
 import { AuthRefreshProvider } from '@/components/auth/auth-refresh-provider'
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryClientProvider client={queryClient}>
           <AuthRefreshProvider>{children}</AuthRefreshProvider>
         </QueryClientProvider>
+        <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
   )

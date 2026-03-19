@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/error-utils'
 import type { EnabledStatus } from '@/types/profit-tracker'
 
 interface WalletCreateModalProps {
@@ -37,31 +38,41 @@ function WalletCreateModalForm({
     descrizione: string
     saldoIniziale: number
     stato: EnabledStatus
-  }) => void
+  }) => Promise<void>
 }) {
   const [holderId, setHolderId] = useState(defaultHolderId || holders[0]?.id || '')
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [saldoIniziale, setSaldoIniziale] = useState('')
   const [stato, setStato] = useState<EnabledStatus>('abilitato')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSaveAsync = async () => {
     if (!holderId || !nome.trim()) return
-    const iniziale = Number.parseFloat(saldoIniziale.replace(',', '.')) || 0
-    onSave({
-      holderId,
-      nome: nome.trim(),
-      descrizione,
-      saldoIniziale: iniziale,
-      stato,
-    })
-    setNome('')
-    setDescrizione('')
-    setSaldoIniziale('')
-    onClose()
+    setSaving(true)
+    setError(null)
+    try {
+      const iniziale = Number.parseFloat(saldoIniziale.replace(',', '.')) || 0
+      await onSave({
+        holderId,
+        nome: nome.trim(),
+        descrizione,
+        saldoIniziale: iniziale,
+        stato,
+      })
+      setNome('')
+      setDescrizione('')
+      setSaldoIniziale('')
+      onClose()
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Errore durante il salvataggio')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const canSave = holderId && nome.trim() !== ''
+  const canSave = holderId && nome.trim() !== '' && !saving
 
   return (
     <div className="space-y-4 p-4 pt-0 text-sm">
@@ -120,12 +131,17 @@ function WalletCreateModalForm({
           <option value="disabilitato">Non abilitato</option>
         </select>
       </div>
+      {error != null && (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
       <DialogFooter>
-        <Button variant="outline" type="button" onClick={onClose}>
+        <Button variant="outline" type="button" onClick={onClose} disabled={saving}>
           Annulla
         </Button>
         <Button type="button" onClick={handleSaveAsync} disabled={!canSave}>
-          Salva
+          {saving ? 'Salvataggio...' : 'Salva'}
         </Button>
       </DialogFooter>
     </div>
@@ -136,14 +152,14 @@ export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: Walle
   const holders = useProfitTrackerStore((s) => s.holders)
   const addWallet = useProfitTrackerStore((s) => s.addWallet)
 
-  const handleSave = (payload: {
+  const handleSave = async (payload: {
     holderId: string
     nome: string
     descrizione: string
     saldoIniziale: number
     stato: EnabledStatus
   }) => {
-    addWallet({
+    await addWallet({
       holderId: payload.holderId,
       nome: payload.nome,
       descrizione: payload.descrizione || undefined,

@@ -176,7 +176,7 @@ interface ProfitTrackerState {
     dataRegistrazione: string
     descrizione?: string
   }) => Promise<void>
-  addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => Promise<void>
+  addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => Promise<boolean>
 
   fetchReminders: (params?: { stato?: Reminder['stato'] }) => Promise<void>
   createReminder: (payload: {
@@ -821,7 +821,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           isSavingWalletMovement: false,
           walletMovementsError: "L'importo deve essere maggiore di zero",
         }))
-        return
+        return false
       }
 
       if ((movement.tipo === 'ricarica' || movement.tipo === 'spesa') && !movement.walletId) {
@@ -830,7 +830,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           isSavingWalletMovement: false,
           walletMovementsError: 'Seleziona un wallet valido',
         }))
-        return
+        return false
       }
 
       if (movement.tipo === 'spesa' && movement.walletId) {
@@ -841,7 +841,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             isSavingWalletMovement: false,
             walletMovementsError: 'Saldo wallet insufficiente per la spesa',
           }))
-          return
+          return false
         }
       }
 
@@ -852,7 +852,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             isSavingWalletMovement: false,
             walletMovementsError: 'Seleziona wallet origine e destinazione per il trasferimento',
           }))
-          return
+          return false
         }
         if (movement.fromWalletId === movement.toWalletId) {
           set((s) => ({
@@ -860,7 +860,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             isSavingWalletMovement: false,
             walletMovementsError: 'I wallet di origine e destinazione devono essere diversi',
           }))
-          return
+          return false
         }
         const fromWallet = state.wallets.find((w) => w.id === movement.fromWalletId)
         if (!fromWallet || fromWallet.saldoAttuale < importo) {
@@ -869,7 +869,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             isSavingWalletMovement: false,
             walletMovementsError: 'Saldo wallet insufficiente per il trasferimento',
           }))
-          return
+          return false
         }
       }
 
@@ -902,6 +902,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             wallets,
           }
         })
+        return true
       } catch (error: unknown) {
         const code = getErrorCode(error) || getResponseDataCode(error)
         let message = getErrorMessage(error) || 'Errore nel salvataggio del movimento wallet'
@@ -913,6 +914,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           isSavingWalletMovement: false,
           walletMovementsError: message,
         }))
+        return false
       }
     },
 

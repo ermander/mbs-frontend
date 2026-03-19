@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
 import type { WalletMovementType } from '@/types/profit-tracker'
@@ -34,6 +36,22 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        setHolderId('')
+        setWalletId('')
+        setTipo('ricarica')
+        setValore('')
+        setDataRegistrazione(new Date().toISOString().slice(0, 10))
+        setDescrizione('')
+      }
+      onOpenChange(nextOpen)
+    },
+    [onOpenChange],
+  )
 
   const effectiveHolderId =
     holderId || (wallets.length > 0 ? wallets[0].holderId : holders.length > 0 ? holders[0].id : '')
@@ -50,11 +68,16 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
         ? walletId
         : (holderWallets[0]?.id ?? '')
 
+  const holderOptions = useMemo(
+    () => holders.map((h) => ({ value: h.id, label: h.nome })),
+    [holders],
+  )
+
   const handleSave = async () => {
     const importo = Number.parseFloat(valore.replace(',', '.'))
     if (!effectiveWalletId || !Number.isFinite(importo)) return
 
-    await addWalletMovement({
+    const success = await addWalletMovement({
       walletId: effectiveWalletId,
       tipo,
       valore: importo,
@@ -62,9 +85,16 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
       descrizione: descrizione || undefined,
     })
 
-    setValore('')
-    setDescrizione('')
-    onOpenChange(false)
+    if (success) {
+      const label = tipo === 'ricarica' ? 'Ricarica' : 'Spesa'
+      toast.success(`${label} registrata con successo`)
+      handleOpenChange(false)
+    } else {
+      toast.error(
+        useProfitTrackerStore.getState().walletMovementsError ||
+          'Errore nel salvataggio del movimento',
+      )
+    }
   }
 
   const canSave =
@@ -74,26 +104,30 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
     Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
+        {/* Portal container for SearchableSelect dropdowns inside the modal */}
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuova ricarica/spesa</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 p-4 pt-0 text-sm">
           <div className="space-y-1.5">
             <Label htmlFor="topup-holder">Intestatario</Label>
-            <select
+            <SearchableSelect
               id="topup-holder"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              options={holderOptions}
               value={effectiveHolderId}
-              onChange={(e) => setHolderId(e.target.value)}
-            >
-              {holders.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setHolderId}
+              allowEmpty={false}
+              placeholder="Seleziona intestatario"
+              searchPlaceholder="Cerca intestatario..."
+              portalContainer={dropdownPortalEl}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="topup-tipo">Metodo</Label>
@@ -155,7 +189,7 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>
             Annulla
           </Button>
           <Button type="button" onClick={handleSave} disabled={!canSave || isSavingWalletMovement}>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
+import { syncThemeToLocalStorage } from '@/hooks/use-theme'
 
 const ADMIN_ROLE = 'ADMIN_ROLE'
 
@@ -23,6 +24,7 @@ export function BackofficeAuthGuard({ children }: { children: React.ReactNode })
       try {
         const { user: me } = await authClient.me()
         setUser(me)
+        syncThemeToLocalStorage(me.settings.theme)
       } catch (error) {
         console.error('[BackofficeAuthGuard] /me failed', error)
         clearUser()

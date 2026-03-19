@@ -11,7 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('mbs-theme');var v=['slate','warm','oled','light-slate','light-warm','light-pure'];if(!t||v.indexOf(t)===-1)t='slate';document.documentElement.setAttribute('data-theme',t);})();`,
+            __html: `(function(){var t=localStorage.getItem('mbs-theme');var v=['slate','warm','oled','light-slate','light-warm','light-pure'];if(!t||v.indexOf(t)===-1)t='light-warm';document.documentElement.setAttribute('data-theme',t);})();`,
           }}
         />
         <QueryClientProvider client={queryClient}>

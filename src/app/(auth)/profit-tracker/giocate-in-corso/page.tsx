@@ -21,20 +21,31 @@ function getSportIcon(sport: string) {
   return SPORT_ICON[sport?.toLowerCase()] ?? '•'
 }
 
+function isMultipla(bet: OngoingBet) {
+  return bet.eventoNome.toUpperCase().startsWith('MULTIPLA')
+}
+
 type EditingCell = { betId: string; field: 'tag' | 'nota'; value: string }
 
 export default function GiocateInCorsoPage() {
   const router = useRouter()
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
-  const bets = useMemo(() => ongoingBets.filter((b) => !b.archiviata), [ongoingBets])
+  const bets = useMemo(
+    () =>
+      ongoingBets
+        .filter((b) => !b.archiviata)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [ongoingBets],
+  )
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
   const isLoadingOngoingBets = useProfitTrackerStore((s) => s.isLoadingOngoingBets)
   const books = useProfitTrackerStore((s) => s.books)
   const holders = useProfitTrackerStore((s) => s.holders)
-  const addBet = useProfitTrackerStore((s) => s.addOngoingBet)
+  const saveBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
+  const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)
   const updateBet = useProfitTrackerStore((s) => s.updateOngoingBet)
   const removeBet = useProfitTrackerStore((s) => s.removeOngoingBet)
 
@@ -60,17 +71,51 @@ export default function GiocateInCorsoPage() {
     }
   }
 
-  const handleClone = (id: string) => {
+  const [cloningId, setCloningId] = useState<string | null>(null)
+
+  const handleClone = async (id: string) => {
     const original = bets.find((b) => b.id === id)
     if (!original) return
-    const { id: _omitId, archiviata: _omitArchiviata, ...rest } = original
-    void _omitId
-    void _omitArchiviata
-    addBet({
-      ...rest,
-      statoEvento: 'bozza',
-      tag: original.tag ? `${original.tag} (clonata)` : 'Clonata',
-    })
+    setCloningId(id)
+    try {
+      const { legs } = await fetchBetWithLegs(id)
+      const betPayload = {
+        eventoData: original.eventoData,
+        sport: original.sport,
+        eventoNome: original.eventoNome,
+        modalitaSaldo: original.modalitaSaldo,
+        accountId: original.accountId,
+        tag: original.tag ? `${original.tag} (clonata)` : 'Clonata',
+        nota: original.nota ?? null,
+      }
+      const legsPayload = legs.map((leg) => ({
+        eventoData: leg.eventoData,
+        sport: leg.sport,
+        eventoNome: leg.eventoNome,
+        competizione: leg.competizione,
+        mercato: leg.mercato,
+        selezione: leg.selezione,
+        metodo: leg.metodo,
+        tipoBonus: leg.tipoBonus,
+        accountId: leg.accountId,
+        stake: leg.stake,
+        quota: leg.quota,
+        quotaRiferimento: leg.quotaRiferimento,
+        rischio: leg.rischio,
+        bonusValore: leg.bonusValore,
+        rimborsoValore: leg.rimborsoValore,
+        commissionePercentuale: leg.commissionePercentuale,
+        movimento: leg.movimento,
+        statoEvento: 'bozza' as const,
+        tag: leg.tag ?? null,
+      }))
+      const clonedBet = await saveBetFromCalculator(betPayload, legsPayload)
+      await updateBet(clonedBet.id, { statoEvento: 'bozza' })
+    } catch (err) {
+      window.alert(getErrorMessage(err) ?? 'Impossibile clonare la giocata.')
+    } finally {
+      setCloningId(null)
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -104,6 +149,7 @@ export default function GiocateInCorsoPage() {
       <div className="block space-y-4 sm:hidden">
         {bets.map((bet) => {
           const shouldHighlight = bet.eventoNotificato && bet.hasOpenLegs
+          const multipla = isMultipla(bet)
           const { datePart, timePart } = formatEventDateDisplay(bet.eventoData)
           return (
             <div
@@ -113,9 +159,20 @@ export default function GiocateInCorsoPage() {
                 shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
               )}
             >
-              <h2 className="text-base font-semibold leading-snug text-foreground">
-                {bet.eventoNome}
-              </h2>
+              <div className="flex items-start gap-2">
+                <h2 className="text-base font-semibold leading-snug text-foreground">
+                  {bet.eventoNome}
+                </h2>
+                {multipla ? (
+                  <span className="mt-0.5 shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                    Multipla
+                  </span>
+                ) : (
+                  <span className="mt-0.5 shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                    Singola
+                  </span>
+                )}
+              </div>
 
               <div className="mt-2 flex flex-wrap gap-2">
                 <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
@@ -142,6 +199,15 @@ export default function GiocateInCorsoPage() {
                   <span className="shrink-0 text-muted-foreground">Conto principale</span>
                   <span className="min-w-0 text-right text-foreground">
                     {resolveAccountLabel(bet.accountId)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-3 border-b border-border/40 pb-2">
+                  <span className="shrink-0 text-muted-foreground">Data creazione</span>
+                  <span className="text-right text-foreground">
+                    {(() => {
+                      const { datePart, timePart } = formatEventDateDisplay(bet.createdAt)
+                      return `${datePart} ${timePart}`
+                    })()}
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -226,10 +292,11 @@ export default function GiocateInCorsoPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                     onClick={() => handleClone(bet.id)}
+                    disabled={cloningId === bet.id}
                   >
-                    Clona
+                    {cloningId === bet.id ? 'Clonando…' : 'Clona'}
                   </button>
                   <button
                     type="button"
@@ -255,6 +322,7 @@ export default function GiocateInCorsoPage() {
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
+              <th className="px-3 py-2 text-left">Data creazione</th>
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Sport</th>
               <th className="px-3 py-2 text-left">Evento</th>
@@ -273,15 +341,27 @@ export default function GiocateInCorsoPage() {
           <tbody>
             {bets.map((bet) => {
               const shouldHighlight = bet.eventoNotificato && bet.hasOpenLegs
+              const multipla = isMultipla(bet)
               return (
                 <tr
                   key={bet.id}
-                  className={`border-b border-border/40 last:border-b-0 ${
-                    shouldHighlight ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
-                  }`}
+                  className={cn(
+                    'border-b border-border/40 last:border-b-0',
+                    shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+                  )}
                 >
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                     {bet.id}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-muted-foreground">
+                    {(() => {
+                      const { datePart, timePart } = formatEventDateDisplay(bet.createdAt)
+                      return (
+                        <span>
+                          {datePart} {timePart}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-center align-top text-xs text-muted-foreground">
                     {(() => {
@@ -297,7 +377,18 @@ export default function GiocateInCorsoPage() {
                     <span aria-hidden>{getSportIcon(bet.sport)}</span>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
-                    {bet.eventoNome}
+                    <span className="inline-flex items-center gap-2">
+                      {multipla ? (
+                        <span className="inline-flex shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                          Multipla
+                        </span>
+                      ) : (
+                        <span className="inline-flex shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                          Singola
+                        </span>
+                      )}
+                      {bet.eventoNome}
+                    </span>
                   </td>
                   <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
                     {bet.modalitaSaldo}
@@ -387,10 +478,11 @@ export default function GiocateInCorsoPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                         onClick={() => handleClone(bet.id)}
+                        disabled={cloningId === bet.id}
                       >
-                        Clona
+                        {cloningId === bet.id ? 'Clonando…' : 'Clona'}
                       </button>
                       <button
                         type="button"
@@ -406,7 +498,7 @@ export default function GiocateInCorsoPage() {
             })}
             {bets.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={9}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={10}>
                   Nessuna giocata in corso. Aggiungi una giocata dai calcolatori o dagli strumenti.
                 </td>
               </tr>

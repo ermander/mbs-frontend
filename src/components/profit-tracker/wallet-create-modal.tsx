@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { sanitizeDecimal } from '@/lib/utils'
 import type { EnabledStatus } from '@/types/profit-tracker'
 
 interface WalletCreateModalProps {
@@ -101,10 +102,10 @@ function WalletCreateModalForm({
         <Label htmlFor="wallet-saldo">Saldo iniziale (€)</Label>
         <Input
           id="wallet-saldo"
-          type="number"
+          type="text"
           inputMode="decimal"
           value={saldoIniziale}
-          onChange={(e) => setSaldoIniziale(e.target.value)}
+          onChange={(e) => setSaldoIniziale(sanitizeDecimal(e.target.value))}
         />
       </div>
       <div className="space-y-1.5">

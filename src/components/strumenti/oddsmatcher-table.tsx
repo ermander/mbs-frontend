@@ -196,6 +196,13 @@ export function OddsmatcherTable() {
     [multiplaSelectedEvents],
   )
   const multiplaRating = ratingMultipla(multiplaSelectedEvents)
+  const quotaMultipla =
+    multiplaSelectedEvents.length > 0
+      ? multiplaSelectedEvents.reduce((acc, ev) => {
+          const back = parseFloat(ev.back_odd)
+          return Number.isNaN(back) ? acc : acc * back
+        }, 1)
+      : null
 
   const toggleBook = (id: string) => {
     setSelectedBookIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -765,6 +772,7 @@ export function OddsmatcherTable() {
         <p className="mb-1 text-xs font-medium text-muted-foreground">Eventi selezionati</p>
         <p className="mb-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
           Rating multipla: {multiplaRating != null ? `${multiplaRating.toFixed(2)}%` : '—'}
+          {quotaMultipla != null && ` · Quota: ${quotaMultipla.toFixed(2)}`}
         </p>
         {multiplaSelectedEvents.length === 0 ? (
           <p className="text-xs text-muted-foreground">

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { sanitizeDecimal } from '@/lib/utils'
 import type { WalletMovementType } from '@/types/profit-tracker'
 
 interface WalletTopupExpenseModalProps {
@@ -125,10 +126,10 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
             <Label htmlFor="topup-valore">Movimento (€)</Label>
             <Input
               id="topup-valore"
-              type="number"
+              type="text"
               inputMode="decimal"
               value={valore}
-              onChange={(e) => setValore(e.target.value)}
+              onChange={(e) => setValore(sanitizeDecimal(e.target.value))}
             />
           </div>
           <div className="space-y-1.5">

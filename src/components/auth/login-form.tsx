@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { useAuthStore } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
+import { syncThemeToLocalStorage } from '@/hooks/use-theme'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,6 +46,7 @@ export function LoginForm({ redirectTo = '/' }: LoginFormProps) {
           password: data.password,
         })
         setUser(response.user)
+        syncThemeToLocalStorage(response.user.settings.theme)
         setSubmitStatus('success')
         setSubmitMessage('Accesso effettuato.')
         router.push(redirectTo)

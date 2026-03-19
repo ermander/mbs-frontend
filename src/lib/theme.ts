@@ -23,7 +23,7 @@ export const THEME_OPTIONS: { id: ThemeId; label: string }[] = [
 export const DARK_THEME_OPTIONS = THEME_OPTIONS.slice(0, 3)
 export const LIGHT_THEME_OPTIONS = THEME_OPTIONS.slice(3, 6)
 
-export const DEFAULT_THEME: ThemeId = 'slate'
+export const DEFAULT_THEME: ThemeId = 'light-warm'
 
 export function isValidThemeId(value: string): value is ThemeId {
   return ALL_THEME_IDS.includes(value as ThemeId)

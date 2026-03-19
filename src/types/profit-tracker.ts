@@ -78,6 +78,7 @@ export interface OngoingBet {
   nota?: string
   statoEvento: BetStatus
   archiviata?: boolean
+  createdAt: string
 }
 
 export type BetLegRealizedLedgerEntryType = 'settlement_delta' | 'account_transfer'
@@ -157,6 +158,7 @@ export interface BetLeg {
   eventoNome: string
   competizione: string
   mercato: string
+  selezione?: string
   metodo: BetMethod
   tipoBonus: BetBonusType
   accountId: string

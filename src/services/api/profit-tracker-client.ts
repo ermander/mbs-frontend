@@ -288,6 +288,7 @@ export interface CreateBetLegPayload {
   eventoNome: string
   competizione: string
   mercato: string
+  selezione?: string
   metodo: 'punta' | 'banca'
   tipoBonus: string
   accountId: string

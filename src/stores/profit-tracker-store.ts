@@ -463,18 +463,25 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
 
     fetchBetWithLegs: async (betId) => {
       const { bet, legs } = await apiGetBetWithLegs(betId)
+      const hasOpenLegs = legs.some(
+        (l) => l.statoEvento === 'bozza' || l.statoEvento === 'in_corso',
+      )
+      const eventoNotificato = legs.some(
+        (l) => l.eventoNotificato && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'),
+      )
+      const enrichedBet = { ...bet, hasOpenLegs, eventoNotificato }
       set((state) => {
         const hasBet = state.ongoingBets.some((b) => b.id === betId)
         const ongoingBets = hasBet
-          ? state.ongoingBets.map((b) => (b.id === betId ? bet : b))
-          : [...state.ongoingBets, bet]
+          ? state.ongoingBets.map((b) => (b.id === betId ? enrichedBet : b))
+          : [...state.ongoingBets, enrichedBet]
         const otherLegs = state.betLegs.filter((l) => l.betId !== betId)
         return {
           ongoingBets,
           betLegs: [...otherLegs, ...legs],
         }
       })
-      return { bet, legs }
+      return { bet: enrichedBet, legs }
     },
 
     saveOngoingBetFromCalculator: async (betPayload, legsPayload) => {

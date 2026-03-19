@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { sanitizeDecimal } from '@/lib/utils'
 import type { QuickGameMethod } from '@/types/profit-tracker'
 
 interface QuickBetModalProps {
@@ -126,10 +127,10 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
             <Label htmlFor="quick-movimento">Movimento (€)</Label>
             <Input
               id="quick-movimento"
-              type="number"
+              type="text"
               inputMode="decimal"
               value={movimento}
-              onChange={(e) => setMovimento(e.target.value)}
+              onChange={(e) => setMovimento(sanitizeDecimal(e.target.value))}
               placeholder="Es. 25 o -15"
             />
           </div>

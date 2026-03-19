@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { calcolaMovimento } from '@/lib/profit-tracker/calcs'
+import { sanitizeDecimal } from '@/lib/utils'
 import type { SportType } from '@/types/profit-tracker'
 
 const SPORTS: { value: SportType; label: string }[] = [
@@ -39,10 +40,21 @@ export function AddBetLegModal({
 }: AddBetLegModalProps) {
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const books = useProfitTrackerStore((s) => s.books)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const addBetLegs = useProfitTrackerStore((s) => s.addBetLegs)
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
+
+  const filteredAccounts = useMemo(
+    () =>
+      allAccounts.filter((a) => {
+        const book = books.find((b) => b.id === a.bookId)
+        if (!book) return false
+        return defaultMethod === 'banca' ? book.isExchange : !book.isExchange
+      }),
+    [allAccounts, books, defaultMethod],
+  )
 
   const [eventoData, setEventoData] = useState('')
   const [eventoNome, setEventoNome] = useState('')
@@ -70,18 +82,18 @@ export function AddBetLegModal({
       }
       setCompetizione('')
       setMercato('')
-      setAccountId(allAccounts[0]?.id ?? '')
+      setAccountId(filteredAccounts[0]?.id ?? '')
       setStake('')
       setQuota('')
       setCommissionePercentuale('0')
       setTag('')
     }
-  }, [open, bet, fetchAllAccounts, allAccounts])
+  }, [open, bet, fetchAllAccounts, filteredAccounts])
 
   const effectiveAccountId =
-    accountId && allAccounts.some((a) => a.id === accountId)
+    accountId && filteredAccounts.some((a) => a.id === accountId)
       ? accountId
-      : (allAccounts[0]?.id ?? '')
+      : (filteredAccounts[0]?.id ?? '')
 
   const stakeNum = Number.parseFloat(stake.replace(',', '.'))
   const quotaNum = Number.parseFloat(quota.replace(',', '.'))
@@ -211,7 +223,7 @@ export function AddBetLegModal({
               value={effectiveAccountId}
               onChange={(e) => setAccountId(e.target.value)}
             >
-              {allAccounts.map((a) => (
+              {filteredAccounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.nome}
                 </option>
@@ -223,24 +235,22 @@ export function AddBetLegModal({
               <Label htmlFor="add-leg-stake">Stake</Label>
               <input
                 id="add-leg-stake"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={stake}
-                onChange={(e) => setStake(e.target.value)}
+                onChange={(e) => setStake(sanitizeDecimal(e.target.value))}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="add-leg-quota">Quota</Label>
               <input
                 id="add-leg-quota"
-                type="number"
-                min="1"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                 value={quota}
-                onChange={(e) => setQuota(e.target.value)}
+                onChange={(e) => setQuota(sanitizeDecimal(e.target.value))}
               />
             </div>
           </div>
@@ -248,12 +258,11 @@ export function AddBetLegModal({
             <Label htmlFor="add-leg-comm">Commissione %</Label>
             <input
               id="add-leg-comm"
-              type="number"
-              min="0"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               value={commissionePercentuale}
-              onChange={(e) => setCommissionePercentuale(e.target.value)}
+              onChange={(e) => setCommissionePercentuale(sanitizeDecimal(e.target.value))}
             />
           </div>
           {movimento !== 0 && (

@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Filtra una stringa lasciando solo cifre, punto e virgola (per input decimali). */
+export function sanitizeDecimal(s: string): string {
+  return s.replace(/[^0-9.,\-]/g, '')
+}
+
 /** Formato Data evento: GG/MM/AA e ora a capo con "h" (es. 17/01/26, h 16:00). */
 export function formatEventDateDisplay(date: string): { datePart: string; timePart: string } {
   const d = new Date(date)

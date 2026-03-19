@@ -237,7 +237,7 @@ export default function ArchivedBetDetailPage() {
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Quota</span>
-                      <span className="text-foreground">{leg.quota.toFixed(2)}</span>
+                      <span className="text-foreground">{leg.quota.toFixed(3)}</span>
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Com %</span>
@@ -357,7 +357,7 @@ export default function ArchivedBetDetailPage() {
                   {resolveAccountLabel(leg.accountId)}
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">{leg.stake.toFixed(2)}</td>
-                <td className="px-3 py-2 text-xs text-foreground">{leg.quota.toFixed(2)}</td>
+                <td className="px-3 py-2 text-xs text-foreground">{leg.quota.toFixed(3)}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {leg.metodo === 'punta' ? (
                     <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />

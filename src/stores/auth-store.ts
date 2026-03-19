@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authClient } from '@/services/api/auth-client'
 import type { AuthUser } from '@/services/api/auth-client'
+import { THEME_STORAGE_KEY, DEFAULT_THEME } from '@/lib/theme'
 
 interface AuthState {
   user: AuthUser | null
@@ -29,6 +30,8 @@ export const useAuthStore = create<AuthState>()(
           // ignore logout errors (e.g. already logged out)
         } finally {
           set({ user: null })
+          localStorage.setItem(THEME_STORAGE_KEY, DEFAULT_THEME)
+          document.documentElement.setAttribute('data-theme', DEFAULT_THEME)
         }
       },
     }),

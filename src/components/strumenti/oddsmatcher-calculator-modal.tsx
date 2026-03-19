@@ -21,7 +21,7 @@ import { ODDSMATCHER_BOOKS } from '@/lib/oddsmatcher-books'
 import type { OddsmatcherRow } from '@/types/oddsmatcher'
 import { Calendar, Loader2, Send, X } from 'lucide-react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn, sanitizeDecimal } from '@/lib/utils'
 
 const TIPOLOGIE: TipologiaCalcolo[] = ['NORMALE', 'RIMBORSO (CR%)']
 
@@ -314,7 +314,8 @@ export function OddsmatcherCalculatorModal({
       : new Date().toISOString()
   const eventoNome = row ? `${row.home} vs ${row.away}` : ''
   const competizione = row?.competition ?? ''
-  const mercato = row?.market ?? row?.selection ?? ''
+  const mercato = row?.market ?? ''
+  const selezione = row?.selection ?? ''
 
   const tipoBonus = tipologia === 'RIMBORSO (CR%)' ? 'rimborso' : 'none'
 
@@ -353,6 +354,7 @@ export function OddsmatcherCalculatorModal({
           eventoNome,
           competizione,
           mercato,
+          selezione,
           metodo: 'punta' as const,
           tipoBonus,
           accountId: accountIdPunta,
@@ -372,6 +374,7 @@ export function OddsmatcherCalculatorModal({
           eventoNome,
           competizione,
           mercato,
+          selezione,
           metodo: 'banca' as const,
           tipoBonus,
           accountId: accountIdBanca,
@@ -470,11 +473,11 @@ export function OddsmatcherCalculatorModal({
                       </Label>
                       <Input
                         id="modal-rimborso"
-                        type="number"
+                        type="text"
                         inputMode="decimal"
                         placeholder="0"
                         value={rimborso}
-                        onChange={(e) => setRimborso(e.target.value)}
+                        onChange={(e) => setRimborso(sanitizeDecimal(e.target.value))}
                         className="h-8 w-24"
                       />
                     </div>
@@ -482,11 +485,11 @@ export function OddsmatcherCalculatorModal({
                   <div className="flex items-center gap-2">
                     <Input
                       id="modal-commissione"
-                      type="number"
+                      type="text"
                       inputMode="decimal"
                       placeholder="3"
                       value={commissione}
-                      onChange={(e) => setCommissione(e.target.value)}
+                      onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
                       className="h-8 w-14"
                     />
                     <span className="text-sm text-muted-foreground">%</span>
@@ -503,11 +506,11 @@ export function OddsmatcherCalculatorModal({
                 </p>
                 <p className="mb-3 text-sm text-muted-foreground">{row.selection}</p>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={quotaPunta}
-                  onChange={(e) => setQuotaPunta(e.target.value)}
+                  onChange={(e) => setQuotaPunta(sanitizeDecimal(e.target.value))}
                   className="mb-3 h-10 text-lg font-semibold"
                 />
                 <div className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1.5">
@@ -527,11 +530,11 @@ export function OddsmatcherCalculatorModal({
                 </p>
                 <p className="mb-3 text-sm text-muted-foreground">{row.selection}</p>
                 <Input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={quotaBanca}
-                  onChange={(e) => setQuotaBanca(e.target.value)}
+                  onChange={(e) => setQuotaBanca(sanitizeDecimal(e.target.value))}
                   className="mb-3 h-10 text-lg font-semibold"
                 />
                 <div className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1.5">
@@ -560,11 +563,11 @@ export function OddsmatcherCalculatorModal({
                   <div className="flex items-baseline gap-2">
                     <Input
                       id="modal-puntata"
-                      type="number"
+                      type="text"
                       inputMode="decimal"
                       placeholder="0"
                       value={puntata}
-                      onChange={(e) => setPuntata(e.target.value)}
+                      onChange={(e) => setPuntata(sanitizeDecimal(e.target.value))}
                       className="h-9 w-28"
                     />
                     <span className="text-xs text-muted-foreground">
@@ -579,11 +582,11 @@ export function OddsmatcherCalculatorModal({
                     </Label>
                     <Input
                       id="modal-bonus"
-                      type="number"
+                      type="text"
                       inputMode="decimal"
                       placeholder="0"
                       value={bonus}
-                      onChange={(e) => setBonus(e.target.value)}
+                      onChange={(e) => setBonus(sanitizeDecimal(e.target.value))}
                       className="h-9 w-24"
                     />
                   </div>

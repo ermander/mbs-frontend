@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ChevronDown, Loader2, Send, X } from 'lucide-react'
 import { equalProfit, ratingPercent, stakeBFromStakeA } from '@/lib/calculators/punta-punta'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { getAccounts } from '@/services/api/profit-tracker-client'
+import { getAccounts, type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import type { Account, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
@@ -232,6 +232,7 @@ export function PuntaPuntaCalculator() {
 
   const handleSendToProfitTracker = async () => {
     if (!canSave) return
+    if (quotaANum == null || quotaBNum == null || stakeB == null) return
     const eventoDataIso = new Date(eventoData).toISOString()
     const eventoNomeVal = eventoNome.trim() || 'Punta-Punta'
     const competizione = 'N/D'
@@ -247,7 +248,7 @@ export function PuntaPuntaCalculator() {
         tag: undefined as string | undefined,
         nota: undefined as string | undefined,
       }
-      const legsPayload = [
+      const legsPayload: CreateBetLegPayload[] = [
         {
           eventoData: eventoDataIso,
           sport: 'calcio',

@@ -14,6 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   authenticatedNavDropdowns,
   authenticatedNavLinksBeforeDropdowns,
   authenticatedNavLinksAfterDropdowns,
@@ -48,6 +54,24 @@ export function Header() {
   }, [logout, router])
 
   const isAuthenticated = user !== null
+
+  React.useEffect(() => {
+    if (!mobileOpen) return
+    const scrollY = window.scrollY
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [mobileOpen])
 
   return (
     <header
@@ -167,7 +191,7 @@ export function Header() {
 
       {mobileOpen && (
         <div
-          className="border-t border-white/10 bg-background/95 backdrop-blur-md md:hidden"
+          className="max-h-[calc(100vh-3.5rem)] min-h-[calc(100vh-3.5rem)] overflow-y-auto border-t border-white/10 bg-background/95 backdrop-blur-md md:hidden"
           role="dialog"
           aria-label="Menu di navigazione"
         >
@@ -184,32 +208,42 @@ export function Header() {
                     {label}
                   </Link>
                 ))}
-                {authenticatedNavDropdowns.map((dropdown) => (
-                  <div key={dropdown.label} className="flex flex-col gap-0">
-                    <span className="px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
-                      {dropdown.label}
-                    </span>
-                    {dropdown.items.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="rounded-md px-5 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    {dropdown.label === 'ACCOUNT' && (
-                      <button
-                        type="button"
-                        className="rounded-md px-5 py-2 text-left text-sm text-destructive hover:bg-white/5"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </button>
-                    )}
-                  </div>
-                ))}
+                <Accordion type="multiple" className="w-full gap-0">
+                  {authenticatedNavDropdowns.map((dropdown) => (
+                    <AccordionItem
+                      key={dropdown.label}
+                      value={dropdown.label}
+                      className="border-0 bg-transparent"
+                    >
+                      <AccordionTrigger className="px-3 py-2 text-xs font-medium uppercase text-muted-foreground hover:bg-white/5 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                        {dropdown.label}
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-1 pt-0">
+                        <div className="flex flex-col gap-0">
+                          {dropdown.items.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className="rounded-md px-5 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                          {dropdown.label === 'ACCOUNT' && (
+                            <button
+                              type="button"
+                              className="rounded-md px-5 py-2 text-left text-sm text-destructive hover:bg-white/5"
+                              onClick={handleLogout}
+                            >
+                              Logout
+                            </button>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
                 {authenticatedNavLinksAfterDropdowns.map(({ href, label }) => (
                   <Link
                     key={href}

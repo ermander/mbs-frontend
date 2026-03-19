@@ -657,7 +657,218 @@ export default function BetDetailPage() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      {/* Vista mobile: card per leg */}
+      <div className="block space-y-4 sm:hidden">
+        {legs.map((leg) => {
+          const shouldHighlightLeg =
+            Boolean(bet?.eventoNotificato && bet?.hasOpenLegs) ||
+            (Boolean(leg.eventoNotificato) &&
+              (leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso'))
+          return (
+            <div
+              key={leg.id}
+              className={`rounded-xl border border-border bg-card/70 p-4 shadow-sm ${
+                shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+              } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-2">
+                  <span className="text-xs font-medium capitalize text-muted-foreground">
+                    {leg.metodo}
+                  </span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  {editingDateLegId === leg.id ? (
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="datetime-local"
+                        className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                        value={draftDateLocal}
+                        onChange={(e) => setDraftDateLocal(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={handleCancelDateEdit}
+                          aria-label="Annulla"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                          onClick={() => void handleConfirmDateEdit()}
+                          aria-label="Conferma"
+                          disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : canEditLegEventDate(leg) ? (
+                    <button
+                      type="button"
+                      className="rounded bg-sky-50 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40"
+                      onClick={() => handleStartDateEdit(leg)}
+                    >
+                      {renderEventDateCell(leg.eventoData)}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {renderEventDateCell(leg.eventoData)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                    {renderEditableTextCell(leg, 'eventoNome', leg.eventoNome)}
+                  </span>
+                </div>
+
+                <div className="grid gap-2 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Competizione</span>
+                    <span className="text-foreground">{leg.competizione}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Mercato</span>
+                    <span className="text-right text-foreground">{leg.mercato}</span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Tipo bonus</span>
+                    {leg.metodo === 'punta' ? (
+                      <select
+                        value={leg.tipoBonus}
+                        onChange={(e) =>
+                          handleTipoBonusChange(leg.id, e.target.value as BetLeg['tipoBonus'])
+                        }
+                        disabled={leg.statoEvento !== 'bozza'}
+                        className="rounded-md border border-border bg-background px-2 py-1 text-xs disabled:opacity-70"
+                      >
+                        {TIPO_BONUS_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Conto</span>
+                    <SearchableSelect
+                      options={accountSelectOptions}
+                      value={leg.accountId}
+                      onChange={(value) => handleAccountChange(leg.id, value)}
+                      placeholder="Seleziona conto"
+                      searchPlaceholder="Cerca conto..."
+                      allowEmpty={false}
+                      size="sm"
+                      className="w-full"
+                      disabled={leg.statoEvento !== 'bozza'}
+                    />
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Stake</span>
+                    {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Quota</span>
+                    {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))}
+                  </div>
+                  {leg.metodo === 'banca' && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Com %</span>
+                      {renderEditableCell(
+                        leg,
+                        'commissionePercentuale',
+                        leg.commissionePercentuale ?? 0,
+                        (v) => `${v.toFixed(1)}%`,
+                      )}
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Rischio</span>
+                    <span className="text-foreground">
+                      {(leg.metodo === 'punta' && (leg.rischio ?? 0) === 0
+                        ? leg.stake
+                        : (leg.rischio ?? 0)
+                      ).toFixed(2)}{' '}
+                      €
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Bonus</span>
+                    {renderEditableCell(leg, 'bonusValore', leg.bonusValore ?? 0, (v) =>
+                      v !== 0 ? `${v.toFixed(2)} €` : '—',
+                    )}
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Rimborso</span>
+                    {renderEditableCell(leg, 'rimborsoValore', leg.rimborsoValore ?? 0, (v) =>
+                      v !== 0 ? `${v.toFixed(2)} €` : '—',
+                    )}
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Mov.</span>
+                    <span className="font-medium text-foreground">
+                      {leg.movimento.toFixed(2)} €
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 pt-1">
+                    <span className="text-muted-foreground">Stato evento</span>
+                    <select
+                      value={leg.statoEvento}
+                      onChange={(e) =>
+                        handleLegStatoChange(leg.id, e.target.value as BetLeg['statoEvento'])
+                      }
+                      className={`rounded-md border px-2 py-1 text-xs font-medium ${statoEventoClasses(leg.statoEvento)}`}
+                    >
+                      <option value="bozza">Bozza</option>
+                      <option value="in_corso">In corso</option>
+                      <option value="vinto">Vinto</option>
+                      <option value="perso">Perso</option>
+                      <option value="annullato">Annullato</option>
+                    </select>
+                  </div>
+                  {leg.tag && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Tag</span>
+                      <span className="text-foreground">{leg.tag}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 border-t border-border/60 pt-3">
+                  <button
+                    type="button"
+                    className="flex-1 rounded-md border border-border bg-muted/60 px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                    onClick={() => handleCloneLeg(leg)}
+                  >
+                    Clona
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
+                    onClick={() => handleDeleteLeg(leg.id)}
+                  >
+                    Elimina
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {legs.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
+            Nessun esito registrato per questa giocata.
+          </div>
+        )}
+      </div>
+
+      {/* Vista desktop: tabella */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium text-muted-foreground">

@@ -175,7 +175,135 @@ export default function ArchivedBetDetailPage() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      {/* Vista mobile: card per leg */}
+      {legs.length > 0 ? (
+        <div className="block space-y-4 sm:hidden">
+          {legs.map((leg) => {
+            const { datePart, timePart } = formatEventDateDisplay(leg.eventoData)
+            return (
+              <div
+                key={leg.id}
+                className={`rounded-xl border border-border bg-card/70 p-4 shadow-sm ${
+                  leg.statoEvento !== 'bozza' ? 'opacity-75' : ''
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-2">
+                    <span className="text-xs font-medium capitalize text-muted-foreground">
+                      {leg.metodo}
+                    </span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      {datePart} {timePart}
+                    </span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
+                      {leg.eventoNome}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-2 text-xs">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Competizione</span>
+                      <span className="text-foreground">{leg.competizione}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Mercato</span>
+                      <span className="text-right text-foreground">{leg.mercato}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Tipo bonus</span>
+                      <span className="text-right text-foreground">
+                        {leg.metodo === 'punta' ? (
+                          TIPO_BONUS_LABEL[leg.tipoBonus]
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <Ban className="h-4 w-4 text-muted-foreground/50" aria-hidden />
+                            <span className="text-muted-foreground">—</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Conto</span>
+                      <span className="text-xs text-foreground">
+                        {resolveAccountLabel(leg.accountId)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Stake</span>
+                      <span className="text-foreground">{leg.stake.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Quota</span>
+                      <span className="text-foreground">{leg.quota.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Com %</span>
+                      <span className="text-foreground">
+                        {leg.metodo === 'punta' ? (
+                          <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" aria-hidden />
+                        ) : leg.commissionePercentuale != null ? (
+                          `${leg.commissionePercentuale.toFixed(1)}%`
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Rischio</span>
+                      <span className="text-foreground">{leg.rischio.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Bonus</span>
+                      <span className="text-foreground">
+                        {leg.bonusValore != null && leg.bonusValore !== 0
+                          ? `${leg.bonusValore.toFixed(2)} €`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Rimborso</span>
+                      <span className="text-foreground">
+                        {leg.rimborsoValore != null && leg.rimborsoValore !== 0
+                          ? `${leg.rimborsoValore.toFixed(2)} €`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Mov.</span>
+                      <span className="font-medium text-foreground">
+                        {leg.movimento.toFixed(2)} €
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Stato evento</span>
+                      <span className="flex items-center justify-end">
+                        <span className={statoEventoBadgeClass(leg.statoEvento)}>
+                          {STATO_EVENTO_LABEL[leg.statoEvento]}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Tag</span>
+                      <span className="text-foreground">{leg.tag ?? '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="block sm:hidden">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
+            Nessun esito registrato per questa giocata.
+          </div>
+        </div>
+      )}
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium text-muted-foreground">

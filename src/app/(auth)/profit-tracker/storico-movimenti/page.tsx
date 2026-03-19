@@ -163,11 +163,11 @@ export default function StoricoMovimentiPage() {
       sectionDescription="Tutte le transazioni finanziarie: scommesse, giocate rapide, depositi, prelievi e altro."
     >
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Tipo</label>
           <select
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value as ActivityFeedSource | '')}
           >
@@ -178,10 +178,10 @@ export default function StoricoMovimentiPage() {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Conto</label>
           <select
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
             value={accountFilter}
             onChange={(e) => setAccountFilter(e.target.value)}
           >
@@ -193,10 +193,10 @@ export default function StoricoMovimentiPage() {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Wallet</label>
           <select
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
             value={walletFilter}
             onChange={(e) => setWalletFilter(e.target.value)}
           >
@@ -208,27 +208,27 @@ export default function StoricoMovimentiPage() {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Da</label>
           <input
             type="date"
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">A</label>
           <input
             type="date"
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
           />
         </div>
         <button
           type="button"
-          className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="mt-1 h-9 w-full rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:mt-0 sm:w-auto"
           onClick={handleFilter}
         >
           Filtra

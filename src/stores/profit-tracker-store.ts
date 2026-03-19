@@ -617,6 +617,16 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         set((state) => ({
           ...state,
           quickBets: [...state.quickBets, created],
+          accounts: state.accounts.map((a) =>
+            a.id === created.accountId
+              ? { ...a, saldoAttuale: a.saldoAttuale + created.movimento }
+              : a,
+          ),
+          allAccounts: state.allAccounts.map((a) =>
+            a.id === created.accountId
+              ? { ...a, saldoAttuale: a.saldoAttuale + created.movimento }
+              : a,
+          ),
           isSavingQuickBet: false,
           quickBetError: undefined,
         }))
@@ -628,13 +638,27 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
 
     updateQuickBet: async (id, patch) => {
       try {
+        const oldBet = _get().quickBets.find((b) => b.id === id)
         const updated = await apiUpdateQuickBet(id, {
           movimento: patch.movimento,
           tag: patch.tag,
           nota: patch.nota,
         })
+        const delta = oldBet ? updated.movimento - oldBet.movimento : 0
         set((state) => ({
           quickBets: state.quickBets.map((b) => (b.id === id ? updated : b)),
+          accounts:
+            delta !== 0
+              ? state.accounts.map((a) =>
+                  a.id === updated.accountId ? { ...a, saldoAttuale: a.saldoAttuale + delta } : a,
+                )
+              : state.accounts,
+          allAccounts:
+            delta !== 0
+              ? state.allAccounts.map((a) =>
+                  a.id === updated.accountId ? { ...a, saldoAttuale: a.saldoAttuale + delta } : a,
+                )
+              : state.allAccounts,
         }))
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'aggiornamento della giocata rapida"
@@ -644,9 +668,20 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
 
     removeQuickBet: async (id) => {
       try {
+        const bet = _get().quickBets.find((b) => b.id === id)
         await apiDeleteQuickBet(id)
         set((state) => ({
           quickBets: state.quickBets.filter((b) => b.id !== id),
+          accounts: bet
+            ? state.accounts.map((a) =>
+                a.id === bet.accountId ? { ...a, saldoAttuale: a.saldoAttuale - bet.movimento } : a,
+              )
+            : state.accounts,
+          allAccounts: bet
+            ? state.allAccounts.map((a) =>
+                a.id === bet.accountId ? { ...a, saldoAttuale: a.saldoAttuale - bet.movimento } : a,
+              )
+            : state.allAccounts,
         }))
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'eliminazione della giocata rapida"

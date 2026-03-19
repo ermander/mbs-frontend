@@ -33,12 +33,85 @@ export default function IntestatariPage() {
       sectionTitle="Intestatari"
       sectionDescription="Gestisci gli intestatari collegati a conti e wallet."
       actions={
-        <Button type="button" onClick={() => setCreateOpen(true)}>
+        <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           Nuovo intestatario
         </Button>
       }
     >
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      <div className="block space-y-4 sm:hidden">
+        {isLoadingHolders && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Caricamento intestatari in corso...
+          </div>
+        )}
+        {!isLoadingHolders &&
+          holders.map((holder) => (
+            <div
+              key={holder.id}
+              className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+            >
+              <div className="grid gap-2 text-xs">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Nome</span>
+                  <span className="text-right text-foreground">{holder.nome}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Descrizione</span>
+                  <span className="text-right text-muted-foreground">
+                    {holder.descrizione ?? '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Stato</span>
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      holder.stato === 'abilitato'
+                        ? 'bg-emerald-600/10 text-emerald-700'
+                        : 'bg-gray-500/10 text-gray-500'
+                    }`}
+                  >
+                    {holder.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/60 pt-3">
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setNewWalletHolderId(holder.id)}
+                >
+                  Nuovo wallet
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setNewAccountHolderId(holder.id)}
+                >
+                  Nuovo conto
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setEditHolderId(holder.id)}
+                >
+                  Modifica
+                </button>
+              </div>
+            </div>
+          ))}
+        {!isLoadingHolders && holders.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun intestatario registrato. Usa &quot;Nuovo intestatario&quot; per aggiungerne uno.
+          </div>
+        )}
+        {holdersError && !isLoadingHolders && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-center text-xs text-destructive">
+            {holdersError}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">

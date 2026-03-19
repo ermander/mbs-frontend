@@ -49,7 +49,89 @@ export default function GiocateRapidePage() {
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      <div className="block space-y-4 sm:hidden">
+        {isLoadingQuickBets ? (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Caricamento...
+          </div>
+        ) : quickBets.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessuna giocata rapida registrata. Usa &quot;Nuova giocata&quot; per aggiungerne una.
+          </div>
+        ) : (
+          quickBets.map((bet) => {
+            const movementClass = bet.movimento >= 0 ? 'text-emerald-600' : 'text-red-500'
+            return (
+              <div
+                key={bet.id}
+                className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+              >
+                <div className="space-y-2">
+                  <h2 className="text-base font-semibold leading-snug text-foreground">
+                    {bet.quickMethod.replace('_', ' ')}
+                  </h2>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                      {formatDate(bet.dataRegistrazione)}
+                    </span>
+                    <span className="rounded-md bg-muted/40 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                      ID {bet.id}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground">Conto</span>
+                    <span className="text-right text-foreground">
+                      {resolveAccountName(bet.accountId)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 text-xs">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Tag</span>
+                    <span className="text-right text-muted-foreground">{bet.tag ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Nota</span>
+                    <span className="text-right text-muted-foreground">{bet.nota ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-border/50 pt-2">
+                    <span className="text-muted-foreground">Movimento</span>
+                    <span className={`text-right font-medium ${movementClass}`}>
+                      {bet.movimento.toFixed(2)} €
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
+                  <button
+                    type="button"
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                    onClick={() =>
+                      void updateQuickBet(bet.id, {
+                        movimento: -bet.movimento,
+                      })
+                    }
+                  >
+                    Inverti
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
+                    onClick={() => void removeQuickBet(bet.id)}
+                  >
+                    Elimina
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">

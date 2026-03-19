@@ -106,21 +106,31 @@ export default function WalletsPage() {
       sectionTitle="Wallets"
       sectionDescription="Configura e monitora i metodi di pagamento e la liquidità disponibile."
       actions={
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" type="button" onClick={() => setTransferOpen(true)}>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setTransferOpen(true)}
+            className="w-full sm:w-auto"
+          >
             Trasferisci
           </Button>
-          <Button variant="outline" type="button" onClick={() => setTopupOpen(true)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setTopupOpen(true)}
+            className="w-full sm:w-auto"
+          >
             Ricarica/Spesa
           </Button>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
+          <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
             Nuovo wallet
           </Button>
         </div>
       }
     >
       <div
-        className="flex w-fit items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5"
+        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 sm:w-fit sm:justify-start"
         role="status"
         aria-label={`Saldo totale wallets: ${saldoTotaleFormatted}`}
       >
@@ -331,7 +341,7 @@ export default function WalletsPage() {
       </div>
 
       {total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm">
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             Visualizzo{' '}
             <strong>
@@ -339,24 +349,26 @@ export default function WalletsPage() {
             </strong>{' '}
             di <strong>{total}</strong> elementi.
           </p>
-          <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-3 items-center gap-2 sm:flex sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               type="button"
+              className="w-full sm:w-auto"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
               aria-disabled={safePage <= 1}
             >
               Precedente
             </Button>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-center text-xs text-muted-foreground">
               Pagina {safePage} di {maxPage}
             </span>
             <Button
               variant="outline"
               size="sm"
               type="button"
+              className="w-full sm:w-auto"
               onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
               disabled={safePage >= maxPage}
               aria-disabled={safePage >= maxPage}

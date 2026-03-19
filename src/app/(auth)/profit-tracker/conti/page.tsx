@@ -77,13 +77,13 @@ export default function ContiPage() {
       sectionTitle="Conti"
       sectionDescription="Gestisci i conti collegati ai bookmaker e monitora i saldi disponibili."
       actions={
-        <Button type="button" onClick={() => setCreateOpen(true)}>
+        <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           Nuovo conto
         </Button>
       }
     >
       <div
-        className="flex w-fit items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5"
+        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 sm:w-fit sm:justify-start"
         role="status"
         aria-label={`Saldo totale conti: ${saldoTotaleFormatted}`}
       >
@@ -94,7 +94,7 @@ export default function ContiPage() {
         </span>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm">
+      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
         <SearchableSelect
           id="filter-holder"
           label="Intestatario"
@@ -106,7 +106,7 @@ export default function ContiPage() {
             setHolderId(v)
             setPage(1)
           }}
-          className="min-w-[200px]"
+          className="w-full sm:min-w-[200px]"
         />
         <SearchableSelect
           id="filter-book"
@@ -119,7 +119,7 @@ export default function ContiPage() {
             setBookId(v)
             setPage(1)
           }}
-          className="min-w-[200px]"
+          className="w-full sm:min-w-[200px]"
         />
       </div>
 

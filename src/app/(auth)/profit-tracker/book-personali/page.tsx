@@ -63,7 +63,7 @@ export default function BookPersonaliPage() {
       sectionTitle="Book personali"
       sectionDescription="Gestisci i bookmaker personali oltre a quelli globali preconfigurati."
       actions={
-        <Button type="button" onClick={() => setCreateOpen(true)}>
+        <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           Nuovo book
         </Button>
       }
@@ -78,9 +78,9 @@ export default function BookPersonaliPage() {
 
       <form
         onSubmit={handleFilterSubmit}
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-3"
+        className="flex flex-col items-stretch gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:items-end"
       >
-        <div className="grid gap-1.5">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filter-nome" className="text-xs text-muted-foreground">
             Nome
           </Label>
@@ -90,10 +90,10 @@ export default function BookPersonaliPage() {
             placeholder="Cerca per nome..."
             value={filterNome}
             onChange={(e) => setFilterNome(e.target.value)}
-            className="h-8 w-48 text-sm"
+            className="h-8 w-full text-sm sm:w-48"
           />
         </div>
-        <div className="grid gap-1.5">
+        <div className="grid w-full gap-1.5 sm:w-auto">
           <Label htmlFor="filter-descrizione" className="text-xs text-muted-foreground">
             Descrizione
           </Label>
@@ -103,15 +103,68 @@ export default function BookPersonaliPage() {
             placeholder="Cerca per descrizione..."
             value={filterDescrizione}
             onChange={(e) => setFilterDescrizione(e.target.value)}
-            className="h-8 w-48 text-sm"
+            className="h-8 w-full text-sm sm:w-48"
           />
         </div>
-        <Button type="submit" variant="secondary" size="sm" className="h-8">
+        <Button type="submit" variant="secondary" size="sm" className="h-8 w-full sm:w-auto">
           Filtra
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm">
+      {/* Vista mobile: cards */}
+      <div className="block space-y-4 sm:hidden">
+        {books.map((book) => (
+          <div key={book.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">{book.nome}</span>
+                {book.isGlobal && (
+                  <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                    Globale
+                  </span>
+                )}
+              </div>
+              <div className="text-xs">
+                {book.isExchange ? (
+                  <span className="inline-flex rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    Exchange
+                  </span>
+                ) : (
+                  <span className="inline-flex rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    Bookmaker
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <p className="mt-2 text-xs text-muted-foreground">{book.descrizione ?? '—'}</p>
+
+            <div className="mt-4">
+              {book.isGlobal ? (
+                <span className="text-xs text-muted-foreground">Sola lettura</span>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setEditBookId(book.id)}
+                >
+                  Modifica
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {books.length === 0 && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun book personale registrato. Usa &quot;Nuovo book&quot; per crearne uno.
+          </div>
+        )}
+      </div>
+
+      {/* Vista desktop: tabella */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
@@ -177,16 +230,16 @@ export default function BookPersonaliPage() {
       </div>
 
       {booksTotal != null && booksTotal > PAGE_SIZE && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <span className="text-muted-foreground">
             Pagina {page} di {totalPages} — {booksTotal} book in totale
           </span>
-          <div className="flex items-center gap-1">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:grid-cols-none sm:items-center sm:gap-1">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-8"
+              className="h-8 w-full sm:w-auto"
               disabled={page <= 1 || isLoadingBooks}
               onClick={() => goToPage(page - 1)}
             >
@@ -196,7 +249,7 @@ export default function BookPersonaliPage() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-8"
+              className="h-8 w-full sm:w-auto"
               disabled={page >= totalPages || isLoadingBooks}
               onClick={() => goToPage(page + 1)}
             >

@@ -38,7 +38,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     items: [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
       { label: 'Punta-Punta', href: '/calcolatori/punta-punta' },
-      { label: 'Dutch-Tool', href: '/calcolatori/dutch-tool' },
+      { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
       { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
       { label: 'Condizionato', href: '/calcolatori/condizionato' },
       { label: 'Combo Tool', href: '/calcolatori/combo-tool' },

@@ -782,8 +782,24 @@ export default function BetDetailPage() {
                     {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Quota</span>
-                    {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))}
+                    <span className="text-muted-foreground">Quota Punta</span>
+                    {leg.metodo === 'punta' ? (
+                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    ) : leg.quotaRiferimento != null ? (
+                      renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
+                        v.toFixed(2),
+                      )
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Quota Banca</span>
+                    {leg.metodo === 'banca' ? (
+                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </div>
                   {leg.metodo === 'banca' && (
                     <div className="flex justify-between gap-2">
@@ -888,7 +904,8 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Quota</th>
+              <th className="px-3 py-2 text-left">Quota Punta</th>
+              <th className="px-3 py-2 text-left">Quota Banca</th>
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -1007,7 +1024,22 @@ export default function BetDetailPage() {
                     {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                   </td>
                   <td className="px-3 py-2">
-                    {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))}
+                    {leg.metodo === 'punta' ? (
+                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    ) : leg.quotaRiferimento != null ? (
+                      renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
+                        v.toFixed(2),
+                      )
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {leg.metodo === 'banca' ? (
+                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(2))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {leg.metodo === 'punta' ? (
@@ -1080,7 +1112,7 @@ export default function BetDetailPage() {
             })}
             {legs.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={16}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={17}>
                   Nessun esito registrato per questa giocata.
                 </td>
               </tr>

@@ -4,11 +4,12 @@ import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
 import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
+import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
 
 const slugToTitle: Record<string, string> = {
   'punta-banca': 'Punta-Banca',
   'punta-punta': 'Punta-Punta',
-  'dutch-tool': 'Dutch-Tool',
+  'tri-punta': 'Tri-Punta',
   'multi-tool': 'Multi-Tool',
   condizionato: 'Condizionato',
   'combo-tool': 'Combo Tool',
@@ -51,6 +52,25 @@ export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug
               <span className="whitespace-nowrap">Punta - Punta</span>
             </h1>
             <PuntaPuntaCalculator />
+          </Container>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  if (slug === 'tri-punta') {
+    return (
+      <>
+        <Header />
+        <main className="py-12 sm:py-16">
+          <Container className="max-w-3xl space-y-8">
+            <h1 className="text-center text-3xl font-bold tracking-tight text-foreground">
+              Calcolatore
+              <br className="md:hidden" />
+              <span className="whitespace-nowrap">Tri-Punta</span>
+            </h1>
+            <TriPuntaCalculator />
           </Container>
         </main>
         <Footer />

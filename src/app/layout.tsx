@@ -1,24 +1,21 @@
-'use client'
 import './globals.css'
 
-import { QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
-import { queryClient } from '@/lib/react-query'
-import { AuthRefreshProvider } from '@/components/auth/auth-refresh-provider'
+import { headers } from 'next/headers'
+import { Providers } from '@/components/providers'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? ''
+
   return (
     <html lang="it" suppressHydrationWarning>
       <body>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('mbs-theme');var v=['slate','warm','oled','light-slate','light-warm','light-pure'];if(!t||v.indexOf(t)===-1)t='light-warm';document.documentElement.setAttribute('data-theme',t);})();`,
           }}
         />
-        <QueryClientProvider client={queryClient}>
-          <AuthRefreshProvider>{children}</AuthRefreshProvider>
-        </QueryClientProvider>
-        <Toaster position="bottom-right" richColors closeButton />
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

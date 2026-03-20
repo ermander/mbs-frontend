@@ -40,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'mbs-auth',
       version: 1,
+      migrate: (persisted) => persisted as { isLoggedIn?: boolean },
       partialize: (state) => ({ isLoggedIn: state.isLoggedIn }),
       merge: (persisted, current) => ({
         ...current,

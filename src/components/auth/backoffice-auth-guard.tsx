@@ -11,6 +11,7 @@ const ADMIN_ROLE = 'ADMIN_ROLE'
 export function BackofficeAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping)
   const setUser = useAuthStore((s) => s.setUser)
   const startBootstrapping = useAuthStore((s) => s.startBootstrapping)
@@ -20,6 +21,10 @@ export function BackofficeAuthGuard({ children }: { children: React.ReactNode })
   useEffect(() => {
     const bootstrap = async () => {
       if (user || isBootstrapping) return
+      if (!isLoggedIn) {
+        router.replace('/backoffice/login')
+        return
+      }
       startBootstrapping()
       try {
         const { user: me } = await authClient.me()
@@ -38,7 +43,16 @@ export function BackofficeAuthGuard({ children }: { children: React.ReactNode })
     }
 
     void bootstrap()
-  }, [clearUser, finishBootstrapping, isBootstrapping, router, setUser, startBootstrapping, user])
+  }, [
+    clearUser,
+    finishBootstrapping,
+    isBootstrapping,
+    isLoggedIn,
+    router,
+    setUser,
+    startBootstrapping,
+    user,
+  ])
 
   if (!user) return null
 

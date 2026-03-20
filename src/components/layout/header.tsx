@@ -41,6 +41,7 @@ export function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const user = useAuthStore((s) => s.user)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
   const logout = useAuthStore((s) => s.logout)
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null)
@@ -53,7 +54,7 @@ export function Header() {
     router.push('/')
   }, [logout, router])
 
-  const isAuthenticated = user !== null
+  const isAuthenticated = isLoggedIn || user !== null
 
   React.useEffect(() => {
     if (!mobileOpen) return

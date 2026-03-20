@@ -6,6 +6,7 @@ import { THEME_STORAGE_KEY, DEFAULT_THEME } from '@/lib/theme'
 
 interface AuthState {
   user: AuthUser | null
+  isLoggedIn: boolean
   isBootstrapping: boolean
   setUser: (user: AuthUser | null) => void
   startBootstrapping: () => void
@@ -18,18 +19,19 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      isLoggedIn: false,
       isBootstrapping: false,
-      setUser: (user) => set({ user }),
+      setUser: (user) => set({ user, isLoggedIn: !!user }),
       startBootstrapping: () => set({ isBootstrapping: true }),
       finishBootstrapping: () => set({ isBootstrapping: false }),
-      clearUser: () => set({ user: null }),
+      clearUser: () => set({ user: null, isLoggedIn: false }),
       logout: async () => {
         try {
           await authClient.logout()
         } catch {
           // ignore logout errors (e.g. already logged out)
         } finally {
-          set({ user: null })
+          set({ user: null, isLoggedIn: false })
           localStorage.setItem(THEME_STORAGE_KEY, DEFAULT_THEME)
           document.documentElement.setAttribute('data-theme', DEFAULT_THEME)
         }
@@ -37,7 +39,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'mbs-auth',
-      partialize: (state) => ({ user: state.user }),
+      version: 1,
+      partialize: (state) => ({ isLoggedIn: state.isLoggedIn }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as { isLoggedIn?: boolean }),
+      }),
     },
   ),
 )

@@ -11,28 +11,30 @@ export function middleware(req: NextRequest) {
 
   const csp = [
     `default-src 'self'`,
-    // nonce per tutti gli script first-party (Next/React/runtime)
-    `script-src 'self' 'nonce-${nonce}'`,
-    // styles: se usi Tailwind + shadcn spesso serve ancora unsafe-inline, poi si può stringere
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
-    // consenti chiamate API
     `connect-src 'self' https://api.matched-betting-system.com`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `frame-ancestors 'none'`,
-    // opzionale ma utile
     `object-src 'none'`,
     `upgrade-insecure-requests`,
   ].join('; ')
 
-  const res = NextResponse.next()
+  // Pass nonce via request headers so Next.js can read it and apply it to script tags
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
 
-  // Next.js può estrarre il nonce dalla CSP e applicarlo automaticamente agli script
+  const res = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
   res.headers.set('Content-Security-Policy', csp)
-  // utile per debug/telemetria interna; non strettamente necessario
-  res.headers.set('x-nonce', nonce)
 
   return res
 }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
 
 function generateNonce() {
-  return crypto.randomBytes(16).toString('base64')
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return btoa(String.fromCharCode(...bytes))
 }
 
 export function middleware(req: NextRequest) {

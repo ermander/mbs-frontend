@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
 
@@ -34,6 +35,12 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+
+  const holderOptions = useMemo(
+    () => holders.map((h) => ({ value: h.id, label: h.nome })),
+    [holders],
+  )
 
   const firstHolderOrWalletHolder =
     wallets.length > 0 ? wallets[0].holderId : holders.length > 0 ? holders[0].id : ''
@@ -104,24 +111,27 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuovo trasferimento</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 p-4 pt-0 text-sm">
           <div className="space-y-1.5">
             <Label htmlFor="from-holder">Da intestatario</Label>
-            <select
+            <SearchableSelect
               id="from-holder"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              options={holderOptions}
               value={effectiveFromHolderId}
-              onChange={(e) => setFromHolderId(e.target.value)}
-            >
-              {holders.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setFromHolderId}
+              allowEmpty={false}
+              placeholder="Seleziona intestatario"
+              searchPlaceholder="Cerca intestatario..."
+              portalContainer={dropdownPortalEl}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="from-wallet">Da wallet</Label>
@@ -140,18 +150,16 @@ export function WalletTransferModal({ open, onOpenChange }: WalletTransferModalP
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="to-holder">A intestatario</Label>
-            <select
+            <SearchableSelect
               id="to-holder"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              options={holderOptions}
               value={effectiveToHolderId}
-              onChange={(e) => setToHolderId(e.target.value)}
-            >
-              {holders.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setToHolderId}
+              allowEmpty={false}
+              placeholder="Seleziona intestatario"
+              searchPlaceholder="Cerca intestatario..."
+              portalContainer={dropdownPortalEl}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="to-wallet">A wallet</Label>

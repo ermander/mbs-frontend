@@ -362,6 +362,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           sortSaldo: params?.sortSaldo ?? 'desc',
           holderId: params?.holderId,
           bookId: params?.bookId,
+          holderIds: params?.holderIds,
+          bookIds: params?.bookIds,
           status: params?.status,
         })
         set(() => ({ accounts: items, accountsTotal: total, isLoadingAccounts: false }))

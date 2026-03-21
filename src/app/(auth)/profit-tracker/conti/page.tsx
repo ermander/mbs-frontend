@@ -4,7 +4,7 @@ import { useEffect, useCallback, useMemo, useState } from 'react'
 
 import { Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
@@ -32,19 +32,19 @@ export default function ContiPage() {
   const [movementForAccount, setMovementForAccount] = useState<string | undefined>(undefined)
   const [editingAccountId, setEditingAccountId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [holderId, setHolderId] = useState<string>('')
-  const [bookId, setBookId] = useState<string>('')
+  const [holderIds, setHolderIds] = useState<string[]>([])
+  const [bookIds, setBookIds] = useState<string[]>([])
   const [sortSaldo, setSortSaldo] = useState<'asc' | 'desc'>('desc')
 
   const loadAccounts = useCallback(() => {
     void fetchAccounts({
       page,
       limit: PAGE_SIZE,
-      holderId: holderId || undefined,
-      bookId: bookId || undefined,
+      holderIds: holderIds.length > 0 ? holderIds.join(',') : undefined,
+      bookIds: bookIds.length > 0 ? bookIds.join(',') : undefined,
       sortSaldo,
     })
-  }, [fetchAccounts, page, holderId, bookId, sortSaldo])
+  }, [fetchAccounts, page, holderIds, bookIds, sortSaldo])
 
   useEffect(() => {
     if (!holders.length) void fetchHolders()
@@ -56,10 +56,17 @@ export default function ContiPage() {
     loadAccounts()
   }, [loadAccounts])
 
-  const saldoTotaleConti = useMemo(
-    () => allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0),
-    [allAccounts],
-  )
+  const saldoTotaleConti = useMemo(() => {
+    const hasFilter = holderIds.length > 0 || bookIds.length > 0
+    if (!hasFilter) return allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
+    return allAccounts
+      .filter((a) => {
+        if (holderIds.length > 0 && !holderIds.includes(a.holderId)) return false
+        if (bookIds.length > 0 && !bookIds.includes(a.bookId)) return false
+        return true
+      })
+      .reduce((sum, a) => sum + a.saldoAttuale, 0)
+  }, [allAccounts, holderIds, bookIds])
   const saldoTotaleFormatted =
     saldoTotaleConti.toLocaleString('it-IT', {
       minimumFractionDigits: 2,
@@ -95,30 +102,34 @@ export default function ContiPage() {
       </div>
 
       <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
-        <SearchableSelect
-          id="filter-holder"
+        <SearchableMultiSelect
           label="Intestatario"
           placeholder="Tutti"
           searchPlaceholder="Cerca intestatario..."
-          options={holders.map((h) => ({ value: h.id, label: h.nome }))}
-          value={holderId}
-          onChange={(v) => {
-            setHolderId(v)
+          buttonLabel={holderIds.length > 0 ? `${holderIds.length} selezionati` : 'Tutti'}
+          options={holders.map((h) => ({ id: h.id, name: h.nome }))}
+          selectedIds={holderIds}
+          onToggle={(id) => {
+            setHolderIds((prev) =>
+              prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+            )
             setPage(1)
           }}
+          showBadges
           className="w-full sm:min-w-[200px]"
         />
-        <SearchableSelect
-          id="filter-book"
+        <SearchableMultiSelect
           label="Book"
           placeholder="Tutti"
           searchPlaceholder="Cerca book..."
-          options={books.map((b) => ({ value: b.id, label: b.nome }))}
-          value={bookId}
-          onChange={(v) => {
-            setBookId(v)
+          buttonLabel={bookIds.length > 0 ? `${bookIds.length} selezionati` : 'Tutti'}
+          options={books.map((b) => ({ id: b.id, name: b.nome }))}
+          selectedIds={bookIds}
+          onToggle={(id) => {
+            setBookIds((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
             setPage(1)
           }}
+          showBadges
           className="w-full sm:min-w-[200px]"
         />
       </div>

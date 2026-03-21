@@ -113,6 +113,10 @@ export interface CreateAccountPayload {
 export interface GetAccountsParams {
   holderId?: string
   bookId?: string
+  /** Comma-separated holder IDs for multi-select filter */
+  holderIds?: string
+  /** Comma-separated book IDs for multi-select filter */
+  bookIds?: string
   status?: string
   page?: number
   limit?: number

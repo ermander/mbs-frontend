@@ -104,6 +104,12 @@ export default function BetDetailPage() {
     })
   }, [allLegs, betId])
 
+  const isMultipla = useMemo(() => {
+    const puntaLeg = legs.find((l) => l.metodo === 'punta')
+    const bancaCount = legs.filter((l) => l.metodo === 'banca').length
+    return bancaCount >= 2 && puntaLeg != null
+  }, [legs])
+
   const resolveAccountLabel = useCallback(
     (accountId: string) => {
       const account = allAccounts.find((a) => a.id === accountId)
@@ -114,15 +120,6 @@ export default function BetDetailPage() {
       return `${book.nome} (${holder.nome})`
     },
     [allAccounts, books, holders],
-  )
-
-  const accountSelectOptions = useMemo(
-    () =>
-      allAccounts.map((a) => ({
-        value: a.id,
-        label: resolveAccountLabel(a.id),
-      })),
-    [allAccounts, resolveAccountLabel],
   )
 
   const puntaAccountOptions = useMemo(
@@ -873,26 +870,35 @@ export default function BetDetailPage() {
                     <span className="text-muted-foreground">Stake</span>
                     {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Quota Punta</span>
-                    {leg.metodo === 'punta' ? (
-                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
-                    ) : leg.quotaRiferimento != null ? (
-                      renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
-                        v.toFixed(3),
-                      )
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Quota Banca</span>
-                    {leg.metodo === 'banca' ? (
-                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
+                  {isMultipla ? (
+                    <>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Quota Punta</span>
+                        {leg.metodo === 'punta' ? (
+                          renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
+                        ) : leg.quotaRiferimento != null ? (
+                          renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
+                            v.toFixed(3),
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">Quota Banca</span>
+                        {leg.metodo === 'banca' ? (
+                          renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Quota</span>
+                      {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))}
+                    </div>
+                  )}
                   {leg.metodo === 'banca' && (
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Com %</span>
@@ -997,8 +1003,14 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Stake</th>
-              <th className="px-3 py-2 text-left">Quota Punta</th>
-              <th className="px-3 py-2 text-left">Quota Banca</th>
+              {isMultipla ? (
+                <>
+                  <th className="px-3 py-2 text-left">Quota Punta</th>
+                  <th className="px-3 py-2 text-left">Quota Banca</th>
+                </>
+              ) : (
+                <th className="px-3 py-2 text-left">Quota</th>
+              )}
               <th className="px-3 py-2 text-left">Com %</th>
               <th className="px-3 py-2 text-left">Rischio</th>
               <th className="px-3 py-2 text-left">Bonus</th>
@@ -1125,24 +1137,32 @@ export default function BetDetailPage() {
                   <td className="px-3 py-2">
                     {renderEditableCell(leg, 'stake', leg.stake, (v) => v.toFixed(2))}
                   </td>
-                  <td className="px-3 py-2">
-                    {leg.metodo === 'punta' ? (
-                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
-                    ) : leg.quotaRiferimento != null ? (
-                      renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
-                        v.toFixed(3),
-                      )
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {leg.metodo === 'banca' ? (
-                      renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
+                  {isMultipla ? (
+                    <>
+                      <td className="px-3 py-2">
+                        {leg.metodo === 'punta' ? (
+                          renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
+                        ) : leg.quotaRiferimento != null ? (
+                          renderEditableCell(leg, 'quotaRiferimento', leg.quotaRiferimento, (v) =>
+                            v.toFixed(3),
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {leg.metodo === 'banca' ? (
+                          renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </>
+                  ) : (
+                    <td className="px-3 py-2">
+                      {renderEditableCell(leg, 'quota', leg.quota, (v) => v.toFixed(3))}
+                    </td>
+                  )}
                   <td className="px-3 py-2">
                     {leg.metodo === 'punta' ? (
                       <Ban className="mx-auto h-4 w-4 text-muted-foreground/50" />

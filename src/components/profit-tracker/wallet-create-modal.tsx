@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import {
   Dialog,
@@ -12,9 +13,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
-import { getErrorMessage } from '@/lib/error-utils'
+import { getResponseStatus } from '@/lib/error-utils'
 import type { EnabledStatus } from '@/types/profit-tracker'
 
 interface WalletCreateModalProps {
@@ -28,6 +30,7 @@ function WalletCreateModalForm({
   holders,
   onClose,
   onSave,
+  portalContainer,
 }: {
   defaultHolderId?: string
   holders: { id: string; nome: string }[]
@@ -39,19 +42,22 @@ function WalletCreateModalForm({
     saldoIniziale: number
     stato: EnabledStatus
   }) => Promise<void>
+  portalContainer: HTMLDivElement | null
 }) {
+  const holderOptions = useMemo(
+    () => holders.map((h) => ({ value: h.id, label: h.nome })),
+    [holders],
+  )
   const [holderId, setHolderId] = useState(defaultHolderId || holders[0]?.id || '')
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [saldoIniziale, setSaldoIniziale] = useState('')
   const [stato, setStato] = useState<EnabledStatus>('abilitato')
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const handleSaveAsync = async () => {
     if (!holderId || !nome.trim()) return
     setSaving(true)
-    setError(null)
     try {
       const iniziale = Number.parseFloat(saldoIniziale.replace(',', '.')) || 0
       await onSave({
@@ -61,12 +67,18 @@ function WalletCreateModalForm({
         saldoIniziale: iniziale,
         stato,
       })
+      toast.success('Wallet creato con successo')
       setNome('')
       setDescrizione('')
       setSaldoIniziale('')
       onClose()
     } catch (err: unknown) {
-      setError(getErrorMessage(err) || 'Errore durante il salvataggio')
+      const status = getResponseStatus(err)
+      if (status === 409) {
+        toast.error("Esiste già un wallet con questo nome per l'intestatario selezionato")
+      } else {
+        toast.error('Errore durante il salvataggio')
+      }
     } finally {
       setSaving(false)
     }
@@ -78,18 +90,16 @@ function WalletCreateModalForm({
     <div className="space-y-4 p-4 pt-0 text-sm">
       <div className="space-y-1.5">
         <Label htmlFor="wallet-holder">Intestatario</Label>
-        <select
+        <SearchableSelect
           id="wallet-holder"
-          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          options={holderOptions}
           value={holderId}
-          onChange={(e) => setHolderId(e.target.value)}
-        >
-          {holders.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.nome}
-            </option>
-          ))}
-        </select>
+          onChange={setHolderId}
+          allowEmpty={false}
+          placeholder="Seleziona intestatario"
+          searchPlaceholder="Cerca intestatario..."
+          portalContainer={portalContainer}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="wallet-nome">Nome</Label>
@@ -131,11 +141,6 @@ function WalletCreateModalForm({
           <option value="disabilitato">Non abilitato</option>
         </select>
       </div>
-      {error != null && (
-        <p className="text-xs text-destructive" role="alert">
-          {error}
-        </p>
-      )}
       <DialogFooter>
         <Button variant="outline" type="button" onClick={onClose} disabled={saving}>
           Annulla
@@ -151,6 +156,7 @@ function WalletCreateModalForm({
 export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: WalletCreateModalProps) {
   const holders = useProfitTrackerStore((s) => s.holders)
   const addWallet = useProfitTrackerStore((s) => s.addWallet)
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   const handleSave = async (payload: {
     holderId: string
@@ -172,6 +178,11 @@ export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: Walle
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuovo wallet</DialogTitle>
         </DialogHeader>
@@ -182,6 +193,7 @@ export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: Walle
             holders={holders}
             onClose={() => onOpenChange(false)}
             onSave={handleSave}
+            portalContainer={dropdownPortalEl}
           />
         )}
       </DialogContent>

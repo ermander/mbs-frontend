@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { EnabledStatus } from '@/types/profit-tracker'
 
@@ -26,6 +27,7 @@ function AccountCreateModalForm({
   books,
   onClose,
   onSave,
+  portalContainer,
 }: {
   defaultHolderId?: string
   holders: { id: string; nome: string }[]
@@ -37,6 +39,7 @@ function AccountCreateModalForm({
     descrizione: string
     stato: EnabledStatus
   }) => void | Promise<void>
+  portalContainer?: HTMLElement | null
 }) {
   const [holderId, setHolderId] = useState(defaultHolderId || holders[0]?.id || '')
   const [bookId, setBookId] = useState(books[0]?.id ?? '')
@@ -70,34 +73,32 @@ function AccountCreateModalForm({
     <div className="space-y-4 p-4 pt-0 text-sm">
       <div className="space-y-1.5">
         <Label htmlFor="acc-holder">Intestatario</Label>
-        <select
+        <SearchableSelect
           id="acc-holder"
-          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          placeholder="Seleziona intestatario"
+          searchPlaceholder="Cerca intestatario..."
+          options={holders.map((h) => ({ value: h.id, label: h.nome }))}
           value={holderId}
-          onChange={(e) => setHolderId(e.target.value)}
-        >
-          {holders.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.nome}
-            </option>
-          ))}
-        </select>
+          onChange={setHolderId}
+          allowEmpty={false}
+          className="w-full"
+          portalContainer={portalContainer}
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="acc-book">Book</Label>
-        <select
+        <SearchableSelect
           id="acc-book"
-          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          placeholder="Seleziona book"
+          searchPlaceholder="Cerca book..."
+          options={books.map((b) => ({ value: b.id, label: b.nome }))}
           value={effectiveBookId}
-          onChange={(e) => setBookId(e.target.value)}
+          onChange={setBookId}
           disabled={books.length === 0}
-        >
-          {books.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.nome}
-            </option>
-          ))}
-        </select>
+          allowEmpty={false}
+          className="w-full"
+          portalContainer={portalContainer}
+        />
         {books.length === 0 && (
           <p className="text-xs text-muted-foreground">
             Nessun book disponibile per questo intestatario.
@@ -146,6 +147,7 @@ export function AccountCreateModal({
   const books = useProfitTrackerStore((s) => s.books)
   const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
   const addAccount = useProfitTrackerStore((s) => s.addAccount)
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -169,6 +171,11 @@ export function AccountCreateModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuovo conto</DialogTitle>
         </DialogHeader>
@@ -180,6 +187,7 @@ export function AccountCreateModal({
             books={books}
             onClose={() => onOpenChange(false)}
             onSave={handleSave}
+            portalContainer={dropdownPortalEl}
           />
         )}
       </DialogContent>

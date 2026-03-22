@@ -53,7 +53,7 @@ export function PuntaBancaSaveModal({
   onOpenChange,
   tipologia,
   puntataEffettiva,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- API consistency; puntataEffettiva used for stake
+
   puntataNum,
   bonusNum,
   rimborsoNum,
@@ -238,7 +238,7 @@ export function PuntaBancaSaveModal({
           metodo: 'punta' as const,
           tipoBonus,
           accountId: accountIdPunta,
-          stake: puntataEffettiva,
+          stake: puntataNum,
           quota: quotaPuntaNum,
           rischio: 0,
           bonusValore: tipologia === 'BONUS' ? bonusNum || undefined : undefined,

@@ -363,7 +363,10 @@ export default function ContiPage() {
       <AccountMovementModal
         open={movementForAccount != null}
         onOpenChange={(open) => {
-          if (!open) setMovementForAccount(undefined)
+          if (!open) {
+            setMovementForAccount(undefined)
+            loadAccounts()
+          }
         }}
         defaultAccountId={movementForAccount}
       />

@@ -388,8 +388,20 @@ export default function WalletsPage() {
         }}
         wallet={selectedWallet}
       />
-      <WalletTransferModal open={transferOpen} onOpenChange={setTransferOpen} />
-      <WalletTopupExpenseModal open={topupOpen} onOpenChange={setTopupOpen} />
+      <WalletTransferModal
+        open={transferOpen}
+        onOpenChange={(open) => {
+          setTransferOpen(open)
+          if (!open) void fetchWallets()
+        }}
+      />
+      <WalletTopupExpenseModal
+        open={topupOpen}
+        onOpenChange={(open) => {
+          setTopupOpen(open)
+          if (!open) void fetchWallets()
+        }}
+      />
     </ProfitTrackerPageShell>
   )
 }

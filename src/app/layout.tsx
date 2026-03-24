@@ -14,12 +14,25 @@ export const metadata: Metadata = {
   description:
     'Confronta le quote, usa i calcolatori e massimizza i guadagni con il matched betting in modo legale e controllato.',
   icons: {
-    icon: [
-      { url: '/loghi/mbs-favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', sizes: '32x32' },
-    ],
+    icon: [{ url: '/loghi/mbs-favicon.svg', type: 'image/svg+xml' }],
     apple: '/loghi/mbs-app-icon-dark.svg',
   },
+  openGraph: {
+    type: 'website',
+    locale: 'it_IT',
+    url: 'https://matched-betting-system.com',
+    siteName: 'MBS — Matched Betting System',
+    title: 'MBS — Matched Betting System',
+    description:
+      'Confronta le quote, usa i calcolatori e massimizza i guadagni con il matched betting in modo legale e controllato.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MBS — Matched Betting System',
+    description:
+      'Confronta le quote, usa i calcolatori e massimizza i guadagni con il matched betting in modo legale e controllato.',
+  },
+  metadataBase: new URL('https://matched-betting-system.com'),
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

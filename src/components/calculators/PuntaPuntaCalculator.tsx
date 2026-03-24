@@ -516,7 +516,7 @@ export function PuntaPuntaCalculator() {
 
             {/* Tabella da sm in su */}
             <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full table-fixed text-sm">
+              <table className="w-full whitespace-nowrap text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
                     <th className="w-[50%] p-3 text-left font-normal"></th>

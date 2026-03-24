@@ -78,10 +78,10 @@ function getHolderName(holders: Holder[], holderId: string | undefined): string 
 }
 
 export function TriPuntaCalculator() {
-  const books = useProfitTrackerStore((s) => s.books)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [tipologia, setTipologia] = useState<(typeof TIPOLOGIE)[number]>('NORMALE')
@@ -169,7 +169,7 @@ export function TriPuntaCalculator() {
     if (!holderId) return []
     const res = await getAccounts({ holderId, status: 'abilitato' })
     if (!res.items.length) return []
-    const currentBooks = useProfitTrackerStore.getState().books
+    const currentBooks = useProfitTrackerStore.getState().allBooks
     return res.items.filter((acc) => {
       const book = currentBooks.find((b) => b.id === acc.bookId)
       if (!book) return false
@@ -229,10 +229,10 @@ export function TriPuntaCalculator() {
     if (!holderModalOpen || savedBetId) return
     const loadBasics = async () => {
       if (holders.length === 0) await fetchHolders()
-      if (books.length === 0) await fetchBooks()
+      if (books.length === 0) await fetchAllBooks()
     }
     void loadBasics()
-  }, [holderModalOpen, savedBetId, holders.length, books.length, fetchHolders, fetchBooks])
+  }, [holderModalOpen, savedBetId, holders.length, books.length, fetchHolders, fetchAllBooks])
 
   const resetModalState = useCallback(() => {
     setHolderIdPuntaA('')

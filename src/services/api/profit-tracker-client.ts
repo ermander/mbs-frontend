@@ -32,8 +32,23 @@ export interface CreateHolderPayload {
   descrizione?: string
 }
 
-export async function getHolders(): Promise<Holder[]> {
-  const response = await apiClient.get<Holder[]>('/profit-tracker/holders')
+export interface GetHoldersParams {
+  page?: number
+  limit?: number
+  nome?: string
+  descrizione?: string
+  stato?: string
+}
+
+export interface GetHoldersResponse {
+  items: Holder[]
+  total: number
+}
+
+export async function getHolders(params?: GetHoldersParams): Promise<GetHoldersResponse> {
+  const response = await apiClient.get<GetHoldersResponse>('/profit-tracker/holders', {
+    params: params ?? {},
+  })
   return response.data
 }
 

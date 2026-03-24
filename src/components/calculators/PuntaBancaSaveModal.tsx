@@ -63,10 +63,10 @@ export function PuntaBancaSaveModal({
   responsabilita,
   commissioneNum,
 }: PuntaBancaSaveModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const books = useProfitTrackerStore((s) => s.books)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [eventoNome, setEventoNome] = useState('')
@@ -112,8 +112,8 @@ export function PuntaBancaSaveModal({
       }
       let currentBooks: Book[] = books
       if (currentBooks.length === 0) {
-        await fetchBooks()
-        currentBooks = useProfitTrackerStore.getState().books
+        await fetchAllBooks()
+        currentBooks = useProfitTrackerStore.getState().allBooks
       }
       if (!mercato) {
         const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
@@ -129,7 +129,7 @@ export function PuntaBancaSaveModal({
     holders.length,
     books.length,
     fetchHolders,
-    fetchBooks,
+    fetchAllBooks,
     mercato,
     resetState,
     holders,
@@ -142,7 +142,7 @@ export function PuntaBancaSaveModal({
     }
     const res = await getAccounts({ holderId, status: 'abilitato' })
     if (!res.items.length) return []
-    const currentBooks: Book[] = useProfitTrackerStore.getState().books
+    const currentBooks: Book[] = useProfitTrackerStore.getState().allBooks
     const filtered = res.items.filter((acc) => {
       const book = currentBooks.find((b) => b.id === acc.bookId)
       if (!book) return false
@@ -288,7 +288,7 @@ export function PuntaBancaSaveModal({
     mercato,
     accountIdPunta,
     accountIdBanca,
-    puntataEffettiva,
+    puntataNum,
     quotaPuntaNum,
     quotaBancaNum,
     layStake,

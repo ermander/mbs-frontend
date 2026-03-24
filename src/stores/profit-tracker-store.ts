@@ -20,6 +20,7 @@ import type {
   CreateBetLegPayload,
   CreateBetPayload,
   GetAccountsParams,
+  GetHoldersParams,
 } from '@/services/api/profit-tracker-client'
 import {
   createAccount as apiCreateAccount,
@@ -62,8 +63,11 @@ import {
 
 interface ProfitTrackerState {
   holders: Holder[]
+  holdersTotal: number | null
   isLoadingHolders: boolean
   holdersError?: string
+  allHolders: Holder[]
+  allBooks: Book[]
   books: Book[]
   booksTotal: number | null
   isLoadingBooks: boolean
@@ -105,10 +109,12 @@ interface ProfitTrackerState {
   isGeneratingTelegramCode: boolean
   generatedTelegramCode?: string
 
-  fetchHolders: () => Promise<void>
+  fetchHolders: (params?: GetHoldersParams) => Promise<void>
+  fetchAllHolders: () => Promise<void>
   fetchQuickBets: () => Promise<void>
   addHolder: (holder: Omit<Holder, 'id'>) => Promise<void>
   updateHolder: (id: string, patch: Partial<Holder>) => void
+  fetchAllBooks: () => Promise<void>
   fetchBooks: (params?: {
     page?: number
     limit?: number
@@ -226,8 +232,11 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
 
   return {
     holders: initialHolders,
+    holdersTotal: null,
     isLoadingHolders: false,
     holdersError: undefined,
+    allHolders: [],
+    allBooks: [],
     books: initialBooks,
     booksTotal: null,
     isLoadingBooks: false,
@@ -269,16 +278,24 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     isGeneratingTelegramCode: false,
     generatedTelegramCode: undefined,
 
-    fetchHolders: async () => {
+    fetchHolders: async (params?: GetHoldersParams) => {
       set(() => ({ isLoadingHolders: true, holdersError: undefined }))
       try {
-        const holders = await apiGetHolders()
-        set(() => ({ holders, isLoadingHolders: false }))
+        const result = await apiGetHolders(params)
+        set(() => ({ holders: result.items, holdersTotal: result.total, isLoadingHolders: false }))
       } catch (error: unknown) {
         set(() => ({
           isLoadingHolders: false,
           holdersError: getErrorMessage(error) || 'Errore nel caricamento degli intestatari',
         }))
+      }
+    },
+    fetchAllHolders: async () => {
+      try {
+        const { items } = await apiGetHolders({ limit: 5000 })
+        set(() => ({ allHolders: items }))
+      } catch {
+        set(() => ({ allHolders: [] }))
       }
     },
     addHolder: async (holder) => {
@@ -290,6 +307,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         })
         set((state) => ({
           holders: [...state.holders, created],
+          holdersTotal: (state.holdersTotal ?? 0) + 1,
+          allHolders: [...state.allHolders, created],
         }))
       } catch (error: unknown) {
         if (getErrorCode(error) === 'HOLDER_NAME_ALREADY_EXISTS') {
@@ -306,8 +325,17 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     updateHolder: (id, patch) =>
       set((state) => ({
         holders: state.holders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
+        allHolders: state.allHolders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
       })),
 
+    fetchAllBooks: async () => {
+      try {
+        const { items } = await apiGetBooks({ limit: 5000 })
+        set(() => ({ allBooks: items }))
+      } catch {
+        set(() => ({ allBooks: [] }))
+      }
+    },
     fetchBooks: async (params) => {
       set(() => ({ isLoadingBooks: true, booksError: undefined }))
       try {
@@ -337,6 +365,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           externalId: book.externalId ?? null,
         })
         set((state) => ({
+          allBooks: [...state.allBooks, created],
           books: [...state.books, created],
         }))
       } catch (error: unknown) {
@@ -361,6 +390,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           externalId: patch.externalId ?? null,
         })
         set((state) => ({
+          allBooks: state.allBooks.map((b) => (b.id === id ? updated : b)),
           books: state.books.map((b) => (b.id === id ? updated : b)),
         }))
       } catch (error: unknown) {

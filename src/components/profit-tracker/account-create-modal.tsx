@@ -143,16 +143,16 @@ export function AccountCreateModal({
   onOpenChange,
   defaultHolderId,
 }: AccountCreateModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const books = useProfitTrackerStore((s) => s.books)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const addAccount = useProfitTrackerStore((s) => s.addAccount)
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!open) return
-    if (!books.length) void fetchBooks()
-  }, [open, books.length, fetchBooks])
+    void fetchAllBooks()
+  }, [open, fetchAllBooks])
 
   const handleSave = async (payload: {
     holderId: string

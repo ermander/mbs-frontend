@@ -40,7 +40,7 @@ export function AddBetLegModal({
 }: AddBetLegModalProps) {
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const addBetLegs = useProfitTrackerStore((s) => s.addBetLegs)
 

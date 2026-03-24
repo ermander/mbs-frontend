@@ -3,7 +3,6 @@
  * Used by Header for dropdowns and mobile nav.
  */
 
-import { profitTrackerNavItems } from '@/components/profit-tracker/profit-tracker-nav'
 export interface NavLinkItem {
   label: string
   href: string
@@ -19,9 +18,9 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     label: 'STRUMENTI ONLINE',
     items: [
       { label: 'Oddsmatcher', href: '/oddsmatcher' },
-      { label: 'Dutcher', href: '/dutcher' },
-      { label: 'Trimatcher', href: '/trimatcher' },
-      { label: 'Targeter', href: '/targeter' },
+      // { label: 'Dutcher', href: '/dutcher' },
+      // { label: 'Trimatcher', href: '/trimatcher' },
+      // { label: 'Targeter', href: '/targeter' },
     ],
   },
   {
@@ -30,11 +29,11 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
       { label: 'Punta-Punta', href: '/calcolatori/punta-punta' },
       { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
-      { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
-      { label: 'Condizionato', href: '/calcolatori/condizionato' },
-      { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
-      { label: 'Converter', href: '/calcolatori/converter' },
-      { label: 'Casino', href: '/calcolatori/casino' },
+      // { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
+      // { label: 'Condizionato', href: '/calcolatori/condizionato' },
+      // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
+      // { label: 'Converter', href: '/calcolatori/converter' },
+      // { label: 'Casino', href: '/calcolatori/casino' },
     ],
   },
   {

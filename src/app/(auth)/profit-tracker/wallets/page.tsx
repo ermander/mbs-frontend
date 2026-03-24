@@ -6,6 +6,7 @@ import { Wallet as WalletIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { WalletCreateModal } from '@/components/profit-tracker/wallet-create-modal'
@@ -26,8 +27,8 @@ function matchFilter(value: string | null | undefined, filter: string): boolean 
 export { WalletsPage as WalletsContent }
 export default function WalletsPage() {
   const wallets = useProfitTrackerStore((s) => s.wallets)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const updateWallet = useProfitTrackerStore((s) => s.updateWallet)
 
@@ -37,7 +38,7 @@ export default function WalletsPage() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [topupOpen, setTopupOpen] = useState(false)
 
-  const [holderFilter, setHolderFilter] = useState('')
+  const [holderIds, setHolderIds] = useState<string[]>([])
   const [walletNameFilter, setWalletNameFilter] = useState('')
   const [descrizioneFilter, setDescrizioneFilter] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -46,12 +47,10 @@ export default function WalletsPage() {
   const resolveHolderName = (holderId: string) =>
     holders.find((h) => h.id === holderId)?.nome ?? '—'
 
-  const { visible, total, start, end, maxPage } = useMemo(() => {
-    const resolveName = (holderId: string) => holders.find((h) => h.id === holderId)?.nome ?? '—'
+  const { visible, total, maxPage } = useMemo(() => {
     const filteredList = wallets.filter((wallet) => {
-      const holderName = resolveName(wallet.holderId)
+      if (holderIds.length > 0 && !holderIds.includes(wallet.holderId)) return false
       return (
-        matchFilter(holderName, holderFilter) &&
         matchFilter(wallet.nome, walletNameFilter) &&
         matchFilter(wallet.descrizione, descrizioneFilter)
       )
@@ -64,21 +63,13 @@ export default function WalletsPage() {
     const safePage = Math.min(Math.max(1, page), maxPageNum)
     const startIdx = (safePage - 1) * PER_PAGE
     const visibleList = sortedList.slice(startIdx, startIdx + PER_PAGE)
-    const startNum = totalCount === 0 ? 0 : startIdx + 1
-    const endNum = totalCount === 0 ? 0 : Math.min(startIdx + PER_PAGE, totalCount)
     return {
       visible: visibleList,
       total: totalCount,
-      start: startNum,
-      end: endNum,
       maxPage: maxPageNum,
     }
-  }, [wallets, holders, holderFilter, walletNameFilter, descrizioneFilter, sortOrder, page])
+  }, [wallets, holderIds, walletNameFilter, descrizioneFilter, sortOrder, page])
 
-  const onHolderFilterChange = (value: string) => {
-    setHolderFilter(value)
-    setPage(1)
-  }
   const onWalletNameFilterChange = (value: string) => {
     setWalletNameFilter(value)
     setPage(1)
@@ -142,41 +133,44 @@ export default function WalletsPage() {
         </span>
       </div>
 
-      <div className="grid gap-2 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:grid-cols-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="filter-holder" className="text-xs">
-            Filtra intestatario
-          </Label>
-          <Input
-            id="filter-holder"
-            type="text"
-            placeholder="Filtra intestatario"
-            value={holderFilter}
-            onChange={(e) => onHolderFilterChange(e.target.value)}
-            className="h-8 text-sm"
-          />
-        </div>
-        <div className="space-y-1.5">
+      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+        <SearchableMultiSelect
+          label="Intestatario"
+          placeholder="Tutti"
+          searchPlaceholder="Cerca intestatario..."
+          buttonLabel={holderIds.length > 0 ? `${holderIds.length} selezionati` : 'Tutti'}
+          options={holders.map((h) => ({ id: h.id, name: h.nome }))}
+          selectedIds={holderIds}
+          onToggle={(id) => {
+            setHolderIds((prev) =>
+              prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
+            )
+            setPage(1)
+          }}
+          showBadges
+          className="w-full sm:min-w-[200px]"
+        />
+        <div className="space-y-1.5 sm:min-w-[200px]">
           <Label htmlFor="filter-wallet-name" className="text-xs">
             Nome wallet
           </Label>
           <Input
             id="filter-wallet-name"
             type="text"
-            placeholder="Nome wallet"
+            placeholder="Cerca per nome..."
             value={walletNameFilter}
             onChange={(e) => onWalletNameFilterChange(e.target.value)}
             className="h-8 text-sm"
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:min-w-[200px]">
           <Label htmlFor="filter-descrizione" className="text-xs">
             Descrizione
           </Label>
           <Input
             id="filter-descrizione"
             type="text"
-            placeholder="Descrizione"
+            placeholder="Cerca per descrizione..."
             value={descrizioneFilter}
             onChange={(e) => onDescrizioneFilterChange(e.target.value)}
             className="h-8 text-sm"
@@ -344,38 +338,27 @@ export default function WalletsPage() {
         </table>
       </div>
 
-      {total > 0 && (
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      {total > PER_PAGE && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm">
           <p className="text-xs text-muted-foreground">
-            Visualizzo{' '}
-            <strong>
-              {start}-{end}
-            </strong>{' '}
-            di <strong>{total}</strong> elementi.
+            Pagina {safePage} di {maxPage} &middot; {total} wallet in totale
           </p>
-          <div className="grid w-full grid-cols-3 items-center gap-2 sm:flex sm:w-auto">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               type="button"
-              className="w-full sm:w-auto"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
-              aria-disabled={safePage <= 1}
             >
               Precedente
             </Button>
-            <span className="text-center text-xs text-muted-foreground">
-              Pagina {safePage} di {maxPage}
-            </span>
             <Button
               variant="outline"
               size="sm"
               type="button"
-              className="w-full sm:w-auto"
               onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
               disabled={safePage >= maxPage}
-              aria-disabled={safePage >= maxPage}
             >
               Successiva
             </Button>

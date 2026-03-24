@@ -93,10 +93,10 @@ export function OddsmatcherMultiplaSaveModal({
   sharedBonus = '',
 }: OddsmatcherMultiplaSaveModalProps) {
   const router = useRouter()
-  const books = useProfitTrackerStore((s) => s.books)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [accountIdPunta, setAccountIdPunta] = useState('')
@@ -123,8 +123,8 @@ export function OddsmatcherMultiplaSaveModal({
     }
     let resolvedBooks = books
     if (resolvedBooks.length === 0) {
-      await fetchBooks()
-      resolvedBooks = useProfitTrackerStore.getState().books
+      await fetchAllBooks()
+      resolvedBooks = useProfitTrackerStore.getState().allBooks
     }
     const puntaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNamePunta)
     const bancaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNameBanca)
@@ -146,7 +146,7 @@ export function OddsmatcherMultiplaSaveModal({
     bookNamePunta,
     bookNameBanca,
     books,
-    fetchBooks,
+    fetchAllBooks,
     holders.length,
     fetchHolders,
   ])

@@ -24,7 +24,7 @@ interface WalletEditModalProps {
 }
 
 export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
   const updateWallet = useProfitTrackerStore((s) => s.updateWallet)
 
   const [descrizione, setDescrizione] = useState('')

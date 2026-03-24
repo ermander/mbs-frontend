@@ -7,7 +7,6 @@ import {
   layStakeRimborso,
   layStakeWithImbalance,
   liability,
-  minGain,
 } from '@/lib/calculators/punta-banca'
 import { getAccounts } from '@/services/api/profit-tracker-client'
 import type { Account } from '@/types/profit-tracker'
@@ -82,10 +81,10 @@ export function OddsmatcherCalculatorModal({
   defaultPuntata = '',
   defaultBonus = '',
 }: OddsmatcherCalculatorModalProps) {
-  const books = useProfitTrackerStore((s) => s.books)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [commissione, setCommissione] = useState('3')
@@ -151,8 +150,8 @@ export function OddsmatcherCalculatorModal({
     }
     let resolvedBooks = books
     if (resolvedBooks.length === 0) {
-      await fetchBooks()
-      resolvedBooks = useProfitTrackerStore.getState().books
+      await fetchAllBooks()
+      resolvedBooks = useProfitTrackerStore.getState().allBooks
     }
     const puntaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNamePunta)
     const bancaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNameBanca)
@@ -170,7 +169,7 @@ export function OddsmatcherCalculatorModal({
     }
     setHolderModalError(null)
     setSavedBetId(null)
-  }, [row, bookNamePunta, bookNameBanca, books, fetchBooks, holders.length, fetchHolders])
+  }, [row, bookNamePunta, bookNameBanca, books, fetchAllBooks, holders.length, fetchHolders])
 
   useEffect(() => {
     if (holderModalOpen) {
@@ -251,12 +250,6 @@ export function OddsmatcherCalculatorModal({
     const raw = layStakeRounded * (1 - commissioneNum / 100)
     return Math.round(raw * 100) / 100
   }, [layStakeRounded, commissioneNum])
-
-  const baseMinGain = useMemo(() => {
-    if (puntataNum == null || puntataNum <= 0 || quotaPuntaNum == null || responsabilita == null)
-      return null
-    return minGain(puntataNum, quotaPuntaNum, responsabilita)
-  }, [puntataNum, quotaPuntaNum, responsabilita])
 
   /* ── Bancata parziale (multi-step, max 6) ── */
   const partialLayResults = useMemo(() => {

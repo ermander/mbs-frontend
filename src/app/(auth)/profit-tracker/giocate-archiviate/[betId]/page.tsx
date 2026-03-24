@@ -57,7 +57,7 @@ export default function ArchivedBetDetailPage() {
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
   const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)

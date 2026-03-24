@@ -1,0 +1,8 @@
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+    <text x="0" y="40" font-size="32" font-family="Inter, sans-serif" fill="#1E2A44">MBS</text>
+    <g transform="translate(70,10)">
+        <rect x="0" y="20" width="6" height="20" fill="#2F6BFF" />
+        <rect x="10" y="10" width="6" height="30" fill="#2F6BFF" />
+        <rect x="20" y="0" width="6" height="40" fill="#1FC7A6" />
+    </g>
+</svg>

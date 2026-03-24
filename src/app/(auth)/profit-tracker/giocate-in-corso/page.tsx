@@ -43,7 +43,7 @@ export default function GiocateInCorsoPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
   const isLoadingOngoingBets = useProfitTrackerStore((s) => s.isLoadingOngoingBets)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
   const saveBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)

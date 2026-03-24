@@ -27,7 +27,7 @@ export default function GiocateArchiviatePage() {
   const [loading, setLoading] = useState(true)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
   const removeOngoingBet = useProfitTrackerStore((s) => s.removeOngoingBet)
 

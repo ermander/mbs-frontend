@@ -83,11 +83,11 @@ export default function BetDetailPage() {
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
   const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const updateBet = useProfitTrackerStore((s) => s.updateOngoingBet)
   const updateBetLeg = useProfitTrackerStore((s) => s.updateBetLeg)
   const removeBetLeg = useProfitTrackerStore((s) => s.removeBetLeg)
@@ -175,7 +175,7 @@ export default function BetDetailPage() {
     setLoadError(false)
     void fetchAllAccounts()
     void fetchTags()
-    if (books.length === 0) void fetchBooks()
+    void fetchAllBooks()
     fetchBetWithLegs(betId)
       .then(() => {
         if (!cancelled) setLoading(false)
@@ -189,7 +189,8 @@ export default function BetDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [betId, fetchBetWithLegs, fetchAllAccounts, fetchBooks, fetchTags, books.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [betId])
 
   useEffect(() => {
     if (bet?.nota !== undefined) setNotaLocal(bet.nota ?? '')

@@ -22,10 +22,10 @@ export default function ContiPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const isLoadingAccounts = useProfitTrackerStore((s) => s.isLoadingAccounts)
   const accountsError = useProfitTrackerStore((s) => s.accountsError)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const books = useProfitTrackerStore((s) => s.books)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const fetchAccounts = useProfitTrackerStore((s) => s.fetchAccounts)
   const updateAccount = useProfitTrackerStore((s) => s.updateAccount)
 
@@ -48,10 +48,11 @@ export default function ContiPage() {
   }, [fetchAccounts, page, holderIds, bookIds, sortSaldo])
 
   useEffect(() => {
-    if (!holders.length) void fetchHolders()
-    if (!books.length) void fetchBooks({ limit: 5000 })
+    void fetchHolders()
+    void fetchAllBooks()
     void fetchAllAccounts()
-  }, [holders.length, books.length, fetchHolders, fetchBooks, fetchAllAccounts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     loadAccounts()

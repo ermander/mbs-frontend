@@ -9,7 +9,9 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay, sanitizeDecimal } from '@/lib/utils'
 import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { BetLeg } from '@/types/profit-tracker'
+import type { BetLeg, BetStatus } from '@/types/profit-tracker'
+
+const FINAL_STATES = new Set<BetStatus>(['vinto', 'perso', 'annullato'])
 import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 
@@ -333,6 +335,7 @@ export default function BetDetailPage() {
 
           for (let i = 0; i < updatedBancaLegs.length; i++) {
             const bl = updatedBancaLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
               stake: r.layStake,
@@ -349,6 +352,7 @@ export default function BetDetailPage() {
           const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
           for (let i = 0; i < bancaLegs.length; i++) {
             const bl = bancaLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
               stake: r.layStake,
@@ -368,6 +372,7 @@ export default function BetDetailPage() {
           const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
           for (let i = 0; i < bancaLegs.length; i++) {
             const bl = bancaLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
               stake: r.layStake,

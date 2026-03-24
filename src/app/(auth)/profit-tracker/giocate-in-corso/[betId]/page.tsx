@@ -214,7 +214,7 @@ export default function BetDetailPage() {
 
   const handleNotaSave = () => {
     if (bet && notaLocal !== (bet.nota ?? '')) {
-      void updateBet(bet.id, { nota: notaLocal || null })
+      void updateBet(bet.id, { nota: notaLocal || undefined })
     }
     setNotaEditing(false)
   }

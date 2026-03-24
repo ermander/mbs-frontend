@@ -41,7 +41,12 @@ function StepCard({
 }) {
   const Icon = step.icon
   return (
-    <Card className={cn('h-full', className)}>
+    <Card
+      className={cn(
+        'h-full transition-all duration-200 hover:border-primary/20 hover:shadow-glow-sm',
+        className,
+      )}
+    >
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
@@ -62,7 +67,7 @@ export function HowItWorksSection() {
   return (
     <section id="come-funziona" className="scroll-mt-20 py-20 sm:py-28">
       <Container>
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Come funziona
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">

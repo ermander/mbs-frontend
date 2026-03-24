@@ -19,7 +19,7 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
 
-const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/20 p-1.5 text-amber-600'
+const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/15 p-1.5 text-amber-400'
 const CURRENT_YEAR = new Date().getFullYear()
 
 export default function ProfitTrackerDashboardPage() {
@@ -116,7 +116,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Bookmakers
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoBookmakers)}
               </p>
             </div>
@@ -129,7 +129,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Wallets
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoWallets)}
               </p>
             </div>
@@ -142,7 +142,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Puntate in corso
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.puntateInCorso)}
               </p>
             </div>
@@ -155,7 +155,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Totale
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoTotale)}
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Mese attuale
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.meseAttuale)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -182,7 +182,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Media mensile
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.mediaMensile)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -193,7 +193,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Totale anno {CURRENT_YEAR}
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.totaleAnno)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -216,7 +216,7 @@ export default function ProfitTrackerDashboardPage() {
                 return (
                   <div key={index} className="flex h-full flex-1 flex-col items-center justify-end">
                     <div
-                      className={`w-3 rounded-full ${isNegative ? 'bg-red-500/70' : 'bg-primary/70'}`}
+                      className={`w-3 rounded-full ${isNegative ? 'bg-destructive/70' : 'bg-primary/70'}`}
                       style={{ height: `${Math.max(barHeight, value !== 0 ? 5 : 2)}%` }}
                       title={formatCurrency(value)}
                     />
@@ -282,8 +282,8 @@ export default function ProfitTrackerDashboardPage() {
                   <span
                     className={
                       entry.amount >= 0
-                        ? 'text-xs font-medium text-emerald-600'
-                        : 'text-xs font-medium text-red-500'
+                        ? 'font-mono text-xs font-medium text-emerald-400'
+                        : 'font-mono text-xs font-medium text-destructive'
                     }
                   >
                     {formatCurrency(entry.amount)}

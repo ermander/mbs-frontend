@@ -20,6 +20,7 @@ function getSportIcon(sport: string) {
   return SPORT_ICON[sport?.toLowerCase()] ?? '•'
 }
 
+export { GiocateArchiviatePage as GiocateArchiviateContent }
 export default function GiocateArchiviatePage() {
   const router = useRouter()
   const [bets, setBets] = useState<OngoingBet[]>([])
@@ -179,7 +180,7 @@ export default function GiocateArchiviatePage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Sport</th>
@@ -193,7 +194,10 @@ export default function GiocateArchiviatePage() {
           </thead>
           <tbody>
             {bets.map((bet) => (
-              <tr key={bet.id} className="border-b border-border/40 last:border-b-0">
+              <tr
+                key={bet.id}
+                className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+              >
                 <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                   {bet.id}
                 </td>

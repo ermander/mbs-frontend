@@ -53,7 +53,10 @@ function PricingCard({
 }: (typeof plans)[number]) {
   return (
     <Card
-      className={cn('flex flex-col', highlighted && 'border-primary/50 ring-1 ring-primary/30')}
+      className={cn(
+        'flex flex-col',
+        highlighted && 'border-primary/30 shadow-glow-sm ring-1 ring-primary/30',
+      )}
       variant={highlighted ? 'elevated' : 'default'}
     >
       <CardHeader className="text-center">
@@ -65,7 +68,7 @@ function PricingCard({
         <h3 className="text-xl font-semibold text-foreground">{name}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         <div className="mt-4 flex items-baseline justify-center gap-1">
-          <span className="text-4xl font-bold text-foreground">€{price}</span>
+          <span className="font-mono text-4xl font-bold text-foreground">€{price}</span>
           <span className="text-muted-foreground">{period}</span>
         </div>
       </CardHeader>
@@ -92,7 +95,7 @@ export function PricingSection() {
   return (
     <section id="prezzi" className="scroll-mt-20 py-20 sm:py-28">
       <Container>
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Piani e prezzi
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">

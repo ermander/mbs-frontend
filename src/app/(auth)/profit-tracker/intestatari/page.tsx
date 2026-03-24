@@ -9,6 +9,7 @@ import { HolderCreateModal, HolderEditModal } from '@/components/profit-tracker/
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
 import { WalletCreateModal } from '@/components/profit-tracker/wallet-create-modal'
 
+export { IntestatariPage as IntestatariContent }
 export default function IntestatariPage() {
   const holders = useProfitTrackerStore((s) => s.holders)
   const isLoadingHolders = useProfitTrackerStore((s) => s.isLoadingHolders)
@@ -66,8 +67,8 @@ export default function IntestatariPage() {
                   <span
                     className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
                       holder.stato === 'abilitato'
-                        ? 'bg-emerald-600/10 text-emerald-700'
-                        : 'bg-gray-500/10 text-gray-500'
+                        ? 'border border-emerald-500/20 bg-emerald-500/15 text-emerald-400'
+                        : 'border border-white/10 bg-white/5 text-white/40'
                     }`}
                   >
                     {holder.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
@@ -114,7 +115,7 @@ export default function IntestatariPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Stato</th>
@@ -131,7 +132,10 @@ export default function IntestatariPage() {
             )}
             {!isLoadingHolders &&
               holders.map((holder) => (
-                <tr key={holder.id} className="border-b border-border/40 last:border-b-0">
+                <tr
+                  key={holder.id}
+                  className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+                >
                   <td className="px-3 py-2 text-sm text-foreground">{holder.nome}</td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {holder.descrizione ?? '—'}
@@ -140,8 +144,8 @@ export default function IntestatariPage() {
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         holder.stato === 'abilitato'
-                          ? 'bg-emerald-600/10 text-emerald-700'
-                          : 'bg-gray-500/10 text-gray-500'
+                          ? 'border border-emerald-500/20 bg-emerald-500/15 text-emerald-400'
+                          : 'border border-white/10 bg-white/5 text-white/40'
                       }`}
                     >
                       {holder.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}

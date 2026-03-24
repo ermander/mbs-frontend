@@ -22,7 +22,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeHydrator />
       <AuthRefreshProvider>{children}</AuthRefreshProvider>
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        theme="dark"
+        toastOptions={{
+          className: 'bg-card border-border text-foreground',
+        }}
+      />
     </QueryClientProvider>
   )
 }

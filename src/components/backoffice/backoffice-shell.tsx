@@ -29,7 +29,7 @@ export function BackofficeShell({ children }: BackofficeShellProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="flex w-64 flex-col border-r border-border bg-card">
+      <aside className="flex w-64 flex-col border-r border-border bg-surface-1">
         <div className="flex h-16 items-center border-b border-border px-6">
           <span className="text-lg font-semibold tracking-tight">MBS Admin</span>
         </div>
@@ -43,8 +43,8 @@ export function BackofficeShell({ children }: BackofficeShellProps) {
                 className={cn(
                   'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? 'border-l-2 border-primary bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                 )}
               >
                 {item.label}

@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/profit-tracker/status-badge'
 
 const PAGE_SIZE = 20
 
+export { ContiPage as ContiContent }
 export default function ContiPage() {
   const accounts = useProfitTrackerStore((s) => s.accounts)
   const accountsTotal = useProfitTrackerStore((s) => s.accountsTotal)
@@ -179,7 +180,7 @@ export default function ContiPage() {
                 </div>
                 <div className="flex justify-between gap-2 border-t border-border/50 pt-2">
                   <span className="text-muted-foreground">Saldo attuale</span>
-                  <span className="font-medium text-foreground">
+                  <span className="font-mono font-medium text-foreground">
                     {account.saldoAttuale.toFixed(2)} €
                   </span>
                 </div>
@@ -227,7 +228,7 @@ export default function ContiPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Creato il</th>
               <th className="px-3 py-2 text-left">Intestatario</th>
               <th className="px-3 py-2 text-left">Book</th>
@@ -264,7 +265,10 @@ export default function ContiPage() {
             )}
             {!isLoadingAccounts &&
               accounts.map((account) => (
-                <tr key={account.id} className="border-b border-border/40 last:border-b-0">
+                <tr
+                  key={account.id}
+                  className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+                >
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {new Date(account.createdAt).toLocaleDateString('it-IT')}
                   </td>
@@ -277,7 +281,7 @@ export default function ContiPage() {
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {account.descrizione ?? '—'}
                   </td>
-                  <td className="px-3 py-2 text-xs font-medium text-foreground">
+                  <td className="px-3 py-2 font-mono text-xs font-medium text-foreground">
                     {account.saldoAttuale.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2 text-xs">

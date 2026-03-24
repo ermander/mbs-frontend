@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useAuthStore } from '@/stores/auth-store'
 
 const footerColumns = [
   {
@@ -29,9 +32,10 @@ const footerColumns = [
 
 export function Footer() {
   const year = new Date().getFullYear()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
 
   return (
-    <footer className="border-t border-white/10 bg-black/20">
+    <footer className="border-t border-border bg-surface-1">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
@@ -63,21 +67,23 @@ export function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
             &copy; {year} MBS. Tutti i diritti riservati.
           </p>
-          <div className="flex gap-4">
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-              Accedi
-            </Link>
-            <Link
-              href="/registrazione"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Registrati
-            </Link>
-          </div>
+          {!isLoggedIn && (
+            <div className="flex gap-4">
+              <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
+                Accedi
+              </Link>
+              <Link
+                href="/registrazione"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Registrati
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </footer>

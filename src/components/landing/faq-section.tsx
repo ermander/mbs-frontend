@@ -45,7 +45,7 @@ export function FaqSection() {
   return (
     <section id="faq" className="scroll-mt-20 py-20 sm:py-28">
       <Container>
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Domande frequenti
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">

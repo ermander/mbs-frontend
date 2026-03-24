@@ -239,7 +239,10 @@ export default function BackofficeBooksPage() {
               </tr>
             ) : (
               books.map((book) => (
-                <tr key={book.id} className="border-t border-border">
+                <tr
+                  key={book.id}
+                  className="border-t border-border transition-colors hover:bg-accent"
+                >
                   <td className="px-4 py-2 font-medium text-foreground">{book.nome}</td>
                   <td className="px-4 py-2 text-foreground">{book.isExchange ? 'Sì' : 'No'}</td>
                   <td className="px-4 py-2">

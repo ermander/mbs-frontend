@@ -16,16 +16,14 @@ export interface NavDropdownItem {
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
-    label: 'OFFERTE',
+    label: 'BONUS',
     items: [
       { label: 'Bonus di benvenuto', href: '/offerte/bonus-benvenuto' },
-      { label: 'Promozioni ricorrenti', href: '/offerte/promozioni' },
-      { label: 'Guadagni extra', href: '/offerte/guadagni-extra' },
-      { label: 'Canale Telegram', href: '/offerte/telegram' },
+      { label: 'Bonus ricorrenti', href: '/offerte/promozioni' },
     ],
   },
   {
-    label: 'STRUMENTI',
+    label: 'STRUMENTI ONLINE',
     items: [
       { label: 'Oddsmatcher', href: '/oddsmatcher' },
       { label: 'Dutcher', href: '/dutcher' },
@@ -34,7 +32,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     ],
   },
   {
-    label: 'CALCOLATORI',
+    label: 'STRUMENTI OFFLINE',
     items: [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
       { label: 'Punta-Punta', href: '/calcolatori/punta-punta' },
@@ -47,17 +45,20 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     ],
   },
   {
-    label: 'PROFIT TRACKER',
-    items: profitTrackerNavItems.map((item) => ({
-      label: item.label,
-      href: item.href,
-    })),
+    label: 'DASHBOARD',
+    items: [
+      { label: 'Dashboard', href: '/profit-tracker/dashboard' },
+      { label: 'Giocate', href: '/profit-tracker/giocate' },
+      { label: 'Archivio', href: '/profit-tracker/archivio' },
+      { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti' },
+      { label: 'Book personali', href: '/profit-tracker/book-personali' },
+      { label: 'Promemoria', href: '/profit-tracker/promemoria' },
+    ],
   },
   {
     label: 'ACCOUNT',
     items: [
       { label: 'Profilo', href: '/account/profilo' },
-      { label: 'Area affiliato', href: '/account/affiliato' },
       // Logout is handled as action in Header, not a link
     ],
   },
@@ -68,6 +69,4 @@ export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'GUIDE', href: '/guide' },
 ]
-export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = [
-  { label: 'FORUM', href: '/forum' },
-]
+export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

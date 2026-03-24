@@ -26,7 +26,7 @@ export function ProfitTrackerPageShell({
         data-pt-page-header
       >
         <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-          Profit Tracker: {sectionTitle}
+          {sectionTitle}
         </h1>
         {sectionDescription ? (
           <p className="text-xs text-muted-foreground sm:text-sm">{sectionDescription}</p>

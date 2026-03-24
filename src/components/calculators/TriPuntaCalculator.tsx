@@ -389,9 +389,9 @@ export function TriPuntaCalculator() {
   const returnC = stakeC != null && quotaCNum != null ? stakeC * quotaCNum : null
 
   return (
-    <div className="mx-auto max-w-2xl rounded-lg border border-white/10 bg-white/5 p-0 shadow-xl backdrop-blur-md">
+    <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
       {/* Barra superiore */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <Label htmlFor="tipologia" className="text-sm text-muted-foreground">
             Tipologia
@@ -420,7 +420,7 @@ export function TriPuntaCalculator() {
       </div>
 
       {/* Sezione input */}
-      <div className="border-b border-white/10 bg-primary/5 p-4">
+      <div className="border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata-a">Puntata A</Label>
@@ -515,15 +515,15 @@ export function TriPuntaCalculator() {
 
       {/* Riepilogo */}
       {showSummary && (
-        <div className="border-b border-white/10 bg-white/5">
-          <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+        <div className="border-b border-border bg-card">
+          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
             Riepilogo
           </div>
           <div className="space-y-2 p-4 text-sm">
             {rating != null && <p>Rating: {rating.toFixed(2)}%</p>}
             <p>
               Punta{' '}
-              <span className="font-medium text-primary">
+              <span className="font-mono font-medium text-primary">
                 {formatNum(puntataEffettivaA)} &euro;
               </span>
               {bonusNum > 0 && (
@@ -532,19 +532,26 @@ export function TriPuntaCalculator() {
                   (di cui {formatNum(bonusNum)} &euro; bonus)
                 </span>
               )}{' '}
-              a quota {formatNum(quotaANum)} sul Book A.
+              a quota <span className="font-mono">{formatNum(quotaANum)}</span> sul Book A.
             </p>
             <p>
-              Punta <span className="font-medium text-primary">{formatNum(stakeB)} &euro;</span> a
-              quota {formatNum(quotaBNum)} sul Book B.
+              Punta{' '}
+              <span className="font-mono font-medium text-primary">{formatNum(stakeB)} &euro;</span>{' '}
+              a quota <span className="font-mono">{formatNum(quotaBNum)}</span> sul Book B.
             </p>
             <p>
-              Punta <span className="font-medium text-primary">{formatNum(stakeC)} &euro;</span> a
-              quota {formatNum(quotaCNum)} sul Book C.
+              Punta{' '}
+              <span className="font-mono font-medium text-primary">{formatNum(stakeC)} &euro;</span>{' '}
+              a quota <span className="font-mono">{formatNum(quotaCNum)}</span> sul Book C.
             </p>
             <p>
               Il guadagno minimo sar&agrave;{' '}
-              <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
+              <span
+                className={cn(
+                  'font-mono',
+                  guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                )}
+              >
                 {formatSigned(guadagnoMinimo)} &euro;
               </span>
             </p>
@@ -560,15 +567,15 @@ export function TriPuntaCalculator() {
         profitIfAWins != null &&
         profitIfBWins != null &&
         profitIfCWins != null && (
-          <div className="border-b border-white/10 bg-white/5">
-            <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+          <div className="border-b border-border bg-card">
+            <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               Tabella dei profitti
             </div>
 
             {/* Layout a card solo su mobile (< sm) */}
             <div className="block space-y-3 p-4 sm:hidden">
               {/* Card: Se vinci sul Book A */}
-              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-primary/10 p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book A:</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -588,7 +595,7 @@ export function TriPuntaCalculator() {
                     <span className="text-muted-foreground">Book C</span>
                     <span className="text-destructive">{formatSigned(-(stakeC ?? 0))} &euro;</span>
                   </div>
-                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                  <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}>
                       = {formatSigned(profitIfAWins)} &euro;
@@ -597,7 +604,7 @@ export function TriPuntaCalculator() {
                 </div>
               </div>
               {/* Card: Se vinci sul Book B */}
-              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-primary/10 p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book B:</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -616,7 +623,7 @@ export function TriPuntaCalculator() {
                     <span className="text-muted-foreground">Book C</span>
                     <span className="text-destructive">{formatSigned(-(stakeC ?? 0))} &euro;</span>
                   </div>
-                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                  <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}>
                       = {formatSigned(profitIfBWins)} &euro;
@@ -625,7 +632,7 @@ export function TriPuntaCalculator() {
                 </div>
               </div>
               {/* Card: Se vinci sul Book C */}
-              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-primary/10 p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book C:</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -644,7 +651,7 @@ export function TriPuntaCalculator() {
                       {formatSigned((returnC ?? 0) - (stakeC ?? 0))} &euro;
                     </span>
                   </div>
-                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                  <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span className={cn(profitIfCWins >= 0 ? 'text-primary' : 'text-destructive')}>
                       = {formatSigned(profitIfCWins)} &euro;
@@ -658,7 +665,7 @@ export function TriPuntaCalculator() {
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full table-fixed text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-muted-foreground">
+                  <tr className="border-b border-border text-muted-foreground">
                     <th className="w-[36%] p-3 text-left font-normal"></th>
                     <th className="w-[13%] p-3 text-right font-normal">Book A</th>
                     <th className="w-[13%] p-3 text-right font-normal">Book B</th>
@@ -667,7 +674,7 @@ export function TriPuntaCalculator() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-white/10 bg-primary/10">
+                  <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci sul Book A:</td>
                     <td className="p-3 text-right text-primary">
                       {formatSigned(
@@ -688,7 +695,7 @@ export function TriPuntaCalculator() {
                       </span>
                     </td>
                   </tr>
-                  <tr className="border-b border-white/10 bg-primary/10">
+                  <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci sul Book B:</td>
                     <td className="p-3 text-right text-destructive">
                       {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
@@ -707,7 +714,7 @@ export function TriPuntaCalculator() {
                       </span>
                     </td>
                   </tr>
-                  <tr className="bg-primary/10">
+                  <tr className="bg-primary/10 transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci sul Book C:</td>
                     <td className="p-3 text-right text-destructive">
                       {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}

@@ -3,193 +3,235 @@
 @tailwind utilities;
 
 @layer base {
-  /* Default: Dark slate. Overridden by [data-theme] when set by script. */
+  /* ═══════════════════════════════════════════════════════
+     NEON (default) — near-black with vibrant neon accents
+     ═══════════════════════════════════════════════════════ */
   :root,
-  [data-theme="slate"] {
-    --background: 220 13% 9%;
-    --foreground: 210 40% 98%;
-    --card: 220 13% 12%;
-    --card-foreground: 210 40% 98%;
-    --popover: 220 13% 12%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 187 85% 43%;
-    --primary-foreground: 220 13% 9%;
-    --secondary: 220 13% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 13% 15%;
-    --muted-foreground: 215 20% 58%;
-    --accent: 220 13% 15%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 20%;
-    --input: 220 13% 20%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --radius: 0.5rem;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+  [data-theme="neon"] {
+    --background: 220 12% 4%;
+    --foreground: 0 0% 100%;
+    --card: 220 8% 8%;
+    --card-foreground: 0 0% 100%;
+    --popover: 220 8% 8%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 160 97% 65%;
+    --primary-foreground: 220 12% 4%;
+    --secondary: 220 8% 12%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 8% 12%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 220 8% 14%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 348 100% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 8% 14%;
+    --input: 220 8% 14%;
+    --ring: 160 97% 65%;
+    --chart-1: 160 97% 65%;
+    --chart-2: 231 100% 77%;
+    --chart-3: 30 100% 66%;
+    --chart-4: 268 100% 77%;
+    --chart-5: 348 100% 65%;
+    --radius: 0.75rem;
+
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.15);
+    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.25);
+    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.15);
+
+    --surface-1: 220 8% 6%;
+    --surface-2: 220 8% 8%;
+    --surface-3: 220 8% 11%;
   }
 
-  [data-theme="warm"] {
-    --background: 24 10% 10%;
-    --foreground: 210 40% 98%;
-    --card: 24 10% 13%;
-    --card-foreground: 210 40% 98%;
-    --popover: 24 10% 13%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 187 85% 43%;
-    --primary-foreground: 24 10% 10%;
-    --secondary: 24 10% 16%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 24 10% 16%;
-    --muted-foreground: 215 20% 58%;
-    --accent: 24 10% 16%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 24 10% 20%;
-    --input: 24 10% 20%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+  /* ═══════════════════════════════════════════════════════
+     NEON WARM — warmer undertones, same neon accents
+     ═══════════════════════════════════════════════════════ */
+  [data-theme="neon-warm"] {
+    --background: 210 10% 5%;
+    --foreground: 0 0% 100%;
+    --card: 210 8% 9%;
+    --card-foreground: 0 0% 100%;
+    --popover: 210 8% 9%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 160 97% 65%;
+    --primary-foreground: 210 10% 5%;
+    --secondary: 210 8% 13%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 8% 13%;
+    --muted-foreground: 210 10% 55%;
+    --accent: 210 8% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 348 100% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 8% 16%;
+    --input: 210 8% 16%;
+    --ring: 160 97% 65%;
+    --chart-1: 160 97% 65%;
+    --chart-2: 231 100% 77%;
+    --chart-3: 30 100% 66%;
+    --chart-4: 268 100% 77%;
+    --chart-5: 348 100% 65%;
+
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.15);
+    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.25);
+    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.15);
+
+    --surface-1: 210 8% 7%;
+    --surface-2: 210 8% 9%;
+    --surface-3: 210 8% 12%;
   }
 
-  [data-theme="oled"] {
-    --background: 0 0% 5%;
-    --foreground: 210 40% 98%;
-    --card: 0 0% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 187 85% 43%;
-    --primary-foreground: 0 0% 5%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 215 20% 58%;
+  /* ═══════════════════════════════════════════════════════
+     NEON OLED — pure black backgrounds for OLED screens
+     ═══════════════════════════════════════════════════════ */
+  [data-theme="neon-oled"] {
+    --background: 0 0% 2%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 160 97% 65%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 50%;
     --accent: 0 0% 10%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent-foreground: 0 0% 100%;
+    --destructive: 348 100% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 160 97% 65%;
+    --chart-1: 160 97% 65%;
+    --chart-2: 231 100% 77%;
+    --chart-3: 30 100% 66%;
+    --chart-4: 268 100% 77%;
+    --chart-5: 348 100% 65%;
+
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.06);
+
+    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.12);
+    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.2);
+    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.12);
+
+    --surface-1: 0 0% 3%;
+    --surface-2: 0 0% 5%;
+    --surface-3: 0 0% 8%;
   }
 
-  [data-theme="light-slate"] {
-    --background: 220 13% 98%;
-    --foreground: 220 13% 11%;
+  /* ═══════════════════════════════════════════════════════
+     LIGHT CLEAN — clean light mode with adjusted accents
+     ═══════════════════════════════════════════════════════ */
+  [data-theme="light-clean"] {
+    --background: 0 0% 98%;
+    --foreground: 220 12% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 220 13% 11%;
+    --card-foreground: 220 12% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 11%;
-    --primary: 187 85% 43%;
+    --popover-foreground: 220 12% 10%;
+    --primary: 160 85% 38%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 13% 96%;
-    --secondary-foreground: 220 13% 11%;
-    --muted: 220 13% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 220 13% 96%;
-    --accent-foreground: 220 13% 11%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 8% 95%;
+    --secondary-foreground: 220 12% 10%;
+    --muted: 220 8% 95%;
+    --muted-foreground: 220 10% 42%;
+    --accent: 220 8% 93%;
+    --accent-foreground: 220 12% 10%;
+    --destructive: 348 80% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --glass-bg: rgba(0, 0, 0, 0.04);
-    --glass-border: rgba(0, 0, 0, 0.08);
-  }
+    --border: 220 8% 90%;
+    --input: 220 8% 90%;
+    --ring: 160 85% 38%;
+    --chart-1: 160 85% 38%;
+    --chart-2: 231 80% 60%;
+    --chart-3: 30 90% 50%;
+    --chart-4: 268 80% 60%;
+    --chart-5: 348 80% 50%;
+    --radius: 0.75rem;
 
-  [data-theme="light-warm"] {
-    --background: 40 20% 97%;
-    --foreground: 24 10% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 24 10% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 24 10% 15%;
-    --primary: 187 85% 43%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 40 15% 93%;
-    --secondary-foreground: 24 10% 15%;
-    --muted: 40 15% 93%;
-    --muted-foreground: 24 10% 40%;
-    --accent: 40 15% 93%;
-    --accent-foreground: 24 10% 15%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 40 15% 88%;
-    --input: 40 15% 88%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --glass-bg: rgba(0, 0, 0, 0.04);
-    --glass-border: rgba(0, 0, 0, 0.08);
-  }
+    --glass-bg: rgba(0, 0, 0, 0.03);
+    --glass-border: rgba(0, 0, 0, 0.06);
 
-  [data-theme="light-pure"] {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 187 85% 43%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 187 85% 43%;
-    --chart-1: 187 85% 43%;
-    --chart-2: 263 70% 66%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
-    --glass-bg: rgba(0, 0, 0, 0.04);
-    --glass-border: rgba(0, 0, 0, 0.08);
+    --glow-primary: none;
+    --glow-primary-strong: none;
+    --glow-destructive: none;
+
+    --surface-1: 0 0% 99%;
+    --surface-2: 0 0% 100%;
+    --surface-3: 220 8% 97%;
   }
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
   * {
     @apply border-border;
   }
+
   body {
-    @apply min-h-screen bg-background text-foreground;
+    @apply min-h-screen bg-background font-sans text-foreground;
     background-attachment: fixed;
+    letter-spacing: -0.01em;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+  .glow-primary-strong {
+    box-shadow: var(--glow-primary-strong);
+  }
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary to-[hsl(var(--chart-2))] bg-clip-text text-transparent;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }

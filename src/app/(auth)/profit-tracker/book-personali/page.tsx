@@ -119,18 +119,18 @@ export default function BookPersonaliPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{book.nome}</span>
                 {book.isGlobal && (
-                  <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                  <span className="inline-flex rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[11px] font-medium text-neon-blue">
                     Globale
                   </span>
                 )}
               </div>
               <div className="text-xs">
                 {book.isExchange ? (
-                  <span className="inline-flex rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                  <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                     Exchange
                   </span>
                 ) : (
-                  <span className="inline-flex rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                  <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/40">
                     Bookmaker
                   </span>
                 )}
@@ -167,7 +167,7 @@ export default function BookPersonaliPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Exchange</th>
@@ -176,12 +176,15 @@ export default function BookPersonaliPage() {
           </thead>
           <tbody>
             {books.map((book) => (
-              <tr key={book.id} className="border-b border-border/40 last:border-b-0">
+              <tr
+                key={book.id}
+                className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+              >
                 <td className="px-3 py-2 text-sm text-foreground">
                   <span className="flex items-center gap-2">
                     {book.nome}
                     {book.isGlobal && (
-                      <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      <span className="inline-flex rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[11px] font-medium text-neon-blue">
                         Globale
                       </span>
                     )}
@@ -192,11 +195,11 @@ export default function BookPersonaliPage() {
                 </td>
                 <td className="px-3 py-2 text-xs">
                   {book.isExchange ? (
-                    <span className="inline-flex rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                       Exchange
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/40">
                       Bookmaker
                     </span>
                   )}

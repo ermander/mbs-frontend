@@ -411,15 +411,18 @@ export function OddsmatcherCalculatorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0" showClose={true}>
+      <DialogContent
+        className="max-h-[100dvh] max-w-2xl overflow-y-auto p-0 sm:max-h-[90vh]"
+        showClose={true}
+      >
         <DialogTitle asChild>
           <VisuallyHidden>Calcolatore Punta-Banca</VisuallyHidden>
         </DialogTitle>
 
         <div className="flex flex-col">
-          {/* Evento: barra compatta e leggibile */}
-          <div className="border-b border-border bg-muted/30 px-5 py-3">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          {/* Evento header */}
+          <div className="border-b border-border bg-muted/30 px-3 py-2.5 sm:px-5 sm:py-3">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:gap-x-3 sm:text-sm">
               <span className="rounded bg-muted px-2 py-0.5 font-medium text-foreground">
                 {row.competition}
               </span>
@@ -431,153 +434,147 @@ export function OddsmatcherCalculatorModal({
                 {formatModalDate(row.date, row.hour)}
               </span>
             </div>
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{row.market}</span>
+              <span className="text-border">·</span>
+              <span className="font-medium text-foreground">{row.selection}</span>
+            </div>
           </div>
 
-          <div className="space-y-5 p-5">
-            {/* Tipo: segment control + commissione — labels allineati sulla stessa riga */}
-            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[1fr_auto] sm:items-start">
-              <div className="flex flex-col gap-2">
-                <span className="block h-5 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground">
-                  Tipo calcolo
+          <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
+            {/* Tipo calcolo + commissione — single row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex rounded-lg border border-border bg-muted/20 p-0.5">
+                {TIPOLOGIE.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTipologia(t)}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
+                      tipologia === t
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {t === 'RIMBORSO (CR%)' ? 'Rimborso' : t}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Comm.
                 </span>
-                <div className="flex rounded-lg border border-border bg-muted/20 p-0.5">
-                  {TIPOLOGIE.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTipologia(t)}
-                      className={cn(
-                        'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                        tipologia === t
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      {t === 'RIMBORSO (CR%)' ? 'Rimborso' : t}
-                    </button>
-                  ))}
-                </div>
+                <Input
+                  id="modal-commissione"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="3"
+                  value={commissione}
+                  onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
+                  className="h-8 w-14 text-center"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
               </div>
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="modal-commissione"
-                  className="block h-5 text-xs font-medium uppercase leading-5 tracking-wide text-muted-foreground"
-                >
-                  Commissione
-                </label>
-                <div className="flex flex-wrap items-center gap-3">
-                  {tipologia === 'RIMBORSO (CR%)' && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="modal-rimborso" className="text-sm text-muted-foreground">
-                        € rimborso
-                      </Label>
-                      <Input
-                        id="modal-rimborso"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={rimborso}
-                        onChange={(e) => setRimborso(sanitizeDecimal(e.target.value))}
-                        className="h-8 w-24"
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="modal-commissione"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="3"
-                      value={commissione}
-                      onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
-                      className="h-8 w-14"
-                    />
-                    <span className="text-sm text-muted-foreground">%</span>
-                  </div>
+              {tipologia === 'RIMBORSO (CR%)' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Rimborso €
+                  </span>
+                  <Input
+                    id="modal-rimborso"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={rimborso}
+                    onChange={(e) => setRimborso(sanitizeDecimal(e.target.value))}
+                    className="h-8 w-20"
+                  />
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* PUNTA e BANCA: card con quota in evidenza */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-primary">
-                  Punta
-                </p>
-                <p className="mb-3 text-sm text-muted-foreground">{row.selection}</p>
+            {/* PUNTA e BANCA */}
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-primary">
+                    Punta
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Image
+                      src={`/loghi_book/${row.id_book_1}.png`}
+                      alt=""
+                      width={60}
+                      height={20}
+                      className="h-5 w-auto max-w-[60px] object-contain"
+                    />
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                      {bookName}
+                    </span>
+                  </div>
+                </div>
                 <Input
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={quotaPunta}
                   onChange={(e) => setQuotaPunta(sanitizeDecimal(e.target.value))}
-                  className="mb-3 h-10 text-lg font-semibold"
+                  className="mt-2 h-9 text-base font-semibold sm:h-10 sm:text-lg"
                 />
-                <div className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1.5">
-                  <Image
-                    src={`/loghi_book/${row.id_book_1}.png`}
-                    alt=""
-                    width={80}
-                    height={24}
-                    className="h-6 w-auto max-w-[80px] object-contain"
-                  />
-                  <span className="text-xs text-muted-foreground">{bookName}</span>
-                </div>
               </div>
-              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-destructive">
-                  Banca
-                </p>
-                <p className="mb-3 text-sm text-muted-foreground">{row.selection}</p>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-destructive">
+                    Banca
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <Image
+                      src={`/loghi_book/${row.id_book_2}.png`}
+                      alt=""
+                      width={60}
+                      height={20}
+                      className="h-5 w-auto max-w-[60px] object-contain"
+                    />
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
+                      {exchangeName}
+                    </span>
+                  </div>
+                </div>
                 <Input
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={quotaBanca}
                   onChange={(e) => setQuotaBanca(sanitizeDecimal(e.target.value))}
-                  className="mb-3 h-10 text-lg font-semibold"
+                  className="mt-2 h-9 text-base font-semibold sm:h-10 sm:text-lg"
                 />
-                <div className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1.5">
-                  <Image
-                    src={`/loghi_book/${row.id_book_2}.png`}
-                    alt=""
-                    width={80}
-                    height={24}
-                    className="h-6 w-auto max-w-[80px] object-contain"
-                  />
-                  <span className="text-xs text-muted-foreground">{exchangeName}</span>
-                </div>
               </div>
             </div>
 
-            {/* Importi e risultati: sezione unica e ordinata */}
-            <div className="rounded-xl border border-border bg-muted/10 p-4">
-              <p className="mb-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {/* Importi e risultati */}
+            <div className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Importi e risultati
               </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="modal-puntata" className="text-sm">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="modal-puntata" className="text-xs sm:text-sm">
                     Puntata €
                   </Label>
-                  <div className="flex items-baseline gap-2">
-                    <Input
-                      id="modal-puntata"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={puntata}
-                      onChange={(e) => setPuntata(sanitizeDecimal(e.target.value))}
-                      className="h-9 w-28"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      a quota {formatNum(quotaPuntaNum)}
-                    </span>
-                  </div>
+                  <Input
+                    id="modal-puntata"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={puntata}
+                    onChange={(e) => setPuntata(sanitizeDecimal(e.target.value))}
+                    className="h-8 sm:h-9"
+                  />
                 </div>
-                {tipologia === 'NORMALE' && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="modal-bonus" className="text-sm">
+                {tipologia === 'NORMALE' ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="modal-bonus" className="text-xs sm:text-sm">
                       Bonus € (opz.)
                     </Label>
                     <Input
@@ -587,141 +584,215 @@ export function OddsmatcherCalculatorModal({
                       placeholder="0"
                       value={bonus}
                       onChange={(e) => setBonus(sanitizeDecimal(e.target.value))}
-                      className="h-9 w-24"
+                      className="h-8 sm:h-9"
                     />
                   </div>
+                ) : (
+                  <div />
                 )}
               </div>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Bancata €</Label>
-                  <p className="flex items-baseline gap-2">
-                    <span className="font-mono text-base font-semibold text-foreground">
-                      {layStakeValue != null ? formatNum(layStakeValue) : '0.00'}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      a quota {formatNum(quotaBancaNum)}
-                    </span>
+              {/* Risultati inline */}
+              <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-background/60 p-2.5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Bancata
+                  </p>
+                  <p className="font-mono text-sm font-semibold">
+                    {layStakeValue != null ? formatNum(layStakeValue) : '—'}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-6 sm:gap-8">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Responsabilità</p>
-                    <p className="font-mono text-sm font-semibold">
-                      € {responsabilita != null ? formatNum(responsabilita) : '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Guadagno minimo</p>
-                    <p
-                      className={cn(
-                        'font-mono text-sm font-semibold',
-                        guadagnoMinimo != null && guadagnoMinimo >= 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : guadagnoMinimo != null && guadagnoMinimo < 0
-                            ? 'text-destructive'
-                            : 'text-foreground',
-                      )}
-                    >
-                      € {guadagnoMinimo != null ? formatNum(guadagnoMinimo) : '—'}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Rischio
+                  </p>
+                  <p className="font-mono text-sm font-semibold">
+                    {responsabilita != null ? formatNum(responsabilita) : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Guadagno min
+                  </p>
+                  <p
+                    className={cn(
+                      'font-mono text-sm font-semibold',
+                      guadagnoMinimo != null && guadagnoMinimo >= 0
+                        ? 'text-emerald-400'
+                        : guadagnoMinimo != null && guadagnoMinimo < 0
+                          ? 'text-destructive'
+                          : 'text-foreground',
+                    )}
+                  >
+                    {guadagnoMinimo != null ? `€${formatNum(guadagnoMinimo)}` : '—'}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Tabella PROFITTI */}
+            {/* Profitti — mobile: stacked cards, desktop: table */}
             {showSummary && guadagnoMinimo != null && (
-              <div className="overflow-hidden rounded-xl border border-border">
-                <div className="bg-muted/30 px-4 py-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <>
+                {/* Mobile: compact stacked */}
+                <div className="space-y-2 sm:hidden">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                     Profitti
                   </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/20">
-                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground" />
-                        <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                          {bookName}
-                        </th>
-                        <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                          {exchangeName}
-                        </th>
-                        {tipologia === 'RIMBORSO (CR%)' && (
-                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                            Rimborso
-                          </th>
-                        )}
-                        <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                          Totale
-                        </th>
-                        <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                          Rating
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-border/50 bg-primary/5">
-                        <td className="px-4 py-2.5 text-muted-foreground">
-                          se vinci la puntata su {bookName}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium text-primary">
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">Vinci puntata</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ratingSeVinciPuntata != null ? `${formatNum(ratingSeVinciPuntata)}%` : ''}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex items-baseline justify-between">
+                      <div className="flex gap-3">
+                        <span className="font-mono text-xs text-primary">
                           {formatSigned(
                             tipologia === 'NORMALE' && bonusNum > 0
                               ? ((puntataNum ?? 0) + bonusNum) * (quotaPuntaNum ?? 0) -
                                   (puntataNum ?? 0)
                               : (puntataNum ?? 0) * ((quotaPuntaNum ?? 0) - 1),
                           )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                        </span>
+                        <span className="font-mono text-xs text-destructive">
                           {formatSigned(-(responsabilita ?? 0))}
-                        </td>
-                        {tipologia === 'RIMBORSO (CR%)' && (
-                          <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
-                        )}
-                        <td className="px-4 py-2.5 text-right font-semibold">
-                          {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'} €
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-muted-foreground">
-                          {ratingSeVinciPuntata != null
-                            ? `${formatNum(ratingSeVinciPuntata)}%`
-                            : '—'}
-                        </td>
-                      </tr>
-                      <tr className="bg-destructive/5">
-                        <td className="px-4 py-2.5 text-muted-foreground">
-                          se vinci la bancata su {exchangeName}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                        </span>
+                      </div>
+                      <span className="font-mono text-sm font-bold">
+                        {totalSeVinciPuntata != null
+                          ? `${formatSigned(totalSeVinciPuntata)}€`
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">Vinci bancata</p>
+                      <p className="text-xs text-muted-foreground">
+                        {ratingSeVinciBancata != null ? `${formatNum(ratingSeVinciBancata)}%` : ''}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex items-baseline justify-between">
+                      <div className="flex gap-3">
+                        <span className="font-mono text-xs text-destructive">
                           {formatSigned(-(puntataNum ?? 0))}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium text-primary">
+                        </span>
+                        <span className="font-mono text-xs text-primary">
                           {(effectiveExchangeProfitRounded ?? effectiveExchangeProfit) != null
                             ? formatSigned(
                                 effectiveExchangeProfitRounded ?? effectiveExchangeProfit ?? 0,
                               )
                             : '—'}
-                        </td>
+                        </span>
                         {tipologia === 'RIMBORSO (CR%)' && (
-                          <td className="px-4 py-2.5 text-right font-medium text-primary">
+                          <span className="font-mono text-xs text-primary">
                             {formatSigned(rimborsoNum)}
-                          </td>
+                          </span>
                         )}
-                        <td className="px-4 py-2.5 text-right font-semibold">
-                          {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'} €
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-muted-foreground">
-                          {ratingSeVinciBancata != null
-                            ? `${formatNum(ratingSeVinciBancata)}%`
-                            : '—'}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      </div>
+                      <span className="font-mono text-sm font-bold">
+                        {totalSeVinciBancata != null
+                          ? `${formatSigned(totalSeVinciBancata)}€`
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                {/* Desktop: full table */}
+                <div className="hidden overflow-hidden rounded-xl border border-border sm:block">
+                  <div className="bg-muted/30 px-4 py-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Profitti
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/20">
+                          <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground" />
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                            {bookName}
+                          </th>
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                            {exchangeName}
+                          </th>
+                          {tipologia === 'RIMBORSO (CR%)' && (
+                            <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                              Rimborso
+                            </th>
+                          )}
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                            Totale
+                          </th>
+                          <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
+                            Rating
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-border/50 bg-primary/5">
+                          <td className="px-4 py-2.5 text-muted-foreground">
+                            se vinci la puntata su {bookName}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-medium text-primary">
+                            {formatSigned(
+                              tipologia === 'NORMALE' && bonusNum > 0
+                                ? ((puntataNum ?? 0) + bonusNum) * (quotaPuntaNum ?? 0) -
+                                    (puntataNum ?? 0)
+                                : (puntataNum ?? 0) * ((quotaPuntaNum ?? 0) - 1),
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                            {formatSigned(-(responsabilita ?? 0))}
+                          </td>
+                          {tipologia === 'RIMBORSO (CR%)' && (
+                            <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
+                          )}
+                          <td className="px-4 py-2.5 text-right font-semibold">
+                            {totalSeVinciPuntata != null ? formatSigned(totalSeVinciPuntata) : '—'}{' '}
+                            €
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-muted-foreground">
+                            {ratingSeVinciPuntata != null
+                              ? `${formatNum(ratingSeVinciPuntata)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+                        <tr className="bg-destructive/5">
+                          <td className="px-4 py-2.5 text-muted-foreground">
+                            se vinci la bancata su {exchangeName}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                            {formatSigned(-(puntataNum ?? 0))}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-medium text-primary">
+                            {(effectiveExchangeProfitRounded ?? effectiveExchangeProfit) != null
+                              ? formatSigned(
+                                  effectiveExchangeProfitRounded ?? effectiveExchangeProfit ?? 0,
+                                )
+                              : '—'}
+                          </td>
+                          {tipologia === 'RIMBORSO (CR%)' && (
+                            <td className="px-4 py-2.5 text-right font-medium text-primary">
+                              {formatSigned(rimborsoNum)}
+                            </td>
+                          )}
+                          <td className="px-4 py-2.5 text-right font-semibold">
+                            {totalSeVinciBancata != null ? formatSigned(totalSeVinciBancata) : '—'}{' '}
+                            €
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-muted-foreground">
+                            {ratingSeVinciBancata != null
+                              ? `${formatNum(ratingSeVinciBancata)}%`
+                              : '—'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Footer: unico bottone full-width */}

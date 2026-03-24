@@ -3,10 +3,11 @@ import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { LoginForm } from '@/components/auth/login-form'
+import { GuestGuard } from '@/components/auth/guest-guard'
 
 export default function LoginPage() {
   return (
-    <>
+    <GuestGuard>
       <Header />
       <main className="py-12 sm:py-16">
         <Container className="max-w-md">
@@ -27,6 +28,6 @@ export default function LoginPage() {
         </Container>
       </main>
       <Footer />
-    </>
+    </GuestGuard>
   )
 }

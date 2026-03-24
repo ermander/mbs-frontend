@@ -5,10 +5,12 @@ import { Container } from '@/components/ui/container'
 
 export function HeroSection() {
   return (
-    <section className="py-20 sm:py-28">
-      <Container className="flex flex-col items-center text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
-          Matched betting e strumenti per le quote
+    <section className="relative py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(82,254,202,0.08)_0%,_transparent_70%)]" />
+      <Container className="relative flex flex-col items-center text-center">
+        <h1 className="text-5xl font-bold tracking-[-0.04em] text-foreground sm:text-6xl md:text-7xl">
+          <span className="text-gradient-primary">Matched betting</span> e strumenti per le{' '}
+          <span className="text-gradient-primary">quote</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
           Confronta le quote, usa i calcolatori e massimizza i guadagni in modo legale e

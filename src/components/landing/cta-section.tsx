@@ -7,7 +7,7 @@ export function CtaSection() {
   return (
     <section className="py-20 sm:py-28">
       <Container className="flex flex-col items-center text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Pronto a iniziare?
         </h2>
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">

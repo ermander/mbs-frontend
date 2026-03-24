@@ -27,6 +27,7 @@ function isMultipla(bet: OngoingBet) {
 
 type EditingCell = { betId: string; field: 'tag' | 'nota'; value: string }
 
+export { GiocateInCorsoPage as GiocateInCorsoContent }
 export default function GiocateInCorsoPage() {
   const router = useRouter()
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
@@ -156,7 +157,7 @@ export default function GiocateInCorsoPage() {
               key={bet.id}
               className={cn(
                 'rounded-xl border border-border bg-card/70 p-4 shadow-sm',
-                shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+                shouldHighlight && 'bg-amber-500/10',
               )}
             >
               <div className="flex items-start gap-2">
@@ -164,11 +165,11 @@ export default function GiocateInCorsoPage() {
                   {bet.eventoNome}
                 </h2>
                 {multipla ? (
-                  <span className="mt-0.5 shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
                     Multipla
                   </span>
                 ) : (
-                  <span className="mt-0.5 shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
                     Singola
                   </span>
                 )}
@@ -320,7 +321,7 @@ export default function GiocateInCorsoPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Data creazione</th>
               <th className="px-3 py-2 text-left">Data evento</th>
@@ -346,8 +347,8 @@ export default function GiocateInCorsoPage() {
                 <tr
                   key={bet.id}
                   className={cn(
-                    'border-b border-border/40 last:border-b-0',
-                    shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+                    'border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent',
+                    shouldHighlight && 'bg-amber-500/10',
                   )}
                 >
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
@@ -379,11 +380,11 @@ export default function GiocateInCorsoPage() {
                   <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
                     <span className="inline-flex items-center gap-2">
                       {multipla ? (
-                        <span className="inline-flex shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                        <span className="inline-flex shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
                           Multipla
                         </span>
                       ) : (
-                        <span className="inline-flex shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                        <span className="inline-flex shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
                           Singola
                         </span>
                       )}

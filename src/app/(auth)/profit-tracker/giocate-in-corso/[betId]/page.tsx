@@ -32,15 +32,15 @@ const TIPO_BONUS_OPTIONS: { value: BetLeg['tipoBonus']; label: string }[] = [
 function statoEventoClasses(stato: BetLeg['statoEvento']): string {
   switch (stato) {
     case 'vinto':
-      return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/40'
+      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
     case 'perso':
-      return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/40'
+      return 'bg-destructive/15 text-destructive border-destructive/20'
     case 'in_corso':
-      return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/40'
+      return 'bg-amber-500/15 text-amber-400 border-amber-500/20'
     case 'annullato':
-      return 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40'
+      return 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20'
     default:
-      return 'bg-background border-border'
+      return 'bg-white/5 text-white/40 border-border'
   }
 }
 
@@ -507,7 +507,7 @@ export default function BetDetailPage() {
             </button>
             <button
               type="button"
-              className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+              className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
               onClick={handleConfirmEdit}
               title="Conferma e salva"
               aria-label="Conferma e salva"
@@ -530,7 +530,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
         onClick={() => handleStartEdit(leg.id, field, displayValue)}
       >
         {format(displayValue)}
@@ -592,7 +592,7 @@ export default function BetDetailPage() {
             </button>
             <button
               type="button"
-              className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+              className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
               onClick={handleConfirmTextEdit}
               title="Conferma e salva"
               aria-label="Conferma e salva"
@@ -606,7 +606,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="whitespace-nowrap rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        className="whitespace-nowrap rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
         onClick={() => handleStartTextEdit(leg.id, field, displayValue)}
       >
         {displayValue}
@@ -755,7 +755,7 @@ export default function BetDetailPage() {
             <div
               key={leg.id}
               className={`rounded-xl border border-border bg-card/70 p-4 shadow-sm ${
-                shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                shouldHighlightLeg ? 'bg-amber-500/10' : ''
               } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
             >
               <div className="space-y-3">
@@ -788,7 +788,7 @@ export default function BetDetailPage() {
                         </button>
                         <button
                           type="button"
-                          className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                          className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
                           onClick={() => void handleConfirmDateEdit()}
                           aria-label="Conferma"
                           disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
@@ -800,7 +800,7 @@ export default function BetDetailPage() {
                   ) : canEditLegEventDate(leg) ? (
                     <button
                       type="button"
-                      className="rounded bg-sky-50 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40"
+                      className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
                       onClick={() => handleStartDateEdit(leg)}
                     >
                       {renderEventDateCell(leg.eventoData)}
@@ -934,7 +934,7 @@ export default function BetDetailPage() {
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Mov.</span>
-                    <span className="font-medium text-foreground">
+                    <span className="font-mono font-medium text-foreground">
                       {leg.movimento.toFixed(2)} €
                     </span>
                   </div>
@@ -993,7 +993,7 @@ export default function BetDetailPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium text-muted-foreground">
+            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
@@ -1032,7 +1032,7 @@ export default function BetDetailPage() {
                 <tr
                   key={leg.id}
                   className={`border-b border-border/40 align-top last:border-b-0 ${
-                    shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                    shouldHighlightLeg ? 'bg-amber-500/10' : ''
                   } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
                 >
                   <td className="px-3 py-2 text-center text-xs text-muted-foreground">
@@ -1061,7 +1061,7 @@ export default function BetDetailPage() {
                           </button>
                           <button
                             type="button"
-                            className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                            className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
                             onClick={() => void handleConfirmDateEdit()}
                             title="Conferma e salva"
                             aria-label="Conferma e salva"
@@ -1074,7 +1074,7 @@ export default function BetDetailPage() {
                     ) : canEditLegEventDate(leg) ? (
                       <button
                         type="button"
-                        className="rounded bg-sky-50 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+                        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
                         onClick={() => handleStartDateEdit(leg)}
                         title="Modifica data evento"
                       >
@@ -1192,7 +1192,7 @@ export default function BetDetailPage() {
                       v !== 0 ? `${v.toFixed(2)} €` : '—',
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs font-medium text-foreground">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-medium text-foreground">
                     {leg.movimento.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2">

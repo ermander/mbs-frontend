@@ -234,9 +234,9 @@ export function PuntaBancaCalculator() {
     puntataEffettiva > 0
 
   return (
-    <div className="mx-auto max-w-2xl rounded-lg border border-white/10 bg-white/5 p-0 shadow-xl backdrop-blur-md">
+    <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
       {/* Barra superiore */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 backdrop-blur-xl">
         <div className="flex items-center gap-2">
           <Label htmlFor="tipologia" className="text-sm text-muted-foreground">
             Tipologia
@@ -272,7 +272,7 @@ export function PuntaBancaCalculator() {
       </div>
 
       {/* Sezione Puntata */}
-      <div className="border-b border-white/10 bg-primary/5 p-4">
+      <div className="border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata">Puntata</Label>
@@ -381,7 +381,7 @@ export function PuntaBancaCalculator() {
       </div>
 
       {/* Sezione Banca */}
-      <div className="border-b border-white/10 bg-destructive/5 p-4">
+      <div className="border-b border-border bg-destructive/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="commissione">Commissione</Label>
@@ -441,8 +441,8 @@ export function PuntaBancaCalculator() {
       {showSummary &&
         guadagnoMinimo != null &&
         (tipologia !== 'RIMBORSO (CR%)' ? rating != null : true) && (
-          <div className="border-b border-white/10 bg-white/5">
-            <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+          <div className="border-b border-border bg-card">
+            <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {tipologia === 'RIMBORSO (CR%)'
                 ? 'BANCATA RIMBORSO • '
                 : bonusNum > 0
@@ -458,7 +458,7 @@ export function PuntaBancaCalculator() {
               </p>
               <p>
                 <span className="font-medium text-primary">Punta</span>{' '}
-                <span className="text-primary">
+                <span className="font-mono text-primary">
                   {formatNum(tipologia === 'RIMBORSO (CR%)' ? puntataNum : puntataEffettiva)} €
                 </span>
                 {tipologia !== 'RIMBORSO (CR%)' && bonusNum > 0 && (
@@ -467,13 +467,14 @@ export function PuntaBancaCalculator() {
                     (di cui {formatNum(bonusNum)} € bonus)
                   </span>
                 )}{' '}
-                a quota {formatNum(quotaPuntaNum)} sul Book.
+                a quota <span className="font-mono">{formatNum(quotaPuntaNum)}</span> sul Book.
               </p>
               <p>
                 <span className="font-medium text-destructive">Banca</span>{' '}
-                <span className="text-destructive">{formatNum(layStake)} €</span> a quota{' '}
-                {formatNum(quotaBancaNum)} su Betfair, con Responsabilità di{' '}
-                <span className="text-destructive">{formatNum(responsabilita)} €</span>.
+                <span className="font-mono text-destructive">{formatNum(layStake)} €</span> a quota{' '}
+                <span className="font-mono">{formatNum(quotaBancaNum)}</span> su Betfair, con
+                Responsabilità di{' '}
+                <span className="font-mono text-destructive">{formatNum(responsabilita)} €</span>.
               </p>
               {showBancataParziale &&
                 nuovaResponsabilita != null &&
@@ -481,12 +482,19 @@ export function PuntaBancaCalculator() {
                 nuovaQuotaNum != null && (
                   <p>
                     <span className="font-medium text-destructive">Nuova Responsabilità:</span>{' '}
-                    <span className="text-destructive">{formatNum(nuovaResponsabilita)} €</span>
+                    <span className="font-mono text-destructive">
+                      {formatNum(nuovaResponsabilita)} €
+                    </span>
                   </p>
                 )}
               <p>
                 Il guadagno minimo sarà{' '}
-                <span className={cn(guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive')}>
+                <span
+                  className={cn(
+                    'font-mono',
+                    guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
+                  )}
+                >
                   {formatSigned(guadagnoMinimo)} €
                 </span>
               </p>
@@ -497,7 +505,7 @@ export function PuntaBancaCalculator() {
       {isAvanzato && (
         <>
           {/* Slider Sbilanciamento (-30% … +30%), solo in modalità avanzata */}
-          <div className="border-b border-white/10 p-4">
+          <div className="border-b border-border p-4">
             <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">−30%</span>
@@ -521,7 +529,7 @@ export function PuntaBancaCalculator() {
           </div>
 
           {/* Bancata Parziale */}
-          <div className="flex justify-center border-b border-white/10 p-4">
+          <div className="flex justify-center border-b border-border p-4">
             <Button
               type="button"
               variant="success"
@@ -540,7 +548,7 @@ export function PuntaBancaCalculator() {
 
           {/* Sezione Abbinata (visibile solo se Bancata Parziale espansa) */}
           {showBancataParziale && (
-            <div className="border-b border-white/10 bg-muted/20 p-4">
+            <div className="border-b border-border bg-muted/20 p-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="abbinata">Abbinata</Label>
@@ -627,8 +635,8 @@ export function PuntaBancaCalculator() {
         layStake != null &&
         responsabilita != null &&
         (tipologia === 'RIMBORSO (CR%)' ? puntataNum != null : true) && (
-          <div className="border-b border-white/10 bg-white/5">
-            <div className="border-b border-white/10 bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+          <div className="border-b border-border bg-card">
+            <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {tipologia === 'RIMBORSO (CR%)'
                 ? 'BANCATA RIMBORSO • '
                 : bonusNum > 0
@@ -638,7 +646,7 @@ export function PuntaBancaCalculator() {
             </div>
             {/* Layout a card solo su mobile (< sm) */}
             <div className="block space-y-3 p-4 sm:hidden">
-              <div className="rounded-xl border border-white/10 bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-primary/10 p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">
                   Se vinci la puntata sul Book:
                 </p>
@@ -668,7 +676,7 @@ export function PuntaBancaCalculator() {
                       <span className="text-muted-foreground">{formatSigned(0)} €</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                  <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span
                       className={cn(
@@ -682,7 +690,7 @@ export function PuntaBancaCalculator() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-destructive/10 p-4">
+              <div className="rounded-xl border border-border bg-destructive/10 p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">
                   Se vinci la bancata sull&apos;Exchange:
                 </p>
@@ -715,7 +723,7 @@ export function PuntaBancaCalculator() {
                       <span className="text-primary">{formatSigned(rimborsoNum)} €</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t border-white/10 pt-2 font-medium">
+                  <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span
                       className={cn(
@@ -735,7 +743,7 @@ export function PuntaBancaCalculator() {
             <div className="hidden overflow-x-auto sm:block">
               <table className="w-full table-fixed text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-muted-foreground">
+                  <tr className="border-b border-border text-muted-foreground">
                     <th
                       className={
                         tipologia === 'RIMBORSO (CR%)'
@@ -770,7 +778,7 @@ export function PuntaBancaCalculator() {
                 <tbody>
                   {tipologia === 'RIMBORSO (CR%)' ? (
                     <>
-                      <tr className="border-b border-white/10 bg-primary/10">
+                      <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
                         <td className="p-3">Se vinci la puntata sul Book:</td>
                         <td className="p-3 text-right text-primary">
                           {formatSigned((puntataNum ?? 0) * (quotaPuntaNum - 1))}
@@ -793,7 +801,7 @@ export function PuntaBancaCalculator() {
                           </span>
                         </td>
                       </tr>
-                      <tr className="bg-destructive/10">
+                      <tr className="bg-destructive/10 transition-colors hover:bg-accent">
                         <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
                         <td className="p-3 text-right text-destructive">
                           {formatSigned(-(puntataNum ?? 0))}
@@ -821,7 +829,7 @@ export function PuntaBancaCalculator() {
                     </>
                   ) : (
                     <>
-                      <tr className="border-b border-white/10 bg-primary/10">
+                      <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
                         <td className="p-3">Se vinci la puntata sul Book:</td>
                         <td className="p-3 text-right text-primary">
                           {formatSigned(
@@ -847,7 +855,7 @@ export function PuntaBancaCalculator() {
                           </span>
                         </td>
                       </tr>
-                      <tr className="bg-destructive/10">
+                      <tr className="bg-destructive/10 transition-colors hover:bg-accent">
                         <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
                         <td className="p-3 text-right text-destructive">
                           {formatSigned(bonusNum > 0 ? -(puntataNum ?? 0) : -puntataEffettiva)}

@@ -11,6 +11,7 @@ function formatDate(date: string) {
   return new Date(date).toLocaleDateString('it-IT')
 }
 
+export { GiocateRapidePage as GiocateRapideContent }
 export default function GiocateRapidePage() {
   const quickBets = useProfitTrackerStore((s) => s.quickBets)
   const isLoadingQuickBets = useProfitTrackerStore((s) => s.isLoadingQuickBets)
@@ -60,7 +61,7 @@ export default function GiocateRapidePage() {
           </div>
         ) : (
           quickBets.map((bet) => {
-            const movementClass = bet.movimento >= 0 ? 'text-emerald-600' : 'text-red-500'
+            const movementClass = bet.movimento >= 0 ? 'text-emerald-400' : 'text-destructive'
             return (
               <div
                 key={bet.id}
@@ -134,7 +135,7 @@ export default function GiocateRapidePage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Registrato il</th>
               <th className="px-3 py-2 text-left">Conto</th>
@@ -155,7 +156,10 @@ export default function GiocateRapidePage() {
             )}
             {!isLoadingQuickBets &&
               quickBets.map((bet) => (
-                <tr key={bet.id} className="border-b border-border/40 last:border-b-0">
+                <tr
+                  key={bet.id}
+                  className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+                >
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                     {bet.id}
                   </td>
@@ -175,8 +179,8 @@ export default function GiocateRapidePage() {
                     {bet.nota ?? '—'}
                   </td>
                   <td
-                    className={`whitespace-nowrap px-3 py-2 align-top text-xs font-medium ${
-                      bet.movimento >= 0 ? 'text-emerald-600' : 'text-red-500'
+                    className={`whitespace-nowrap px-3 py-2 align-top font-mono text-xs font-medium ${
+                      bet.movimento >= 0 ? 'text-emerald-400' : 'text-destructive'
                     }`}
                   >
                     {bet.movimento.toFixed(2)} €

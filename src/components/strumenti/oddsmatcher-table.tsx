@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react'
 import { useOddsmatcher } from '@/hooks/use-oddsmatcher'
 import type { OddsmatcherRow } from '@/types/oddsmatcher'
 import { Button } from '@/components/ui/button'
@@ -141,19 +141,26 @@ export function OddsmatcherTable() {
   }
   const { data, isLoading, isError, error, refetch, isRefetching } = useOddsmatcher(apiParams)
 
+  // Deferred values: l'input resta reattivo, il filtering pesante viene differito
+  const deferredMinOdds = useDeferredValue(minOdds)
+  const deferredMaxOdds = useDeferredValue(maxOdds)
+  const deferredMinLiquidity = useDeferredValue(minLiquidity)
+  const deferredMinRating = useDeferredValue(minRating)
+  const deferredSearchQuery = useDeferredValue(searchQuery)
+
   useEffect(() => {
     queueMicrotask(() => setPage(1))
   }, [
     data,
-    searchQuery,
+    deferredSearchQuery,
     selectedBookIds,
     selectedExchangeIds,
     selectedSportIds,
     selectedMarkets,
-    minLiquidity,
-    minRating,
-    minOdds,
-    maxOdds,
+    deferredMinLiquidity,
+    deferredMinRating,
+    deferredMinOdds,
+    deferredMaxOdds,
     startDate,
     endDate,
   ])
@@ -174,6 +181,12 @@ export function OddsmatcherTable() {
     setMaxOdds('')
     setStartDate('')
     setEndDate('')
+    setMultiplaNumEventi(2)
+    setMultiplaQuotaMinEvento('')
+    setMultiplaQuotaMaxEvento('')
+    setMultiplaQuotaMinTotale('1.00')
+    setMultiplaDataInizio('')
+    setMultiplaDataFine('')
   }
 
   const resetMultiplaFilters = () => {
@@ -419,6 +432,7 @@ export function OddsmatcherTable() {
             aria-label="Reset filtri"
           >
             <RotateCcw className="h-3 w-3" />
+            Reset
           </button>
         </div>
       </div>
@@ -611,6 +625,7 @@ export function OddsmatcherTable() {
                 placeholder="min"
                 value={minOdds}
                 onChange={(e) => setMinOdds(e.target.value)}
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 className="h-8 w-full min-w-0 text-sm"
                 min={1}
                 step={0.01}
@@ -629,6 +644,7 @@ export function OddsmatcherTable() {
                 placeholder="max"
                 value={maxOdds}
                 onChange={(e) => setMaxOdds(e.target.value)}
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 className="h-8 w-full min-w-0 text-sm"
                 min={1}
                 step={0.01}
@@ -699,6 +715,7 @@ export function OddsmatcherTable() {
                 placeholder="€"
                 value={minLiquidity}
                 onChange={(e) => setMinLiquidity(e.target.value)}
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 className="h-8 w-full min-w-0 text-sm"
                 min={0}
                 step={1}
@@ -717,6 +734,7 @@ export function OddsmatcherTable() {
                 placeholder="%"
                 value={minRating}
                 onChange={(e) => setMinRating(e.target.value)}
+                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                 className="h-8 w-full min-w-0 text-sm"
                 min={0}
                 max={100}
@@ -731,130 +749,137 @@ export function OddsmatcherTable() {
       {multiplaOpen && (
         <div className="mt-2 animate-fade-in rounded-xl border border-neon-lavender/20 bg-surface-1 p-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-n-eventi"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  N. Eventi
-                </Label>
-                <select
-                  id="multipla-n-eventi"
-                  value={multiplaNumEventi}
-                  onChange={(e) => setMultiplaNumEventi(Number(e.target.value))}
-                  className="h-8 w-full min-w-0 rounded-lg border border-border bg-surface-1 px-3 text-sm text-foreground"
-                >
-                  {[2, 3, 4, 5, 6, 7, 8].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-quota-min-evento"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  Quota min evento
-                </Label>
-                <Input
-                  id="multipla-quota-min-evento"
-                  type="number"
-                  placeholder="—"
-                  value={multiplaQuotaMinEvento}
-                  onChange={(e) => setMultiplaQuotaMinEvento(e.target.value)}
-                  className="h-8 w-full min-w-0 text-sm"
-                  min={1}
-                  step={0.01}
-                />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-quota-max-evento"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  Quota max evento
-                </Label>
-                <Input
-                  id="multipla-quota-max-evento"
-                  type="number"
-                  placeholder="—"
-                  value={multiplaQuotaMaxEvento}
-                  onChange={(e) => setMultiplaQuotaMaxEvento(e.target.value)}
-                  className="h-8 w-full min-w-0 text-sm"
-                  min={1}
-                  step={0.01}
-                />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-quota-min-totale"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  Quota min totale
-                </Label>
-                <Input
-                  id="multipla-quota-min-totale"
-                  type="number"
-                  value={multiplaQuotaMinTotale}
-                  onChange={(e) => setMultiplaQuotaMinTotale(e.target.value)}
-                  className="h-8 w-full min-w-0 text-sm"
-                  min={1}
-                  step={0.01}
-                />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-data-inizio"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  Data inizio
-                </Label>
-                <div className="relative">
-                  <Input
-                    ref={multiplaDataInizioRef}
-                    id="multipla-data-inizio"
-                    type="date"
-                    value={multiplaDataInizio}
-                    onChange={(e) => setMultiplaDataInizio(e.target.value)}
-                    className="h-8 w-full min-w-0 pr-9 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => multiplaDataInizioRef.current?.showPicker?.()}
-                    className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                    aria-label="Apri selettore data"
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-n-eventi"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
                   >
-                    <Calendar className="h-3.5 w-3.5" aria-hidden />
-                  </button>
+                    N. Eventi
+                  </Label>
+                  <select
+                    id="multipla-n-eventi"
+                    value={multiplaNumEventi}
+                    onChange={(e) => setMultiplaNumEventi(Number(e.target.value))}
+                    className="h-8 w-full min-w-0 rounded-lg border border-border bg-surface-1 px-3 text-sm text-foreground"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-quota-min-evento"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
+                  >
+                    Quota min evento
+                  </Label>
+                  <Input
+                    id="multipla-quota-min-evento"
+                    type="number"
+                    placeholder="—"
+                    value={multiplaQuotaMinEvento}
+                    onChange={(e) => setMultiplaQuotaMinEvento(e.target.value)}
+                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
+                    className="h-8 w-full min-w-0 text-sm"
+                    min={1}
+                    step={0.01}
+                  />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-quota-max-evento"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
+                  >
+                    Quota max evento
+                  </Label>
+                  <Input
+                    id="multipla-quota-max-evento"
+                    type="number"
+                    placeholder="—"
+                    value={multiplaQuotaMaxEvento}
+                    onChange={(e) => setMultiplaQuotaMaxEvento(e.target.value)}
+                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
+                    className="h-8 w-full min-w-0 text-sm"
+                    min={1}
+                    step={0.01}
+                  />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-quota-min-totale"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
+                  >
+                    Quota min totale
+                  </Label>
+                  <Input
+                    id="multipla-quota-min-totale"
+                    type="number"
+                    value={multiplaQuotaMinTotale}
+                    onChange={(e) => setMultiplaQuotaMinTotale(e.target.value)}
+                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
+                    className="h-8 w-full min-w-0 text-sm"
+                    min={1}
+                    step={0.01}
+                  />
                 </div>
               </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <Label
-                  htmlFor="multipla-data-fine"
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                >
-                  Data fine
-                </Label>
-                <div className="relative">
-                  <Input
-                    ref={multiplaDataFineRef}
-                    id="multipla-data-fine"
-                    type="date"
-                    value={multiplaDataFine}
-                    onChange={(e) => setMultiplaDataFine(e.target.value)}
-                    className="h-8 w-full min-w-0 pr-9 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => multiplaDataFineRef.current?.showPicker?.()}
-                    className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                    aria-label="Apri selettore data"
+              <div className="grid grid-cols-2 gap-x-6 sm:max-w-sm">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-data-inizio"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
                   >
-                    <Calendar className="h-3.5 w-3.5" aria-hidden />
-                  </button>
+                    Data inizio
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      ref={multiplaDataInizioRef}
+                      id="multipla-data-inizio"
+                      type="date"
+                      value={multiplaDataInizio}
+                      onChange={(e) => setMultiplaDataInizio(e.target.value)}
+                      className="h-8 w-full min-w-0 pr-9 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => multiplaDataInizioRef.current?.showPicker?.()}
+                      className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                      aria-label="Apri selettore data"
+                    >
+                      <Calendar className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <Label
+                    htmlFor="multipla-data-fine"
+                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
+                  >
+                    Data fine
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      ref={multiplaDataFineRef}
+                      id="multipla-data-fine"
+                      type="date"
+                      value={multiplaDataFine}
+                      onChange={(e) => setMultiplaDataFine(e.target.value)}
+                      className="h-8 w-full min-w-0 pr-9 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => multiplaDataFineRef.current?.showPicker?.()}
+                      className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                      aria-label="Apri selettore data"
+                    >
+                      <Calendar className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1011,7 +1036,7 @@ export function OddsmatcherTable() {
     )
   }
 
-  const q = searchQuery.trim().toLowerCase()
+  const q = deferredSearchQuery.trim().toLowerCase()
   let filteredRows = q
     ? rows.filter((row) => {
         const eventText = `${row.home} ${row.away}`.toLowerCase()
@@ -1028,26 +1053,26 @@ export function OddsmatcherTable() {
     const marketSet = new Set(selectedMarkets)
     filteredRows = filteredRows.filter((row) => marketSet.has(row.market))
   }
-  if (minLiquidity.trim() !== '') {
-    const minLiq = parseFloat(minLiquidity)
+  if (deferredMinLiquidity.trim() !== '') {
+    const minLiq = parseFloat(deferredMinLiquidity)
     if (!Number.isNaN(minLiq)) {
       filteredRows = filteredRows.filter((row) => parseFloat(row.liquidity) >= minLiq)
     }
   }
-  if (minRating.trim() !== '') {
-    const minR = parseFloat(minRating)
+  if (deferredMinRating.trim() !== '') {
+    const minR = parseFloat(deferredMinRating)
     if (!Number.isNaN(minR)) {
       filteredRows = filteredRows.filter((row) => ratingValue(row.back_odd, row.lay_odd) >= minR)
     }
   }
-  if (minOdds.trim() !== '') {
-    const minO = parseFloat(minOdds)
+  if (deferredMinOdds.trim() !== '') {
+    const minO = parseFloat(deferredMinOdds)
     if (!Number.isNaN(minO)) {
       filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) >= minO)
     }
   }
-  if (maxOdds.trim() !== '') {
-    const maxO = parseFloat(maxOdds)
+  if (deferredMaxOdds.trim() !== '') {
+    const maxO = parseFloat(deferredMaxOdds)
     if (!Number.isNaN(maxO)) {
       filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) <= maxO)
     }

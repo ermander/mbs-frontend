@@ -10,7 +10,7 @@ export const profitTrackerNavItems = [
   { href: '/profit-tracker/giocate', label: 'Giocate' },
   { href: '/profit-tracker/archivio', label: 'Archivio' },
   { href: '/profit-tracker/gestione-conti', label: 'Gestione Conti' },
-  { href: '/profit-tracker/book-personali', label: 'Book personali' },
+  { href: '/profit-tracker/book-personali', label: 'Impostazioni' },
   { href: '/profit-tracker/promemoria', label: 'Promemoria' },
 ] as const
 

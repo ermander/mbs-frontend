@@ -208,6 +208,14 @@ export interface WalletMovement {
   descrizione?: string
 }
 
+export interface Tag {
+  id: string
+  nome: string
+  colore: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type ReminderPeriod = '24h' | '12h' | 'scadenza'
 export type ReminderStatus = 'attivo' | 'completato' | 'scaduto'
 

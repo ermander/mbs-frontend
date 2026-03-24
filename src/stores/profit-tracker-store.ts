@@ -10,6 +10,7 @@ import type {
   Holder,
   OngoingBet,
   QuickBet,
+  Tag,
   Wallet,
   WalletMovement,
   Reminder,
@@ -53,6 +54,10 @@ import {
   updateBetLeg as apiUpdateBetLeg,
   updateBook as apiUpdateBook,
   updateQuickBet as apiUpdateQuickBet,
+  getTags as apiGetTags,
+  createTag as apiCreateTag,
+  updateTag as apiUpdateTag,
+  deleteTag as apiDeleteTag,
 } from '@/services/api/profit-tracker-client'
 
 interface ProfitTrackerState {
@@ -86,6 +91,10 @@ interface ProfitTrackerState {
   isSavingWalletMovement: boolean
   walletMovementsError?: string
 
+  tags: Tag[]
+  isLoadingTags: boolean
+  tagsError?: string
+
   reminders: Reminder[]
   isLoadingReminders: boolean
   remindersError?: string
@@ -108,6 +117,10 @@ interface ProfitTrackerState {
   }) => Promise<void>
   addBook: (book: Omit<Book, 'id'>) => Promise<void>
   updateBook: (id: string, patch: Partial<Book>) => Promise<void>
+  fetchTags: () => Promise<void>
+  addTag: (data: { nome: string; colore?: string }) => Promise<void>
+  updateTag: (id: string, patch: Partial<{ nome: string; colore: string }>) => Promise<void>
+  deleteTag: (id: string) => Promise<void>
   fetchAccounts: (params?: GetAccountsParams) => Promise<void>
   fetchAllAccounts: () => Promise<void>
   addAccount: (account: {
@@ -242,6 +255,10 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     isSavingWalletMovement: false,
     walletMovementsError: undefined,
 
+    tags: [],
+    isLoadingTags: false,
+    tagsError: undefined,
+
     reminders: [],
     isLoadingReminders: false,
     remindersError: undefined,
@@ -349,6 +366,62 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       } catch (error: unknown) {
         set(() => ({
           booksError: getErrorMessage(error) || 'Errore nel salvataggio del book',
+        }))
+      }
+    },
+
+    fetchTags: async () => {
+      set(() => ({ isLoadingTags: true, tagsError: undefined }))
+      try {
+        const tags = await apiGetTags()
+        set(() => ({ tags, isLoadingTags: false }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingTags: false,
+          tagsError: getErrorMessage(error) || 'Errore nel caricamento dei tag',
+        }))
+      }
+    },
+    addTag: async (data) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        const created = await apiCreateTag(data)
+        set((state) => ({ tags: [...state.tags, created] }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'TAG_NAME_ALREADY_EXISTS') {
+          set(() => ({ tagsError: 'Esiste già un tag con questo nome' }))
+          return
+        }
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nel salvataggio del tag',
+        }))
+      }
+    },
+    updateTag: async (id, patch) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        const updated = await apiUpdateTag(id, patch)
+        set((state) => ({
+          tags: state.tags.map((t) => (t.id === id ? updated : t)),
+        }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'TAG_NAME_ALREADY_EXISTS') {
+          set(() => ({ tagsError: 'Esiste già un tag con questo nome' }))
+          return
+        }
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nel salvataggio del tag',
+        }))
+      }
+    },
+    deleteTag: async (id) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        await apiDeleteTag(id)
+        set((state) => ({ tags: state.tags.filter((t) => t.id !== id) }))
+      } catch (error: unknown) {
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nella cancellazione del tag',
         }))
       }
     },

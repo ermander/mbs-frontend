@@ -82,13 +82,13 @@ export function AddBetLegModal({
       }
       setCompetizione('')
       setMercato('')
-      setAccountId(filteredAccounts[0]?.id ?? '')
+      setAccountId('')
       setStake('')
       setQuota('')
       setCommissionePercentuale('0')
       setTag('')
     }
-  }, [open, bet, fetchAllAccounts, filteredAccounts])
+  }, [open, bet, fetchAllAccounts])
 
   const effectiveAccountId =
     accountId && filteredAccounts.some((a) => a.id === accountId)

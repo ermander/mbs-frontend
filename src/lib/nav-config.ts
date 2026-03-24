@@ -16,13 +16,6 @@ export interface NavDropdownItem {
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
-    label: 'BONUS',
-    items: [
-      { label: 'Bonus di benvenuto', href: '/offerte/bonus-benvenuto' },
-      { label: 'Bonus ricorrenti', href: '/offerte/promozioni' },
-    ],
-  },
-  {
     label: 'STRUMENTI ONLINE',
     items: [
       { label: 'Oddsmatcher', href: '/oddsmatcher' },
@@ -51,7 +44,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Giocate', href: '/profit-tracker/giocate' },
       { label: 'Archivio', href: '/profit-tracker/archivio' },
       { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti' },
-      { label: 'Book personali', href: '/profit-tracker/book-personali' },
+      { label: 'Impostazioni', href: '/profit-tracker/book-personali' },
       { label: 'Promemoria', href: '/profit-tracker/promemoria' },
     ],
   },
@@ -65,8 +58,5 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 ]
 
 /** Direct links (no dropdown); order: HOME, GUIDE, then dropdowns go in between, then AGENDA, FORUM */
-export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
-  { label: 'HOME', href: '/' },
-  { label: 'GUIDE', href: '/guide' },
-]
+export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [{ label: 'HOME', href: '/' }]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

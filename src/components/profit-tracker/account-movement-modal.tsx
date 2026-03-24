@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
 import type { AccountMovementType } from '@/types/profit-tracker'
@@ -41,6 +42,7 @@ export function AccountMovementModal({
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -89,6 +91,20 @@ export function AccountMovementModal({
     onOpenChange(false)
   }
 
+  const accountOptions = useMemo(
+    () => allAccounts.map((a) => ({ value: a.id, label: a.nome })),
+    [allAccounts],
+  )
+
+  const walletOptions = useMemo(
+    () =>
+      holderWallets.map((w) => ({
+        value: w.id,
+        label: `${w.nome} (${w.saldoAttuale.toFixed(2)} €)`,
+      })),
+    [holderWallets],
+  )
+
   const canSave =
     effectiveAccountId &&
     valore.trim() !== '' &&
@@ -98,6 +114,12 @@ export function AccountMovementModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        {/* Portal container per dropdown SearchableSelect dentro la modale */}
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuovo movimento conto</DialogTitle>
         </DialogHeader>
@@ -115,37 +137,29 @@ export function AccountMovementModal({
               <option value="riconciliazione">Riconciliazione</option>
             </select>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mov-account">Conto</Label>
-            <select
-              id="mov-account"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={effectiveAccountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              {allAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            id="mov-account"
+            label="Conto"
+            options={accountOptions}
+            value={effectiveAccountId}
+            onChange={setAccountId}
+            allowEmpty={false}
+            placeholder="Seleziona conto"
+            searchPlaceholder="Cerca conto..."
+            portalContainer={dropdownPortalEl}
+          />
           {tipo !== 'riconciliazione' && (
-            <div className="space-y-1.5">
-              <Label htmlFor="mov-wallet">Wallet</Label>
-              <select
-                id="mov-wallet"
-                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                value={effectiveWalletId}
-                onChange={(e) => setWalletId(e.target.value)}
-              >
-                {holderWallets.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.nome} ({w.saldoAttuale.toFixed(2)} €)
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              id="mov-wallet"
+              label="Wallet"
+              options={walletOptions}
+              value={effectiveWalletId}
+              onChange={setWalletId}
+              allowEmpty={false}
+              placeholder="Seleziona wallet"
+              searchPlaceholder="Cerca wallet..."
+              portalContainer={dropdownPortalEl}
+            />
           )}
           <div className="space-y-1.5">
             <Label htmlFor="mov-valore">Movimento (€)</Label>

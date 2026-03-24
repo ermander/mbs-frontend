@@ -1,7 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notFound, useParams, useRouter } from 'next/navigation'
 import { Ban, Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
@@ -12,7 +11,7 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { BetLeg, BetStatus } from '@/types/profit-tracker'
 
 const FINAL_STATES = new Set<BetStatus>(['vinto', 'perso', 'annullato'])
-import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
+import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 
 function renderEventDateCell(date: string) {
@@ -42,7 +41,7 @@ function statoEventoClasses(stato: BetLeg['statoEvento']): string {
     case 'annullato':
       return 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20'
     default:
-      return 'bg-white/5 text-white/40 border-border'
+      return 'bg-muted/50 text-muted-foreground border-border'
   }
 }
 
@@ -67,8 +66,7 @@ export default function BetDetailPage() {
   const [loadError, setLoadError] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
   const [notaLocal, setNotaLocal] = useState('')
-  const [addLegOpen, setAddLegOpen] = useState(false)
-  const [addLegMethod, setAddLegMethod] = useState<'punta' | 'banca'>('punta')
+  const [notaEditing, setNotaEditing] = useState(false)
   const [editingCell, setEditingCell] = useState<{ legId: string; field: EditableField } | null>(
     null,
   )
@@ -79,6 +77,8 @@ export default function BetDetailPage() {
   const [draftTextValue, setDraftTextValue] = useState('')
   const [editingDateLegId, setEditingDateLegId] = useState<string | null>(null)
   const [draftDateLocal, setDraftDateLocal] = useState('')
+  const [depositModalOpen, setDepositModalOpen] = useState(false)
+  const navigatingAway = useRef(false)
 
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
@@ -93,6 +93,8 @@ export default function BetDetailPage() {
   const removeBetLeg = useProfitTrackerStore((s) => s.removeBetLeg)
   const addBetLegs = useProfitTrackerStore((s) => s.addBetLegs)
   const removeOngoingBet = useProfitTrackerStore((s) => s.removeOngoingBet)
+  const tags = useProfitTrackerStore((s) => s.tags)
+  const fetchTags = useProfitTrackerStore((s) => s.fetchTags)
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
   const legs = useMemo(() => {
@@ -102,14 +104,26 @@ export default function BetDetailPage() {
       if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
       const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
       if (byDate !== 0) return byDate
+      if (a.quota !== b.quota) return a.quota - b.quota
       return String(a.id).localeCompare(String(b.id))
     })
   }, [allLegs, betId])
 
+  const hasLegsInCorso = useMemo(() => legs.some((l) => l.statoEvento === 'in_corso'), [legs])
+
   const isMultipla = useMemo(() => {
     const puntaLeg = legs.find((l) => l.metodo === 'punta')
-    const bancaCount = legs.filter((l) => l.metodo === 'banca').length
-    return bancaCount >= 2 && puntaLeg != null
+    const bancaLegs = legs.filter((l) => l.metodo === 'banca')
+    if (bancaLegs.length < 2 || puntaLeg == null) return false
+    // Bancate parziali (stesso evento/mercato/selezione) non sono una multipla
+    const first = bancaLegs[0]
+    const isPartialLay = bancaLegs.every(
+      (l) =>
+        l.eventoNome === first.eventoNome &&
+        l.mercato === first.mercato &&
+        l.selezione === first.selezione,
+    )
+    return !isPartialLay
   }, [legs])
 
   const resolveAccountLabel = useCallback(
@@ -146,12 +160,21 @@ export default function BetDetailPage() {
     [allAccounts, books, resolveAccountLabel],
   )
 
+  const tagOptions = useMemo(
+    () => [
+      { value: '', label: 'Nessun tag' },
+      ...tags.map((t) => ({ value: t.nome, label: t.nome })),
+    ],
+    [tags],
+  )
+
   useEffect(() => {
     if (!betId) return
     let cancelled = false
     setLoading(true)
     setLoadError(false)
     void fetchAllAccounts()
+    void fetchTags()
     if (books.length === 0) void fetchBooks()
     fetchBetWithLegs(betId)
       .then(() => {
@@ -166,7 +189,7 @@ export default function BetDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [betId, fetchBetWithLegs, fetchAllAccounts, fetchBooks, books.length])
+  }, [betId, fetchBetWithLegs, fetchAllAccounts, fetchBooks, fetchTags, books.length])
 
   useEffect(() => {
     if (bet?.nota !== undefined) setNotaLocal(bet.nota ?? '')
@@ -176,7 +199,7 @@ export default function BetDetailPage() {
     notFound()
   }
 
-  if (loadError || (!loading && !bet)) {
+  if (!navigatingAway.current && (loadError || (!loading && !bet))) {
     notFound()
   }
 
@@ -188,15 +211,21 @@ export default function BetDetailPage() {
     )
   }
 
-  const handleNotaBlur = () => {
+  const handleNotaSave = () => {
     if (bet && notaLocal !== (bet.nota ?? '')) {
-      void updateBet(bet.id, { nota: notaLocal || undefined })
+      void updateBet(bet.id, { nota: notaLocal || null })
     }
+    setNotaEditing(false)
   }
 
   const handleArchive = async () => {
     if (!bet) return
+    if (hasLegsInCorso) {
+      window.alert('Non è possibile archiviare una giocata con scommesse ancora in corso.')
+      return
+    }
     try {
+      navigatingAway.current = true
       await updateBet(bet.id, { archiviata: true })
       router.push('/profit-tracker/giocate-in-corso')
     } catch (err) {
@@ -207,6 +236,7 @@ export default function BetDetailPage() {
   const handleDeleteBet = async () => {
     if (!bet || !window.confirm('Eliminare questa giocata?')) return
     try {
+      navigatingAway.current = true
       await removeOngoingBet(bet.id)
       router.push('/profit-tracker/giocate-in-corso')
     } catch {
@@ -291,7 +321,15 @@ export default function BetDetailPage() {
           if (byDate !== 0) return byDate
           return String(a.id).localeCompare(String(b.id))
         })
-      const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
+      const isMultipla =
+        bancaLegs.length >= 2 &&
+        puntaLeg != null &&
+        !bancaLegs.every(
+          (l) =>
+            l.eventoNome === bancaLegs[0].eventoNome &&
+            l.mercato === bancaLegs[0].mercato &&
+            l.selezione === bancaLegs[0].selezione,
+        )
 
       if (isMultipla) {
         const field = editingCell.field
@@ -418,7 +456,15 @@ export default function BetDetailPage() {
           if (byDate !== 0) return byDate
           return String(a.id).localeCompare(String(b.id))
         })
-      const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
+      const isMultipla =
+        bancaLegs.length >= 2 &&
+        puntaLeg != null &&
+        !bancaLegs.every(
+          (l) =>
+            l.eventoNome === bancaLegs[0].eventoNome &&
+            l.mercato === bancaLegs[0].mercato &&
+            l.selezione === bancaLegs[0].selezione,
+        )
       if (isMultipla && legId === puntaLeg.id) {
         const leg = legs.find((l) => l.id === legId)
         const oldBonus = leg?.bonusValore ?? 0
@@ -462,9 +508,10 @@ export default function BetDetailPage() {
     .reduce((s, l) => s + (l.rischio ?? 0), 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const canEditField = (leg: BetLeg, field: EditableField) => {
+    if (!isLegEditable(leg)) return false
     if (field === 'bonusValore') return leg.tipoBonus === 'bonus'
     if (field === 'rimborsoValore') return leg.tipoBonus === 'rimborso'
-    return isLegEditable(leg)
+    return true
   }
 
   const renderEditableCell = (
@@ -619,8 +666,7 @@ export default function BetDetailPage() {
     )
   }
 
-  const canEditLegEventDate = (leg: BetLeg) =>
-    leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso'
+  const canEditLegEventDate = (leg: BetLeg) => leg.statoEvento === 'bozza'
 
   const toDatetimeLocalValue = (iso: string) => {
     const d = new Date(iso)
@@ -679,62 +725,86 @@ export default function BetDetailPage() {
           </p>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Inserisci una nota"
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 pr-8 text-sm"
-            value={notaLocal}
-            onChange={(e) => setNotaLocal(e.target.value)}
-            onBlur={handleNotaBlur}
-          />
-          <Pencil
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            {notaEditing ? (
+              <>
+                <input
+                  type="text"
+                  placeholder="Inserisci una nota"
+                  className="w-full rounded-md border border-primary bg-background px-2 py-1.5 pr-8 text-sm ring-1 ring-primary/30"
+                  value={notaLocal}
+                  onChange={(e) => setNotaLocal(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNotaSave()}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-primary hover:bg-primary/10"
+                  onClick={handleNotaSave}
+                  title="Salva nota"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border border-border bg-background px-2 py-1.5 text-left text-sm hover:bg-muted/40"
+                onClick={() => setNotaEditing(true)}
+              >
+                <span className={notaLocal ? 'text-foreground' : 'text-muted-foreground'}>
+                  {notaLocal || 'Inserisci una nota'}
+                </span>
+                <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 sm:w-auto">
+            <span className="text-xs text-muted-foreground">Tag</span>
+            <select
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+              value={bet.tag ?? ''}
+              onChange={(e) => {
+                void updateBet(bet.id, { tag: e.target.value || undefined })
+              }}
+            >
+              {tagOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('punta')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Puntata
-          </button>
-          <button
-            type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('banca')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Bancata
-          </button>
-          <Link
-            href="/profit-tracker/conti"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted sm:w-auto"
+            onClick={() => setDepositModalOpen(true)}
           >
             <Plus className="h-4 w-4" />
             Nuovo Deposito
-          </Link>
+          </button>
+          <div className="sm:ml-auto" />
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed opacity-50' : 'text-foreground hover:bg-muted'}`}
             onClick={handleArchive}
+            disabled={hasLegsInCorso}
+            title={
+              hasLegsInCorso
+                ? 'Non è possibile archiviare una giocata con scommesse in corso'
+                : undefined
+            }
           >
             <Archive className="h-4 w-4" />
             Archivia
           </button>
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 sm:w-auto"
             onClick={handleDeleteBet}
           >
             <Trash2 className="h-4 w-4" />
@@ -829,12 +899,10 @@ export default function BetDetailPage() {
                     <span className="text-foreground">{leg.competizione}</span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Mercato</span>
-                    <span className="text-right text-foreground">{leg.mercato}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Selezione</span>
-                    <span className="text-right text-foreground">{leg.selezione || '—'}</span>
+                    <span className="text-right text-foreground">
+                      {[leg.mercato, leg.selezione].filter(Boolean).join(' - ') || '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Tipo bonus</span>
@@ -1002,7 +1070,6 @@ export default function BetDetailPage() {
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
-              <th className="whitespace-nowrap px-3 py-2 text-left">Mercato</th>
               <th className="whitespace-nowrap px-3 py-2 text-left">Selezione</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Tipo bonus</th>
@@ -1096,10 +1163,7 @@ export default function BetDetailPage() {
                     {leg.competizione}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                    {leg.mercato}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                    {leg.selezione || '—'}
+                    {[leg.mercato, leg.selezione].filter(Boolean).join(' - ') || '—'}
                   </td>
                   <td className="px-3 py-2 text-xs capitalize text-muted-foreground">
                     {leg.metodo}
@@ -1269,13 +1333,7 @@ export default function BetDetailPage() {
         </div>
       )}
 
-      <AddBetLegModal
-        open={addLegOpen}
-        onOpenChange={setAddLegOpen}
-        betId={betId}
-        defaultMethod={addLegMethod}
-        onSuccess={() => void fetchBetWithLegs(betId)}
-      />
+      <AccountMovementModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
     </section>
   )
 }

@@ -22,8 +22,7 @@ import type { OddsmatcherRow } from '@/types/oddsmatcher'
 import { Calendar, Loader2, Send, X } from 'lucide-react'
 import Link from 'next/link'
 import { cn, sanitizeDecimal } from '@/lib/utils'
-
-const TIPOLOGIE: TipologiaCalcolo[] = ['NORMALE', 'RIMBORSO (CR%)']
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
 function formatModalDate(date: string, hour: string): string {
   const [y, m, d] = date.split('-')
@@ -98,6 +97,8 @@ export function OddsmatcherCalculatorModal({
   const [quotaBanca, setQuotaBanca] = useState('')
   const [agendaMessage, setAgendaMessage] = useState<string | null>(null)
 
+  const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
+
   const [holderModalOpen, setHolderModalOpen] = useState(false)
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
@@ -106,6 +107,7 @@ export function OddsmatcherCalculatorModal({
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
+  const [holderPortalEl, setHolderPortalEl] = useState<HTMLDivElement | null>(null)
   const wasOpenRef = useRef(false)
 
   useEffect(() => {
@@ -131,6 +133,7 @@ export function OddsmatcherCalculatorModal({
       setQuotaPunta('')
       setQuotaBanca('')
       setAgendaMessage(null)
+      setPartialLays([])
       setAccountIdPunta('')
       setAccountIdBanca('')
       setHolderModalOpen(false)
@@ -290,6 +293,82 @@ export function OddsmatcherCalculatorModal({
     return Number.isFinite(pct) ? pct : null
   }, [puntataEffettiva, layStakeValue, commissioneNum])
 
+  /* ── Bancata parziale (multi-step, max 6) ── */
+  const partialLayResults = useMemo(() => {
+    if (partialLays.length === 0 || quotaPuntaNum == null || quotaBancaNum == null) return []
+
+    const effectiveStake = puntataEffettiva > 0 ? puntataEffettiva : (puntataNum ?? 0)
+    if (effectiveStake <= 0) return []
+
+    const c = commissioneNum / 100
+
+    // Each step: the "already covered" sum grows.
+    // coveredSum = Σ Li * (Qli - c/100)  for all previous lays
+    // First lay (i=0) covers at the original quotaBanca.
+    // L_next = (S*Qp - coveredSum) / (Ql_next - c/100)
+
+    type StepResult = {
+      newLayStake: number
+      newLiability: number
+    }
+
+    const results: (StepResult | null)[] = []
+    // coveredSum starts with the portion covered at the original odds
+    let coveredSum = 0
+
+    for (let i = 0; i < partialLays.length; i++) {
+      const amountNum = parseNum(partialLays[i].amount)
+      const newOddsNum = parseNum(partialLays[i].newOdds)
+
+      if (amountNum == null || amountNum <= 0 || newOddsNum == null || newOddsNum <= 1) {
+        results.push(null)
+        break // can't compute subsequent steps without this one
+      }
+
+      // The amount already laid at the *previous* odds
+      const prevOdds = i === 0 ? quotaBancaNum : parseNum(partialLays[i - 1].newOdds)
+      if (prevOdds == null) {
+        results.push(null)
+        break
+      }
+
+      coveredSum += amountNum * (prevOdds - c)
+
+      const denominator = newOddsNum - c
+      if (denominator <= 0) {
+        results.push(null)
+        break
+      }
+
+      const newLayStake = (effectiveStake * quotaPuntaNum - coveredSum) / denominator
+      if (!Number.isFinite(newLayStake) || newLayStake < 0) {
+        results.push(null)
+        break
+      }
+
+      const newLiability = newLayStake * (newOddsNum - 1)
+      results.push({ newLayStake, newLiability })
+    }
+
+    return results
+  }, [partialLays, quotaPuntaNum, quotaBancaNum, puntataEffettiva, puntataNum, commissioneNum])
+
+  const addPartialLay = () => {
+    if (partialLays.length < 6) {
+      setPartialLays((prev) => [...prev, { amount: '', newOdds: '' }])
+    }
+  }
+
+  const removePartialLay = (index: number) => {
+    setPartialLays((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const updatePartialLay = (index: number, field: 'amount' | 'newOdds', value: string) => {
+    setPartialLays((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    )
+  }
+
   const showSummary =
     tipologia === 'RIMBORSO (CR%)'
       ? puntataNum != null &&
@@ -334,6 +413,17 @@ export function OddsmatcherCalculatorModal({
     ) {
       return
     }
+
+    // Validazione bancate parziali: se presenti, tutti i risultati devono essere validi
+    const hasPartialLays = partialLays.length > 0
+    if (hasPartialLays) {
+      const allValid = partialLays.every((_, i) => partialLayResults[i] != null)
+      if (!allValid) {
+        setHolderModalError('Completa tutti i campi delle bancate parziali prima di salvare.')
+        return
+      }
+    }
+
     setIsSaving(true)
     setHolderModalError(null)
     try {
@@ -347,49 +437,85 @@ export function OddsmatcherCalculatorModal({
         tag: undefined as string | undefined,
         nota: undefined as string | undefined,
       }
-      const legsPayload = [
-        {
-          eventoData: eventoDataIso,
-          sport: 'calcio',
-          eventoNome,
-          competizione,
-          mercato,
-          selezione,
-          metodo: 'punta' as const,
-          tipoBonus,
-          accountId: accountIdPunta,
-          stake: puntataEffettiva,
-          quota: quotaPuntaNum,
-          rischio: 0,
-          bonusValore: undefined,
-          rimborsoValore: tipologia === 'RIMBORSO (CR%)' ? rimborsoNum : undefined,
-          commissionePercentuale: commissioneNum,
-          movimento: 0,
-          statoEvento: 'bozza',
-          tag: undefined as string | undefined,
-        },
-        {
-          eventoData: eventoDataIso,
-          sport: 'calcio',
-          eventoNome,
-          competizione,
-          mercato,
-          selezione,
-          metodo: 'banca' as const,
-          tipoBonus,
-          accountId: accountIdBanca,
-          stake: layStakeValue,
-          quota: quotaBancaNum,
-          quotaRiferimento: quotaPuntaNum,
-          rischio: responsabilita,
-          bonusValore: undefined,
-          rimborsoValore: undefined,
-          commissionePercentuale: commissioneNum,
-          movimento: 0,
-          statoEvento: 'bozza',
-          tag: undefined as string | undefined,
-        },
-      ]
+
+      const bancaLegBase = {
+        eventoData: eventoDataIso,
+        sport: 'calcio',
+        eventoNome,
+        competizione,
+        mercato,
+        selezione,
+        metodo: 'banca' as const,
+        tipoBonus,
+        accountId: accountIdBanca,
+        quotaRiferimento: quotaPuntaNum,
+        bonusValore: undefined,
+        rimborsoValore: undefined,
+        commissionePercentuale: commissioneNum,
+        movimento: 0,
+        statoEvento: 'bozza',
+        tag: undefined as string | undefined,
+      }
+
+      const puntaLeg = {
+        eventoData: eventoDataIso,
+        sport: 'calcio',
+        eventoNome,
+        competizione,
+        mercato,
+        selezione,
+        metodo: 'punta' as const,
+        tipoBonus,
+        accountId: accountIdPunta,
+        stake: puntataEffettiva,
+        quota: quotaPuntaNum,
+        rischio: 0,
+        bonusValore: undefined,
+        rimborsoValore: tipologia === 'RIMBORSO (CR%)' ? rimborsoNum : undefined,
+        commissionePercentuale: commissioneNum,
+        movimento: 0,
+        statoEvento: 'bozza',
+        tag: undefined as string | undefined,
+      }
+
+      let bancaLegs: (typeof bancaLegBase & { stake: number; quota: number; rischio: number })[]
+
+      if (hasPartialLays) {
+        // Primo leg banca: importo già bancato alla quota originale
+        const firstAmount = parseNum(partialLays[0].amount) ?? 0
+        bancaLegs = [
+          {
+            ...bancaLegBase,
+            stake: firstAmount,
+            quota: quotaBancaNum,
+            rischio: firstAmount * (quotaBancaNum - 1),
+          },
+        ]
+
+        // Leg banca successivi: calcolati dai risultati delle bancate parziali
+        for (let i = 0; i < partialLays.length; i++) {
+          const result = partialLayResults[i]!
+          const newOdds = parseNum(partialLays[i].newOdds)!
+          bancaLegs.push({
+            ...bancaLegBase,
+            stake: result.newLayStake,
+            quota: newOdds,
+            rischio: result.newLiability,
+          })
+        }
+      } else {
+        // Caso standard: singola bancata
+        bancaLegs = [
+          {
+            ...bancaLegBase,
+            stake: layStakeValue,
+            quota: quotaBancaNum,
+            rischio: responsabilita,
+          },
+        ]
+      }
+
+      const legsPayload = [puntaLeg, ...bancaLegs]
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       if (process.env.NODE_ENV !== 'production') {
         await new Promise((r) => setTimeout(r, 1000))
@@ -434,84 +560,29 @@ export function OddsmatcherCalculatorModal({
                 {formatModalDate(row.date, row.hour)}
               </span>
             </div>
-            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{row.market}</span>
-              <span className="text-border">·</span>
-              <span className="font-medium text-foreground">{row.selection}</span>
-            </div>
           </div>
 
           <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
-            {/* Tipo calcolo + commissione — single row */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex rounded-lg border border-border bg-muted/20 p-0.5">
-                {TIPOLOGIE.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTipologia(t)}
-                    className={cn(
-                      'rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
-                      tipologia === t
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {t === 'RIMBORSO (CR%)' ? 'Rimborso' : t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Comm.
-                </span>
-                <Input
-                  id="modal-commissione"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="3"
-                  value={commissione}
-                  onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
-                  className="h-8 w-14 text-center"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
-              {tipologia === 'RIMBORSO (CR%)' && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    Rimborso €
-                  </span>
-                  <Input
-                    id="modal-rimborso"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={rimborso}
-                    onChange={(e) => setRimborso(sanitizeDecimal(e.target.value))}
-                    className="h-8 w-20"
-                  />
-                </div>
-              )}
-            </div>
-
             {/* PUNTA e BANCA */}
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 sm:p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-primary">
-                    Punta
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-primary">
+                      Punta
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">
+                      {row.market} · {row.selection}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <Image
                       src={`/loghi_book/${row.id_book_1}.png`}
                       alt=""
-                      width={60}
-                      height={20}
-                      className="h-5 w-auto max-w-[60px] object-contain"
+                      width={80}
+                      height={28}
+                      className="h-7 w-auto max-w-[80px] object-contain"
                     />
-                    <span className="hidden text-xs text-muted-foreground sm:inline">
-                      {bookName}
-                    </span>
                   </div>
                 </div>
                 <Input
@@ -525,20 +596,22 @@ export function OddsmatcherCalculatorModal({
               </div>
               <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 sm:p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-destructive">
-                    Banca
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-destructive">
+                      Banca
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">
+                      {row.market} · {row.selection}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <Image
                       src={`/loghi_book/${row.id_book_2}.png`}
                       alt=""
-                      width={60}
-                      height={20}
-                      className="h-5 w-auto max-w-[60px] object-contain"
+                      width={80}
+                      height={28}
+                      className="h-7 w-auto max-w-[80px] object-contain"
                     />
-                    <span className="hidden text-xs text-muted-foreground sm:inline">
-                      {exchangeName}
-                    </span>
                   </div>
                 </div>
                 <Input
@@ -557,7 +630,7 @@ export function OddsmatcherCalculatorModal({
               <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Importi e risultati
               </p>
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="modal-puntata" className="text-xs sm:text-sm">
                     Puntata €
@@ -572,24 +645,34 @@ export function OddsmatcherCalculatorModal({
                     className="h-8 sm:h-9"
                   />
                 </div>
-                {tipologia === 'NORMALE' ? (
-                  <div className="space-y-1">
-                    <Label htmlFor="modal-bonus" className="text-xs sm:text-sm">
-                      Bonus € (opz.)
-                    </Label>
-                    <Input
-                      id="modal-bonus"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={bonus}
-                      onChange={(e) => setBonus(sanitizeDecimal(e.target.value))}
-                      className="h-8 sm:h-9"
-                    />
-                  </div>
-                ) : (
-                  <div />
-                )}
+                <div className="space-y-1">
+                  <Label htmlFor="modal-bonus" className="text-xs sm:text-sm">
+                    Bonus € (opz.)
+                  </Label>
+                  <Input
+                    id="modal-bonus"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={bonus}
+                    onChange={(e) => setBonus(sanitizeDecimal(e.target.value))}
+                    className="h-8 sm:h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="modal-commissione" className="text-xs sm:text-sm">
+                    Comm. %
+                  </Label>
+                  <Input
+                    id="modal-commissione"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="3"
+                    value={commissione}
+                    onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
+                    className="h-8 sm:h-9"
+                  />
+                </div>
               </div>
               {/* Risultati inline */}
               <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-background/60 p-2.5">
@@ -628,6 +711,98 @@ export function OddsmatcherCalculatorModal({
                 </div>
               </div>
             </div>
+
+            {/* Bancata parziale */}
+            {layStakeValue != null && (
+              <div className="space-y-3">
+                {partialLays.map((pl, i) => {
+                  const result = partialLayResults[i] ?? null
+                  return (
+                    <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Bancata parziale {partialLays.length > 1 ? `#${i + 1}` : ''}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => removePartialLay(i)}
+                          className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor={`modal-partial-amount-${i}`}
+                            className="text-xs sm:text-sm"
+                          >
+                            Già bancato €
+                          </Label>
+                          <Input
+                            id={`modal-partial-amount-${i}`}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={pl.amount}
+                            onChange={(e) =>
+                              updatePartialLay(i, 'amount', sanitizeDecimal(e.target.value))
+                            }
+                            className="h-8 sm:h-9"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`modal-partial-odds-${i}`} className="text-xs sm:text-sm">
+                            Nuova quota banca
+                          </Label>
+                          <Input
+                            id={`modal-partial-odds-${i}`}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={pl.newOdds}
+                            onChange={(e) =>
+                              updatePartialLay(i, 'newOdds', sanitizeDecimal(e.target.value))
+                            }
+                            className="h-8 sm:h-9"
+                          />
+                        </div>
+                      </div>
+                      {result != null && (
+                        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              Nuova bancata
+                            </p>
+                            <p className="font-mono text-sm font-semibold text-destructive">
+                              €{formatNum(result.newLayStake)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              Nuova resp.
+                            </p>
+                            <p className="font-mono text-sm font-semibold">
+                              €{formatNum(result.newLiability)}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {partialLays.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={addPartialLay}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    <span className="text-base leading-none">+</span>
+                    Bancata parziale
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Profitti — mobile: stacked cards, desktop: table */}
             {showSummary && guadagnoMinimo != null && (
@@ -828,7 +1003,13 @@ export function OddsmatcherCalculatorModal({
           if (!open) setSavedBetId(null)
         }}
       >
-        <DialogContent className="max-w-md gap-0 overflow-hidden p-0" showClose={true}>
+        <DialogContent className="max-w-md gap-0 p-0" showClose={true}>
+          {/* Portal container per dropdown SearchableSelect dentro la modale */}
+          <div
+            ref={setHolderPortalEl}
+            className="pointer-events-none fixed inset-0 z-[9998]"
+            aria-hidden
+          />
           {savedBetId ? (
             <>
               <div className="px-6 pb-4 pt-6">
@@ -885,41 +1066,18 @@ export function OddsmatcherCalculatorModal({
                       {bookNamePunta || '—'}
                     </span>
                   </div>
-                  <div className="relative">
-                    <select
-                      value={accountIdPunta}
-                      onChange={(e) => setAccountIdPunta(e.target.value)}
-                      className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                    >
-                      <option value="">Seleziona intestatario</option>
-                      {accountsPunta.map((acc) => {
-                        const holder = holders.find((h) => h.id === acc.holderId)
-                        return (
-                          <option key={acc.id} value={acc.id}>
-                            {holder?.nome ?? acc.nome}
-                          </option>
-                        )
-                      })}
-                    </select>
-                    <span
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </span>
-                  </div>
+                  <SearchableSelect
+                    options={accountsPunta.map((acc) => {
+                      const holder = holders.find((h) => h.id === acc.holderId)
+                      return { value: acc.id, label: holder?.nome ?? acc.nome }
+                    })}
+                    value={accountIdPunta}
+                    onChange={setAccountIdPunta}
+                    placeholder="Seleziona intestatario"
+                    searchPlaceholder="Cerca intestatario..."
+                    allowEmpty={false}
+                    portalContainer={holderPortalEl}
+                  />
                   {accountsPunta.length === 0 && bookNamePunta && (
                     <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                       Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
@@ -937,41 +1095,18 @@ export function OddsmatcherCalculatorModal({
                       {bookNameBanca || '—'}
                     </span>
                   </div>
-                  <div className="relative">
-                    <select
-                      value={accountIdBanca}
-                      onChange={(e) => setAccountIdBanca(e.target.value)}
-                      className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                    >
-                      <option value="">Seleziona intestatario</option>
-                      {accountsBanca.map((acc) => {
-                        const holder = holders.find((h) => h.id === acc.holderId)
-                        return (
-                          <option key={acc.id} value={acc.id}>
-                            {holder?.nome ?? acc.nome}
-                          </option>
-                        )
-                      })}
-                    </select>
-                    <span
-                      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </span>
-                  </div>
+                  <SearchableSelect
+                    options={accountsBanca.map((acc) => {
+                      const holder = holders.find((h) => h.id === acc.holderId)
+                      return { value: acc.id, label: holder?.nome ?? acc.nome }
+                    })}
+                    value={accountIdBanca}
+                    onChange={setAccountIdBanca}
+                    placeholder="Seleziona intestatario"
+                    searchPlaceholder="Cerca intestatario..."
+                    allowEmpty={false}
+                    portalContainer={holderPortalEl}
+                  />
                   {accountsBanca.length === 0 && bookNameBanca && (
                     <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                       Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
@@ -8,6 +9,14 @@ export function HeroSection() {
     <section className="relative py-20 sm:py-28">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(82,254,202,0.08)_0%,_transparent_70%)]" />
       <Container className="relative flex flex-col items-center text-center">
+        <Image
+          src="/loghi/mbs-icon.svg"
+          alt="MBS"
+          width={64}
+          height={64}
+          className="mb-6 h-16 w-16"
+          priority
+        />
         <h1 className="text-5xl font-bold tracking-[-0.04em] text-foreground sm:text-6xl md:text-7xl">
           <span className="text-gradient-primary">Matched betting</span> e strumenti per le{' '}
           <span className="text-gradient-primary">quote</span>

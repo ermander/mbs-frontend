@@ -1,9 +1,26 @@
 import './globals.css'
 
+import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Providers } from '@/components/providers'
+
+export const metadata: Metadata = {
+  title: {
+    default: 'MBS — Matched Betting System',
+    template: '%s | MBS',
+  },
+  description:
+    'Confronta le quote, usa i calcolatori e massimizza i guadagni con il matched betting in modo legale e controllato.',
+  icons: {
+    icon: [
+      { url: '/loghi/mbs-favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
+    ],
+    apple: '/loghi/mbs-app-icon-dark.svg',
+  },
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get('x-nonce') ?? ''

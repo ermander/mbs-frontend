@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Container } from '@/components/ui/container'
@@ -12,6 +13,13 @@ export default function RegistrazionePage() {
       <main className="py-12 sm:py-16">
         <Container className="max-w-md">
           <div className="space-y-6 text-center">
+            <Image
+              src="/loghi/mbs-icon.svg"
+              alt="MBS"
+              width={48}
+              height={48}
+              className="mx-auto h-12 w-12"
+            />
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Crea un account</h1>
             <p className="text-muted-foreground">
               Inizia gratis. Inserisci i tuoi dati per registrarti.

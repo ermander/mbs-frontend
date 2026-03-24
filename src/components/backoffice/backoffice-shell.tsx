@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ReactNode } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
@@ -30,7 +31,8 @@ export function BackofficeShell({ children }: BackofficeShellProps) {
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="flex w-64 flex-col border-r border-border bg-surface-1">
-        <div className="flex h-16 items-center border-b border-border px-6">
+        <div className="flex h-16 items-center gap-2.5 border-b border-border px-6">
+          <Image src="/loghi/mbs-icon.svg" alt="" width={28} height={28} className="h-7 w-7" />
           <span className="text-lg font-semibold tracking-tight">MBS Admin</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">

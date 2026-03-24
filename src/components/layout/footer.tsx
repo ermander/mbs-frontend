@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuthStore } from '@/stores/auth-store'
 
 const footerColumns = [
@@ -41,8 +42,9 @@ export function Footer() {
           <div className="sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="rounded text-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-2 rounded text-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              <Image src="/loghi/mbs-icon.svg" alt="" width={24} height={24} className="h-6 w-6" />
               MBS
             </Link>
             <p className="mt-2 text-sm text-muted-foreground">

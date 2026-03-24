@@ -3,6 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { ChevronDown, Menu, X, User } from 'lucide-react'
 
 import {
@@ -119,6 +120,14 @@ export function Header() {
               href="/"
               className="flex items-center gap-1.5 rounded-full px-1 text-base font-bold tracking-tight text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              <Image
+                src="/loghi/mbs-icon.svg"
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7"
+                priority
+              />
               <span className="text-gradient-primary">MBS</span>
             </Link>
 

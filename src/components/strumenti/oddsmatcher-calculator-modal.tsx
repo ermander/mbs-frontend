@@ -95,6 +95,7 @@ export function OddsmatcherCalculatorModal({
   const [puntata, setPuntata] = useState('')
   const [quotaPunta, setQuotaPunta] = useState('')
   const [quotaBanca, setQuotaBanca] = useState('')
+  const [imbalance, setImbalance] = useState(0)
   const [agendaMessage, setAgendaMessage] = useState<string | null>(null)
 
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
@@ -127,6 +128,7 @@ export function OddsmatcherCalculatorModal({
     if (wasOpenRef.current && !open) {
       setTipologia('NORMALE')
       setCommissione('3')
+      setImbalance(0)
       setRimborso('')
       setBonus('')
       setPuntata('')
@@ -203,12 +205,33 @@ export function OddsmatcherCalculatorModal({
     if (tipologia === 'NORMALE' && bonusNum > 0) {
       const backStakeTotale = (puntataNum ?? 0) + bonusNum
       if (backStakeTotale <= 0) return null
-      return layStakeWithImbalance(backStakeTotale, quotaPuntaNum, quotaBancaNum, commissioneNum, 0)
+      return layStakeWithImbalance(
+        backStakeTotale,
+        quotaPuntaNum,
+        quotaBancaNum,
+        commissioneNum,
+        imbalance,
+      )
     }
     // NORMALE senza bonus: bancata sulla sola puntata
     if (puntataNum == null || puntataNum <= 0) return null
-    return layStakeWithImbalance(puntataNum, quotaPuntaNum, quotaBancaNum, commissioneNum, 0)
-  }, [tipologia, puntataNum, bonusNum, rimborsoNum, quotaPuntaNum, quotaBancaNum, commissioneNum])
+    return layStakeWithImbalance(
+      puntataNum,
+      quotaPuntaNum,
+      quotaBancaNum,
+      commissioneNum,
+      imbalance,
+    )
+  }, [
+    tipologia,
+    puntataNum,
+    bonusNum,
+    rimborsoNum,
+    quotaPuntaNum,
+    quotaBancaNum,
+    commissioneNum,
+    imbalance,
+  ])
 
   /** Bancata arrotondata a 2 decimali: usata per responsabilità e totali tabella PROFITTI (come nel calcolatore di riferimento). */
   const layStakeRounded = useMemo(() => {
@@ -295,17 +318,19 @@ export function OddsmatcherCalculatorModal({
 
   /* ── Bancata parziale (multi-step, max 6) ── */
   const partialLayResults = useMemo(() => {
-    if (partialLays.length === 0 || quotaPuntaNum == null || quotaBancaNum == null) return []
-
-    const effectiveStake = puntataEffettiva > 0 ? puntataEffettiva : (puntataNum ?? 0)
-    if (effectiveStake <= 0) return []
+    if (
+      partialLays.length === 0 ||
+      quotaPuntaNum == null ||
+      quotaBancaNum == null ||
+      layStakeValue == null
+    )
+      return []
 
     const c = commissioneNum / 100
 
-    // Each step: the "already covered" sum grows.
-    // coveredSum = Σ Li * (Qli - c/100)  for all previous lays
-    // First lay (i=0) covers at the original quotaBanca.
-    // L_next = (S*Qp - coveredSum) / (Ql_next - c/100)
+    // Il target totale di copertura è derivato dalla bancata già sbilanciata:
+    // layStakeValue include già l'imbalance, quindi target = layStakeValue * (Ql - c)
+    const coverageTarget = layStakeValue * (quotaBancaNum - c)
 
     type StepResult = {
       newLayStake: number
@@ -313,7 +338,6 @@ export function OddsmatcherCalculatorModal({
     }
 
     const results: (StepResult | null)[] = []
-    // coveredSum starts with the portion covered at the original odds
     let coveredSum = 0
 
     for (let i = 0; i < partialLays.length; i++) {
@@ -322,10 +346,9 @@ export function OddsmatcherCalculatorModal({
 
       if (amountNum == null || amountNum <= 0 || newOddsNum == null || newOddsNum <= 1) {
         results.push(null)
-        break // can't compute subsequent steps without this one
+        break
       }
 
-      // The amount already laid at the *previous* odds
       const prevOdds = i === 0 ? quotaBancaNum : parseNum(partialLays[i - 1].newOdds)
       if (prevOdds == null) {
         results.push(null)
@@ -340,7 +363,7 @@ export function OddsmatcherCalculatorModal({
         break
       }
 
-      const newLayStake = (effectiveStake * quotaPuntaNum - coveredSum) / denominator
+      const newLayStake = (coverageTarget - coveredSum) / denominator
       if (!Number.isFinite(newLayStake) || newLayStake < 0) {
         results.push(null)
         break
@@ -351,7 +374,7 @@ export function OddsmatcherCalculatorModal({
     }
 
     return results
-  }, [partialLays, quotaPuntaNum, quotaBancaNum, puntataEffettiva, puntataNum, commissioneNum])
+  }, [partialLays, quotaPuntaNum, quotaBancaNum, layStakeValue, commissioneNum])
 
   const addPartialLay = () => {
     if (partialLays.length < 6) {
@@ -672,6 +695,32 @@ export function OddsmatcherCalculatorModal({
                     onChange={(e) => setCommissione(sanitizeDecimal(e.target.value))}
                     className="h-8 sm:h-9"
                   />
+                </div>
+              </div>
+              {/* Sbilanciamento bancata */}
+              <div className="mt-3">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Sbilanciamento bancata
+                  </p>
+                  <span className="font-mono text-xs font-medium text-foreground">
+                    {imbalance > 0 ? '+' : ''}
+                    {imbalance.toFixed(1)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-20}
+                  max={20}
+                  step={0.5}
+                  value={imbalance}
+                  onChange={(e) => setImbalance(Number.parseFloat(e.target.value))}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                />
+                <div className="mt-0.5 flex justify-between text-[9px] text-muted-foreground">
+                  <span>-20%</span>
+                  <span>0%</span>
+                  <span>+20%</span>
                 </div>
               </div>
               {/* Risultati inline */}

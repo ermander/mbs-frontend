@@ -32,6 +32,7 @@ import {
 import Image from 'next/image'
 import { OddsmatcherCalculatorModal } from '@/components/strumenti/oddsmatcher-calculator-modal'
 import { OddsmatcherMultiplaSaveModal } from '@/components/strumenti/oddsmatcher-multipla-save-modal'
+import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 25
@@ -108,6 +109,7 @@ export function OddsmatcherTable() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sharedStake, setSharedStake] = useState('')
   const [sharedBonus, setSharedBonus] = useState('')
+  const [sharedRimborso, setSharedRimborso] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [multiplaOpen, setMultiplaOpen] = useState(false)
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
@@ -218,6 +220,25 @@ export function OddsmatcherTable() {
           return Number.isNaN(back) ? acc : acc * back
         }, 1)
       : null
+  const guadagnoMultipla = useMemo(() => {
+    if (quotaMultipla == null || multiplaSelectedEvents.length === 0) return null
+    const stake = Number.parseFloat(sharedStake) || 0
+    const bonus = Number.parseFloat(sharedBonus) || 0
+    const rimborso = Number.parseFloat(sharedRimborso) || 0
+    const backStakeTotale = stake + bonus
+    if (backStakeTotale <= 0) return null
+    const results = multiplaLayStakes(
+      backStakeTotale,
+      quotaMultipla,
+      multiplaSelectedEvents.map((row) => ({
+        layOdds: parseFloat(row.lay_odd),
+        commissionPercent: EXCHANGE_COMMISSION * 100,
+      })),
+      rimborso,
+    )
+    const totalLiability = results.reduce((sum, r) => sum + r.liability, 0)
+    return backStakeTotale * quotaMultipla - stake - totalLiability
+  }, [quotaMultipla, multiplaSelectedEvents, sharedStake, sharedBonus, sharedRimborso])
 
   const toggleBook = (id: string) => {
     setSelectedBookIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -310,6 +331,21 @@ export function OddsmatcherTable() {
             onChange={(e) => setSharedBonus(e.target.value)}
             className="h-8 w-20 text-sm"
             aria-label="Bonus"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">Rimborso</span>
+          <Input
+            id="oddsmatcher-shared-rimborso"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            placeholder="€"
+            value={sharedRimborso}
+            onChange={(e) => setSharedRimborso(e.target.value)}
+            className="h-8 w-20 text-sm"
+            aria-label="Rimborso"
           />
         </div>
 
@@ -897,6 +933,17 @@ export function OddsmatcherTable() {
                       · {quotaMultipla.toFixed(2)}
                     </span>
                   )}
+                  {guadagnoMultipla != null && (
+                    <span
+                      className={cn(
+                        'ml-1.5',
+                        guadagnoMultipla >= 0 ? 'text-emerald-400' : 'text-red-400',
+                      )}
+                    >
+                      · {guadagnoMultipla >= 0 ? '+' : ''}
+                      {guadagnoMultipla.toFixed(2)} €
+                    </span>
+                  )}
                 </p>
               </div>
               {multiplaSelectedEvents.length === 0 ? (
@@ -989,6 +1036,7 @@ export function OddsmatcherTable() {
           row={calculatorRow}
           defaultPuntata={sharedStake}
           defaultBonus={sharedBonus}
+          defaultRimborso={sharedRimborso}
         />
       </div>
     )
@@ -1013,6 +1061,7 @@ export function OddsmatcherTable() {
           row={calculatorRow}
           defaultPuntata={sharedStake}
           defaultBonus={sharedBonus}
+          defaultRimborso={sharedRimborso}
         />
       </div>
     )
@@ -1031,6 +1080,7 @@ export function OddsmatcherTable() {
           row={calculatorRow}
           defaultPuntata={sharedStake}
           defaultBonus={sharedBonus}
+          defaultRimborso={sharedRimborso}
         />
       </div>
     )
@@ -1106,6 +1156,7 @@ export function OddsmatcherTable() {
           row={calculatorRow}
           defaultPuntata={sharedStake}
           defaultBonus={sharedBonus}
+          defaultRimborso={sharedRimborso}
         />
       </div>
     )
@@ -1131,6 +1182,7 @@ export function OddsmatcherTable() {
           row={calculatorRow}
           defaultPuntata={sharedStake}
           defaultBonus={sharedBonus}
+          defaultRimborso={sharedRimborso}
         />
       </div>
     )
@@ -1472,6 +1524,7 @@ export function OddsmatcherTable() {
         row={calculatorRow}
         defaultPuntata={sharedStake}
         defaultBonus={sharedBonus}
+        defaultRimborso={sharedRimborso}
       />
       <OddsmatcherMultiplaSaveModal
         open={multiplaSaveModalOpen}
@@ -1481,6 +1534,7 @@ export function OddsmatcherTable() {
         exchangeOddsId={multiplaSelectedEvents[0]?.id_book_2 ?? ''}
         sharedStake={sharedStake}
         sharedBonus={sharedBonus}
+        sharedRimborso={sharedRimborso}
       />
     </div>
   )

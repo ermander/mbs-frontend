@@ -72,6 +72,8 @@ export interface OddsmatcherCalculatorModalProps {
   defaultPuntata?: string
   /** Valore precompilato per il campo Bonus (condiviso con la barra filtri Oddsmatcher). */
   defaultBonus?: string
+  /** Valore precompilato per il campo Rimborso (condiviso con la barra filtri Oddsmatcher). */
+  defaultRimborso?: string
 }
 
 export function OddsmatcherCalculatorModal({
@@ -80,6 +82,7 @@ export function OddsmatcherCalculatorModal({
   row,
   defaultPuntata = '',
   defaultBonus = '',
+  defaultRimborso = '',
 }: OddsmatcherCalculatorModalProps) {
   const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.allHolders)
@@ -118,9 +121,10 @@ export function OddsmatcherCalculatorModal({
         setQuotaBanca(lay)
         setPuntata(defaultPuntata)
         setBonus(defaultBonus)
+        setRimborso(defaultRimborso)
       })
     }
-  }, [open, row, defaultPuntata, defaultBonus])
+  }, [open, row, defaultPuntata, defaultBonus, defaultRimborso])
 
   useEffect(() => {
     if (wasOpenRef.current && !open) {
@@ -496,7 +500,7 @@ export function OddsmatcherCalculatorModal({
         rischio: 0,
         bonusValore: undefined,
         rimborsoValore: isRimborso ? rimborsoNum : undefined,
-        commissionePercentuale: commissioneNum,
+        commissionePercentuale: 0,
         movimento: 0,
         statoEvento: 'bozza',
         tag: undefined as string | undefined,

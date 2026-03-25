@@ -13,7 +13,7 @@ import {
   type CreateBetPayload,
   type CreateBetLegPayload,
 } from '@/services/api/profit-tracker-client'
-import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
+import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { Loader2, X } from 'lucide-react'
 
@@ -81,6 +81,8 @@ export interface OddsmatcherMultiplaSaveModalProps {
   sharedStake?: string
   /** Bonus condiviso dalla barra filtri (stesso valore usato per il calcolatore singolo). */
   sharedBonus?: string
+  /** Rimborso condiviso dalla barra filtri. */
+  sharedRimborso?: string
 }
 
 export function OddsmatcherMultiplaSaveModal({
@@ -91,6 +93,7 @@ export function OddsmatcherMultiplaSaveModal({
   exchangeOddsId,
   sharedStake = '',
   sharedBonus = '',
+  sharedRimborso = '',
 }: OddsmatcherMultiplaSaveModalProps) {
   const router = useRouter()
   const books = useProfitTrackerStore((s) => s.allBooks)
@@ -196,11 +199,12 @@ export function OddsmatcherMultiplaSaveModal({
         nota: undefined,
       }
 
-      const quotaPuntaTotale =
-        Math.round(sorted.reduce((acc, row) => acc * parseFloat(row.back_odd), 1) * 100) / 100
+      const quotaPuntaPrecisa = sorted.reduce((acc, row) => acc * parseFloat(row.back_odd), 1)
+      const quotaPuntaTotale = Math.round(quotaPuntaPrecisa * 100) / 100
 
       const stakePunta = Number.parseFloat(sharedStake) || 0
       const bonusValore = Number.parseFloat(sharedBonus) || 0
+      const rimborsoValore = Number.parseFloat(sharedRimborso) || 0
       const backStakeTotale = stakePunta + bonusValore
       const legPunta: CreateBetLegPayload = {
         eventoData: eventoDataFirst,
@@ -210,13 +214,14 @@ export function OddsmatcherMultiplaSaveModal({
         mercato: 'Multipla',
         selezione: undefined,
         metodo: 'punta',
-        tipoBonus: bonusValore > 0 ? 'bonus' : 'none',
+        tipoBonus: bonusValore > 0 ? 'bonus' : rimborsoValore > 0 ? 'rimborso' : 'none',
         accountId: accountIdPunta,
         stake: stakePunta,
         quota: quotaPuntaTotale,
         rischio: stakePunta,
         bonusValore: bonusValore > 0 ? bonusValore : undefined,
-        commissionePercentuale: 3,
+        rimborsoValore: rimborsoValore > 0 ? rimborsoValore : undefined,
+        commissionePercentuale: 0,
         movimento: 0,
         statoEvento: 'bozza',
         tag: undefined,
@@ -224,11 +229,12 @@ export function OddsmatcherMultiplaSaveModal({
 
       const multiplaResults = multiplaLayStakes(
         backStakeTotale,
-        quotaPuntaTotale,
+        quotaPuntaPrecisa,
         sorted.map((row) => ({
           layOdds: parseFloat(row.lay_odd),
           commissionPercent: 3,
         })),
+        rimborsoValore,
       )
       const legsBanca: CreateBetLegPayload[] = sorted.map((row, i) => {
         const layOdds_i = parseFloat(row.lay_odd)

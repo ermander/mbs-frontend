@@ -88,7 +88,7 @@ export default function GiocateInCorsoPage() {
         eventoNome: original.eventoNome,
         modalitaSaldo: original.modalitaSaldo,
         accountId: original.accountId,
-        tag: original.tag ? `${original.tag} (clonata)` : 'Clonata',
+        tag: null,
         nota: original.nota ?? null,
       }
       const legsPayload = legs.map((leg) => ({

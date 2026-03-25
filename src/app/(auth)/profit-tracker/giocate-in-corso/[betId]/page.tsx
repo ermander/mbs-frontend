@@ -9,7 +9,7 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay, sanitizeDecimal } from '@/lib/utils'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { BetLeg, BetStatus } from '@/types/profit-tracker'
+import type { BetLeg, BetStatus, ModalitaSaldo } from '@/types/profit-tracker'
 
 const FINAL_STATES = new Set<BetStatus>(['vinto', 'perso', 'annullato'])
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
@@ -271,7 +271,7 @@ export default function BetDetailPage() {
       commissionePercentuale: leg.commissionePercentuale ?? 0,
       movimento: leg.movimento,
       statoEvento: 'bozza',
-      tag: leg.tag ? `${leg.tag} (clonata)` : 'Clonata',
+      tag: null,
     }
     try {
       await addBetLegs(betId, [payload])
@@ -517,6 +517,18 @@ export default function BetDetailPage() {
         }
       }
 
+      // Sync modalitaSaldo on the bet when the punta leg's tipoBonus changes
+      const puntaLegForSync = legs.find((l) => l.metodo === 'punta')
+      if (puntaLegForSync && legId === puntaLegForSync.id) {
+        const modalita =
+          tipoBonus === 'bonus' || tipoBonus === 'freebet'
+            ? 'bonus'
+            : tipoBonus === 'rimborso'
+              ? 'rimborso'
+              : 'reale'
+        await updateBet(betId, { modalitaSaldo: modalita as ModalitaSaldo })
+      }
+
       await fetchBetWithLegs(betId)
     } catch (err) {
       window.alert(getErrorMessage(err) ?? "Errore nell'aggiornamento del tipo bonus.")
@@ -526,6 +538,11 @@ export default function BetDetailPage() {
   const handleAccountChange = async (legId: string, accountId: string) => {
     try {
       await updateBetLeg(betId, legId, { accountId })
+      // Sync accountId on the bet when the punta leg's account changes
+      const puntaLeg = legs.find((l) => l.metodo === 'punta')
+      if (puntaLeg && legId === puntaLeg.id) {
+        await updateBet(betId, { accountId })
+      }
       await fetchBetWithLegs(betId)
       await fetchAllAccounts()
     } catch (err) {
@@ -797,7 +814,7 @@ export default function BetDetailPage() {
               className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
               value={bet.tag ?? ''}
               onChange={(e) => {
-                void updateBet(bet.id, { tag: e.target.value || undefined })
+                void updateBet(bet.id, { tag: e.target.value || null })
               }}
             >
               {tagOptions.map((opt) => (
@@ -835,8 +852,14 @@ export default function BetDetailPage() {
           </button>
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 sm:w-auto"
+            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed text-destructive/50 opacity-50' : 'text-destructive hover:bg-destructive/10'}`}
             onClick={handleDeleteBet}
+            disabled={hasLegsInCorso}
+            title={
+              hasLegsInCorso
+                ? 'Non è possibile eliminare una giocata con scommesse in corso'
+                : undefined
+            }
           >
             <Trash2 className="h-4 w-4" />
             Elimina

@@ -41,6 +41,7 @@ export default function WalletsPage() {
   const [holderIds, setHolderIds] = useState<string[]>([])
   const [walletNameFilter, setWalletNameFilter] = useState('')
   const [descrizioneFilter, setDescrizioneFilter] = useState('')
+  const [filterStato, setFilterStato] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
 
@@ -50,6 +51,7 @@ export default function WalletsPage() {
   const { visible, total, maxPage } = useMemo(() => {
     const filteredList = wallets.filter((wallet) => {
       if (holderIds.length > 0 && !holderIds.includes(wallet.holderId)) return false
+      if (filterStato && wallet.stato !== filterStato) return false
       return (
         matchFilter(wallet.nome, walletNameFilter) &&
         matchFilter(wallet.descrizione, descrizioneFilter)
@@ -68,7 +70,7 @@ export default function WalletsPage() {
       total: totalCount,
       maxPage: maxPageNum,
     }
-  }, [wallets, holderIds, walletNameFilter, descrizioneFilter, sortOrder, page])
+  }, [wallets, holderIds, walletNameFilter, descrizioneFilter, filterStato, sortOrder, page])
 
   const onWalletNameFilterChange = (value: string) => {
     setWalletNameFilter(value)
@@ -175,6 +177,24 @@ export default function WalletsPage() {
             onChange={(e) => onDescrizioneFilterChange(e.target.value)}
             className="h-8 text-sm"
           />
+        </div>
+        <div className="space-y-1.5 sm:min-w-[160px]">
+          <Label htmlFor="filter-stato-wallet" className="text-xs">
+            Stato
+          </Label>
+          <select
+            id="filter-stato-wallet"
+            value={filterStato}
+            onChange={(e) => {
+              setFilterStato(e.target.value)
+              setPage(1)
+            }}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">Tutti</option>
+            <option value="abilitato">Abilitato</option>
+            <option value="disabilitato">Non abilitato</option>
+          </select>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useCallback, useMemo, useState } from 'react'
 
 import { Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -35,6 +36,7 @@ export default function ContiPage() {
   const [page, setPage] = useState(1)
   const [holderIds, setHolderIds] = useState<string[]>([])
   const [bookIds, setBookIds] = useState<string[]>([])
+  const [filterStato, setFilterStato] = useState('')
   const [sortSaldo, setSortSaldo] = useState<'asc' | 'desc'>('desc')
 
   const loadAccounts = useCallback(() => {
@@ -43,9 +45,10 @@ export default function ContiPage() {
       limit: PAGE_SIZE,
       holderIds: holderIds.length > 0 ? holderIds.join(',') : undefined,
       bookIds: bookIds.length > 0 ? bookIds.join(',') : undefined,
+      status: filterStato || undefined,
       sortSaldo,
     })
-  }, [fetchAccounts, page, holderIds, bookIds, sortSaldo])
+  }, [fetchAccounts, page, holderIds, bookIds, filterStato, sortSaldo])
 
   useEffect(() => {
     void fetchHolders()
@@ -134,6 +137,24 @@ export default function ContiPage() {
           showBadges
           className="w-full sm:min-w-[200px]"
         />
+        <div className="space-y-1.5 sm:min-w-[160px]">
+          <Label htmlFor="filter-stato-conto" className="text-xs">
+            Stato
+          </Label>
+          <select
+            id="filter-stato-conto"
+            value={filterStato}
+            onChange={(e) => {
+              setFilterStato(e.target.value)
+              setPage(1)
+            }}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">Tutti</option>
+            <option value="abilitato">Abilitato</option>
+            <option value="disabilitato">Non abilitato</option>
+          </select>
+        </div>
       </div>
 
       {accountsError && (

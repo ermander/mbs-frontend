@@ -814,7 +814,7 @@ export default function BetDetailPage() {
               className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
               value={bet.tag ?? ''}
               onChange={(e) => {
-                void updateBet(bet.id, { tag: e.target.value || null })
+                void updateBet(bet.id, { tag: e.target.value || undefined })
               }}
             >
               {tagOptions.map((opt) => (

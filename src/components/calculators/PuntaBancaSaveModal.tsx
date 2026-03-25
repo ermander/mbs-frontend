@@ -269,6 +269,7 @@ export function PuntaBancaSaveModal({
         statoEvento: 'bozza',
         quotaRiferimento: undefined,
         tag: undefined as string | undefined,
+        posizione: 0,
       }
 
       const bancaLegBase = {
@@ -291,7 +292,12 @@ export function PuntaBancaSaveModal({
 
       const hasPartialLays = partialLays.length > 0 && partialLayResults.every((r) => r != null)
 
-      let bancaLegs: (typeof bancaLegBase & { stake: number; quota: number; rischio: number })[]
+      let bancaLegs: (typeof bancaLegBase & {
+        stake: number
+        quota: number
+        rischio: number
+        posizione: number
+      })[]
 
       if (hasPartialLays) {
         bancaLegs = []
@@ -305,6 +311,7 @@ export function PuntaBancaSaveModal({
             stake: amount,
             quota: odds,
             rischio: amount * (odds - 1),
+            posizione: i + 1,
           })
         }
 
@@ -316,6 +323,7 @@ export function PuntaBancaSaveModal({
           stake: lastResult.newLayStake,
           quota: lastOdds,
           rischio: lastResult.newLiability,
+          posizione: partialLays.length + 1,
         })
       } else {
         // Caso standard: singola bancata
@@ -325,6 +333,7 @@ export function PuntaBancaSaveModal({
             stake: layStake,
             quota: quotaBancaNum,
             rischio: responsabilita,
+            posizione: 1,
           },
         ]
       }

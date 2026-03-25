@@ -2,8 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Loader2, Send, X } from 'lucide-react'
-import { equalProfit, ratingPercent, stakeBFromStakeA } from '@/lib/calculators/punta-punta'
+import { Loader2, Send, X } from 'lucide-react'
+import {
+  ratingPercent,
+  stakeBFromStakeA,
+  stakeBFromStakeARimborso,
+} from '@/lib/calculators/punta-punta'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts, type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
 import { SearchableSelect } from '@/components/ui/searchable-select'
@@ -11,16 +15,9 @@ import type { Account, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
-
-const TIPOLOGIE = ['NORMALE'] as const
 
 const MERCATI_PUNTA_PUNTA = [
   '1X2 - 1',
@@ -84,11 +81,13 @@ export function PuntaPuntaCalculator() {
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
-  const [tipologia, setTipologia] = useState<(typeof TIPOLOGIE)[number]>('NORMALE')
-  const [puntataA, setPuntataA] = useState('100')
-  const [quotaA, setQuotaA] = useState('2.3')
-  const [quotaB, setQuotaB] = useState('2.5')
+  const [puntataA, setPuntataA] = useState('')
+  const [quotaA, setQuotaA] = useState('')
+  const [quotaB, setQuotaB] = useState('')
   const [bonus, setBonus] = useState('')
+  const [rimborso, setRimborso] = useState('')
+  const [imbalance, setImbalance] = useState<number>(0)
+  const [partialPuntas, setPartialPuntas] = useState<{ amount: string; newOdds: string }[]>([])
   const [holderModalOpen, setHolderModalOpen] = useState(false)
   const [holderIdPuntaA, setHolderIdPuntaA] = useState('')
   const [holderIdPuntaB, setHolderIdPuntaB] = useState('')
@@ -107,21 +106,96 @@ export function PuntaPuntaCalculator() {
 
   const puntataANum = parseNum(puntataA)
   const bonusNum = parseNum(bonus) ?? 0
+  const rimborsoNum = parseNum(rimborso) ?? 0
   const puntataEffettivaA = (puntataANum ?? 0) + bonusNum
   const quotaANum = parseNum(quotaA)
   const quotaBNum = parseNum(quotaB)
 
+  const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
+  const imbalanceFactor = 1 + imbalancePercent / 100
+
   const stakeB = useMemo(() => {
     if (puntataEffettivaA <= 0 || quotaANum == null || quotaBNum == null) return null
-    return stakeBFromStakeA(puntataEffettivaA, quotaANum, quotaBNum)
-  }, [puntataEffettivaA, quotaANum, quotaBNum])
-
-  const guadagnoMinimo = useMemo(() => {
-    if (stakeB == null || quotaANum == null || quotaBNum == null) return null
-    const base = equalProfit(puntataEffettivaA, quotaANum, stakeB, quotaBNum)
+    let base: number | null
+    if (rimborsoNum > 0) {
+      base = stakeBFromStakeARimborso(puntataEffettivaA, quotaANum, quotaBNum, rimborsoNum)
+    } else {
+      base = stakeBFromStakeA(puntataEffettivaA, quotaANum, quotaBNum)
+    }
     if (base == null) return null
-    return base + bonusNum
-  }, [puntataEffettivaA, stakeB, quotaANum, quotaBNum, bonusNum])
+    const adjusted = base * imbalanceFactor
+    return Number.isFinite(adjusted) ? adjusted : null
+  }, [puntataEffettivaA, quotaANum, quotaBNum, rimborsoNum, imbalanceFactor])
+
+  /* ── Contropuntata parziale (multi-step, max 6) ── */
+  const partialPuntaResults = useMemo(() => {
+    if (partialPuntas.length === 0 || quotaBNum == null || stakeB == null) return []
+
+    const coverageTarget = stakeB * quotaBNum
+
+    type StepResult = { newStake: number }
+    const results: (StepResult | null)[] = []
+    let coveredSum = 0
+
+    for (let i = 0; i < partialPuntas.length; i++) {
+      const amountNum = parseNum(partialPuntas[i].amount)
+      const newOddsNum = parseNum(partialPuntas[i].newOdds)
+
+      if (amountNum == null || amountNum <= 0 || newOddsNum == null || newOddsNum <= 1) {
+        results.push(null)
+        break
+      }
+
+      const prevOdds = i === 0 ? quotaBNum : parseNum(partialPuntas[i - 1].newOdds)
+      if (prevOdds == null) {
+        results.push(null)
+        break
+      }
+
+      coveredSum += amountNum * prevOdds
+
+      if (newOddsNum <= 0) {
+        results.push(null)
+        break
+      }
+
+      const newStake = (coverageTarget - coveredSum) / newOddsNum
+      if (!Number.isFinite(newStake) || newStake < 0) {
+        results.push(null)
+        break
+      }
+
+      results.push({ newStake })
+    }
+
+    return results
+  }, [partialPuntas, quotaBNum, stakeB])
+
+  const hasValidPartialPuntas =
+    partialPuntas.length > 0 &&
+    partialPuntaResults.length > 0 &&
+    partialPuntaResults.every((r) => r != null)
+
+  const partialPuntaTotals = useMemo(() => {
+    if (!hasValidPartialPuntas || quotaBNum == null || stakeB == null) return null
+
+    let totalStakeB = 0
+
+    for (let i = 0; i < partialPuntas.length; i++) {
+      const amount = parseNum(partialPuntas[i].amount)
+      if (amount == null || amount <= 0) return null
+      totalStakeB += amount
+    }
+
+    const lastResult = partialPuntaResults[partialPuntaResults.length - 1]
+    if (lastResult == null) return null
+    totalStakeB += lastResult.newStake
+
+    return { totalStakeB }
+  }, [hasValidPartialPuntas, partialPuntas, partialPuntaResults, quotaBNum, stakeB])
+
+  // Effective stakeB: use partial totals if available
+  const effectiveStakeB = partialPuntaTotals?.totalStakeB ?? stakeB
 
   const rating = useMemo(() => {
     if (quotaANum == null || quotaBNum == null || quotaANum <= 0 || quotaBNum <= 0) return null
@@ -134,8 +208,9 @@ export function PuntaPuntaCalculator() {
     quotaANum > 0 &&
     quotaBNum != null &&
     quotaBNum > 0 &&
-    stakeB != null &&
-    guadagnoMinimo != null
+    stakeB != null
+
+  const showRimborsoColumn = rimborsoNum > 0
 
   const loadAccountsForHolder = useCallback(async (holderId: string) => {
     if (!holderId) return []
@@ -207,6 +282,42 @@ export function PuntaPuntaCalculator() {
     setHolderModalOpen(true)
   }
 
+  const realOutlay = (puntataANum ?? 0) + (effectiveStakeB ?? 0)
+  const profitIfAWins =
+    quotaANum != null && effectiveStakeB != null ? puntataEffettivaA * quotaANum - realOutlay : null
+  const profitIfBWins =
+    effectiveStakeB != null && quotaBNum != null
+      ? effectiveStakeB * quotaBNum - realOutlay + rimborsoNum
+      : null
+  const returnA = quotaANum != null ? puntataEffettivaA * quotaANum : null
+  const returnB = effectiveStakeB != null && quotaBNum != null ? effectiveStakeB * quotaBNum : null
+
+  const guadagnoMinimo = useMemo(() => {
+    if (profitIfAWins == null || profitIfBWins == null) return null
+    const minVal = Math.min(profitIfAWins, profitIfBWins)
+    return Number.isFinite(minVal) ? minVal : null
+  }, [profitIfAWins, profitIfBWins])
+
+  const crPercent =
+    rimborsoNum > 0 && guadagnoMinimo != null && Number.isFinite(guadagnoMinimo)
+      ? (guadagnoMinimo / rimborsoNum) * 100
+      : null
+
+  // Partial punta helpers
+  const addPartialPunta = () => {
+    if (partialPuntas.length < 6) {
+      setPartialPuntas((prev) => [...prev, { amount: '', newOdds: '' }])
+    }
+  }
+  const removePartialPunta = (index: number) => {
+    setPartialPuntas((prev) => prev.filter((_, i) => i !== index))
+  }
+  const updatePartialPunta = (index: number, field: 'amount' | 'newOdds', value: string) => {
+    setPartialPuntas((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    )
+  }
+
   const canSave = useMemo(() => {
     if (!eventoNome.trim()) return false
     if (!accountIdPuntaA || !accountIdPuntaB) return false
@@ -248,32 +359,89 @@ export function PuntaPuntaCalculator() {
         tag: undefined as string | undefined,
         nota: undefined as string | undefined,
       }
-      const legsPayload: CreateBetLegPayload[] = [
-        {
+      const tipoBonusA = rimborsoNum > 0 ? 'rimborso' : bonusNum > 0 ? 'bonus' : 'none'
+
+      const legA: CreateBetLegPayload = {
+        eventoData: eventoDataIso,
+        sport: 'calcio',
+        eventoNome: eventoNomeVal,
+        competizione,
+        mercato: mercatoPuntaA || '\u2014',
+        metodo: 'punta' as const,
+        tipoBonus: tipoBonusA as 'none' | 'bonus' | 'rimborso' | 'freebet',
+        accountId: accountIdPuntaA,
+        stake: puntataEffettivaA,
+        quota: quotaANum,
+        rischio: 0,
+        bonusValore: bonusNum > 0 ? bonusNum : undefined,
+        rimborsoValore: rimborsoNum > 0 ? rimborsoNum : undefined,
+        commissionePercentuale: 0,
+        movimento: 0,
+        statoEvento: 'bozza',
+        tag: undefined as string | undefined,
+        posizione: 0,
+      }
+
+      // Build leg B — split into multiple legs if partial counter-bets are active
+      const legsB: CreateBetLegPayload[] = []
+      if (hasValidPartialPuntas && partialPuntaResults.every((r) => r != null)) {
+        for (let i = 0; i < partialPuntas.length; i++) {
+          const amount = parseNum(partialPuntas[i].amount)
+          const odds = i === 0 ? quotaBNum : parseNum(partialPuntas[i - 1].newOdds)
+          if (amount == null || odds == null) break
+          legsB.push({
+            eventoData: eventoDataIso,
+            sport: 'calcio',
+            eventoNome: eventoNomeVal,
+            competizione,
+            mercato: mercatoPuntaB || '\u2014',
+            metodo: 'punta' as const,
+            tipoBonus: 'none',
+            accountId: accountIdPuntaB,
+            stake: amount,
+            quota: odds,
+            rischio: 0,
+            bonusValore: undefined,
+            rimborsoValore: undefined,
+            commissionePercentuale: 0,
+            movimento: 0,
+            statoEvento: 'bozza',
+            tag: undefined as string | undefined,
+            posizione: i + 1,
+          })
+        }
+        // Add the final calculated remaining stake
+        const lastResult = partialPuntaResults[partialPuntaResults.length - 1]
+        const lastNewOdds = parseNum(partialPuntas[partialPuntas.length - 1].newOdds)
+        if (lastResult != null && lastNewOdds != null) {
+          legsB.push({
+            eventoData: eventoDataIso,
+            sport: 'calcio',
+            eventoNome: eventoNomeVal,
+            competizione,
+            mercato: mercatoPuntaB || '\u2014',
+            metodo: 'punta' as const,
+            tipoBonus: 'none',
+            accountId: accountIdPuntaB,
+            stake: lastResult.newStake,
+            quota: lastNewOdds,
+            rischio: 0,
+            bonusValore: undefined,
+            rimborsoValore: undefined,
+            commissionePercentuale: 0,
+            movimento: 0,
+            statoEvento: 'bozza',
+            tag: undefined as string | undefined,
+            posizione: partialPuntas.length + 1,
+          })
+        }
+      } else {
+        legsB.push({
           eventoData: eventoDataIso,
           sport: 'calcio',
           eventoNome: eventoNomeVal,
           competizione,
-          mercato: mercatoPuntaA || '—',
-          metodo: 'punta' as const,
-          tipoBonus: bonusNum > 0 ? 'bonus' : 'none',
-          accountId: accountIdPuntaA,
-          stake: puntataEffettivaA,
-          quota: quotaANum,
-          rischio: 0,
-          bonusValore: bonusNum > 0 ? bonusNum : undefined,
-          rimborsoValore: undefined,
-          commissionePercentuale: 0,
-          movimento: 0,
-          statoEvento: 'bozza',
-          tag: undefined as string | undefined,
-        },
-        {
-          eventoData: eventoDataIso,
-          sport: 'calcio',
-          eventoNome: eventoNomeVal,
-          competizione,
-          mercato: mercatoPuntaB || '—',
+          mercato: mercatoPuntaB || '\u2014',
           metodo: 'punta' as const,
           tipoBonus: 'none',
           accountId: accountIdPuntaB,
@@ -286,8 +454,11 @@ export function PuntaPuntaCalculator() {
           movimento: 0,
           statoEvento: 'bozza',
           tag: undefined as string | undefined,
-        },
-      ]
+          posizione: 1,
+        })
+      }
+
+      const legsPayload: CreateBetLegPayload[] = [legA, ...legsB]
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       setSavedBetId(bet.id)
     } catch (err) {
@@ -297,44 +468,8 @@ export function PuntaPuntaCalculator() {
     }
   }
 
-  const realOutlay = (puntataANum ?? 0) + (stakeB ?? 0)
-  const profitIfAWins =
-    quotaANum != null && stakeB != null ? puntataEffettivaA * quotaANum - realOutlay : null
-  const profitIfBWins = stakeB != null && quotaBNum != null ? stakeB * quotaBNum - realOutlay : null
-  const returnA = quotaANum != null ? puntataEffettivaA * quotaANum : null
-  const returnB = stakeB != null && quotaBNum != null ? stakeB * quotaBNum : null
-
   return (
     <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
-      {/* Barra superiore */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="tipologia" className="text-sm text-muted-foreground">
-            Tipologia
-          </Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                id="tipologia"
-                variant="secondary"
-                size="sm"
-                className="min-w-[10rem] justify-between"
-              >
-                {tipologia}
-                <ChevronDown className="h-4 w-4 opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {TIPOLOGIE.map((t) => (
-                <DropdownMenuItem key={t} onSelect={() => setTipologia(t)}>
-                  {t}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
       {/* Sezione input */}
       <div className="border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -408,17 +543,69 @@ export function PuntaPuntaCalculator() {
               </span>
             </div>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="rimborso">Valore rimborso</Label>
+            <div className="relative">
+              <Input
+                id="rimborso"
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={rimborso}
+                onChange={(e) => setRimborso(e.target.value)}
+                className="pr-8"
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                €
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Slider Sbilanciamento (-30% … +30%) */}
+      <div className="border-b border-border p-4">
+        <Label className="mb-2 block">Sbilanciamento della Puntata B</Label>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">−30%</span>
+          <Slider
+            value={[imbalance]}
+            onValueChange={([v]) => setImbalance(v ?? 0)}
+            min={-30}
+            max={30}
+            step={0.2}
+            className="flex-1"
+          />
+          <span className="text-xs text-muted-foreground">+30%</span>
+        </div>
+        <p className="mt-1 text-center text-xs text-muted-foreground">
+          {imbalance === 0
+            ? 'Standard (0%)'
+            : imbalance > 0
+              ? `+${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`
+              : `${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`}
+        </p>
+      </div>
+
       {/* Riepilogo */}
-      {showSummary && (
+      {showSummary && guadagnoMinimo != null && (
         <div className="border-b border-border bg-card">
           <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+            {bonusNum > 0 && rimborsoNum > 0
+              ? 'BONUS + RIMBORSO \u2022 '
+              : bonusNum > 0
+                ? 'BONUS \u2022 '
+                : rimborsoNum > 0
+                  ? 'RIMBORSO \u2022 '
+                  : ''}
             Riepilogo
           </div>
           <div className="space-y-2 p-4 text-sm">
-            {rating != null && <p>Rating: {rating.toFixed(2)}%</p>}
+            <p>
+              {rimborsoNum > 0 && crPercent != null
+                ? `CR%: ${crPercent.toFixed(2)}%`
+                : `Rating: ${rating != null ? rating.toFixed(2) : '\u2014'}%`}
+            </p>
             <p>
               Punta{' '}
               <span className="font-mono font-medium text-primary">
@@ -437,6 +624,14 @@ export function PuntaPuntaCalculator() {
               <span className="font-mono font-medium text-primary">{formatNum(stakeB)} €</span> a
               quota <span className="font-mono">{formatNum(quotaBNum)}</span> sul Book B.
             </p>
+            {hasValidPartialPuntas && partialPuntaTotals != null && (
+              <p>
+                <span className="font-medium text-primary">Nuova Puntata B totale:</span>{' '}
+                <span className="font-mono text-primary">
+                  {formatNum(partialPuntaTotals.totalStakeB)} €
+                </span>
+              </p>
+            )}
             <p>
               Il guadagno minimo sarà{' '}
               <span
@@ -460,6 +655,13 @@ export function PuntaPuntaCalculator() {
         profitIfBWins != null && (
           <div className="border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
+              {bonusNum > 0 && rimborsoNum > 0
+                ? 'BONUS + RIMBORSO \u2022 '
+                : bonusNum > 0
+                  ? 'BONUS \u2022 '
+                  : rimborsoNum > 0
+                    ? 'RIMBORSO \u2022 '
+                    : ''}
               Tabella dei profitti
             </div>
 
@@ -479,8 +681,16 @@ export function PuntaPuntaCalculator() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Book B</span>
-                    <span className="text-destructive">{formatSigned(-(stakeB ?? 0))} €</span>
+                    <span className="text-destructive">
+                      {formatSigned(-(effectiveStakeB ?? 0))} €
+                    </span>
                   </div>
+                  {showRimborsoColumn && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Rimborso</span>
+                      <span className="text-muted-foreground">{formatSigned(0)} €</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}>
@@ -501,9 +711,15 @@ export function PuntaPuntaCalculator() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Book B</span>
                     <span className="text-primary">
-                      {formatSigned((returnB ?? 0) - (stakeB ?? 0))} €
+                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))} €
                     </span>
                   </div>
+                  {showRimborsoColumn && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Rimborso</span>
+                      <span className="text-primary">{formatSigned(rimborsoNum)} €</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-border pt-2 font-medium">
                     <span className="text-foreground">Totale</span>
                     <span className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}>
@@ -519,9 +735,34 @@ export function PuntaPuntaCalculator() {
               <table className="w-full whitespace-nowrap text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
-                    <th className="w-[50%] p-3 text-left font-normal"></th>
-                    <th className="w-[16%] p-3 text-right font-normal">Book A</th>
-                    <th className="w-[16%] p-3 text-right font-normal">Book B</th>
+                    <th
+                      className={
+                        showRimborsoColumn
+                          ? 'w-[40%] p-3 text-left font-normal'
+                          : 'w-[50%] p-3 text-left font-normal'
+                      }
+                    ></th>
+                    <th
+                      className={
+                        showRimborsoColumn
+                          ? 'w-[14%] p-3 text-right font-normal'
+                          : 'w-[16%] p-3 text-right font-normal'
+                      }
+                    >
+                      Book A
+                    </th>
+                    <th
+                      className={
+                        showRimborsoColumn
+                          ? 'w-[14%] p-3 text-right font-normal'
+                          : 'w-[16%] p-3 text-right font-normal'
+                      }
+                    >
+                      Book B
+                    </th>
+                    {showRimborsoColumn && (
+                      <th className="w-[14%] p-3 text-right font-normal">Rimborso</th>
+                    )}
                     <th className="w-[18%] min-w-[5.5rem] p-3 text-right font-normal">Totale</th>
                   </tr>
                 </thead>
@@ -534,8 +775,11 @@ export function PuntaPuntaCalculator() {
                       )}
                     </td>
                     <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(stakeB ?? 0))}
+                      {formatSigned(-(effectiveStakeB ?? 0))}
                     </td>
+                    {showRimborsoColumn && (
+                      <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
+                    )}
                     <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                       <span
                         className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}
@@ -550,8 +794,11 @@ export function PuntaPuntaCalculator() {
                       {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
                     </td>
                     <td className="p-3 text-right text-primary">
-                      {formatSigned((returnB ?? 0) - (stakeB ?? 0))}
+                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))}
                     </td>
+                    {showRimborsoColumn && (
+                      <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
+                    )}
                     <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                       <span
                         className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}
@@ -565,6 +812,83 @@ export function PuntaPuntaCalculator() {
             </div>
           </div>
         )}
+
+      {/* Contropuntata parziale (multi-step) */}
+      {stakeB != null && (
+        <div className="border-b border-border p-4">
+          <div className="space-y-3">
+            {partialPuntas.map((pp, i) => {
+              const result = partialPuntaResults[i] ?? null
+              return (
+                <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Contropuntata parziale {partialPuntas.length > 1 ? `#${i + 1}` : ''}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => removePartialPunta(i)}
+                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor={`partial-amount-${i}`} className="text-xs sm:text-sm">
+                        Già puntato €
+                      </Label>
+                      <Input
+                        id={`partial-amount-${i}`}
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={pp.amount}
+                        onChange={(e) => updatePartialPunta(i, 'amount', e.target.value)}
+                        className="h-8 sm:h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`partial-odds-${i}`} className="text-xs sm:text-sm">
+                        Nuova quota punta B
+                      </Label>
+                      <Input
+                        id={`partial-odds-${i}`}
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={pp.newOdds}
+                        onChange={(e) => updatePartialPunta(i, 'newOdds', e.target.value)}
+                        className="h-8 sm:h-9"
+                      />
+                    </div>
+                  </div>
+                  {result != null && (
+                    <div className="mt-3 rounded-lg bg-background/60 p-2.5">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Nuova puntata B
+                      </p>
+                      <p className="font-mono text-sm font-semibold text-primary">
+                        {formatNum(result.newStake)} €
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {partialPuntas.length < 6 && (
+              <button
+                type="button"
+                onClick={addPartialPunta}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <span className="text-base leading-none">+</span>
+                Contropuntata parziale
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Invia al Profit Tracker */}
       <div className="flex flex-col items-center gap-2 p-4">
@@ -803,11 +1127,38 @@ export function PuntaPuntaCalculator() {
                       Punta 1: <span className="font-mono">{puntataEffettivaA.toFixed(2)} €</span> a
                       quota <span className="font-mono">{quotaANum?.toFixed(2)}</span>
                     </p>
-                    <p>
-                      Punta 2 (copertura):{' '}
-                      <span className="font-mono">{(stakeB ?? 0).toFixed(2)} €</span> a quota{' '}
-                      <span className="font-mono">{quotaBNum?.toFixed(2)}</span>.
-                    </p>
+                    {hasValidPartialPuntas && partialPuntaResults.every((r) => r != null) ? (
+                      <>
+                        {partialPuntas.map((pp, i) => {
+                          const amount = parseNum(pp.amount)
+                          const odds = i === 0 ? quotaBNum : parseNum(partialPuntas[i - 1].newOdds)
+                          return (
+                            <p key={i}>
+                              Punta 2.{i + 1} (copertura):{' '}
+                              <span className="font-mono">{(amount ?? 0).toFixed(2)} €</span> a
+                              quota <span className="font-mono">{(odds ?? 0).toFixed(2)}</span>
+                            </p>
+                          )
+                        })}
+                        {(() => {
+                          const lastResult = partialPuntaResults[partialPuntaResults.length - 1]
+                          const lastOdds = parseNum(partialPuntas[partialPuntas.length - 1].newOdds)
+                          return lastResult != null && lastOdds != null ? (
+                            <p>
+                              Punta 2.{partialPuntas.length + 1} (copertura):{' '}
+                              <span className="font-mono">{lastResult.newStake.toFixed(2)} €</span>{' '}
+                              a quota <span className="font-mono">{lastOdds.toFixed(2)}</span>
+                            </p>
+                          ) : null
+                        })()}
+                      </>
+                    ) : (
+                      <p>
+                        Punta 2 (copertura):{' '}
+                        <span className="font-mono">{(stakeB ?? 0).toFixed(2)} €</span> a quota{' '}
+                        <span className="font-mono">{quotaBNum?.toFixed(2)}</span>.
+                      </p>
+                    )}
                     {guadagnoMinimo != null && (
                       <p>
                         Guadagno minimo:{' '}

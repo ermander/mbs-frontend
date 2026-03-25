@@ -15,6 +15,7 @@ import {
 } from '@/services/api/profit-tracker-client'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Loader2, X } from 'lucide-react'
 
 function getBookName(id: string): string {
@@ -55,22 +56,6 @@ function buildMultiplaEventoNome(row: OddsmatcherRow): string {
   return `MULTIPLA ${row.home} - ${row.away}`
 }
 
-const ChevronDown = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-)
-
 export interface OddsmatcherMultiplaSaveModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -105,6 +90,7 @@ export function OddsmatcherMultiplaSaveModal({
   const [accountIdBanca, setAccountIdBanca] = useState('')
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
+  const [holderPortalEl, setHolderPortalEl] = useState<HTMLDivElement | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -279,7 +265,13 @@ export function OddsmatcherMultiplaSaveModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-0 overflow-hidden p-0" showClose={true}>
+      <DialogContent className="max-w-md gap-0 p-0" showClose={true}>
+        {/* Portal container per dropdown SearchableSelect dentro la modale */}
+        <div
+          ref={setHolderPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         {savedBetId ? (
           <>
             <div className="px-6 pb-4 pt-6">
@@ -332,29 +324,18 @@ export function OddsmatcherMultiplaSaveModal({
                     {bookNamePunta || '—'}
                   </span>
                 </div>
-                <div className="relative">
-                  <select
-                    value={accountIdPunta}
-                    onChange={(e) => setAccountIdPunta(e.target.value)}
-                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                  >
-                    <option value="">Seleziona intestatario</option>
-                    {accountsPunta.map((acc) => {
-                      const holder = holders.find((h) => h.id === acc.holderId)
-                      return (
-                        <option key={acc.id} value={acc.id}>
-                          {holder?.nome ?? acc.nome}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <span
-                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  >
-                    <ChevronDown />
-                  </span>
-                </div>
+                <SearchableSelect
+                  options={accountsPunta.map((acc) => {
+                    const holder = holders.find((h) => h.id === acc.holderId)
+                    return { value: acc.id, label: holder?.nome ?? acc.nome }
+                  })}
+                  value={accountIdPunta}
+                  onChange={setAccountIdPunta}
+                  placeholder="Seleziona intestatario"
+                  searchPlaceholder="Cerca intestatario..."
+                  allowEmpty={false}
+                  portalContainer={holderPortalEl}
+                />
                 {accountsPunta.length === 0 && bookNamePunta && (
                   <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                     Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
@@ -371,29 +352,18 @@ export function OddsmatcherMultiplaSaveModal({
                     {bookNameBanca || '—'}
                   </span>
                 </div>
-                <div className="relative">
-                  <select
-                    value={accountIdBanca}
-                    onChange={(e) => setAccountIdBanca(e.target.value)}
-                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                  >
-                    <option value="">Seleziona intestatario</option>
-                    {accountsBanca.map((acc) => {
-                      const holder = holders.find((h) => h.id === acc.holderId)
-                      return (
-                        <option key={acc.id} value={acc.id}>
-                          {holder?.nome ?? acc.nome}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <span
-                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  >
-                    <ChevronDown />
-                  </span>
-                </div>
+                <SearchableSelect
+                  options={accountsBanca.map((acc) => {
+                    const holder = holders.find((h) => h.id === acc.holderId)
+                    return { value: acc.id, label: holder?.nome ?? acc.nome }
+                  })}
+                  value={accountIdBanca}
+                  onChange={setAccountIdBanca}
+                  placeholder="Seleziona intestatario"
+                  searchPlaceholder="Cerca intestatario..."
+                  allowEmpty={false}
+                  portalContainer={holderPortalEl}
+                />
                 {accountsBanca.length === 0 && bookNameBanca && (
                   <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                     Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.

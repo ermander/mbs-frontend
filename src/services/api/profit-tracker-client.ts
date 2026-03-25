@@ -362,6 +362,7 @@ export interface CreateBetLegPayload {
   movimento: number
   statoEvento: string
   tag?: string | null
+  posizione?: number
 }
 
 export async function getBets(params?: GetBetsParams): Promise<OngoingBet[]> {

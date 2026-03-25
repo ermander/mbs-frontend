@@ -44,6 +44,31 @@ export function stakesFromTotal(
 }
 
 /**
+ * Dato stake A, quote e rimborso, calcola stake B e C per profitto uguale.
+ * Il rimborso viene ricevuto quando A perde (B o C vince).
+ * Se A vince: P = S_A * q_A - S_A - S_B - S_C
+ * Se B vince: P = S_B * q_B - S_A - S_B - S_C + rimborso
+ * Se C vince: P = S_C * q_C - S_A - S_B - S_C + rimborso
+ * Uguagliando A con B: S_B = (S_A * q_A - rimborso) / q_B
+ * Uguagliando A con C: S_C = (S_A * q_A - rimborso) / q_C
+ */
+export function stakeBCFromStakeARimborso(
+  stakeA: number,
+  oddsA: number,
+  oddsB: number,
+  oddsC: number,
+  refund: number,
+): { stakeB: number; stakeC: number } | null {
+  if (stakeA <= 0 || oddsA <= 0 || oddsB <= 0 || oddsC <= 0 || refund < 0) return null
+  const numerator = stakeA * oddsA - refund
+  if (numerator <= 0) return null
+  const stakeB = numerator / oddsB
+  const stakeC = numerator / oddsC
+  if (!Number.isFinite(stakeB) || !Number.isFinite(stakeC)) return null
+  return { stakeB, stakeC }
+}
+
+/**
  * Profitto garantito (uguale in tutti e tre gli esiti).
  * P = S_A * q_A - (S_A + S_B + S_C)
  */

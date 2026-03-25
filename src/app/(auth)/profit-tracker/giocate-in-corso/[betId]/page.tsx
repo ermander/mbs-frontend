@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notFound, useParams, useRouter } from 'next/navigation'
 import { Ban, Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
+import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay, sanitizeDecimal } from '@/lib/utils'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
@@ -100,6 +101,9 @@ export default function BetDetailPage() {
   const legs = useMemo(() => {
     const filtered = allLegs.filter((l) => l.betId === betId)
     return filtered.sort((a, b) => {
+      const posA = a.posizione ?? 999
+      const posB = b.posizione ?? 999
+      if (posA !== posB) return posA - posB
       if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
       if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
       const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
@@ -221,8 +225,9 @@ export default function BetDetailPage() {
 
   const handleArchive = async () => {
     if (!bet) return
+    if (!window.confirm('Vuoi davvero archiviare questa giocata?')) return
     if (hasLegsInCorso) {
-      window.alert('Non è possibile archiviare una giocata con scommesse ancora in corso.')
+      toast.error('Non è possibile archiviare una giocata con scommesse ancora in corso.')
       return
     }
     try {
@@ -230,7 +235,8 @@ export default function BetDetailPage() {
       await updateBet(bet.id, { archiviata: true })
       router.push('/profit-tracker/giocate-in-corso')
     } catch (err) {
-      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
+      navigatingAway.current = false
+      toast.error(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 
@@ -240,8 +246,9 @@ export default function BetDetailPage() {
       navigatingAway.current = true
       await removeOngoingBet(bet.id)
       router.push('/profit-tracker/giocate-in-corso')
-    } catch {
-      // Error in store
+    } catch (err) {
+      navigatingAway.current = false
+      toast.error(getErrorMessage(err) ?? 'Impossibile eliminare la giocata.')
     }
   }
 
@@ -278,8 +285,8 @@ export default function BetDetailPage() {
     if (!window.confirm('Eliminare questo elemento dalla giocata?')) return
     try {
       await removeBetLeg(betId, legId)
-    } catch {
-      // Error in store
+    } catch (err) {
+      toast.error(getErrorMessage(err) ?? "Impossibile eliminare l'elemento.")
     }
   }
 

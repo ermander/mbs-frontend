@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay } from '@/lib/utils'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
@@ -65,10 +66,11 @@ export default function GiocateInCorsoPage() {
   }
 
   const handleArchive = async (id: string) => {
+    if (!window.confirm('Vuoi davvero archiviare questa giocata?')) return
     try {
       await updateBet(id, { archiviata: true })
     } catch (err) {
-      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
+      toast.error(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 
@@ -123,8 +125,8 @@ export default function GiocateInCorsoPage() {
     if (!window.confirm('Vuoi davvero eliminare questa giocata?')) return
     try {
       await removeBet(id)
-    } catch {
-      // Error already set in store
+    } catch (err) {
+      toast.error(getErrorMessage(err) ?? 'Impossibile eliminare la giocata.')
     }
   }
 

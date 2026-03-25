@@ -173,6 +173,7 @@ export interface BetLeg {
   eventoNotificato?: boolean
   statoEvento: BetStatus
   tag?: string
+  posizione?: number
 }
 
 export interface QuickBet {

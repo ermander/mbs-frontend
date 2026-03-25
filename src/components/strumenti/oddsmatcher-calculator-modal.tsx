@@ -504,9 +504,15 @@ export function OddsmatcherCalculatorModal({
         movimento: 0,
         statoEvento: 'bozza',
         tag: undefined as string | undefined,
+        posizione: 0,
       }
 
-      let bancaLegs: (typeof bancaLegBase & { stake: number; quota: number; rischio: number })[]
+      let bancaLegs: (typeof bancaLegBase & {
+        stake: number
+        quota: number
+        rischio: number
+        posizione: number
+      })[]
 
       if (hasPartialLays) {
         bancaLegs = []
@@ -520,6 +526,7 @@ export function OddsmatcherCalculatorModal({
             stake: amount,
             quota: odds,
             rischio: amount * (odds - 1),
+            posizione: i + 1,
           })
         }
 
@@ -531,6 +538,7 @@ export function OddsmatcherCalculatorModal({
           stake: lastResult.newLayStake,
           quota: lastOdds,
           rischio: lastResult.newLiability,
+          posizione: partialLays.length + 1,
         })
       } else {
         // Caso standard: singola bancata
@@ -540,6 +548,7 @@ export function OddsmatcherCalculatorModal({
             stake: layStakeValue,
             quota: quotaBancaNum,
             rischio: responsabilita,
+            posizione: 1,
           },
         ]
       }

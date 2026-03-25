@@ -340,7 +340,9 @@ export default function BetDetailPage() {
           (field === 'quota' && editedIsBanca) ||
           (field === 'commissionePercentuale' && editedIsBanca)
         const puntaQuotaChanged = field === 'quota' && !editedIsBanca
-        const puntaStakeChanged = (field === 'stake' || field === 'bonusValore') && !editedIsBanca
+        const puntaStakeChanged =
+          (field === 'stake' || field === 'bonusValore' || field === 'rimborsoValore') &&
+          !editedIsBanca
 
         if (needsRecalc) {
           const updatedBancaLegs = bancaLegs.map((l) => {
@@ -411,19 +413,18 @@ export default function BetDetailPage() {
           const backStakeTotale =
             field === 'stake'
               ? (value as number) + (puntaLeg.bonusValore ?? 0)
-              : puntaLeg.stake + (value as number)
+              : field === 'bonusValore'
+                ? puntaLeg.stake + (value as number)
+                : puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
+          const rimborso =
+            field === 'rimborsoValore' ? (value as number) : (puntaLeg.rimborsoValore ?? 0)
           const totalBackOdds =
             bancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
           const eventsForCalc = bancaLegs.map((l) => ({
             layOdds: l.quota,
             commissionPercent: l.commissionePercentuale ?? 3,
           }))
-          const results = multiplaLayStakes(
-            backStakeTotale,
-            totalBackOdds,
-            eventsForCalc,
-            puntaLeg.rimborsoValore ?? 0,
-          )
+          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc, rimborso)
           for (let i = 0; i < bancaLegs.length; i++) {
             const bl = bancaLegs[i]!
             if (FINAL_STATES.has(bl.statoEvento)) continue

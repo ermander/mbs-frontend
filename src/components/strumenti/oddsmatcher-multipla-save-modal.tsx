@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -95,7 +95,6 @@ export function OddsmatcherMultiplaSaveModal({
   sharedBonus = '',
   sharedRimborso = '',
 }: OddsmatcherMultiplaSaveModalProps) {
-  const router = useRouter()
   const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
@@ -107,6 +106,7 @@ export function OddsmatcherMultiplaSaveModal({
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [savedBetId, setSavedBetId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const sortedSelectedEvents = useMemo(() => {
@@ -159,6 +159,7 @@ export function OddsmatcherMultiplaSaveModal({
       setAccountIdPunta('')
       setAccountIdBanca('')
       setSaveError(null)
+      setSavedBetId(null)
     }
   }, [open])
 
@@ -268,8 +269,7 @@ export function OddsmatcherMultiplaSaveModal({
 
       const legsPayload: CreateBetLegPayload[] = [legPunta, ...legsBanca]
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
-      onOpenChange(false)
-      router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)
+      setSavedBetId(bet.id)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Errore nel salvataggio della multipla.')
     } finally {
@@ -280,133 +280,167 @@ export function OddsmatcherMultiplaSaveModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0" showClose={true}>
-        <div className="px-6 pb-1 pt-6">
-          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
-            Assegna intestatari
-          </DialogTitle>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Scegli l&apos;intestatario per la puntata (book) e per la bancata (exchange) della
-            multipla.
-          </p>
-        </div>
-
-        <div className="grid gap-4 px-6 py-5">
-          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-primary">
-                Intestatario Punta
-              </Label>
-              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                {bookNamePunta || '—'}
-              </span>
-            </div>
-            <div className="relative">
-              <select
-                value={accountIdPunta}
-                onChange={(e) => setAccountIdPunta(e.target.value)}
-                className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-              >
-                <option value="">Seleziona intestatario</option>
-                {accountsPunta.map((acc) => {
-                  const holder = holders.find((h) => h.id === acc.holderId)
-                  return (
-                    <option key={acc.id} value={acc.id}>
-                      {holder?.nome ?? acc.nome}
-                    </option>
-                  )
-                })}
-              </select>
-              <span
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              >
-                <ChevronDown />
-              </span>
-            </div>
-            {accountsPunta.length === 0 && bookNamePunta && (
-              <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-                Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
+        {savedBetId ? (
+          <>
+            <div className="px-6 pb-4 pt-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                Giocata salvata
+              </DialogTitle>
+              <p className="mt-2 text-sm text-muted-foreground">
+                La giocata è stata salvata correttamente nel Profit Tracker.
               </p>
-            )}
-          </div>
-
-          <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
-                Intestatario Banca
-              </Label>
-              <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
-                {bookNameBanca || '—'}
-              </span>
-            </div>
-            <div className="relative">
-              <select
-                value={accountIdBanca}
-                onChange={(e) => setAccountIdBanca(e.target.value)}
-                className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-              >
-                <option value="">Seleziona intestatario</option>
-                {accountsBanca.map((acc) => {
-                  const holder = holders.find((h) => h.id === acc.holderId)
-                  return (
-                    <option key={acc.id} value={acc.id}>
-                      {holder?.nome ?? acc.nome}
-                    </option>
-                  )
-                })}
-              </select>
-              <span
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              >
-                <ChevronDown />
-              </span>
-            </div>
-            {accountsBanca.length === 0 && bookNameBanca && (
-              <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-                Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.
+              <p className="mt-3 text-sm text-foreground">
+                <Link
+                  href={`/profit-tracker/giocate-in-corso/${savedBetId}`}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Vai al dettaglio della giocata
+                </Link>
               </p>
-            )}
-          </div>
-        </div>
+            </div>
+            <div className="flex justify-end border-t border-border bg-muted/20 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSavedBetId(null)
+                  onOpenChange(false)
+                }}
+              >
+                Chiudi
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-6 pb-1 pt-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                Assegna intestatari
+              </DialogTitle>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Scegli l&apos;intestatario per la puntata (book) e per la bancata (exchange) della
+                multipla.
+              </p>
+            </div>
 
-        {saveError && (
-          <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
-            <p className="text-sm text-destructive">{saveError}</p>
-          </div>
+            <div className="grid gap-4 px-6 py-5">
+              <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                    Intestatario Punta
+                  </Label>
+                  <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                    {bookNamePunta || '—'}
+                  </span>
+                </div>
+                <div className="relative">
+                  <select
+                    value={accountIdPunta}
+                    onChange={(e) => setAccountIdPunta(e.target.value)}
+                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
+                  >
+                    <option value="">Seleziona intestatario</option>
+                    {accountsPunta.map((acc) => {
+                      const holder = holders.find((h) => h.id === acc.holderId)
+                      return (
+                        <option key={acc.id} value={acc.id}>
+                          {holder?.nome ?? acc.nome}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  >
+                    <ChevronDown />
+                  </span>
+                </div>
+                {accountsPunta.length === 0 && bookNamePunta && (
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
+                    Intestatario Banca
+                  </Label>
+                  <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {bookNameBanca || '—'}
+                  </span>
+                </div>
+                <div className="relative">
+                  <select
+                    value={accountIdBanca}
+                    onChange={(e) => setAccountIdBanca(e.target.value)}
+                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
+                  >
+                    <option value="">Seleziona intestatario</option>
+                    {accountsBanca.map((acc) => {
+                      const holder = holders.find((h) => h.id === acc.holderId)
+                      return (
+                        <option key={acc.id} value={acc.id}>
+                          {holder?.nome ?? acc.nome}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  >
+                    <ChevronDown />
+                  </span>
+                </div>
+                {accountsBanca.length === 0 && bookNameBanca && (
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {saveError && (
+              <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+                <p className="text-sm text-destructive">{saveError}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
+              <Button
+                variant="outline"
+                className="sm:min-w-[100px]"
+                onClick={() => onOpenChange(false)}
+                disabled={isSaving}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Annulla
+              </Button>
+              <Button
+                className="bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white sm:min-w-[120px]"
+                onClick={() => void handleSave()}
+                disabled={
+                  !accountIdPunta ||
+                  !accountIdBanca ||
+                  isSaving ||
+                  ((Number.parseFloat(sharedStake) || 0) <= 0 &&
+                    (Number.parseFloat(sharedBonus) || 0) <= 0)
+                }
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Salvataggio...
+                  </>
+                ) : (
+                  'Salva'
+                )}
+              </Button>
+            </div>
+          </>
         )}
-
-        <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
-          <Button
-            variant="outline"
-            className="sm:min-w-[100px]"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Annulla
-          </Button>
-          <Button
-            className="bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white sm:min-w-[120px]"
-            onClick={() => void handleSave()}
-            disabled={
-              !accountIdPunta ||
-              !accountIdBanca ||
-              isSaving ||
-              ((Number.parseFloat(sharedStake) || 0) <= 0 &&
-                (Number.parseFloat(sharedBonus) || 0) <= 0)
-            }
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Salvataggio...
-              </>
-            ) : (
-              'Salva'
-            )}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   )

@@ -1000,13 +1000,25 @@ export function OddsmatcherTable() {
                   disabled={
                     multiplaSelectedEvents.length !== multiplaNumEventi ||
                     ((Number.parseFloat(sharedStake) || 0) <= 0 &&
-                      (Number.parseFloat(sharedBonus) || 0) <= 0)
+                      (Number.parseFloat(sharedBonus) || 0) <= 0) ||
+                    (multiplaQuotaMinTotale.trim() !== '' &&
+                      quotaMultipla != null &&
+                      quotaMultipla < (Number.parseFloat(multiplaQuotaMinTotale) || 0))
                   }
                   onClick={() => setMultiplaSaveModalOpen(true)}
                 >
                   Salva
                 </Button>
               </div>
+              {multiplaSelectedEvents.length === multiplaNumEventi &&
+                multiplaQuotaMinTotale.trim() !== '' &&
+                quotaMultipla != null &&
+                quotaMultipla < (Number.parseFloat(multiplaQuotaMinTotale) || 0) && (
+                  <p className="text-[11px] text-amber-500">
+                    Quota totale {quotaMultipla.toFixed(2)} inferiore alla minima (
+                    {multiplaQuotaMinTotale}).
+                  </p>
+                )}
             </div>
           </div>
         </div>

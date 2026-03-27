@@ -86,6 +86,7 @@ export function PuntaBancaSaveModal({
   const [accountIdPunta, setAccountIdPunta] = useState('')
   const [accountIdBanca, setAccountIdBanca] = useState('')
 
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
@@ -102,6 +103,7 @@ export function PuntaBancaSaveModal({
     setAccountsBanca([])
     setAccountIdPunta('')
     setAccountIdBanca('')
+    setIsLoadingBasics(false)
     setIsSaving(false)
     setError(null)
     setSavedBetId(null)
@@ -115,33 +117,38 @@ export function PuntaBancaSaveModal({
     }
 
     const loadBasics = async () => {
-      if (holders.length === 0) {
-        await fetchHolders()
-      }
-      let currentBooks: Book[] = books
-      if (currentBooks.length === 0) {
-        await fetchAllBooks()
-        currentBooks = useProfitTrackerStore.getState().allBooks
-      }
-      if (!mercato) {
-        const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
-        if (hasExchangeBooks) {
-          setMercato('Punta-Banca')
-        }
-      }
-
-      // Carica gli account exchange per filtrare gli intestatari banca
+      setIsLoadingBasics(true)
       try {
-        const allAccounts = await getAccounts({ status: 'abilitato' })
-        const exchangeBookIds = new Set(currentBooks.filter((b) => b.isExchange).map((b) => b.id))
-        const holderIdsWithExchange = new Set(
-          allAccounts.items
-            .filter((acc) => exchangeBookIds.has(acc.bookId))
-            .map((acc) => acc.holderId),
-        )
-        setExchangeHolderIds(holderIdsWithExchange)
-      } catch {
-        // Se fallisce, non filtrare (fallback a tutti gli intestatari)
+        if (holders.length === 0) {
+          await fetchHolders()
+        }
+        let currentBooks: Book[] = books
+        if (currentBooks.length === 0) {
+          await fetchAllBooks()
+          currentBooks = useProfitTrackerStore.getState().allBooks
+        }
+        if (!mercato) {
+          const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
+          if (hasExchangeBooks) {
+            setMercato('Punta-Banca')
+          }
+        }
+
+        // Carica gli account exchange per filtrare gli intestatari banca
+        try {
+          const allAccounts = await getAccounts({ status: 'abilitato' })
+          const exchangeBookIds = new Set(currentBooks.filter((b) => b.isExchange).map((b) => b.id))
+          const holderIdsWithExchange = new Set(
+            allAccounts.items
+              .filter((acc) => exchangeBookIds.has(acc.bookId))
+              .map((acc) => acc.holderId),
+          )
+          setExchangeHolderIds(holderIdsWithExchange)
+        } catch {
+          // Se fallisce, non filtrare (fallback a tutti gli intestatari)
+        }
+      } finally {
+        setIsLoadingBasics(false)
       }
     }
 
@@ -416,6 +423,13 @@ export function PuntaBancaSaveModal({
               >
                 Chiudi
               </Button>
+            </div>
+          </>
+        ) : isLoadingBasics ? (
+          <>
+            <DialogTitle className="sr-only">Caricamento</DialogTitle>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           </>
         ) : (

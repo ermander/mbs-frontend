@@ -1,5 +1,6 @@
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
+import { LandingPageBackdrop } from '@/components/landing/landing-page-backdrop'
 import { HeroSection } from '@/components/landing/hero-section'
 import { ValuePropositionSection } from '@/components/landing/value-proposition-section'
 import { HowItWorksSection } from '@/components/landing/how-it-works-section'
@@ -13,7 +14,8 @@ export default function Page() {
   return (
     <>
       <Header />
-      <main>
+      <main className="relative isolate overflow-x-hidden">
+        <LandingPageBackdrop />
         <HeroSection />
         <ValuePropositionSection />
         <HowItWorksSection />

@@ -15,15 +15,6 @@ export interface NavDropdownItem {
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
-    label: 'STRUMENTI ONLINE',
-    items: [
-      { label: 'Oddsmatcher', href: '/oddsmatcher' },
-      // { label: 'Dutcher', href: '/dutcher' },
-      // { label: 'Trimatcher', href: '/trimatcher' },
-      // { label: 'Targeter', href: '/targeter' },
-    ],
-  },
-  {
     label: 'STRUMENTI OFFLINE',
     items: [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
@@ -57,5 +48,8 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 ]
 
 /** Direct links (no dropdown); order: HOME, GUIDE, then dropdowns go in between, then AGENDA, FORUM */
-export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [{ label: 'HOME', href: '/' }]
+export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
+  { label: 'HOME', href: '/' },
+  { label: 'ODDS SCANNER', href: '/odds-scanner' },
+]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

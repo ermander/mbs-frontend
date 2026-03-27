@@ -67,6 +67,7 @@ interface ProfitTrackerState {
   isLoadingHolders: boolean
   holdersError?: string
   allHolders: Holder[]
+  isLoadingAllHolders: boolean
   allBooks: Book[]
   books: Book[]
   booksTotal: number | null
@@ -236,6 +237,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     isLoadingHolders: false,
     holdersError: undefined,
     allHolders: [],
+    isLoadingAllHolders: false,
     allBooks: [],
     books: initialBooks,
     booksTotal: null,
@@ -291,11 +293,14 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       }
     },
     fetchAllHolders: async () => {
+      set(() => ({ isLoadingAllHolders: true }))
       try {
         const { items } = await apiGetHolders({ limit: 5000 })
         set(() => ({ allHolders: items }))
       } catch {
         set(() => ({ allHolders: [] }))
+      } finally {
+        set(() => ({ isLoadingAllHolders: false }))
       }
     },
     addHolder: async (holder) => {

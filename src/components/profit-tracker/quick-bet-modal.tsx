@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
 import type { QuickGameMethod } from '@/types/profit-tracker'
@@ -48,11 +49,22 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [tag, setTag] = useState('')
   const [nota, setNota] = useState('')
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!open) return
     void fetchAllAccounts()
   }, [open, fetchAllAccounts])
+
+  const accountOptions = useMemo(
+    () => allAccounts.map((a) => ({ value: a.id, label: a.nome })),
+    [allAccounts],
+  )
+
+  const methodOptions = useMemo(
+    () => QUICK_METHODS.map((m) => ({ value: m.value, label: m.label })),
+    [],
+  )
 
   const effectiveAccountId =
     accountId && allAccounts.some((a) => a.id === accountId)
@@ -89,40 +101,38 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
+        {/* Portal container per dropdown SearchableSelect dentro la modale */}
+        <div
+          ref={setDropdownPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
         <DialogHeader>
           <DialogTitle>Nuova giocata rapida</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="quick-account">Conto</Label>
-            <select
-              id="quick-account"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={effectiveAccountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              {allAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="quick-method">Metodo</Label>
-            <select
-              id="quick-method"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={method}
-              onChange={(e) => setMethod(e.target.value as QuickGameMethod)}
-            >
-              {QUICK_METHODS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            id="quick-account"
+            label="Conto"
+            options={accountOptions}
+            value={effectiveAccountId}
+            onChange={setAccountId}
+            allowEmpty={false}
+            placeholder="Seleziona conto"
+            searchPlaceholder="Cerca conto..."
+            portalContainer={dropdownPortalEl}
+          />
+          <SearchableSelect
+            id="quick-method"
+            label="Metodo"
+            options={methodOptions}
+            value={method}
+            onChange={(v) => setMethod(v as QuickGameMethod)}
+            allowEmpty={false}
+            placeholder="Seleziona metodo"
+            searchPlaceholder="Cerca metodo..."
+            portalContainer={dropdownPortalEl}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="quick-movimento">Movimento (€)</Label>
             <Input

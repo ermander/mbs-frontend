@@ -2,10 +2,11 @@ import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 
 export function CtaSection() {
   return (
-    <section className="py-20 sm:py-28">
+    <LandingSection accent="blue-wash" hairlineTop>
       <Container className="flex flex-col items-center text-center">
         <h2 className="text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Pronto a iniziare?
@@ -18,6 +19,6 @@ export function CtaSection() {
           <Link href="/registrazione">Inizia gratis</Link>
         </Button>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

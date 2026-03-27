@@ -86,6 +86,7 @@ export function OddsmatcherCalculatorModal({
 }: OddsmatcherCalculatorModalProps) {
   const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.allHolders)
+  const isLoadingAllHolders = useProfitTrackerStore((s) => s.isLoadingAllHolders)
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
@@ -102,6 +103,7 @@ export function OddsmatcherCalculatorModal({
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
 
   const [holderModalOpen, setHolderModalOpen] = useState(false)
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
   const [accountIdPunta, setAccountIdPunta] = useState<string>('')
@@ -184,7 +186,15 @@ export function OddsmatcherCalculatorModal({
 
   useEffect(() => {
     if (holderModalOpen && row) {
-      void loadHolderOptions()
+      const load = async () => {
+        setIsLoadingBasics(true)
+        try {
+          await loadHolderOptions()
+        } finally {
+          setIsLoadingBasics(false)
+        }
+      }
+      void load()
     }
   }, [holderModalOpen, row, loadHolderOptions])
 
@@ -1105,6 +1115,13 @@ export function OddsmatcherCalculatorModal({
                 >
                   Chiudi
                 </Button>
+              </div>
+            </>
+          ) : isLoadingBasics ? (
+            <>
+              <DialogTitle className="sr-only">Caricamento</DialogTitle>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             </>
           ) : (

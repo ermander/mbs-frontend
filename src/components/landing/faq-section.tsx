@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 
 const faqItems = [
   {
@@ -43,7 +44,7 @@ const faqItems = [
 
 export function FaqSection() {
   return (
-    <section id="faq" className="scroll-mt-20 py-20 sm:py-28">
+    <LandingSection id="faq" className="scroll-mt-20" hairlineTop>
       <Container>
         <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Domande frequenti
@@ -60,6 +61,6 @@ export function FaqSection() {
           ))}
         </Accordion>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

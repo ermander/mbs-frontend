@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 import { cn } from '@/lib/utils'
 
 import { Check } from 'lucide-react'
@@ -93,7 +94,7 @@ function PricingCard({
 
 export function PricingSection() {
   return (
-    <section id="prezzi" className="scroll-mt-20 py-20 sm:py-28">
+    <LandingSection id="prezzi" className="scroll-mt-20" accent="cyan-wash" hairlineTop>
       <Container>
         <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Piani e prezzi
@@ -107,6 +108,6 @@ export function PricingSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

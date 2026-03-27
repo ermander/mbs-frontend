@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 import { cn } from '@/lib/utils'
 
 import { UserPlus, Search, Calculator, TrendingUp } from 'lucide-react'
@@ -65,7 +66,7 @@ function StepCard({
 
 export function HowItWorksSection() {
   return (
-    <section id="come-funziona" className="scroll-mt-20 py-20 sm:py-28">
+    <LandingSection id="come-funziona" className="scroll-mt-20" accent="blue-wash" hairlineTop>
       <Container>
         <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Come funziona
@@ -79,6 +80,6 @@ export function HowItWorksSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

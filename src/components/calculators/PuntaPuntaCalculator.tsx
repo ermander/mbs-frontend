@@ -89,6 +89,7 @@ export function PuntaPuntaCalculator() {
   const [imbalance, setImbalance] = useState<number>(0)
   const [partialPuntas, setPartialPuntas] = useState<{ amount: string; newOdds: string }[]>([])
   const [holderModalOpen, setHolderModalOpen] = useState(false)
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [holderIdPuntaA, setHolderIdPuntaA] = useState('')
   const [holderIdPuntaB, setHolderIdPuntaB] = useState('')
   const [accountsPuntaA, setAccountsPuntaA] = useState<Account[]>([])
@@ -259,8 +260,13 @@ export function PuntaPuntaCalculator() {
   useEffect(() => {
     if (!holderModalOpen || savedBetId) return
     const loadBasics = async () => {
-      if (holders.length === 0) await fetchHolders()
-      if (books.length === 0) await fetchAllBooks()
+      setIsLoadingBasics(true)
+      try {
+        if (holders.length === 0) await fetchHolders()
+        if (books.length === 0) await fetchAllBooks()
+      } finally {
+        setIsLoadingBasics(false)
+      }
     }
     void loadBasics()
   }, [holderModalOpen, savedBetId, holders.length, books.length, fetchHolders, fetchAllBooks])
@@ -939,6 +945,13 @@ export function PuntaPuntaCalculator() {
                 >
                   Chiudi
                 </Button>
+              </div>
+            </>
+          ) : isLoadingBasics ? (
+            <>
+              <DialogTitle className="sr-only">Caricamento</DialogTitle>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             </>
           ) : (

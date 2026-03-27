@@ -34,6 +34,9 @@ import { OddsmatcherCalculatorModal } from '@/components/strumenti/oddsmatcher-c
 import { OddsmatcherMultiplaSaveModal } from '@/components/strumenti/oddsmatcher-multipla-save-modal'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { cn } from '@/lib/utils'
+import type { SharedFilters } from '@/types/shared-filters'
+import type { MultiplaEvent } from '@/types/multipla-event'
+import { multiplaEventKey } from '@/types/multipla-event'
 
 const PAGE_SIZE = 25
 const EXCHANGE_COMMISSION = 0.03
@@ -85,16 +88,17 @@ function isRowAfter(row: OddsmatcherRow, refDate: string, refHour: string): bool
   return row.hour > refHour
 }
 
-function ratingMultipla(selected: OddsmatcherRow[]): number | null {
+function ratingMultipla(selected: MultiplaEvent[]): number | null {
   if (selected.length === 0) return null
   let product = 1
-  for (const row of selected) {
-    const back = parseFloat(row.back_odd)
-    const lay = parseFloat(row.lay_odd)
-    if (Number.isNaN(back) || Number.isNaN(lay) || lay <= 0) return null
-    const layEffective = lay - EXCHANGE_COMMISSION
-    if (layEffective <= 0) return null
-    product *= (back * (1 - EXCHANGE_COMMISSION)) / layEffective
+  for (const ev of selected) {
+    const main = parseFloat(ev.mainOdd)
+    const cover = parseFloat(ev.coverOdd)
+    const c = ev.commissionPercent / 100
+    if (Number.isNaN(main) || Number.isNaN(cover) || cover <= 0) return null
+    const coverEffective = cover - c
+    if (coverEffective <= 0) return null
+    product *= (main * (1 - c)) / coverEffective
   }
   return product * 100
 }
@@ -104,39 +108,76 @@ function formatDateShort(date: string, hour: string): string {
   return `${d}/${m} ${hour}`
 }
 
-export function OddsmatcherTable() {
+export function OddsmatcherTable({
+  filters,
+  onMetadata,
+}: {
+  filters: SharedFilters
+  onMetadata?: (sports: string[], markets: string[]) => void
+}) {
+  const {
+    searchQuery,
+    setSearchQuery,
+    sharedStake,
+    sharedBonus,
+    sharedRimborso,
+    setSharedStake,
+    setSharedBonus,
+    setSharedRimborso,
+    selectedSportIds,
+    setSelectedSportIds,
+    selectedMarkets,
+    setSelectedMarkets,
+    minOdds,
+    setMinOdds,
+    maxOdds,
+    setMaxOdds,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    minLiquidity,
+    setMinLiquidity,
+    minRating,
+    setMinRating,
+    filtersOpen,
+    setFiltersOpen,
+    multiplaOpen,
+    setMultiplaOpen,
+    multiplaNumEventi,
+    setMultiplaNumEventi,
+    multiplaQuotaMinEvento,
+    setMultiplaQuotaMinEvento,
+    multiplaQuotaMaxEvento,
+    setMultiplaQuotaMaxEvento,
+    multiplaQuotaMinTotale,
+    setMultiplaQuotaMinTotale,
+    multiplaDataInizio,
+    setMultiplaDataInizio,
+    multiplaDataFine,
+    setMultiplaDataFine,
+    multiplaSelectedEvents,
+    setMultiplaSelectedEvents,
+    multiplaSportIds,
+    setMultiplaSportIds,
+    toggleMultiplaEvent,
+    eliminaMultipla,
+    resetMultiplaFilters,
+  } = filters
+
+  // ── Tab-specific state ──
   const [page, setPage] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sharedStake, setSharedStake] = useState('')
-  const [sharedBonus, setSharedBonus] = useState('')
-  const [sharedRimborso, setSharedRimborso] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [multiplaOpen, setMultiplaOpen] = useState(false)
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
   const [selectedExchangeIds, setSelectedExchangeIds] = useState<string[]>(() =>
     ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id),
   )
-  const [selectedSportIds, setSelectedSportIds] = useState<string[]>([])
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([])
-  const [minLiquidity, setMinLiquidity] = useState('')
-  const [minRating, setMinRating] = useState('')
-  const [minOdds, setMinOdds] = useState('')
-  const [maxOdds, setMaxOdds] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [calculatorRow, setCalculatorRow] = useState<OddsmatcherRow | null>(null)
-  const [multiplaNumEventi, setMultiplaNumEventi] = useState(2)
-  const [multiplaQuotaMinEvento, setMultiplaQuotaMinEvento] = useState('')
-  const [multiplaQuotaMinTotale, setMultiplaQuotaMinTotale] = useState('1.00')
-  const [multiplaQuotaMaxEvento, setMultiplaQuotaMaxEvento] = useState('')
-  const [multiplaDataInizio, setMultiplaDataInizio] = useState('')
-  const [multiplaDataFine, setMultiplaDataFine] = useState('')
   const startDateInputRef = useRef<HTMLInputElement>(null)
   const endDateInputRef = useRef<HTMLInputElement>(null)
   const multiplaDataInizioRef = useRef<HTMLInputElement>(null)
   const multiplaDataFineRef = useRef<HTMLInputElement>(null)
-  const [multiplaSelectedEvents, setMultiplaSelectedEvents] = useState<OddsmatcherRow[]>([])
   const [multiplaSaveModalOpen, setMultiplaSaveModalOpen] = useState(false)
+
   const apiParams = {
     id_book: selectedBookIds.length > 0 ? selectedBookIds : undefined,
     id_exchange: selectedExchangeIds.length > 0 ? selectedExchangeIds : undefined,
@@ -172,52 +213,29 @@ export function OddsmatcherTable() {
   }, [multiplaSelectedEvents, selectedBookIds.length])
 
   const resetFilters = () => {
-    setSearchQuery('')
+    filters.resetFilters()
     setSelectedBookIds([])
     setSelectedExchangeIds(ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id))
-    setSelectedSportIds([])
-    setSelectedMarkets([])
-    setMinLiquidity('')
-    setMinRating('')
-    setMinOdds('')
-    setMaxOdds('')
-    setStartDate('')
-    setEndDate('')
-    setMultiplaNumEventi(2)
-    setMultiplaQuotaMinEvento('')
-    setMultiplaQuotaMaxEvento('')
-    setMultiplaQuotaMinTotale('1.00')
-    setMultiplaDataInizio('')
-    setMultiplaDataFine('')
-  }
-
-  const resetMultiplaFilters = () => {
-    setMultiplaNumEventi(2)
-    setMultiplaQuotaMinEvento('')
-    setMultiplaQuotaMaxEvento('')
-    setMultiplaQuotaMinTotale('1.00')
-    setMultiplaDataInizio('')
-    setMultiplaDataFine('')
-  }
-
-  const eliminaMultipla = () => {
-    setMultiplaSelectedEvents([])
   }
 
   const rows = useMemo(() => data ?? [], [data])
   const sports = useMemo(() => [...new Set(rows.map((r) => r.sport))].sort(), [rows])
   const markets = useMemo(() => [...new Set(rows.map((r) => r.market))].sort(), [rows])
 
+  useEffect(() => {
+    onMetadata?.(sports, markets)
+  }, [sports, markets, onMetadata])
+
   const selectedKeysSet = useMemo(
-    () => new Set(multiplaSelectedEvents.map(rowToKey)),
+    () => new Set(multiplaSelectedEvents.map(multiplaEventKey)),
     [multiplaSelectedEvents],
   )
   const multiplaRating = ratingMultipla(multiplaSelectedEvents)
   const quotaMultipla =
     multiplaSelectedEvents.length > 0
       ? multiplaSelectedEvents.reduce((acc, ev) => {
-          const back = parseFloat(ev.back_odd)
-          return Number.isNaN(back) ? acc : acc * back
+          const main = parseFloat(ev.mainOdd)
+          return Number.isNaN(main) ? acc : acc * main
         }, 1)
       : null
   const guadagnoMultipla = useMemo(() => {
@@ -230,9 +248,9 @@ export function OddsmatcherTable() {
     const results = multiplaLayStakes(
       backStakeTotale,
       quotaMultipla,
-      multiplaSelectedEvents.map((row) => ({
-        layOdds: parseFloat(row.lay_odd),
-        commissionPercent: EXCHANGE_COMMISSION * 100,
+      multiplaSelectedEvents.map((ev) => ({
+        layOdds: parseFloat(ev.coverOdd),
+        commissionPercent: ev.commissionPercent,
       })),
       rimborso,
     )
@@ -287,70 +305,8 @@ export function OddsmatcherTable() {
 
   const filtersBarSlim = (
     <div className="space-y-0">
-      {/* Main bar */}
+      {/* Tab-specific bar */}
       <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-1 px-3 py-2.5">
-        <div className="relative min-w-[180px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Cerca evento o torneo..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 border-0 bg-transparent pl-8 text-sm focus-visible:ring-0"
-            aria-label="Cerca per nome evento o torneo"
-          />
-        </div>
-
-        <div className="hidden h-5 w-px bg-border sm:block" />
-
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">Puntata</span>
-          <Input
-            id="oddsmatcher-shared-stake"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.01"
-            placeholder="€"
-            value={sharedStake}
-            onChange={(e) => setSharedStake(e.target.value)}
-            className="h-8 w-20 text-sm"
-            aria-label="Stake"
-          />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">Bonus</span>
-          <Input
-            id="oddsmatcher-shared-bonus"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.01"
-            placeholder="€"
-            value={sharedBonus}
-            onChange={(e) => setSharedBonus(e.target.value)}
-            className="h-8 w-20 text-sm"
-            aria-label="Bonus"
-          />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">Rimborso</span>
-          <Input
-            id="oddsmatcher-shared-rimborso"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="0.01"
-            placeholder="€"
-            value={sharedRimborso}
-            onChange={(e) => setSharedRimborso(e.target.value)}
-            className="h-8 w-20 text-sm"
-            aria-label="Rimborso"
-          />
-        </div>
-
-        <div className="hidden h-5 w-px bg-border sm:block" />
-
         <SearchableMultiSelect
           options={ODDSMATCHER_BOOKS_ONLY}
           selectedIds={selectedBookIds}
@@ -391,66 +347,6 @@ export function OddsmatcherTable() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="hidden h-5 w-px bg-border sm:block" />
-
-        <button
-          type="button"
-          onClick={() => {
-            if (filtersOpen) {
-              setFiltersOpen(false)
-            } else {
-              if (multiplaOpen) {
-                resetMultiplaFilters()
-                eliminaMultipla()
-                setMultiplaOpen(false)
-              }
-              setFiltersOpen(true)
-            }
-          }}
-          className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all',
-            filtersOpen
-              ? 'border-primary/30 bg-primary/10 text-primary'
-              : 'border-border text-muted-foreground hover:border-primary/20 hover:text-foreground',
-          )}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filtri
-          {activeFilterCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (multiplaOpen) {
-              setMultiplaOpen(false)
-            } else {
-              if (filtersOpen) {
-                resetFilters()
-                setFiltersOpen(false)
-              }
-              setMultiplaOpen(true)
-            }
-          }}
-          className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all',
-            multiplaOpen
-              ? 'border-neon-lavender/30 bg-neon-lavender/10 text-neon-lavender'
-              : 'border-border text-muted-foreground hover:border-neon-lavender/20 hover:text-foreground',
-          )}
-        >
-          Multipla
-          {multiplaSelectedEvents.length > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-neon-lavender px-1 text-[10px] font-bold text-background">
-              {multiplaSelectedEvents.length}/{multiplaNumEventi}
-            </span>
-          )}
-        </button>
-
         <div className="ml-auto flex items-center gap-2">
           <Button
             onClick={() => refetch()}
@@ -472,314 +368,6 @@ export function OddsmatcherTable() {
           </button>
         </div>
       </div>
-
-      {/* Active filter chips */}
-      {activeFilterCount > 0 && !filtersOpen && (
-        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-2">
-          {selectedSportIds.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Sport: {selectedSportIds.map((s) => getSportDisplay(s).label).join(', ')}
-              <button
-                type="button"
-                onClick={() => setSelectedSportIds([])}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-          {selectedMarkets.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Mercati: {selectedMarkets.length}
-              <button
-                type="button"
-                onClick={() => setSelectedMarkets([])}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-          {(minOdds.trim() || maxOdds.trim()) && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Quote: {minOdds || '—'} – {maxOdds || '—'}
-              <button
-                type="button"
-                onClick={() => {
-                  setMinOdds('')
-                  setMaxOdds('')
-                }}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-          {(startDate.trim() || endDate.trim()) && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Date: {startDate || '—'} → {endDate || '—'}
-              <button
-                type="button"
-                onClick={() => {
-                  setStartDate('')
-                  setEndDate('')
-                }}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-          {minLiquidity.trim() && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Liq. ≥ €{minLiquidity}
-              <button
-                type="button"
-                onClick={() => setMinLiquidity('')}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-          {minRating.trim() && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
-              Rating ≥ {minRating}%
-              <button
-                type="button"
-                onClick={() => setMinRating('')}
-                className="ml-0.5 hover:text-foreground"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Advanced filters panel (collapsible) */}
-      {filtersOpen && (
-        <div className="mt-2 animate-fade-in rounded-xl border border-border bg-surface-1 p-4">
-          <div className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Sport
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-full min-w-0 justify-between text-xs"
-                  >
-                    {selectedSportIds.length === 0
-                      ? 'Tutti'
-                      : selectedSportIds.length === 1
-                        ? (() => {
-                            const { icon, label } = getSportDisplay(selectedSportIds[0])
-                            return icon ? `${icon} ${label}` : selectedSportIds[0]
-                          })()
-                        : `${selectedSportIds.length} sport`}
-                    <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-                  {sports.map((s) => {
-                    const { icon, label } = getSportDisplay(s)
-                    return (
-                      <DropdownMenuItem
-                        key={s}
-                        onSelect={(e) => e.preventDefault()}
-                        className="cursor-pointer"
-                      >
-                        <label className="flex w-full cursor-pointer items-center gap-2">
-                          <Checkbox
-                            checked={selectedSportIds.includes(s)}
-                            onChange={() => toggleSport(s)}
-                          />
-                          {icon && (
-                            <span className="text-base" aria-hidden>
-                              {icon}
-                            </span>
-                          )}
-                          <span>{label}</span>
-                        </label>
-                      </DropdownMenuItem>
-                    )
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Mercati
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-full min-w-0 justify-between text-xs"
-                  >
-                    {selectedMarkets.length === 0
-                      ? 'Tutti'
-                      : selectedMarkets.length === 1
-                        ? selectedMarkets[0]
-                        : `${selectedMarkets.length} mercati`}
-                    <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-[240px] overflow-y-auto">
-                  {markets.map((m) => (
-                    <DropdownMenuItem
-                      key={m}
-                      onSelect={(e) => e.preventDefault()}
-                      className="cursor-pointer"
-                    >
-                      <label className="flex w-full cursor-pointer items-center gap-2">
-                        <Checkbox
-                          checked={selectedMarkets.includes(m)}
-                          onChange={() => toggleMarket(m)}
-                        />
-                        <span>{m}</span>
-                      </label>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-quota-min"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Quota min
-              </Label>
-              <Input
-                id="oddsmatcher-quota-min"
-                type="number"
-                placeholder="min"
-                value={minOdds}
-                onChange={(e) => setMinOdds(e.target.value)}
-                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                className="h-8 w-full min-w-0 text-sm"
-                min={1}
-                step={0.01}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-quota-max"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Quota max
-              </Label>
-              <Input
-                id="oddsmatcher-quota-max"
-                type="number"
-                placeholder="max"
-                value={maxOdds}
-                onChange={(e) => setMaxOdds(e.target.value)}
-                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                className="h-8 w-full min-w-0 text-sm"
-                min={1}
-                step={0.01}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-date-from"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Data da
-              </Label>
-              <div className="relative">
-                <Input
-                  ref={startDateInputRef}
-                  id="oddsmatcher-date-from"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-8 w-full min-w-0 pr-9 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => startDateInputRef.current?.showPicker?.()}
-                  className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                  aria-label="Apri selettore data"
-                >
-                  <Calendar className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-date-to"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Data a
-              </Label>
-              <div className="relative">
-                <Input
-                  ref={endDateInputRef}
-                  id="oddsmatcher-date-to"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-8 w-full min-w-0 pr-9 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => endDateInputRef.current?.showPicker?.()}
-                  className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                  aria-label="Apri selettore data"
-                >
-                  <Calendar className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-liq-min"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Liq. min €
-              </Label>
-              <Input
-                id="oddsmatcher-liq-min"
-                type="number"
-                placeholder="€"
-                value={minLiquidity}
-                onChange={(e) => setMinLiquidity(e.target.value)}
-                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                className="h-8 w-full min-w-0 text-sm"
-                min={0}
-                step={1}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                htmlFor="oddsmatcher-rating-min"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground"
-              >
-                Rating min %
-              </Label>
-              <Input
-                id="oddsmatcher-rating-min"
-                type="number"
-                placeholder="%"
-                value={minRating}
-                onChange={(e) => setMinRating(e.target.value)}
-                onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                className="h-8 w-full min-w-0 text-sm"
-                min={0}
-                max={100}
-                step={0.1}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Multipla panel (collapsible) */}
       {multiplaOpen && (
@@ -863,6 +451,43 @@ export function OddsmatcherTable() {
                     step={0.01}
                   />
                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Sport
+                </span>
+                {sports.map((s) => {
+                  const { icon, label } = getSportDisplay(s)
+                  const active = multiplaSportIds.includes(s)
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() =>
+                        setMultiplaSportIds((prev) =>
+                          active ? prev.filter((id) => id !== s) : [...prev, s],
+                        )
+                      }
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors ${
+                        active
+                          ? 'border-neon-lavender/60 bg-neon-lavender/15 text-foreground'
+                          : 'border-border bg-surface-1 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {icon && <span aria-hidden>{icon}</span>}
+                      {label}
+                    </button>
+                  )
+                })}
+                {multiplaSportIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMultiplaSportIds([])}
+                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Tutti
+                  </button>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-x-6 sm:max-w-sm">
                 <div className="flex min-w-0 flex-col gap-1">
@@ -954,11 +579,11 @@ export function OddsmatcherTable() {
                 <ul className="space-y-1">
                   {multiplaSelectedEvents.map((ev) => (
                     <li
-                      key={rowToKey(ev)}
+                      key={multiplaEventKey(ev)}
                       className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-2 py-1 text-xs"
                     >
                       <span className="truncate">
-                        {ev.home} – {ev.away}{' '}
+                        {ev.type === 'punta-banca' ? 'PB' : 'PP'} {ev.home} – {ev.away}{' '}
                         <span className="text-muted-foreground">
                           ({formatDateShort(ev.date, ev.hour)})
                         </span>
@@ -969,7 +594,7 @@ export function OddsmatcherTable() {
                         aria-label="Rimuovi"
                         onClick={() =>
                           setMultiplaSelectedEvents((prev) =>
-                            prev.filter((r) => rowToKey(r) !== rowToKey(ev)),
+                            prev.filter((r) => multiplaEventKey(r) !== multiplaEventKey(ev)),
                           )
                         }
                       >
@@ -1237,37 +862,46 @@ export function OddsmatcherTable() {
         )
       }
     }
-    const selectedKeys = new Set(multiplaSelectedEvents.map(rowToKey))
+    if (multiplaSportIds.length > 0) {
+      const sportSet = new Set(multiplaSportIds)
+      multiplaAvailableRows = multiplaAvailableRows.filter((row) => sportSet.has(row.sport))
+    }
+    const selectedKeys = new Set(multiplaSelectedEvents.map(multiplaEventKey))
     multiplaAvailableRows = multiplaAvailableRows.filter((row) => !selectedKeys.has(rowToKey(row)))
     multiplaAvailableRows = [...multiplaAvailableRows].sort(
       (a, b) => ratingValue(b.back_odd, b.lay_odd) - ratingValue(a.back_odd, a.lay_odd),
     )
   }
-  // Eventi selezionati ancorati in cima, in ordine cronologico
-  const anchoredRows =
-    oneBookId && multiplaSelectedEvents.length > 0
-      ? [...multiplaSelectedEvents].sort((a, b) => {
-          if (a.date !== b.date) return a.date.localeCompare(b.date)
-          return a.hour.localeCompare(b.hour)
-        })
-      : []
-  const fullMultiplaRows = oneBookId ? [...anchoredRows, ...multiplaAvailableRows] : []
-  const multiplaTotalPages = Math.ceil(fullMultiplaRows.length / PAGE_SIZE)
-  const multiplaPaginatedRows = fullMultiplaRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const multiplaStart = fullMultiplaRows.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const multiplaEnd = Math.min(page * PAGE_SIZE, fullMultiplaRows.length)
+  const multiplaTotalPages = Math.ceil(multiplaAvailableRows.length / PAGE_SIZE)
+  const multiplaPaginatedRows = multiplaAvailableRows.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  )
+  const multiplaStart = multiplaAvailableRows.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const multiplaEnd = Math.min(page * PAGE_SIZE, multiplaAvailableRows.length)
 
-  const toggleMultiplaEvent = (row: OddsmatcherRow) => {
-    const key = rowToKey(row)
-    if (selectedKeysSet.has(key)) {
-      setMultiplaSelectedEvents((prev) => prev.filter((r) => rowToKey(r) !== key))
-    } else if (multiplaSelectedEvents.length < multiplaNumEventi) {
-      setMultiplaSelectedEvents((prev) => [...prev, row])
-    }
+  const oddsRowToMultiplaEvent = (row: OddsmatcherRow): MultiplaEvent => ({
+    type: 'punta-banca',
+    home: row.home,
+    away: row.away,
+    date: row.date,
+    hour: row.hour,
+    competition: row.competition,
+    market: row.market,
+    selection: row.selection,
+    mainOdd: row.back_odd,
+    coverOdd: row.lay_odd,
+    bookId1: row.id_book_1,
+    bookId2: row.id_book_2,
+    commissionPercent: EXCHANGE_COMMISSION * 100,
+  })
+
+  const handleToggleMultipla = (row: OddsmatcherRow) => {
+    toggleMultiplaEvent(oddsRowToMultiplaEvent(row))
   }
 
   const tableRows = oneBookId ? multiplaPaginatedRows : paginatedRows
-  const tableTotal = oneBookId ? fullMultiplaRows.length : sortedRows.length
+  const tableTotal = oneBookId ? multiplaAvailableRows.length : sortedRows.length
   const tablePages = oneBookId ? multiplaTotalPages : totalPages
   const tableStart = oneBookId ? multiplaStart : start
   const tableEnd = oneBookId ? multiplaEnd : end
@@ -1359,7 +993,7 @@ export function OddsmatcherTable() {
                   <Checkbox
                     checked={isSelected}
                     disabled={checkboxDisabled}
-                    onChange={() => oneBookId && toggleMultiplaEvent(row)}
+                    onChange={() => oneBookId && handleToggleMultipla(row)}
                     aria-label={`Seleziona ${row.home} – ${row.away}`}
                   />
                   <Button
@@ -1424,7 +1058,7 @@ export function OddsmatcherTable() {
                     <Checkbox
                       checked={isSelected}
                       disabled={checkboxDisabled}
-                      onChange={() => oneBookId && toggleMultiplaEvent(row)}
+                      onChange={() => oneBookId && handleToggleMultipla(row)}
                       aria-label={`Seleziona ${row.home} – ${row.away}`}
                     />
                   </td>
@@ -1541,9 +1175,9 @@ export function OddsmatcherTable() {
       <OddsmatcherMultiplaSaveModal
         open={multiplaSaveModalOpen}
         onOpenChange={setMultiplaSaveModalOpen}
-        selectedEvents={multiplaSelectedEvents}
+        selectedEvents={multiplaSelectedEvents as unknown as OddsmatcherRow[]}
         bookOddsId={oneBookId ?? ''}
-        exchangeOddsId={multiplaSelectedEvents[0]?.id_book_2 ?? ''}
+        exchangeOddsId={multiplaSelectedEvents[0]?.bookId2 ?? ''}
         sharedStake={sharedStake}
         sharedBonus={sharedBonus}
         sharedRimborso={sharedRimborso}

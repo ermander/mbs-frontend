@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 import { cn } from '@/lib/utils'
 
 import { BarChart3, Calculator, BookOpen, TrendingUp, Target, Sparkles } from 'lucide-react'
@@ -70,7 +71,7 @@ function FeatureCard({
 
 export function FeaturesSection() {
   return (
-    <section id="strumenti" className="scroll-mt-20 py-20 sm:py-28">
+    <LandingSection id="strumenti" className="scroll-mt-20" accent="cyan-wash" hairlineTop>
       <Container>
         <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Strumenti e funzionalità
@@ -85,6 +86,6 @@ export function FeaturesSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 
 import { Scale, Shield, Calculator } from 'lucide-react'
 
@@ -23,7 +24,7 @@ const points = [
 
 export function ValuePropositionSection() {
   return (
-    <section className="py-20 sm:py-28">
+    <LandingSection accent="cyan-wash" hairlineTop>
       <Container>
         <Card variant="elevated" className="mx-auto max-w-4xl">
           <CardContent className="pt-6">
@@ -49,6 +50,6 @@ export function ValuePropositionSection() {
           </CardContent>
         </Card>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

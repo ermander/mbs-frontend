@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 
 const stats = [
   { value: '10+', label: 'Bookmaker supportati' },
@@ -54,7 +55,7 @@ function TestimonialCard({ quote, name, role }: { quote: string; name: string; r
 
 export function SocialProofSection() {
   return (
-    <section className="py-20 sm:py-28">
+    <LandingSection accent="blue-wash" hairlineTop>
       <Container>
         <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Cosa dicono di noi
@@ -71,6 +72,6 @@ export function SocialProofSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

@@ -86,6 +86,7 @@ export function OddsmatcherMultiplaSaveModal({
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [accountIdPunta, setAccountIdPunta] = useState('')
   const [accountIdBanca, setAccountIdBanca] = useState('')
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
@@ -151,7 +152,15 @@ export function OddsmatcherMultiplaSaveModal({
 
   useEffect(() => {
     if (open && (bookOddsId || exchangeOddsId)) {
-      void loadHolderOptions()
+      const load = async () => {
+        setIsLoadingBasics(true)
+        try {
+          await loadHolderOptions()
+        } finally {
+          setIsLoadingBasics(false)
+        }
+      }
+      void load()
     }
   }, [open, bookOddsId, exchangeOddsId, loadHolderOptions])
 
@@ -300,6 +309,13 @@ export function OddsmatcherMultiplaSaveModal({
               >
                 Chiudi
               </Button>
+            </div>
+          </>
+        ) : isLoadingBasics ? (
+          <>
+            <DialogTitle className="sr-only">Caricamento</DialogTitle>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           </>
         ) : (

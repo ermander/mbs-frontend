@@ -10,6 +10,7 @@
  */
 export interface MultiplaEvent {
   type: 'punta-banca' | 'punta-punta'
+  sport: string
   home: string
   away: string
   date: string

@@ -32,6 +32,8 @@ interface SearchableMultiSelectProps {
   /** Show selected items as badges with remove button. Default false (legacy button mode). */
   showBadges?: boolean
   size?: 'default' | 'sm'
+  /** Custom render for each option in the dropdown list */
+  renderOption?: (option: SearchableMultiSelectOption) => React.ReactNode
 }
 
 const PANEL_OFFSET = 4
@@ -56,6 +58,7 @@ export function SearchableMultiSelect({
   placeholder = 'Tutti',
   showBadges = false,
   size = 'default',
+  renderOption,
 }: SearchableMultiSelectProps) {
   const isSmall = size === 'sm'
   const listboxId = useId()
@@ -73,9 +76,16 @@ export function SearchableMultiSelect({
     [options, selectedIds],
   )
 
-  const filteredOptions = searchQuery.trim()
-    ? options.filter((opt) => opt.name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
-    : options
+  const filteredOptions = useMemo(() => {
+    const base = searchQuery.trim()
+      ? options.filter((opt) => opt.name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+      : options
+    return [...base].sort((a, b) => {
+      const aSelected = selectedIds.includes(a.id) ? 0 : 1
+      const bSelected = selectedIds.includes(b.id) ? 0 : 1
+      return aSelected - bSelected
+    })
+  }, [options, searchQuery, selectedIds])
 
   const handleRemove = onRemove ?? onToggle
 
@@ -208,7 +218,7 @@ export function SearchableMultiSelect({
                   onClick={(e) => e.stopPropagation()}
                   aria-hidden
                 />
-                <span>{opt.name}</span>
+                {renderOption ? renderOption(opt) : <span>{opt.name}</span>}
               </div>
             )
           })}

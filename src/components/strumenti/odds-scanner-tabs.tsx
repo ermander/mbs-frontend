@@ -5,6 +5,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { OddsmatcherTable } from '@/components/strumenti/oddsmatcher-table'
 import { DutcherTable } from '@/components/strumenti/dutcher-table'
 import { SharedFilterBar } from '@/components/strumenti/shared-filter-bar'
+import { OddsmatcherMultiplaSaveModal } from '@/components/strumenti/oddsmatcher-multipla-save-modal'
 import type { SharedFilters } from '@/types/shared-filters'
 import type { MultiplaEvent } from '@/types/multipla-event'
 import { multiplaEventKey } from '@/types/multipla-event'
@@ -85,6 +86,9 @@ export function OddsScannerTabs() {
     setMultiplaDataFine('')
   }
 
+  // ── Multipla save modal ──
+  const [multiplaSaveModalOpen, setMultiplaSaveModalOpen] = useState(false)
+
   const resetMultiplaFilters = () => {
     setMultiplaNumEventi(2)
     setMultiplaQuotaMinEvento('')
@@ -140,6 +144,7 @@ export function OddsScannerTabs() {
     setMultiplaSelectedEvents,
     multiplaSportIds,
     setMultiplaSportIds,
+    multiplaBookId: multiplaSelectedEvents.length > 0 ? multiplaSelectedEvents[0].bookId1 : null,
     toggleMultiplaEvent,
     eliminaMultipla,
     resetFilters,
@@ -149,7 +154,12 @@ export function OddsScannerTabs() {
   return (
     <div className="space-y-4">
       <Tabs tabs={[...SCANNER_TABS]} activeTab={activeTab} onTabChange={setActiveTab} />
-      <SharedFilterBar filters={shared} sports={allSports} markets={allMarkets} />
+      <SharedFilterBar
+        filters={shared}
+        sports={allSports}
+        markets={allMarkets}
+        onMultiplaSave={() => setMultiplaSaveModalOpen(true)}
+      />
       <div className={activeTab === 'oddsmatcher' ? undefined : 'hidden'}>
         <OddsmatcherTable
           filters={shared}
@@ -168,6 +178,16 @@ export function OddsScannerTabs() {
           }}
         />
       </div>
+      <OddsmatcherMultiplaSaveModal
+        open={multiplaSaveModalOpen}
+        onOpenChange={setMultiplaSaveModalOpen}
+        selectedEvents={multiplaSelectedEvents}
+        bookOddsId={multiplaSelectedEvents.length > 0 ? multiplaSelectedEvents[0].bookId1 : ''}
+        exchangeOddsId={multiplaSelectedEvents.length > 0 ? multiplaSelectedEvents[0].bookId2 : ''}
+        sharedStake={sharedStake}
+        sharedBonus={sharedBonus}
+        sharedRimborso={sharedRimborso}
+      />
     </div>
   )
 }

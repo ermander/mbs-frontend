@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ODDSMATCHER_BOOKS } from '@/lib/oddsmatcher-books'
-import type { OddsmatcherRow } from '@/types/oddsmatcher'
+import type { MultiplaEvent } from '@/types/multipla-event'
 import type { Account } from '@/types/profit-tracker'
 import {
   getAccounts,
@@ -36,12 +36,12 @@ function findBookIdByOddsmatcherName(
   return found?.id ?? null
 }
 
-function rowToEventoData(row: OddsmatcherRow): string {
-  const hour = row.hour.replace('.', ':')
-  return new Date(`${row.date}T${hour}:00`).toISOString()
+function eventToEventoData(ev: MultiplaEvent): string {
+  const hour = ev.hour.replace('.', ':')
+  return new Date(`${ev.date}T${hour}:00`).toISOString()
 }
 
-function sportFromOddsmatcher(sportId: string): string {
+function sportFromId(sportId: string): string {
   switch (sportId) {
     case '1':
       return 'tennis'
@@ -52,14 +52,14 @@ function sportFromOddsmatcher(sportId: string): string {
   }
 }
 
-function buildMultiplaEventoNome(row: OddsmatcherRow): string {
-  return `MULTIPLA ${row.home} - ${row.away}`
+function buildMultiplaEventoNome(ev: MultiplaEvent): string {
+  return `MULTIPLA ${ev.home} - ${ev.away}`
 }
 
 export interface OddsmatcherMultiplaSaveModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  selectedEvents: OddsmatcherRow[]
+  selectedEvents: MultiplaEvent[]
   bookOddsId: string
   exchangeOddsId: string
   /** Stake condiviso dalla barra filtri (stesso valore usato per il calcolatore singolo). */
@@ -181,8 +181,8 @@ export function OddsmatcherMultiplaSaveModal({
     try {
       const sorted = sortedSelectedEvents
       const first = sorted[0]
-      const eventoDataFirst = rowToEventoData(first)
-      const sport = sportFromOddsmatcher(first.sport)
+      const eventoDataFirst = eventToEventoData(first)
+      const sport = sportFromId(first.sport)
       const eventoNome = buildMultiplaEventoNome(sorted[0])
 
       const betPayload: CreateBetPayload = {
@@ -195,7 +195,7 @@ export function OddsmatcherMultiplaSaveModal({
         nota: undefined,
       }
 
-      const quotaPuntaPrecisa = sorted.reduce((acc, row) => acc * parseFloat(row.back_odd), 1)
+      const quotaPuntaPrecisa = sorted.reduce((acc, ev) => acc * parseFloat(ev.mainOdd), 1)
       const quotaPuntaTotale = Math.round(quotaPuntaPrecisa * 100) / 100
 
       const stakePunta = Number.parseFloat(sharedStake) || 0
@@ -226,43 +226,44 @@ export function OddsmatcherMultiplaSaveModal({
       const multiplaResults = multiplaLayStakes(
         backStakeTotale,
         quotaPuntaPrecisa,
-        sorted.map((row) => ({
-          layOdds: parseFloat(row.lay_odd),
-          commissionPercent: 3,
+        sorted.map((ev) => ({
+          type: ev.type,
+          coverOdds: parseFloat(ev.coverOdd),
+          commissionPercent: ev.commissionPercent,
         })),
         rimborsoValore,
       )
-      const legsBanca: CreateBetLegPayload[] = sorted.map((row, i) => {
-        const layOdds_i = parseFloat(row.lay_odd)
-        const { layStake: layStake_i, liability: rischio_i } = multiplaResults[i] ?? {
-          layStake: 0,
-          liability: 0,
+      const legsHedge: CreateBetLegPayload[] = sorted.map((ev, i) => {
+        const coverOdds_i = parseFloat(ev.coverOdd)
+        const { hedgeStake: hedgeStake_i, hedgeCost: rischio_i } = multiplaResults[i] ?? {
+          hedgeStake: 0,
+          hedgeCost: 0,
         }
         return {
-          eventoData: rowToEventoData(row),
-          sport: sportFromOddsmatcher(row.sport),
-          eventoNome: `${row.home} - ${row.away}`,
-          competizione: row.competition,
-          mercato: row.market,
-          selezione: row.selection,
-          metodo: 'banca' as const,
+          eventoData: eventToEventoData(ev),
+          sport: sportFromId(ev.sport),
+          eventoNome: `${ev.home} - ${ev.away}`,
+          competizione: ev.competition,
+          mercato: ev.market,
+          selezione: ev.selection,
+          metodo: ev.type === 'punta-punta' ? ('punta' as const) : ('banca' as const),
           tipoBonus: 'none',
           accountId: accountIdBanca,
-          stake: layStake_i,
-          quota: layOdds_i,
+          stake: hedgeStake_i,
+          quota: coverOdds_i,
           quotaRiferimento: (() => {
-            const n = parseFloat(row.back_odd)
+            const n = parseFloat(ev.mainOdd)
             return Number.isFinite(n) ? n : undefined
           })(),
           rischio: rischio_i,
-          commissionePercentuale: 3,
+          commissionePercentuale: ev.commissionPercent,
           movimento: 0,
           statoEvento: 'bozza',
           tag: undefined,
         }
       })
 
-      const legsPayload: CreateBetLegPayload[] = [legPunta, ...legsBanca]
+      const legsPayload: CreateBetLegPayload[] = [legPunta, ...legsHedge]
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       setSavedBetId(bet.id)
     } catch (err) {

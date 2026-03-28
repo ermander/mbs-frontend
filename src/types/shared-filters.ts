@@ -46,6 +46,7 @@ export interface SharedFilters {
   setMultiplaSelectedEvents: Dispatch<SetStateAction<MultiplaEvent[]>>
   multiplaSportIds: string[]
   setMultiplaSportIds: Dispatch<SetStateAction<string[]>>
+  multiplaBookId: string | null
   toggleMultiplaEvent: (event: MultiplaEvent) => void
   eliminaMultipla: () => void
   resetFilters: () => void

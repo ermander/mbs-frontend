@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import type { SharedFilters } from '@/types/shared-filters'
-import { multiplaEventKey } from '@/types/multipla-event'
+import { MultiplaPanel } from '@/components/strumenti/multipla-panel'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,9 +30,15 @@ interface SharedFilterBarProps {
   filters: SharedFilters
   sports: string[]
   markets: string[]
+  onMultiplaSave?: () => void
 }
 
-export function SharedFilterBar({ filters, sports, markets }: SharedFilterBarProps) {
+export function SharedFilterBar({
+  filters,
+  sports,
+  markets,
+  onMultiplaSave,
+}: SharedFilterBarProps) {
   const {
     searchQuery,
     setSearchQuery,
@@ -483,6 +489,9 @@ export function SharedFilterBar({ filters, sports, markets }: SharedFilterBarPro
           </div>
         </div>
       )}
+
+      {/* Multipla panel */}
+      {multiplaOpen && <MultiplaPanel filters={filters} sports={sports} onSave={onMultiplaSave} />}
     </div>
   )
 }

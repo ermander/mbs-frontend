@@ -31,7 +31,6 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { OddsmatcherCalculatorModal } from '@/components/strumenti/oddsmatcher-calculator-modal'
-import { OddsmatcherMultiplaSaveModal } from '@/components/strumenti/oddsmatcher-multipla-save-modal'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { cn } from '@/lib/utils'
 import type { SharedFilters } from '@/types/shared-filters'
@@ -96,9 +95,14 @@ function ratingMultipla(selected: MultiplaEvent[]): number | null {
     const cover = parseFloat(ev.coverOdd)
     const c = ev.commissionPercent / 100
     if (Number.isNaN(main) || Number.isNaN(cover) || cover <= 0) return null
-    const coverEffective = cover - c
-    if (coverEffective <= 0) return null
-    product *= (main * (1 - c)) / coverEffective
+    if (ev.type === 'punta-punta') {
+      if (cover <= 1) return null
+      product *= (main * (cover - 1)) / cover
+    } else {
+      const coverEffective = cover - c
+      if (coverEffective <= 0) return null
+      product *= (main * (1 - c)) / coverEffective
+    }
   }
   return product * 100
 }
@@ -176,13 +180,12 @@ export function OddsmatcherTable({
   const endDateInputRef = useRef<HTMLInputElement>(null)
   const multiplaDataInizioRef = useRef<HTMLInputElement>(null)
   const multiplaDataFineRef = useRef<HTMLInputElement>(null)
-  const [multiplaSaveModalOpen, setMultiplaSaveModalOpen] = useState(false)
-
-  const apiParams = {
+  const buildApiParams = () => ({
     id_book: selectedBookIds.length > 0 ? selectedBookIds : undefined,
     id_exchange: selectedExchangeIds.length > 0 ? selectedExchangeIds : undefined,
-  }
-  const { data, isLoading, isError, error, refetch, isRefetching } = useOddsmatcher(apiParams)
+  })
+  const [committedParams, setCommittedParams] = useState(buildApiParams)
+  const { data, isLoading, isError, error, refetch, isRefetching } = useOddsmatcher(committedParams)
 
   // Deferred values: l'input resta reattivo, il filtering pesante viene differito
   const deferredMinOdds = useDeferredValue(minOdds)
@@ -216,6 +219,8 @@ export function OddsmatcherTable({
     filters.resetFilters()
     setSelectedBookIds([])
     setSelectedExchangeIds(ODDSMATCHER_EXCHANGES_ONLY.map((e) => e.id))
+    setCommittedParams({ id_book: undefined, id_exchange: undefined })
+    queueMicrotask(() => refetch())
   }
 
   const rows = useMemo(() => data ?? [], [data])
@@ -249,13 +254,14 @@ export function OddsmatcherTable({
       backStakeTotale,
       quotaMultipla,
       multiplaSelectedEvents.map((ev) => ({
-        layOdds: parseFloat(ev.coverOdd),
+        type: ev.type,
+        coverOdds: parseFloat(ev.coverOdd),
         commissionPercent: ev.commissionPercent,
       })),
       rimborso,
     )
-    const totalLiability = results.reduce((sum, r) => sum + r.liability, 0)
-    return backStakeTotale * quotaMultipla - stake - totalLiability
+    const totalHedgeCost = results.reduce((sum, r) => sum + r.hedgeCost, 0)
+    return backStakeTotale * quotaMultipla - stake - totalHedgeCost
   }, [quotaMultipla, multiplaSelectedEvents, sharedStake, sharedBonus, sharedRimborso])
 
   const toggleBook = (id: string) => {
@@ -316,6 +322,15 @@ export function OddsmatcherTable({
           searchInputAriaLabel="Filtra book"
           emptyMessage="Nessun book trovato"
           size="sm"
+          renderOption={(opt) => (
+            <Image
+              src={`/loghi_book/${opt.id}.png`}
+              alt={opt.name}
+              width={80}
+              height={24}
+              className="h-5 w-auto max-w-[80px] object-contain"
+            />
+          )}
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -340,7 +355,13 @@ export function OddsmatcherTable({
                     checked={selectedExchangeIds.includes(ex.id)}
                     onChange={() => toggleExchange(ex.id)}
                   />
-                  <span>{ex.name}</span>
+                  <Image
+                    src={`/loghi_book/${ex.id}.png`}
+                    alt={ex.name}
+                    width={80}
+                    height={24}
+                    className="h-5 w-auto max-w-[80px] object-contain"
+                  />
                 </label>
               </DropdownMenuItem>
             ))}
@@ -349,7 +370,10 @@ export function OddsmatcherTable({
 
         <div className="ml-auto flex items-center gap-2">
           <Button
-            onClick={() => refetch()}
+            onClick={() => {
+              setCommittedParams(buildApiParams())
+              queueMicrotask(() => refetch())
+            }}
             disabled={isRefetching}
             size="sm"
             className="h-8 text-xs"
@@ -368,286 +392,6 @@ export function OddsmatcherTable({
           </button>
         </div>
       </div>
-
-      {/* Multipla panel (collapsible) */}
-      {multiplaOpen && (
-        <div className="mt-2 animate-fade-in rounded-xl border border-neon-lavender/20 bg-surface-1 p-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-n-eventi"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    N. Eventi
-                  </Label>
-                  <select
-                    id="multipla-n-eventi"
-                    value={multiplaNumEventi}
-                    onChange={(e) => setMultiplaNumEventi(Number(e.target.value))}
-                    className="h-8 w-full min-w-0 rounded-lg border border-border bg-surface-1 px-3 text-sm text-foreground"
-                  >
-                    {[2, 3, 4, 5, 6, 7, 8].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-quota-min-evento"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    Quota min evento
-                  </Label>
-                  <Input
-                    id="multipla-quota-min-evento"
-                    type="number"
-                    placeholder="—"
-                    value={multiplaQuotaMinEvento}
-                    onChange={(e) => setMultiplaQuotaMinEvento(e.target.value)}
-                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                    className="h-8 w-full min-w-0 text-sm"
-                    min={1}
-                    step={0.01}
-                  />
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-quota-max-evento"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    Quota max evento
-                  </Label>
-                  <Input
-                    id="multipla-quota-max-evento"
-                    type="number"
-                    placeholder="—"
-                    value={multiplaQuotaMaxEvento}
-                    onChange={(e) => setMultiplaQuotaMaxEvento(e.target.value)}
-                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                    className="h-8 w-full min-w-0 text-sm"
-                    min={1}
-                    step={0.01}
-                  />
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-quota-min-totale"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    Quota min totale
-                  </Label>
-                  <Input
-                    id="multipla-quota-min-totale"
-                    type="number"
-                    value={multiplaQuotaMinTotale}
-                    onChange={(e) => setMultiplaQuotaMinTotale(e.target.value)}
-                    onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
-                    className="h-8 w-full min-w-0 text-sm"
-                    min={1}
-                    step={0.01}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Sport
-                </span>
-                {sports.map((s) => {
-                  const { icon, label } = getSportDisplay(s)
-                  const active = multiplaSportIds.includes(s)
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() =>
-                        setMultiplaSportIds((prev) =>
-                          active ? prev.filter((id) => id !== s) : [...prev, s],
-                        )
-                      }
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors ${
-                        active
-                          ? 'border-neon-lavender/60 bg-neon-lavender/15 text-foreground'
-                          : 'border-border bg-surface-1 text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {icon && <span aria-hidden>{icon}</span>}
-                      {label}
-                    </button>
-                  )
-                })}
-                {multiplaSportIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setMultiplaSportIds([])}
-                    className="text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    Tutti
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 sm:max-w-sm">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-data-inizio"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    Data inizio
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      ref={multiplaDataInizioRef}
-                      id="multipla-data-inizio"
-                      type="date"
-                      value={multiplaDataInizio}
-                      onChange={(e) => setMultiplaDataInizio(e.target.value)}
-                      className="h-8 w-full min-w-0 pr-9 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => multiplaDataInizioRef.current?.showPicker?.()}
-                      className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                      aria-label="Apri selettore data"
-                    >
-                      <Calendar className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex min-w-0 flex-col gap-1">
-                  <Label
-                    htmlFor="multipla-data-fine"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground"
-                  >
-                    Data fine
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      ref={multiplaDataFineRef}
-                      id="multipla-data-fine"
-                      type="date"
-                      value={multiplaDataFine}
-                      onChange={(e) => setMultiplaDataFine(e.target.value)}
-                      className="h-8 w-full min-w-0 pr-9 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => multiplaDataFineRef.current?.showPicker?.()}
-                      className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                      aria-label="Apri selettore data"
-                    >
-                      <Calendar className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Eventi selezionati — inline sidebar */}
-            <div className="flex flex-col gap-2 border-t border-border pt-3 lg:min-w-[240px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  Eventi selezionati
-                </p>
-                <p className="font-mono text-sm font-semibold text-emerald-400">
-                  {multiplaRating != null ? `${multiplaRating.toFixed(2)}%` : '—'}
-                  {quotaMultipla != null && (
-                    <span className="ml-1.5 text-muted-foreground">
-                      · {quotaMultipla.toFixed(2)}
-                    </span>
-                  )}
-                  {guadagnoMultipla != null && (
-                    <span
-                      className={cn(
-                        'ml-1.5',
-                        guadagnoMultipla >= 0 ? 'text-emerald-400' : 'text-red-400',
-                      )}
-                    >
-                      · {guadagnoMultipla >= 0 ? '+' : ''}
-                      {guadagnoMultipla.toFixed(2)} €
-                    </span>
-                  )}
-                </p>
-              </div>
-              {multiplaSelectedEvents.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Seleziona un book e clicca sugli eventi.
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {multiplaSelectedEvents.map((ev) => (
-                    <li
-                      key={multiplaEventKey(ev)}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-2 py-1 text-xs"
-                    >
-                      <span className="truncate">
-                        {ev.type === 'punta-banca' ? 'PB' : 'PP'} {ev.home} – {ev.away}{' '}
-                        <span className="text-muted-foreground">
-                          ({formatDateShort(ev.date, ev.hour)})
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="shrink-0 text-muted-foreground hover:text-foreground"
-                        aria-label="Rimuovi"
-                        onClick={() =>
-                          setMultiplaSelectedEvents((prev) =>
-                            prev.filter((r) => multiplaEventKey(r) !== multiplaEventKey(ev)),
-                          )
-                        }
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={resetMultiplaFilters}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <RotateCcw className="inline h-3 w-3" /> Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={eliminaMultipla}
-                  className="text-xs text-destructive hover:text-destructive/80"
-                >
-                  <X className="inline h-3 w-3" /> Elimina
-                </button>
-                <Button
-                  size="sm"
-                  className="ml-auto h-7 text-xs"
-                  disabled={
-                    multiplaSelectedEvents.length !== multiplaNumEventi ||
-                    ((Number.parseFloat(sharedStake) || 0) <= 0 &&
-                      (Number.parseFloat(sharedBonus) || 0) <= 0) ||
-                    (multiplaQuotaMinTotale.trim() !== '' &&
-                      quotaMultipla != null &&
-                      quotaMultipla < (Number.parseFloat(multiplaQuotaMinTotale) || 0))
-                  }
-                  onClick={() => setMultiplaSaveModalOpen(true)}
-                >
-                  Salva
-                </Button>
-              </div>
-              {multiplaSelectedEvents.length === multiplaNumEventi &&
-                multiplaQuotaMinTotale.trim() !== '' &&
-                quotaMultipla != null &&
-                quotaMultipla < (Number.parseFloat(multiplaQuotaMinTotale) || 0) && (
-                  <p className="text-[11px] text-amber-500">
-                    Quota totale {quotaMultipla.toFixed(2)} inferiore alla minima (
-                    {multiplaQuotaMinTotale}).
-                  </p>
-                )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 
@@ -775,6 +519,34 @@ export function OddsmatcherTable({
     (row) => exchangeSet.has(row.id_book_1) || exchangeSet.has(row.id_book_2),
   )
 
+  // Multipla filters (when multipla panel is open)
+  const multiplaBookId = filters.multiplaBookId
+  if (multiplaOpen) {
+    if (multiplaBookId) {
+      filteredRows = filteredRows.filter((row) => row.id_book_1 === multiplaBookId)
+    }
+    if (multiplaQuotaMinEvento.trim() !== '') {
+      const minQ = parseFloat(multiplaQuotaMinEvento)
+      if (!Number.isNaN(minQ))
+        filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) >= minQ)
+    }
+    if (multiplaQuotaMaxEvento.trim() !== '') {
+      const maxQ = parseFloat(multiplaQuotaMaxEvento)
+      if (!Number.isNaN(maxQ))
+        filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) <= maxQ)
+    }
+    if (multiplaSportIds.length > 0) {
+      const sportSet = new Set(multiplaSportIds)
+      filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
+    }
+    if (multiplaDataInizio.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.date >= multiplaDataInizio)
+    }
+    if (multiplaDataFine.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.date <= multiplaDataFine)
+    }
+  }
+
   const sortedRows = [...filteredRows].sort(
     (a, b) => ratingValue(b.back_odd, b.lay_odd) - ratingValue(a.back_odd, a.lay_odd),
   )
@@ -830,7 +602,11 @@ export function OddsmatcherTable({
   const start = (page - 1) * PAGE_SIZE + 1
   const end = Math.min(page * PAGE_SIZE, sortedRows.length)
 
-  const oneBookId = selectedBookIds.length === 1 ? selectedBookIds[0] : null
+  const oneBookId = multiplaOpen
+    ? multiplaBookId
+    : selectedBookIds.length === 1
+      ? selectedBookIds[0]
+      : null
   let multiplaAvailableRows: OddsmatcherRow[] = []
   if (oneBookId) {
     // Partire dai dati già filtrati (sortedRows) così i filtri avanzati restano applicati
@@ -882,6 +658,7 @@ export function OddsmatcherTable({
 
   const oddsRowToMultiplaEvent = (row: OddsmatcherRow): MultiplaEvent => ({
     type: 'punta-banca',
+    sport: row.sport,
     home: row.home,
     away: row.away,
     date: row.date,
@@ -909,7 +686,7 @@ export function OddsmatcherTable({
   return (
     <div className="space-y-4">
       {filtersBarSlim}
-      {oneBookId === null && (
+      {!multiplaOpen && oneBookId === null && (
         <div className="rounded-md border border-border bg-muted/30 p-6 text-center text-muted-foreground">
           Seleziona un solo book dalla tendina per compilare la multipla.
         </div>
@@ -993,7 +770,7 @@ export function OddsmatcherTable({
                   <Checkbox
                     checked={isSelected}
                     disabled={checkboxDisabled}
-                    onChange={() => oneBookId && handleToggleMultipla(row)}
+                    onChange={() => (multiplaOpen || oneBookId) && handleToggleMultipla(row)}
                     aria-label={`Seleziona ${row.home} – ${row.away}`}
                   />
                   <Button
@@ -1043,7 +820,8 @@ export function OddsmatcherTable({
                 : `${row.home}-${row.away}-${row.selection}-${row.market}-${(page - 1) * PAGE_SIZE + index}`
               const isSelected = selectedKeysSet.has(rowToKey(row))
               const checkboxDisabled =
-                oneBookId === null ||
+                (!multiplaOpen && oneBookId === null) ||
+                (multiplaBookId != null && row.id_book_1 !== multiplaBookId) ||
                 (!isSelected && multiplaSelectedEvents.length >= multiplaNumEventi)
               return (
                 <tr
@@ -1058,7 +836,7 @@ export function OddsmatcherTable({
                     <Checkbox
                       checked={isSelected}
                       disabled={checkboxDisabled}
-                      onChange={() => oneBookId && handleToggleMultipla(row)}
+                      onChange={() => (multiplaOpen || oneBookId) && handleToggleMultipla(row)}
                       aria-label={`Seleziona ${row.home} – ${row.away}`}
                     />
                   </td>
@@ -1171,16 +949,6 @@ export function OddsmatcherTable({
         defaultPuntata={sharedStake}
         defaultBonus={sharedBonus}
         defaultRimborso={sharedRimborso}
-      />
-      <OddsmatcherMultiplaSaveModal
-        open={multiplaSaveModalOpen}
-        onOpenChange={setMultiplaSaveModalOpen}
-        selectedEvents={multiplaSelectedEvents as unknown as OddsmatcherRow[]}
-        bookOddsId={oneBookId ?? ''}
-        exchangeOddsId={multiplaSelectedEvents[0]?.bookId2 ?? ''}
-        sharedStake={sharedStake}
-        sharedBonus={sharedBonus}
-        sharedRimborso={sharedRimborso}
       />
     </div>
   )

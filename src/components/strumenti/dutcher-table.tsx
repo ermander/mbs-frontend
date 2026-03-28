@@ -1,32 +1,12 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react'
+import { useState, useMemo, useEffect, useDeferredValue } from 'react'
 import { useDutcher } from '@/hooks/use-dutcher'
-import type { DutcherRow } from '@/types/dutcher'
+import type { DutcherRow, DutcherParams } from '@/types/dutcher'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
-import {
-  Calculator,
-  Calendar,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  X,
-} from 'lucide-react'
+import { Calculator, ChevronLeft, ChevronRight, Loader2, RefreshCw, RotateCcw } from 'lucide-react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { DutcherCalculatorModal } from '@/components/strumenti/dutcher-calculator-modal'
@@ -69,42 +49,29 @@ export function DutcherTable({
 }) {
   const {
     searchQuery,
-    setSearchQuery,
-    sharedStake,
-    sharedBonus,
-    sharedRimborso,
-    setSharedStake,
-    setSharedBonus,
-    setSharedRimborso,
     selectedSportIds,
-    setSelectedSportIds,
     selectedMarkets,
-    setSelectedMarkets,
     minOdds,
-    setMinOdds,
     maxOdds,
-    setMaxOdds,
     startDate,
-    setStartDate,
     endDate,
-    setEndDate,
-    minLiquidity,
-    setMinLiquidity,
     minRating,
-    setMinRating,
-    filtersOpen,
-    setFiltersOpen,
     multiplaOpen,
-    setMultiplaOpen,
     multiplaSelectedEvents,
     multiplaNumEventi,
+    multiplaBookId,
+    multiplaQuotaMinEvento,
+    multiplaQuotaMaxEvento,
+    multiplaSportIds,
+    multiplaDataInizio,
+    multiplaDataFine,
     toggleMultiplaEvent,
     resetFilters: resetSharedFilters,
-    resetMultiplaFilters,
   } = filters
 
   const dutcherRowToMultiplaEvent = (row: DutcherRow): MultiplaEvent => ({
     type: 'punta-punta',
+    sport: row.sport,
     home: row.home,
     away: row.away,
     date: row.data,
@@ -132,14 +99,24 @@ export function DutcherTable({
   const [page, setPage] = useState(1)
   const [calculatorRow, setCalculatorRow] = useState<DutcherRow | null>(null)
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
-  const [selectedSideBookIds, setSelectedSideBookIds] = useState<string[]>(() =>
-    ODDSMATCHER_BOOKS_ONLY.map((b) => b.id),
-  )
+  const [selectedSideBookIds, setSelectedSideBookIds] = useState<string[]>([])
 
-  const startDateInputRef = useRef<HTMLInputElement>(null)
-  const endDateInputRef = useRef<HTMLInputElement>(null)
+  const allSideBookIds = ODDSMATCHER_BOOKS_ONLY.map((b) => b.id)
 
-  const { data, isLoading, isError, error, refetch, isRefetching } = useDutcher()
+  const buildDutcherParams = (): DutcherParams => ({
+    id_book: selectedBookIds.length === 1 ? selectedBookIds[0] : '0',
+    books: allSideBookIds.join(','),
+    ...(selectedSideBookIds.length > 0 ? { side_books: selectedSideBookIds.join(',') } : {}),
+    length: 50,
+    start: 0,
+    sports: '0,1,2',
+    mercati: 'DC,GG,O15,O25,O35,RIG,TT,TTB',
+    sortBy: 'rating',
+    sortMode: 'DESC',
+  })
+
+  const [committedParams, setCommittedParams] = useState<DutcherParams>(buildDutcherParams)
+  const { data, isLoading, isError, error, refetch, isRefetching } = useDutcher(committedParams)
 
   // Deferred values
   const deferredMinOdds = useDeferredValue(minOdds)
@@ -180,7 +157,9 @@ export function DutcherTable({
   const resetFilters = () => {
     resetSharedFilters()
     setSelectedBookIds([])
-    setSelectedSideBookIds(ODDSMATCHER_BOOKS_ONLY.map((b) => b.id))
+    setSelectedSideBookIds([])
+    setCommittedParams(buildDutcherParams())
+    queueMicrotask(() => refetch())
   }
 
   const toggleBook = (id: string) => {
@@ -189,16 +168,6 @@ export function DutcherTable({
   const toggleSideBook = (id: string) => {
     setSelectedSideBookIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
-  const toggleSport = (id: string) => {
-    setSelectedSportIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
-  const toggleMarket = (value: string) => {
-    setSelectedMarkets((prev) =>
-      prev.includes(value) ? prev.filter((x) => x !== value) : [...prev, value],
     )
   }
 
@@ -216,16 +185,6 @@ export function DutcherTable({
         ? (ODDSMATCHER_BOOKS_ONLY.find((b) => b.id === selectedSideBookIds[0])?.name ??
           'Side Books')
         : `${selectedSideBookIds.length} side books`
-
-  const activeFilterCount = [
-    selectedSportIds.length > 0,
-    selectedMarkets.length > 0,
-    minOdds.trim() !== '',
-    maxOdds.trim() !== '',
-    startDate.trim() !== '',
-    endDate.trim() !== '',
-    minRating.trim() !== '',
-  ].filter(Boolean).length
 
   // ── Client-side filtering ──
   const q = deferredSearchQuery.trim().toLowerCase()
@@ -270,6 +229,33 @@ export function DutcherTable({
     filteredRows = filteredRows.filter((row) => row.data <= endDate)
   }
 
+  // Multipla filters (when multipla panel is open)
+  if (multiplaOpen) {
+    if (multiplaBookId) {
+      filteredRows = filteredRows.filter((row) => row.id_book1 === multiplaBookId)
+    }
+    if (multiplaQuotaMinEvento.trim() !== '') {
+      const minQ = parseFloat(multiplaQuotaMinEvento)
+      if (!Number.isNaN(minQ))
+        filteredRows = filteredRows.filter((row) => parseFloat(row.yes) >= minQ)
+    }
+    if (multiplaQuotaMaxEvento.trim() !== '') {
+      const maxQ = parseFloat(multiplaQuotaMaxEvento)
+      if (!Number.isNaN(maxQ))
+        filteredRows = filteredRows.filter((row) => parseFloat(row.yes) <= maxQ)
+    }
+    if (multiplaSportIds.length > 0) {
+      const sportSet = new Set(multiplaSportIds)
+      filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
+    }
+    if (multiplaDataInizio.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.data >= multiplaDataInizio)
+    }
+    if (multiplaDataFine.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.data <= multiplaDataFine)
+    }
+  }
+
   const sortedRows = [...filteredRows].sort((a, b) => b.rating - a.rating)
 
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE))
@@ -297,6 +283,15 @@ export function DutcherTable({
         searchInputAriaLabel="Filtra book"
         emptyMessage="Nessun book trovato"
         size="sm"
+        renderOption={(opt) => (
+          <Image
+            src={`/loghi_book/${opt.id}.png`}
+            alt={opt.name}
+            width={80}
+            height={24}
+            className="h-5 w-auto max-w-[80px] object-contain"
+          />
+        )}
       />
       <SearchableMultiSelect
         options={ODDSMATCHER_BOOKS_ONLY}
@@ -307,10 +302,27 @@ export function DutcherTable({
         searchInputAriaLabel="Filtra side book"
         emptyMessage="Nessun book trovato"
         size="sm"
+        renderOption={(opt) => (
+          <Image
+            src={`/loghi_book/${opt.id}.png`}
+            alt={opt.name}
+            width={80}
+            height={24}
+            className="h-5 w-auto max-w-[80px] object-contain"
+          />
+        )}
       />
 
       <div className="ml-auto flex items-center gap-2">
-        <Button onClick={() => refetch()} disabled={isRefetching} size="sm" className="h-8 text-xs">
+        <Button
+          onClick={() => {
+            setCommittedParams(buildDutcherParams())
+            queueMicrotask(() => refetch())
+          }}
+          disabled={isRefetching}
+          size="sm"
+          className="h-8 text-xs"
+        >
           <RefreshCw className={cn('h-3.5 w-3.5', isRefetching && 'animate-spin')} />
           Refresh
         </Button>
@@ -493,8 +505,9 @@ export function DutcherTable({
             {pagedRows.map((row, idx) => {
               const evKey = multiplaEventKey(dutcherRowToMultiplaEvent(row))
               const isSelected = selectedKeysSet.has(evKey)
+              const wrongBook = multiplaBookId != null && row.id_book1 !== multiplaBookId
               const checkboxDisabled =
-                !isSelected && multiplaSelectedEvents.length >= multiplaNumEventi
+                wrongBook || (!isSelected && multiplaSelectedEvents.length >= multiplaNumEventi)
               return (
                 <tr
                   key={rowKey(row, (page - 1) * PAGE_SIZE + idx)}

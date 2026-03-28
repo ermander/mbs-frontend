@@ -117,11 +117,13 @@ export default function BetDetailPage() {
 
   const isMultipla = useMemo(() => {
     const puntaLeg = legs.find((l) => l.metodo === 'punta')
-    const bancaLegs = legs.filter((l) => l.metodo === 'banca')
-    if (bancaLegs.length < 2 || puntaLeg == null) return false
-    // Bancate parziali (stesso evento/mercato/selezione) non sono una multipla
-    const first = bancaLegs[0]
-    const isPartialLay = bancaLegs.every(
+    if (puntaLeg == null) return false
+    // Hedge legs = tutto tranne la prima punta (include sia banca che punta-punta)
+    const hedgeLegs = legs.filter((l) => l.id !== puntaLeg.id)
+    if (hedgeLegs.length < 2) return false
+    // Bancate/coperture parziali (stesso evento/mercato/selezione) non sono una multipla
+    const first = hedgeLegs[0]
+    const isPartialLay = hedgeLegs.every(
       (l) =>
         l.eventoNome === first.eventoNome &&
         l.mercato === first.mercato &&
@@ -322,37 +324,39 @@ export default function BetDetailPage() {
       setEditingCell(null)
 
       const puntaLeg = legs.find((l) => l.metodo === 'punta')
-      const bancaLegs = legs
-        .filter((l) => l.metodo === 'banca')
-        .sort((a, b) => {
-          const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
-          if (byDate !== 0) return byDate
-          return String(a.id).localeCompare(String(b.id))
-        })
+      const hedgeLegs = puntaLeg
+        ? legs
+            .filter((l) => l.id !== puntaLeg.id)
+            .sort((a, b) => {
+              const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+              if (byDate !== 0) return byDate
+              return String(a.id).localeCompare(String(b.id))
+            })
+        : []
       const isMultipla =
-        bancaLegs.length >= 2 &&
+        hedgeLegs.length >= 2 &&
         puntaLeg != null &&
-        !bancaLegs.every(
+        !hedgeLegs.every(
           (l) =>
-            l.eventoNome === bancaLegs[0].eventoNome &&
-            l.mercato === bancaLegs[0].mercato &&
-            l.selezione === bancaLegs[0].selezione,
+            l.eventoNome === hedgeLegs[0].eventoNome &&
+            l.mercato === hedgeLegs[0].mercato &&
+            l.selezione === hedgeLegs[0].selezione,
         )
 
       if (isMultipla) {
         const field = editingCell.field
-        const editedIsBanca = leg.metodo === 'banca'
+        const editedIsHedge = leg.id !== puntaLeg.id
         const needsRecalc =
-          (field === 'quotaRiferimento' && editedIsBanca) ||
-          (field === 'quota' && editedIsBanca) ||
-          (field === 'commissionePercentuale' && editedIsBanca)
-        const puntaQuotaChanged = field === 'quota' && !editedIsBanca
+          (field === 'quotaRiferimento' && editedIsHedge) ||
+          (field === 'quota' && editedIsHedge) ||
+          (field === 'commissionePercentuale' && editedIsHedge)
+        const puntaQuotaChanged = field === 'quota' && !editedIsHedge
         const puntaStakeChanged =
           (field === 'stake' || field === 'bonusValore' || field === 'rimborsoValore') &&
-          !editedIsBanca
+          !editedIsHedge
 
         if (needsRecalc) {
-          const updatedBancaLegs = bancaLegs.map((l) => {
+          const updatedHedgeLegs = hedgeLegs.map((l) => {
             if (l.id !== leg.id) return l
             return { ...l, [field]: value }
           })
@@ -360,21 +364,24 @@ export default function BetDetailPage() {
           if (field === 'quotaRiferimento') {
             const newTotalOdds =
               Math.round(
-                updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
+                updatedHedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
               ) / 100
             await updateBetLeg(betId, puntaLeg.id, { quota: newTotalOdds })
           }
 
           const totalBackOdds =
             field === 'quotaRiferimento'
-              ? updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
-              : bancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
+              ? updatedHedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
+              : hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
 
           const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
 
-          const eventsForCalc = updatedBancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+          const eventsForCalc = updatedHedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
 
           const results = multiplaLayStakes(
@@ -384,22 +391,25 @@ export default function BetDetailPage() {
             puntaLeg.rimborsoValore ?? 0,
           )
 
-          for (let i = 0; i < updatedBancaLegs.length; i++) {
-            const bl = updatedBancaLegs[i]!
+          for (let i = 0; i < updatedHedgeLegs.length; i++) {
+            const bl = updatedHedgeLegs[i]!
             if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         } else if (puntaQuotaChanged) {
           const totalBackOdds =
-            bancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || (value as number)
+            hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || (value as number)
           const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
-          const eventsForCalc = bancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+          const eventsForCalc = hedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
           const results = multiplaLayStakes(
             backStakeTotale,
@@ -407,13 +417,13 @@ export default function BetDetailPage() {
             eventsForCalc,
             puntaLeg.rimborsoValore ?? 0,
           )
-          for (let i = 0; i < bancaLegs.length; i++) {
-            const bl = bancaLegs[i]!
+          for (let i = 0; i < hedgeLegs.length; i++) {
+            const bl = hedgeLegs[i]!
             if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         } else if (puntaStakeChanged) {
@@ -426,19 +436,22 @@ export default function BetDetailPage() {
           const rimborso =
             field === 'rimborsoValore' ? (value as number) : (puntaLeg.rimborsoValore ?? 0)
           const totalBackOdds =
-            bancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
-          const eventsForCalc = bancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+            hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
+          const eventsForCalc = hedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
           const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc, rimborso)
-          for (let i = 0; i < bancaLegs.length; i++) {
-            const bl = bancaLegs[i]!
+          for (let i = 0; i < hedgeLegs.length; i++) {
+            const bl = hedgeLegs[i]!
             if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         }
@@ -471,23 +484,25 @@ export default function BetDetailPage() {
       }
       await updateBetLeg(betId, legId, patch as Parameters<typeof updateBetLeg>[2])
 
-      // Ricalcola bancate se è una multipla e il bonus è cambiato
+      // Ricalcola coperture se è una multipla e il bonus è cambiato
       const puntaLeg = legs.find((l) => l.metodo === 'punta')
-      const bancaLegs = legs
-        .filter((l) => l.metodo === 'banca')
-        .sort((a, b) => {
-          const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
-          if (byDate !== 0) return byDate
-          return String(a.id).localeCompare(String(b.id))
-        })
+      const hedgeLegs = puntaLeg
+        ? legs
+            .filter((l) => l.id !== puntaLeg.id)
+            .sort((a, b) => {
+              const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+              if (byDate !== 0) return byDate
+              return String(a.id).localeCompare(String(b.id))
+            })
+        : []
       const isMultipla =
-        bancaLegs.length >= 2 &&
+        hedgeLegs.length >= 2 &&
         puntaLeg != null &&
-        !bancaLegs.every(
+        !hedgeLegs.every(
           (l) =>
-            l.eventoNome === bancaLegs[0].eventoNome &&
-            l.mercato === bancaLegs[0].mercato &&
-            l.selezione === bancaLegs[0].selezione,
+            l.eventoNome === hedgeLegs[0].eventoNome &&
+            l.mercato === hedgeLegs[0].mercato &&
+            l.selezione === hedgeLegs[0].selezione,
         )
       if (isMultipla && legId === puntaLeg.id) {
         const leg = legs.find((l) => l.id === legId)
@@ -496,10 +511,13 @@ export default function BetDetailPage() {
         const newRimborso = tipoBonus === 'rimborso' ? (puntaLeg.rimborsoValore ?? 0) : 0
         const backStakeTotale = puntaLeg.stake + newBonus
         const totalBackOdds =
-          bancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
-        const eventsForCalc = bancaLegs.map((l) => ({
-          layOdds: l.quota,
-          commissionPercent: l.commissionePercentuale ?? 3,
+          hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
+        const eventsForCalc = hedgeLegs.map((l) => ({
+          type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+            | 'punta-banca'
+            | 'punta-punta',
+          coverOdds: l.quota,
+          commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
         }))
         const results = multiplaLayStakes(
           backStakeTotale,
@@ -507,12 +525,12 @@ export default function BetDetailPage() {
           eventsForCalc,
           newRimborso,
         )
-        for (let i = 0; i < bancaLegs.length; i++) {
-          const bl = bancaLegs[i]!
+        for (let i = 0; i < hedgeLegs.length; i++) {
+          const bl = hedgeLegs[i]!
           const r = results[i]!
           await updateBetLeg(betId, bl.id, {
-            stake: r.layStake,
-            rischio: r.liability,
+            stake: r.hedgeStake,
+            rischio: r.hedgeCost,
           })
         }
       }

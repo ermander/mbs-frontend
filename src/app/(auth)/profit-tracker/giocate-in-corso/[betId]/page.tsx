@@ -569,8 +569,9 @@ export default function BetDetailPage() {
   }
 
   const isLegEditable = (leg: BetLeg) => leg.statoEvento === 'bozza'
+  const mainPuntaLeg = legs.find((l) => l.metodo === 'punta')
   const totalRischio = legs
-    .filter((l) => l.metodo === 'banca')
+    .filter((l) => l.id !== mainPuntaLeg?.id)
     .reduce((s, l) => s + (l.rischio ?? 0), 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const canEditField = (leg: BetLeg, field: EditableField) => {

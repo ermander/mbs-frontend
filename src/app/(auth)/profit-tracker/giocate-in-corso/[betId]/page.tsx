@@ -401,8 +401,7 @@ export default function BetDetailPage() {
             })
           }
         } else if (puntaQuotaChanged) {
-          const totalBackOdds =
-            hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || (value as number)
+          const totalBackOdds = value as number
           const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
           const eventsForCalc = hedgeLegs.map((l) => ({
             type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as

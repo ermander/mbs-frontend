@@ -163,7 +163,14 @@ export function SharedFilterBar({
 
         <button
           type="button"
-          onClick={() => setFiltersOpen(!filtersOpen)}
+          onClick={() => {
+            if (filtersOpen) {
+              setFiltersOpen(false)
+            } else {
+              if (multiplaOpen) setMultiplaOpen(false)
+              setFiltersOpen(true)
+            }
+          }}
           className={cn(
             'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all',
             filtersOpen

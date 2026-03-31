@@ -196,37 +196,40 @@ export function DutcherTable({
       })
     : allRows
 
-  if (selectedSportIds.length > 0) {
-    const sportSet = new Set(selectedSportIds)
-    filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
-  }
-  if (selectedMarkets.length > 0) {
-    const marketSet = new Set(selectedMarkets)
-    filteredRows = filteredRows.filter((row) => marketSet.has(row.tipo))
-  }
-  if (deferredMinRating.trim() !== '') {
-    const minR = parseFloat(deferredMinRating)
-    if (!Number.isNaN(minR)) {
-      filteredRows = filteredRows.filter((row) => row.rating >= minR)
+  // Standard filters (only when Multipla is NOT active)
+  if (!multiplaOpen) {
+    if (selectedSportIds.length > 0) {
+      const sportSet = new Set(selectedSportIds)
+      filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
     }
-  }
-  if (deferredMinOdds.trim() !== '') {
-    const minO = parseFloat(deferredMinOdds)
-    if (!Number.isNaN(minO)) {
-      filteredRows = filteredRows.filter((row) => parseFloat(row.yes) >= minO)
+    if (selectedMarkets.length > 0) {
+      const marketSet = new Set(selectedMarkets)
+      filteredRows = filteredRows.filter((row) => marketSet.has(row.tipo))
     }
-  }
-  if (deferredMaxOdds.trim() !== '') {
-    const maxO = parseFloat(deferredMaxOdds)
-    if (!Number.isNaN(maxO)) {
-      filteredRows = filteredRows.filter((row) => parseFloat(row.yes) <= maxO)
+    if (deferredMinRating.trim() !== '') {
+      const minR = parseFloat(deferredMinRating)
+      if (!Number.isNaN(minR)) {
+        filteredRows = filteredRows.filter((row) => row.rating >= minR)
+      }
     }
-  }
-  if (startDate.trim() !== '') {
-    filteredRows = filteredRows.filter((row) => row.data >= startDate)
-  }
-  if (endDate.trim() !== '') {
-    filteredRows = filteredRows.filter((row) => row.data <= endDate)
+    if (deferredMinOdds.trim() !== '') {
+      const minO = parseFloat(deferredMinOdds)
+      if (!Number.isNaN(minO)) {
+        filteredRows = filteredRows.filter((row) => parseFloat(row.yes) >= minO)
+      }
+    }
+    if (deferredMaxOdds.trim() !== '') {
+      const maxO = parseFloat(deferredMaxOdds)
+      if (!Number.isNaN(maxO)) {
+        filteredRows = filteredRows.filter((row) => parseFloat(row.yes) <= maxO)
+      }
+    }
+    if (startDate.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.data >= startDate)
+    }
+    if (endDate.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.data <= endDate)
+    }
   }
 
   // Multipla filters (when multipla panel is open)
@@ -485,7 +488,9 @@ export function DutcherTable({
         <table className="w-full min-w-[900px] text-sm [&_tbody_td]:border-b [&_tbody_td]:border-border [&_td:not(:last-child)]:relative [&_td:not(:last-child)]:after:absolute [&_td:not(:last-child)]:after:bottom-2 [&_td:not(:last-child)]:after:right-0 [&_td:not(:last-child)]:after:top-2 [&_td:not(:last-child)]:after:w-px [&_td:not(:last-child)]:after:bg-border/60 [&_td:not(:last-child)]:after:content-[''] [&_th:not(:last-child)]:relative [&_th:not(:last-child)]:after:absolute [&_th:not(:last-child)]:after:bottom-2 [&_th:not(:last-child)]:after:right-0 [&_th:not(:last-child)]:after:top-2 [&_th:not(:last-child)]:after:w-px [&_th:not(:last-child)]:after:bg-border/60 [&_th:not(:last-child)]:after:content-['']">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-muted-foreground">
-              <th className="w-10 p-3 text-center font-medium" aria-label="Seleziona" />
+              {multiplaOpen && (
+                <th className="w-10 p-3 text-center font-medium" aria-label="Seleziona" />
+              )}
               <th className="whitespace-nowrap p-3 text-left font-medium">Data</th>
               <th className="w-12 p-3 text-left font-medium">Sport</th>
               <th className="whitespace-nowrap p-3 text-left font-medium">Evento</th>
@@ -513,14 +518,16 @@ export function DutcherTable({
                   key={rowKey(row, (page - 1) * PAGE_SIZE + idx)}
                   className={cn('transition-colors hover:bg-accent', isSelected && 'bg-primary/5')}
                 >
-                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      disabled={checkboxDisabled}
-                      onChange={() => handleToggleMultipla(row)}
-                      aria-label={`Seleziona ${row.home} – ${row.away}`}
-                    />
-                  </td>
+                  {multiplaOpen && (
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        disabled={checkboxDisabled}
+                        onChange={() => handleToggleMultipla(row)}
+                        aria-label={`Seleziona ${row.home} – ${row.away}`}
+                      />
+                    </td>
+                  )}
                   <td className="whitespace-nowrap p-3 text-center text-muted-foreground">
                     {formatDate(row.data, row.ora)}
                   </td>

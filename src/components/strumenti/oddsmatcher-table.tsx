@@ -476,43 +476,46 @@ export function OddsmatcherTable({
       })
     : rows
 
-  if (selectedSportIds.length > 0) {
-    const sportSet = new Set(selectedSportIds)
-    filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
-  }
-  if (selectedMarkets.length > 0) {
-    const marketSet = new Set(selectedMarkets)
-    filteredRows = filteredRows.filter((row) => marketSet.has(row.market))
-  }
-  if (deferredMinLiquidity.trim() !== '') {
-    const minLiq = parseFloat(deferredMinLiquidity)
-    if (!Number.isNaN(minLiq)) {
-      filteredRows = filteredRows.filter((row) => parseFloat(row.liquidity) >= minLiq)
+  // Standard filters (only when Multipla is NOT active)
+  if (!multiplaOpen) {
+    if (selectedSportIds.length > 0) {
+      const sportSet = new Set(selectedSportIds)
+      filteredRows = filteredRows.filter((row) => sportSet.has(row.sport))
     }
-  }
-  if (deferredMinRating.trim() !== '') {
-    const minR = parseFloat(deferredMinRating)
-    if (!Number.isNaN(minR)) {
-      filteredRows = filteredRows.filter((row) => ratingValue(row.back_odd, row.lay_odd) >= minR)
+    if (selectedMarkets.length > 0) {
+      const marketSet = new Set(selectedMarkets)
+      filteredRows = filteredRows.filter((row) => marketSet.has(row.market))
     }
-  }
-  if (deferredMinOdds.trim() !== '') {
-    const minO = parseFloat(deferredMinOdds)
-    if (!Number.isNaN(minO)) {
-      filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) >= minO)
+    if (deferredMinLiquidity.trim() !== '') {
+      const minLiq = parseFloat(deferredMinLiquidity)
+      if (!Number.isNaN(minLiq)) {
+        filteredRows = filteredRows.filter((row) => parseFloat(row.liquidity) >= minLiq)
+      }
     }
-  }
-  if (deferredMaxOdds.trim() !== '') {
-    const maxO = parseFloat(deferredMaxOdds)
-    if (!Number.isNaN(maxO)) {
-      filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) <= maxO)
+    if (deferredMinRating.trim() !== '') {
+      const minR = parseFloat(deferredMinRating)
+      if (!Number.isNaN(minR)) {
+        filteredRows = filteredRows.filter((row) => ratingValue(row.back_odd, row.lay_odd) >= minR)
+      }
     }
-  }
-  if (startDate.trim() !== '') {
-    filteredRows = filteredRows.filter((row) => row.date >= startDate)
-  }
-  if (endDate.trim() !== '') {
-    filteredRows = filteredRows.filter((row) => row.date <= endDate)
+    if (deferredMinOdds.trim() !== '') {
+      const minO = parseFloat(deferredMinOdds)
+      if (!Number.isNaN(minO)) {
+        filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) >= minO)
+      }
+    }
+    if (deferredMaxOdds.trim() !== '') {
+      const maxO = parseFloat(deferredMaxOdds)
+      if (!Number.isNaN(maxO)) {
+        filteredRows = filteredRows.filter((row) => parseFloat(row.back_odd) <= maxO)
+      }
+    }
+    if (startDate.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.date >= startDate)
+    }
+    if (endDate.trim() !== '') {
+      filteredRows = filteredRows.filter((row) => row.date <= endDate)
+    }
   }
   const exchangeSet = new Set(selectedExchangeIds)
   filteredRows = filteredRows.filter(
@@ -767,12 +770,14 @@ export function OddsmatcherTable({
                   {formatDate(row.date, row.hour)}
                 </span>
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isSelected}
-                    disabled={checkboxDisabled}
-                    onChange={() => (multiplaOpen || oneBookId) && handleToggleMultipla(row)}
-                    aria-label={`Seleziona ${row.home} – ${row.away}`}
-                  />
+                  {multiplaOpen && (
+                    <Checkbox
+                      checked={isSelected}
+                      disabled={checkboxDisabled}
+                      onChange={() => handleToggleMultipla(row)}
+                      aria-label={`Seleziona ${row.home} – ${row.away}`}
+                    />
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -794,7 +799,9 @@ export function OddsmatcherTable({
         <table className="w-full min-w-[900px] text-sm [&_tbody_td]:border-b [&_tbody_td]:border-border [&_td:not(:last-child)]:relative [&_td:not(:last-child)]:after:absolute [&_td:not(:last-child)]:after:bottom-2 [&_td:not(:last-child)]:after:right-0 [&_td:not(:last-child)]:after:top-2 [&_td:not(:last-child)]:after:w-px [&_td:not(:last-child)]:after:bg-border/60 [&_td:not(:last-child)]:after:content-[''] [&_th:not(:last-child)]:relative [&_th:not(:last-child)]:after:absolute [&_th:not(:last-child)]:after:bottom-2 [&_th:not(:last-child)]:after:right-0 [&_th:not(:last-child)]:after:top-2 [&_th:not(:last-child)]:after:w-px [&_th:not(:last-child)]:after:bg-border/60 [&_th:not(:last-child)]:after:content-['']">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-muted-foreground">
-              <th className="w-10 p-3 text-center font-medium" aria-label="Seleziona" />
+              {multiplaOpen && (
+                <th className="w-10 p-3 text-center font-medium" aria-label="Seleziona" />
+              )}
               <th className="whitespace-nowrap p-3 text-left font-medium">Data</th>
               <th className="w-12 p-3 text-center font-medium" aria-label="Sport">
                 Sport
@@ -832,14 +839,16 @@ export function OddsmatcherTable({
                   )}
                   onDoubleClick={() => setCalculatorRow(row)}
                 >
-                  <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      disabled={checkboxDisabled}
-                      onChange={() => (multiplaOpen || oneBookId) && handleToggleMultipla(row)}
-                      aria-label={`Seleziona ${row.home} – ${row.away}`}
-                    />
-                  </td>
+                  {multiplaOpen && (
+                    <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        disabled={checkboxDisabled}
+                        onChange={() => handleToggleMultipla(row)}
+                        aria-label={`Seleziona ${row.home} – ${row.away}`}
+                      />
+                    </td>
+                  )}
                   <td className="whitespace-nowrap p-3 text-muted-foreground">
                     {formatDate(row.date, row.hour)}
                   </td>

@@ -20,6 +20,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
       { label: 'Punta-Punta', href: '/calcolatori/punta-punta' },
       { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
+      { label: 'Multipla', href: '/strumenti-offline/multipla' },
       // { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
       // { label: 'Condizionato', href: '/calcolatori/condizionato' },
       // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },

@@ -23,6 +23,7 @@ import type {
   WalletMovementType,
   Reminder,
   ReminderStatus,
+  Tag,
   TelegramStatus,
 } from '@/types/profit-tracker'
 
@@ -31,8 +32,23 @@ export interface CreateHolderPayload {
   descrizione?: string
 }
 
-export async function getHolders(): Promise<Holder[]> {
-  const response = await apiClient.get<Holder[]>('/profit-tracker/holders')
+export interface GetHoldersParams {
+  page?: number
+  limit?: number
+  nome?: string
+  descrizione?: string
+  stato?: string
+}
+
+export interface GetHoldersResponse {
+  items: Holder[]
+  total: number
+}
+
+export async function getHolders(params?: GetHoldersParams): Promise<GetHoldersResponse> {
+  const response = await apiClient.get<GetHoldersResponse>('/profit-tracker/holders', {
+    params: params ?? {},
+  })
   return response.data
 }
 
@@ -101,6 +117,46 @@ export async function createBook(payload: CreateBookPayload): Promise<Book> {
 export async function updateBook(id: string, payload: UpdateBookPayload): Promise<Book> {
   const response = await apiClient.put<Book>(`/profit-tracker/books/${id}`, payload)
   return response.data
+}
+
+// ── Tags ──────────────────────────────────────────────────────────────
+
+export interface CreateTagPayload {
+  nome: string
+  colore?: string
+}
+
+export interface UpdateTagPayload {
+  nome?: string
+  colore?: string
+}
+
+export async function getTags(): Promise<Tag[]> {
+  const response = await apiClient.get<Tag[]>('/profit-tracker/tags')
+  return response.data
+}
+
+export async function createTag(payload: CreateTagPayload): Promise<Tag> {
+  try {
+    const response = await apiClient.post<Tag>('/profit-tracker/tags', payload)
+    return response.data
+  } catch (error: unknown) {
+    if (getResponseStatus(error) === 409) {
+      const err = new Error('TAG_NAME_ALREADY_EXISTS') as Error & { code: string }
+      err.code = 'TAG_NAME_ALREADY_EXISTS'
+      throw err
+    }
+    throw error
+  }
+}
+
+export async function updateTag(id: string, payload: UpdateTagPayload): Promise<Tag> {
+  const response = await apiClient.patch<Tag>(`/profit-tracker/tags/${id}`, payload)
+  return response.data
+}
+
+export async function deleteTag(id: string): Promise<void> {
+  await apiClient.delete(`/profit-tracker/tags/${id}`)
 }
 
 export interface CreateAccountPayload {
@@ -306,6 +362,7 @@ export interface CreateBetLegPayload {
   movimento: number
   statoEvento: string
   tag?: string | null
+  posizione?: number
 }
 
 export async function getBets(params?: GetBetsParams): Promise<OngoingBet[]> {

@@ -27,14 +27,14 @@ const SOURCE_LABELS: Record<ActivityFeedSource, string> = {
 }
 
 const SOURCE_COLORS: Record<ActivityFeedSource, string> = {
-  bet_settlement: 'bg-blue-100 text-blue-700',
-  quick_bet: 'bg-violet-100 text-violet-700',
-  deposito: 'bg-emerald-100 text-emerald-700',
-  prelievo: 'bg-red-100 text-red-700',
-  riconciliazione: 'bg-amber-100 text-amber-700',
-  ricarica: 'bg-emerald-100 text-emerald-700',
-  spesa: 'bg-red-100 text-red-700',
-  trasferimento: 'bg-gray-100 text-gray-700',
+  bet_settlement: 'bg-neon-blue/15 text-neon-blue border border-neon-blue/20',
+  quick_bet: 'bg-neon-lavender/15 text-neon-lavender border border-neon-lavender/20',
+  deposito: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
+  prelievo: 'bg-destructive/15 text-destructive border border-destructive/20',
+  riconciliazione: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
+  ricarica: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
+  spesa: 'bg-destructive/15 text-destructive border border-destructive/20',
+  trasferimento: 'bg-white/5 text-white/40 border border-white/10',
 }
 
 const FILTER_OPTIONS: { value: ActivityFeedSource | ''; label: string }[] = [
@@ -58,6 +58,7 @@ function formatBetDescription(entry: ActivityFeedEntry): string {
   return parts.join(' · ')
 }
 
+export { StoricoMovimentiPage as StoricoMovimentiContent }
 export default function StoricoMovimentiPage() {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
@@ -242,7 +243,7 @@ export default function StoricoMovimentiPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Totale entrate
             </p>
-            <p className="mt-2 text-xl font-semibold text-emerald-600">
+            <p className="mt-2 font-mono text-xl font-semibold text-emerald-400">
               {formatCurrency(summary.totaleEntrate)}
             </p>
           </div>
@@ -250,7 +251,7 @@ export default function StoricoMovimentiPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Totale uscite
             </p>
-            <p className="mt-2 text-xl font-semibold text-red-500">
+            <p className="mt-2 font-mono text-xl font-semibold text-destructive">
               {formatCurrency(summary.totaleUscite)}
             </p>
           </div>
@@ -259,7 +260,7 @@ export default function StoricoMovimentiPage() {
               Saldo netto
             </p>
             <p
-              className={`mt-2 text-xl font-semibold ${summary.saldoNetto >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+              className={`mt-2 font-mono text-xl font-semibold ${summary.saldoNetto >= 0 ? 'text-emerald-400' : 'text-destructive'}`}
             >
               {formatCurrency(summary.saldoNetto)}
             </p>
@@ -291,7 +292,7 @@ export default function StoricoMovimentiPage() {
               <span className="text-xs text-muted-foreground">{resolveReference(entry)}</span>
               <span
                 className={`text-sm font-semibold ${
-                  entry.importo >= 0 ? 'text-emerald-600' : 'text-red-500'
+                  entry.importo >= 0 ? 'text-emerald-400' : 'text-destructive'
                 }`}
               >
                 {formatCurrency(entry.importo)}
@@ -313,7 +314,7 @@ export default function StoricoMovimentiPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Data</th>
               <th className="px-3 py-2 text-left">Tipo</th>
               <th className="px-3 py-2 text-left">Conto / Wallet</th>
@@ -325,7 +326,7 @@ export default function StoricoMovimentiPage() {
             {items.map((entry) => (
               <tr
                 key={`${entry.source}-${entry.id}`}
-                className="border-b border-border/40 last:border-b-0"
+                className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
               >
                 <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
                   {new Date(entry.data).toLocaleDateString('it-IT', {
@@ -347,10 +348,10 @@ export default function StoricoMovimentiPage() {
                 <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">
                   {getDescription(entry)}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right">
+                <td className="whitespace-nowrap px-3 py-2 text-right font-mono">
                   <span
                     className={`text-sm font-medium ${
-                      entry.importo >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      entry.importo >= 0 ? 'text-emerald-400' : 'text-destructive'
                     }`}
                   >
                     {formatCurrency(entry.importo)}

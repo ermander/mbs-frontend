@@ -15,11 +15,21 @@ import type {
   BetLegRealizedLedgerEntry,
 } from '@/types/profit-tracker'
 
+const SPORT_ICON: Record<string, string> = {
+  calcio: '⚽',
+  tennis: '🎾',
+  basket: '🏀',
+  altro: '•',
+}
+function getSportIcon(sport: string) {
+  return SPORT_ICON[sport?.toLowerCase()] ?? '•'
+}
+
 function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
 
-const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/20 p-1.5 text-amber-600'
+const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/15 p-1.5 text-amber-400'
 const CURRENT_YEAR = new Date().getFullYear()
 
 export default function ProfitTrackerDashboardPage() {
@@ -116,7 +126,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Bookmakers
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoBookmakers)}
               </p>
             </div>
@@ -129,7 +139,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Wallets
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoWallets)}
               </p>
             </div>
@@ -142,7 +152,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Puntate in corso
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.puntateInCorso)}
               </p>
             </div>
@@ -155,7 +165,7 @@ export default function ProfitTrackerDashboardPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Saldo Totale
               </p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
                 {formatCurrency(bilancio.saldoTotale)}
               </p>
             </div>
@@ -171,7 +181,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Mese attuale
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.meseAttuale)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -182,7 +192,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Media mensile
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.mediaMensile)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -193,7 +203,7 @@ export default function ProfitTrackerDashboardPage() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Totale anno {CURRENT_YEAR}
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">
+          <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
             {formatCurrency(kpi.totaleAnno)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -202,13 +212,13 @@ export default function ProfitTrackerDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
+      <div className="grid gap-4 lg:grid-cols-[2fr,1fr] lg:gap-6">
+        <div className="min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-foreground">Trend guadagni {CURRENT_YEAR}</p>
             <p className="text-xs text-muted-foreground">Profitto mensile realizzato</p>
           </div>
-          <div className="mt-2 h-40 rounded-md bg-muted/40 p-3">
+          <div className="mt-2 h-40 rounded-md bg-muted/40 p-3 sm:h-48">
             <div className="flex h-full items-end gap-1">
               {monthlyTrend.map((value, index) => {
                 const barHeight = (Math.abs(value) / trendMax) * 80
@@ -216,7 +226,7 @@ export default function ProfitTrackerDashboardPage() {
                 return (
                   <div key={index} className="flex h-full flex-1 flex-col items-center justify-end">
                     <div
-                      className={`w-3 rounded-full ${isNegative ? 'bg-red-500/70' : 'bg-primary/70'}`}
+                      className={`w-full max-w-3 rounded-full ${isNegative ? 'bg-destructive/70' : 'bg-primary/70'}`}
                       style={{ height: `${Math.max(barHeight, value !== 0 ? 5 : 2)}%` }}
                       title={formatCurrency(value)}
                     />
@@ -224,7 +234,7 @@ export default function ProfitTrackerDashboardPage() {
                 )
               })}
             </div>
-            <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
+            <div className="mt-2 flex justify-between gap-0.5 overflow-hidden text-[9px] text-muted-foreground sm:text-[10px]">
               <span>Gen</span>
               <span>Feb</span>
               <span>Mar</span>
@@ -241,7 +251,7 @@ export default function ProfitTrackerDashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <p className="text-sm font-medium text-foreground">Giocate in corso</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -254,7 +264,9 @@ export default function ProfitTrackerDashboardPage() {
                   className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2"
                 >
                   <span className="truncate text-foreground">{bet.eventoNome}</span>
-                  <span className="text-xs uppercase text-muted-foreground">{bet.sport}</span>
+                  <span className="text-base" aria-label={bet.sport}>
+                    {getSportIcon(bet.sport)}
+                  </span>
                 </li>
               ))}
               {activeOngoingBets.length === 0 && (
@@ -282,8 +294,8 @@ export default function ProfitTrackerDashboardPage() {
                   <span
                     className={
                       entry.amount >= 0
-                        ? 'text-xs font-medium text-emerald-600'
-                        : 'text-xs font-medium text-red-500'
+                        ? 'font-mono text-xs font-medium text-emerald-400'
+                        : 'font-mono text-xs font-medium text-destructive'
                     }
                   >
                     {formatCurrency(entry.amount)}

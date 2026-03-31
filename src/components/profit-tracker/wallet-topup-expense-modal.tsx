@@ -24,7 +24,7 @@ interface WalletTopupExpenseModalProps {
 }
 
 export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpenseModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
   const isSavingWalletMovement = useProfitTrackerStore((s) => s.isSavingWalletMovement)

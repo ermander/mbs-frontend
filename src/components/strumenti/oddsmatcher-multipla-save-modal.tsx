@@ -1,20 +1,21 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { ODDSMATCHER_BOOKS } from '@/lib/oddsmatcher-books'
-import type { OddsmatcherRow } from '@/types/oddsmatcher'
+import type { MultiplaEvent } from '@/types/multipla-event'
 import type { Account } from '@/types/profit-tracker'
 import {
   getAccounts,
   type CreateBetPayload,
   type CreateBetLegPayload,
 } from '@/services/api/profit-tracker-client'
-import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
+import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { Loader2, X } from 'lucide-react'
 
 function getBookName(id: string): string {
@@ -35,12 +36,12 @@ function findBookIdByOddsmatcherName(
   return found?.id ?? null
 }
 
-function rowToEventoData(row: OddsmatcherRow): string {
-  const hour = row.hour.replace('.', ':')
-  return new Date(`${row.date}T${hour}:00`).toISOString()
+function eventToEventoData(ev: MultiplaEvent): string {
+  const hour = ev.hour.replace('.', ':')
+  return new Date(`${ev.date}T${hour}:00`).toISOString()
 }
 
-function sportFromOddsmatcher(sportId: string): string {
+function sportFromId(sportId: string): string {
   switch (sportId) {
     case '1':
       return 'tennis'
@@ -51,36 +52,22 @@ function sportFromOddsmatcher(sportId: string): string {
   }
 }
 
-function buildMultiplaEventoNome(row: OddsmatcherRow): string {
-  return `MULTIPLA ${row.home} - ${row.away}`
+function buildMultiplaEventoNome(ev: MultiplaEvent): string {
+  return `MULTIPLA ${ev.home} - ${ev.away}`
 }
-
-const ChevronDown = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-)
 
 export interface OddsmatcherMultiplaSaveModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  selectedEvents: OddsmatcherRow[]
+  selectedEvents: MultiplaEvent[]
   bookOddsId: string
   exchangeOddsId: string
   /** Stake condiviso dalla barra filtri (stesso valore usato per il calcolatore singolo). */
   sharedStake?: string
   /** Bonus condiviso dalla barra filtri (stesso valore usato per il calcolatore singolo). */
   sharedBonus?: string
+  /** Rimborso condiviso dalla barra filtri. */
+  sharedRimborso?: string
 }
 
 export function OddsmatcherMultiplaSaveModal({
@@ -91,19 +78,22 @@ export function OddsmatcherMultiplaSaveModal({
   exchangeOddsId,
   sharedStake = '',
   sharedBonus = '',
+  sharedRimborso = '',
 }: OddsmatcherMultiplaSaveModalProps) {
-  const router = useRouter()
-  const books = useProfitTrackerStore((s) => s.books)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [accountIdPunta, setAccountIdPunta] = useState('')
   const [accountIdBanca, setAccountIdBanca] = useState('')
   const [accountsPunta, setAccountsPunta] = useState<Account[]>([])
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
+  const [holderPortalEl, setHolderPortalEl] = useState<HTMLDivElement | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [savedBetId, setSavedBetId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const sortedSelectedEvents = useMemo(() => {
@@ -123,8 +113,8 @@ export function OddsmatcherMultiplaSaveModal({
     }
     let resolvedBooks = books
     if (resolvedBooks.length === 0) {
-      await fetchBooks()
-      resolvedBooks = useProfitTrackerStore.getState().books
+      await fetchAllBooks()
+      resolvedBooks = useProfitTrackerStore.getState().allBooks
     }
     const puntaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNamePunta)
     const bancaBookId = findBookIdByOddsmatcherName(resolvedBooks, bookNameBanca)
@@ -146,7 +136,7 @@ export function OddsmatcherMultiplaSaveModal({
     bookNamePunta,
     bookNameBanca,
     books,
-    fetchBooks,
+    fetchAllBooks,
     holders.length,
     fetchHolders,
   ])
@@ -156,12 +146,21 @@ export function OddsmatcherMultiplaSaveModal({
       setAccountIdPunta('')
       setAccountIdBanca('')
       setSaveError(null)
+      setSavedBetId(null)
     }
   }, [open])
 
   useEffect(() => {
     if (open && (bookOddsId || exchangeOddsId)) {
-      void loadHolderOptions()
+      const load = async () => {
+        setIsLoadingBasics(true)
+        try {
+          await loadHolderOptions()
+        } finally {
+          setIsLoadingBasics(false)
+        }
+      }
+      void load()
     }
   }, [open, bookOddsId, exchangeOddsId, loadHolderOptions])
 
@@ -182,8 +181,8 @@ export function OddsmatcherMultiplaSaveModal({
     try {
       const sorted = sortedSelectedEvents
       const first = sorted[0]
-      const eventoDataFirst = rowToEventoData(first)
-      const sport = sportFromOddsmatcher(first.sport)
+      const eventoDataFirst = eventToEventoData(first)
+      const sport = sportFromId(first.sport)
       const eventoNome = buildMultiplaEventoNome(sorted[0])
 
       const betPayload: CreateBetPayload = {
@@ -196,11 +195,12 @@ export function OddsmatcherMultiplaSaveModal({
         nota: undefined,
       }
 
-      const quotaPuntaTotale =
-        Math.round(sorted.reduce((acc, row) => acc * parseFloat(row.back_odd), 1) * 100) / 100
+      const quotaPuntaPrecisa = sorted.reduce((acc, ev) => acc * parseFloat(ev.mainOdd), 1)
+      const quotaPuntaTotale = Math.round(quotaPuntaPrecisa * 100) / 100
 
       const stakePunta = Number.parseFloat(sharedStake) || 0
       const bonusValore = Number.parseFloat(sharedBonus) || 0
+      const rimborsoValore = Number.parseFloat(sharedRimborso) || 0
       const backStakeTotale = stakePunta + bonusValore
       const legPunta: CreateBetLegPayload = {
         eventoData: eventoDataFirst,
@@ -210,13 +210,14 @@ export function OddsmatcherMultiplaSaveModal({
         mercato: 'Multipla',
         selezione: undefined,
         metodo: 'punta',
-        tipoBonus: bonusValore > 0 ? 'bonus' : 'none',
+        tipoBonus: bonusValore > 0 ? 'bonus' : rimborsoValore > 0 ? 'rimborso' : 'none',
         accountId: accountIdPunta,
         stake: stakePunta,
         quota: quotaPuntaTotale,
         rischio: stakePunta,
         bonusValore: bonusValore > 0 ? bonusValore : undefined,
-        commissionePercentuale: 3,
+        rimborsoValore: rimborsoValore > 0 ? rimborsoValore : undefined,
+        commissionePercentuale: 0,
         movimento: 0,
         statoEvento: 'bozza',
         tag: undefined,
@@ -224,46 +225,47 @@ export function OddsmatcherMultiplaSaveModal({
 
       const multiplaResults = multiplaLayStakes(
         backStakeTotale,
-        quotaPuntaTotale,
-        sorted.map((row) => ({
-          layOdds: parseFloat(row.lay_odd),
-          commissionPercent: 3,
+        quotaPuntaPrecisa,
+        sorted.map((ev) => ({
+          type: ev.type,
+          coverOdds: parseFloat(ev.coverOdd),
+          commissionPercent: ev.commissionPercent,
         })),
+        rimborsoValore,
       )
-      const legsBanca: CreateBetLegPayload[] = sorted.map((row, i) => {
-        const layOdds_i = parseFloat(row.lay_odd)
-        const { layStake: layStake_i, liability: rischio_i } = multiplaResults[i] ?? {
-          layStake: 0,
-          liability: 0,
+      const legsHedge: CreateBetLegPayload[] = sorted.map((ev, i) => {
+        const coverOdds_i = parseFloat(ev.coverOdd)
+        const { hedgeStake: hedgeStake_i, hedgeCost: rischio_i } = multiplaResults[i] ?? {
+          hedgeStake: 0,
+          hedgeCost: 0,
         }
         return {
-          eventoData: rowToEventoData(row),
-          sport: sportFromOddsmatcher(row.sport),
-          eventoNome: `${row.home} - ${row.away}`,
-          competizione: row.competition,
-          mercato: row.market,
-          selezione: row.selection,
-          metodo: 'banca' as const,
+          eventoData: eventToEventoData(ev),
+          sport: sportFromId(ev.sport),
+          eventoNome: `${ev.home} - ${ev.away}`,
+          competizione: ev.competition,
+          mercato: ev.market,
+          selezione: ev.selection,
+          metodo: ev.type === 'punta-punta' ? ('punta' as const) : ('banca' as const),
           tipoBonus: 'none',
           accountId: accountIdBanca,
-          stake: layStake_i,
-          quota: layOdds_i,
+          stake: hedgeStake_i,
+          quota: coverOdds_i,
           quotaRiferimento: (() => {
-            const n = parseFloat(row.back_odd)
+            const n = parseFloat(ev.mainOdd)
             return Number.isFinite(n) ? n : undefined
           })(),
           rischio: rischio_i,
-          commissionePercentuale: 3,
+          commissionePercentuale: ev.commissionPercent,
           movimento: 0,
           statoEvento: 'bozza',
           tag: undefined,
         }
       })
 
-      const legsPayload: CreateBetLegPayload[] = [legPunta, ...legsBanca]
+      const legsPayload: CreateBetLegPayload[] = [legPunta, ...legsHedge]
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
-      onOpenChange(false)
-      router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)
+      setSavedBetId(bet.id)
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Errore nel salvataggio della multipla.')
     } finally {
@@ -273,134 +275,159 @@ export function OddsmatcherMultiplaSaveModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md gap-0 overflow-hidden p-0" showClose={true}>
-        <div className="px-6 pb-1 pt-6">
-          <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
-            Assegna intestatari
-          </DialogTitle>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Scegli l&apos;intestatario per la puntata (book) e per la bancata (exchange) della
-            multipla.
-          </p>
-        </div>
-
-        <div className="grid gap-4 px-6 py-5">
-          <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-primary">
-                Intestatario Punta
-              </Label>
-              <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                {bookNamePunta || '—'}
-              </span>
-            </div>
-            <div className="relative">
-              <select
-                value={accountIdPunta}
-                onChange={(e) => setAccountIdPunta(e.target.value)}
-                className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-              >
-                <option value="">Seleziona intestatario</option>
-                {accountsPunta.map((acc) => {
-                  const holder = holders.find((h) => h.id === acc.holderId)
-                  return (
-                    <option key={acc.id} value={acc.id}>
-                      {holder?.nome ?? acc.nome}
-                    </option>
-                  )
-                })}
-              </select>
-              <span
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              >
-                <ChevronDown />
-              </span>
-            </div>
-            {accountsPunta.length === 0 && bookNamePunta && (
-              <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-                Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
+      <DialogContent className="max-w-md gap-0 p-0" showClose={true}>
+        {/* Portal container per dropdown SearchableSelect dentro la modale */}
+        <div
+          ref={setHolderPortalEl}
+          className="pointer-events-none fixed inset-0 z-[9998]"
+          aria-hidden
+        />
+        {savedBetId ? (
+          <>
+            <div className="px-6 pb-4 pt-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                Giocata salvata
+              </DialogTitle>
+              <p className="mt-2 text-sm text-muted-foreground">
+                La giocata è stata salvata correttamente nel Profit Tracker.
               </p>
-            )}
-          </div>
-
-          <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
-                Intestatario Banca
-              </Label>
-              <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
-                {bookNameBanca || '—'}
-              </span>
-            </div>
-            <div className="relative">
-              <select
-                value={accountIdBanca}
-                onChange={(e) => setAccountIdBanca(e.target.value)}
-                className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-              >
-                <option value="">Seleziona intestatario</option>
-                {accountsBanca.map((acc) => {
-                  const holder = holders.find((h) => h.id === acc.holderId)
-                  return (
-                    <option key={acc.id} value={acc.id}>
-                      {holder?.nome ?? acc.nome}
-                    </option>
-                  )
-                })}
-              </select>
-              <span
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              >
-                <ChevronDown />
-              </span>
-            </div>
-            {accountsBanca.length === 0 && bookNameBanca && (
-              <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
-                Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.
+              <p className="mt-3 text-sm text-foreground">
+                <Link
+                  href={`/profit-tracker/giocate-in-corso/${savedBetId}`}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Vai al dettaglio della giocata
+                </Link>
               </p>
-            )}
-          </div>
-        </div>
+            </div>
+            <div className="flex justify-end border-t border-border bg-muted/20 px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSavedBetId(null)
+                  onOpenChange(false)
+                }}
+              >
+                Chiudi
+              </Button>
+            </div>
+          </>
+        ) : isLoadingBasics ? (
+          <>
+            <DialogTitle className="sr-only">Caricamento</DialogTitle>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-6 pb-1 pt-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                Assegna intestatari
+              </DialogTitle>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Scegli l&apos;intestatario per la puntata (book) e per la bancata (exchange) della
+                multipla.
+              </p>
+            </div>
 
-        {saveError && (
-          <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
-            <p className="text-sm text-destructive">{saveError}</p>
-          </div>
+            <div className="grid gap-4 px-6 py-5">
+              <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                    Intestatario Punta
+                  </Label>
+                  <span className="rounded-md bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                    {bookNamePunta || '—'}
+                  </span>
+                </div>
+                <SearchableSelect
+                  options={accountsPunta.map((acc) => {
+                    const holder = holders.find((h) => h.id === acc.holderId)
+                    return { value: acc.id, label: holder?.nome ?? acc.nome }
+                  })}
+                  value={accountIdPunta}
+                  onChange={setAccountIdPunta}
+                  placeholder="Seleziona intestatario"
+                  searchPlaceholder="Cerca intestatario..."
+                  allowEmpty={false}
+                  portalContainer={holderPortalEl}
+                />
+                {accountsPunta.length === 0 && bookNamePunta && (
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
+                    Intestatario Banca
+                  </Label>
+                  <span className="rounded-md bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+                    {bookNameBanca || '—'}
+                  </span>
+                </div>
+                <SearchableSelect
+                  options={accountsBanca.map((acc) => {
+                    const holder = holders.find((h) => h.id === acc.holderId)
+                    return { value: acc.id, label: holder?.nome ?? acc.nome }
+                  })}
+                  value={accountIdBanca}
+                  onChange={setAccountIdBanca}
+                  placeholder="Seleziona intestatario"
+                  searchPlaceholder="Cerca intestatario..."
+                  allowEmpty={false}
+                  portalContainer={holderPortalEl}
+                />
+                {accountsBanca.length === 0 && bookNameBanca && (
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {saveError && (
+              <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+                <p className="text-sm text-destructive">{saveError}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
+              <Button
+                variant="outline"
+                className="sm:min-w-[100px]"
+                onClick={() => onOpenChange(false)}
+                disabled={isSaving}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Annulla
+              </Button>
+              <Button
+                className="bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white sm:min-w-[120px]"
+                onClick={() => void handleSave()}
+                disabled={
+                  !accountIdPunta ||
+                  !accountIdBanca ||
+                  isSaving ||
+                  ((Number.parseFloat(sharedStake) || 0) <= 0 &&
+                    (Number.parseFloat(sharedBonus) || 0) <= 0)
+                }
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Salvataggio...
+                  </>
+                ) : (
+                  'Salva'
+                )}
+              </Button>
+            </div>
+          </>
         )}
-
-        <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
-          <Button
-            variant="outline"
-            className="sm:min-w-[100px]"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Annulla
-          </Button>
-          <Button
-            className="bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white sm:min-w-[120px]"
-            onClick={() => void handleSave()}
-            disabled={
-              !accountIdPunta ||
-              !accountIdBanca ||
-              isSaving ||
-              ((Number.parseFloat(sharedStake) || 0) <= 0 &&
-                (Number.parseFloat(sharedBonus) || 0) <= 0)
-            }
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Salvataggio...
-              </>
-            ) : (
-              'Salva'
-            )}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   )

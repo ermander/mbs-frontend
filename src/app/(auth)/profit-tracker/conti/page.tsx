@@ -4,6 +4,7 @@ import { useEffect, useCallback, useMemo, useState } from 'react'
 
 import { Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -14,6 +15,7 @@ import { StatusBadge } from '@/components/profit-tracker/status-badge'
 
 const PAGE_SIZE = 20
 
+export { ContiPage as ContiContent }
 export default function ContiPage() {
   const accounts = useProfitTrackerStore((s) => s.accounts)
   const accountsTotal = useProfitTrackerStore((s) => s.accountsTotal)
@@ -21,10 +23,10 @@ export default function ContiPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const isLoadingAccounts = useProfitTrackerStore((s) => s.isLoadingAccounts)
   const accountsError = useProfitTrackerStore((s) => s.accountsError)
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const books = useProfitTrackerStore((s) => s.books)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const fetchAccounts = useProfitTrackerStore((s) => s.fetchAccounts)
   const updateAccount = useProfitTrackerStore((s) => s.updateAccount)
 
@@ -34,6 +36,7 @@ export default function ContiPage() {
   const [page, setPage] = useState(1)
   const [holderIds, setHolderIds] = useState<string[]>([])
   const [bookIds, setBookIds] = useState<string[]>([])
+  const [filterStato, setFilterStato] = useState('')
   const [sortSaldo, setSortSaldo] = useState<'asc' | 'desc'>('desc')
 
   const loadAccounts = useCallback(() => {
@@ -42,15 +45,17 @@ export default function ContiPage() {
       limit: PAGE_SIZE,
       holderIds: holderIds.length > 0 ? holderIds.join(',') : undefined,
       bookIds: bookIds.length > 0 ? bookIds.join(',') : undefined,
+      status: filterStato || undefined,
       sortSaldo,
     })
-  }, [fetchAccounts, page, holderIds, bookIds, sortSaldo])
+  }, [fetchAccounts, page, holderIds, bookIds, filterStato, sortSaldo])
 
   useEffect(() => {
-    if (!holders.length) void fetchHolders()
-    if (!books.length) void fetchBooks({ limit: 5000 })
+    void fetchHolders()
+    void fetchAllBooks()
     void fetchAllAccounts()
-  }, [holders.length, books.length, fetchHolders, fetchBooks, fetchAllAccounts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     loadAccounts()
@@ -132,6 +137,24 @@ export default function ContiPage() {
           showBadges
           className="w-full sm:min-w-[200px]"
         />
+        <div className="space-y-1.5 sm:min-w-[160px]">
+          <Label htmlFor="filter-stato-conto" className="text-xs">
+            Stato
+          </Label>
+          <select
+            id="filter-stato-conto"
+            value={filterStato}
+            onChange={(e) => {
+              setFilterStato(e.target.value)
+              setPage(1)
+            }}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">Tutti</option>
+            <option value="abilitato">Abilitato</option>
+            <option value="disabilitato">Non abilitato</option>
+          </select>
+        </div>
       </div>
 
       {accountsError && (
@@ -179,7 +202,7 @@ export default function ContiPage() {
                 </div>
                 <div className="flex justify-between gap-2 border-t border-border/50 pt-2">
                   <span className="text-muted-foreground">Saldo attuale</span>
-                  <span className="font-medium text-foreground">
+                  <span className="font-mono font-medium text-foreground">
                     {account.saldoAttuale.toFixed(2)} €
                   </span>
                 </div>
@@ -227,7 +250,7 @@ export default function ContiPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Creato il</th>
               <th className="px-3 py-2 text-left">Intestatario</th>
               <th className="px-3 py-2 text-left">Book</th>
@@ -264,7 +287,10 @@ export default function ContiPage() {
             )}
             {!isLoadingAccounts &&
               accounts.map((account) => (
-                <tr key={account.id} className="border-b border-border/40 last:border-b-0">
+                <tr
+                  key={account.id}
+                  className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+                >
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {new Date(account.createdAt).toLocaleDateString('it-IT')}
                   </td>
@@ -277,7 +303,7 @@ export default function ContiPage() {
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {account.descrizione ?? '—'}
                   </td>
-                  <td className="px-3 py-2 text-xs font-medium text-foreground">
+                  <td className="px-3 py-2 font-mono text-xs font-medium text-foreground">
                     {account.saldoAttuale.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2 text-xs">
@@ -363,7 +389,10 @@ export default function ContiPage() {
       <AccountMovementModal
         open={movementForAccount != null}
         onOpenChange={(open) => {
-          if (!open) setMovementForAccount(undefined)
+          if (!open) {
+            setMovementForAccount(undefined)
+            loadAccounts()
+          }
         }}
         defaultAccountId={movementForAccount}
       />

@@ -173,6 +173,7 @@ export interface BetLeg {
   eventoNotificato?: boolean
   statoEvento: BetStatus
   tag?: string
+  posizione?: number
 }
 
 export interface QuickBet {
@@ -206,6 +207,14 @@ export interface WalletMovement {
   valore: number
   dataRegistrazione: string
   descrizione?: string
+}
+
+export interface Tag {
+  id: string
+  nome: string
+  colore: string
+  createdAt: string
+  updatedAt: string
 }
 
 export type ReminderPeriod = '24h' | '12h' | 'scadenza'

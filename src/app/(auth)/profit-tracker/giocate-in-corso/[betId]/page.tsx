@@ -1,16 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { notFound, useParams, useRouter } from 'next/navigation'
 import { Ban, Pencil, Plus, Archive, Trash2, Check, X } from 'lucide-react'
 
+import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay, sanitizeDecimal } from '@/lib/utils'
-import { multiplaLayStakes } from '@/lib/calculators/punta-banca'
+import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { BetLeg } from '@/types/profit-tracker'
-import { AddBetLegModal } from '@/components/profit-tracker/add-bet-leg-modal'
+import type { BetLeg, BetStatus, ModalitaSaldo } from '@/types/profit-tracker'
+
+const FINAL_STATES = new Set<BetStatus>(['vinto', 'perso', 'annullato'])
+import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 
 function renderEventDateCell(date: string) {
@@ -32,15 +34,15 @@ const TIPO_BONUS_OPTIONS: { value: BetLeg['tipoBonus']; label: string }[] = [
 function statoEventoClasses(stato: BetLeg['statoEvento']): string {
   switch (stato) {
     case 'vinto':
-      return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/40'
+      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
     case 'perso':
-      return 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/40'
+      return 'bg-destructive/15 text-destructive border-destructive/20'
     case 'in_corso':
-      return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/40'
+      return 'bg-amber-500/15 text-amber-400 border-amber-500/20'
     case 'annullato':
-      return 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40'
+      return 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20'
     default:
-      return 'bg-background border-border'
+      return 'bg-muted/50 text-muted-foreground border-border'
   }
 }
 
@@ -65,8 +67,7 @@ export default function BetDetailPage() {
   const [loadError, setLoadError] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
   const [notaLocal, setNotaLocal] = useState('')
-  const [addLegOpen, setAddLegOpen] = useState(false)
-  const [addLegMethod, setAddLegMethod] = useState<'punta' | 'banca'>('punta')
+  const [notaEditing, setNotaEditing] = useState(false)
   const [editingCell, setEditingCell] = useState<{ legId: string; field: EditableField } | null>(
     null,
   )
@@ -77,37 +78,58 @@ export default function BetDetailPage() {
   const [draftTextValue, setDraftTextValue] = useState('')
   const [editingDateLegId, setEditingDateLegId] = useState<string | null>(null)
   const [draftDateLocal, setDraftDateLocal] = useState('')
+  const [depositModalOpen, setDepositModalOpen] = useState(false)
+  const navigatingAway = useRef(false)
 
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
   const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const updateBet = useProfitTrackerStore((s) => s.updateOngoingBet)
   const updateBetLeg = useProfitTrackerStore((s) => s.updateBetLeg)
   const removeBetLeg = useProfitTrackerStore((s) => s.removeBetLeg)
   const addBetLegs = useProfitTrackerStore((s) => s.addBetLegs)
   const removeOngoingBet = useProfitTrackerStore((s) => s.removeOngoingBet)
+  const tags = useProfitTrackerStore((s) => s.tags)
+  const fetchTags = useProfitTrackerStore((s) => s.fetchTags)
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
   const legs = useMemo(() => {
     const filtered = allLegs.filter((l) => l.betId === betId)
     return filtered.sort((a, b) => {
+      const posA = a.posizione ?? 999
+      const posB = b.posizione ?? 999
+      if (posA !== posB) return posA - posB
       if (a.metodo === 'punta' && b.metodo !== 'punta') return -1
       if (a.metodo !== 'punta' && b.metodo === 'punta') return 1
       const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
       if (byDate !== 0) return byDate
+      if (a.quota !== b.quota) return a.quota - b.quota
       return String(a.id).localeCompare(String(b.id))
     })
   }, [allLegs, betId])
 
+  const hasLegsInCorso = useMemo(() => legs.some((l) => l.statoEvento === 'in_corso'), [legs])
+
   const isMultipla = useMemo(() => {
     const puntaLeg = legs.find((l) => l.metodo === 'punta')
-    const bancaCount = legs.filter((l) => l.metodo === 'banca').length
-    return bancaCount >= 2 && puntaLeg != null
+    if (puntaLeg == null) return false
+    // Hedge legs = tutto tranne la prima punta (include sia banca che punta-punta)
+    const hedgeLegs = legs.filter((l) => l.id !== puntaLeg.id)
+    if (hedgeLegs.length < 2) return false
+    // Bancate/coperture parziali (stesso evento/mercato/selezione) non sono una multipla
+    const first = hedgeLegs[0]
+    const isPartialLay = hedgeLegs.every(
+      (l) =>
+        l.eventoNome === first.eventoNome &&
+        l.mercato === first.mercato &&
+        l.selezione === first.selezione,
+    )
+    return !isPartialLay
   }, [legs])
 
   const resolveAccountLabel = useCallback(
@@ -144,13 +166,22 @@ export default function BetDetailPage() {
     [allAccounts, books, resolveAccountLabel],
   )
 
+  const tagOptions = useMemo(
+    () => [
+      { value: '', label: 'Nessun tag' },
+      ...tags.map((t) => ({ value: t.nome, label: t.nome })),
+    ],
+    [tags],
+  )
+
   useEffect(() => {
     if (!betId) return
     let cancelled = false
     setLoading(true)
     setLoadError(false)
     void fetchAllAccounts()
-    if (books.length === 0) void fetchBooks()
+    void fetchTags()
+    void fetchAllBooks()
     fetchBetWithLegs(betId)
       .then(() => {
         if (!cancelled) setLoading(false)
@@ -164,7 +195,8 @@ export default function BetDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [betId, fetchBetWithLegs, fetchAllAccounts, fetchBooks, books.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [betId])
 
   useEffect(() => {
     if (bet?.nota !== undefined) setNotaLocal(bet.nota ?? '')
@@ -174,7 +206,7 @@ export default function BetDetailPage() {
     notFound()
   }
 
-  if (loadError || (!loading && !bet)) {
+  if (!navigatingAway.current && (loadError || (!loading && !bet))) {
     notFound()
   }
 
@@ -186,29 +218,39 @@ export default function BetDetailPage() {
     )
   }
 
-  const handleNotaBlur = () => {
+  const handleNotaSave = () => {
     if (bet && notaLocal !== (bet.nota ?? '')) {
       void updateBet(bet.id, { nota: notaLocal || undefined })
     }
+    setNotaEditing(false)
   }
 
   const handleArchive = async () => {
     if (!bet) return
+    if (!window.confirm('Vuoi davvero archiviare questa giocata?')) return
+    if (hasLegsInCorso) {
+      toast.error('Non è possibile archiviare una giocata con scommesse ancora in corso.')
+      return
+    }
     try {
+      navigatingAway.current = true
       await updateBet(bet.id, { archiviata: true })
       router.push('/profit-tracker/giocate-in-corso')
     } catch (err) {
-      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
+      navigatingAway.current = false
+      toast.error(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 
   const handleDeleteBet = async () => {
     if (!bet || !window.confirm('Eliminare questa giocata?')) return
     try {
+      navigatingAway.current = true
       await removeOngoingBet(bet.id)
       router.push('/profit-tracker/giocate-in-corso')
-    } catch {
-      // Error in store
+    } catch (err) {
+      navigatingAway.current = false
+      toast.error(getErrorMessage(err) ?? 'Impossibile eliminare la giocata.')
     }
   }
 
@@ -231,7 +273,7 @@ export default function BetDetailPage() {
       commissionePercentuale: leg.commissionePercentuale ?? 0,
       movimento: leg.movimento,
       statoEvento: 'bozza',
-      tag: leg.tag ? `${leg.tag} (clonata)` : 'Clonata',
+      tag: null,
     }
     try {
       await addBetLegs(betId, [payload])
@@ -245,8 +287,8 @@ export default function BetDetailPage() {
     if (!window.confirm('Eliminare questo elemento dalla giocata?')) return
     try {
       await removeBetLeg(betId, legId)
-    } catch {
-      // Error in store
+    } catch (err) {
+      toast.error(getErrorMessage(err) ?? "Impossibile eliminare l'elemento.")
     }
   }
 
@@ -282,27 +324,39 @@ export default function BetDetailPage() {
       setEditingCell(null)
 
       const puntaLeg = legs.find((l) => l.metodo === 'punta')
-      const bancaLegs = legs
-        .filter((l) => l.metodo === 'banca')
-        .sort((a, b) => {
-          const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
-          if (byDate !== 0) return byDate
-          return String(a.id).localeCompare(String(b.id))
-        })
-      const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
+      const hedgeLegs = puntaLeg
+        ? legs
+            .filter((l) => l.id !== puntaLeg.id)
+            .sort((a, b) => {
+              const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+              if (byDate !== 0) return byDate
+              return String(a.id).localeCompare(String(b.id))
+            })
+        : []
+      const isMultipla =
+        hedgeLegs.length >= 2 &&
+        puntaLeg != null &&
+        !hedgeLegs.every(
+          (l) =>
+            l.eventoNome === hedgeLegs[0].eventoNome &&
+            l.mercato === hedgeLegs[0].mercato &&
+            l.selezione === hedgeLegs[0].selezione,
+        )
 
       if (isMultipla) {
         const field = editingCell.field
-        const editedIsBanca = leg.metodo === 'banca'
+        const editedIsHedge = leg.id !== puntaLeg.id
         const needsRecalc =
-          (field === 'quotaRiferimento' && editedIsBanca) ||
-          (field === 'quota' && editedIsBanca) ||
-          (field === 'commissionePercentuale' && editedIsBanca)
-        const puntaQuotaChanged = field === 'quota' && !editedIsBanca
-        const puntaStakeChanged = (field === 'stake' || field === 'bonusValore') && !editedIsBanca
+          (field === 'quotaRiferimento' && editedIsHedge) ||
+          (field === 'quota' && editedIsHedge) ||
+          (field === 'commissionePercentuale' && editedIsHedge)
+        const puntaQuotaChanged = field === 'quota' && !editedIsHedge
+        const puntaStakeChanged =
+          (field === 'stake' || field === 'bonusValore' || field === 'rimborsoValore') &&
+          !editedIsHedge
 
         if (needsRecalc) {
-          const updatedBancaLegs = bancaLegs.map((l) => {
+          const updatedHedgeLegs = hedgeLegs.map((l) => {
             if (l.id !== leg.id) return l
             return { ...l, [field]: value }
           })
@@ -310,68 +364,93 @@ export default function BetDetailPage() {
           if (field === 'quotaRiferimento') {
             const newTotalOdds =
               Math.round(
-                updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
+                updatedHedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
               ) / 100
             await updateBetLeg(betId, puntaLeg.id, { quota: newTotalOdds })
           }
 
           const totalBackOdds =
             field === 'quotaRiferimento'
-              ? Math.round(
-                  updatedBancaLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) * 100,
-                ) / 100
-              : puntaLeg.quota
+              ? updatedHedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
+              : hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1)
 
           const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
 
-          const eventsForCalc = updatedBancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+          const eventsForCalc = updatedHedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
 
-          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
+          const results = multiplaLayStakes(
+            backStakeTotale,
+            totalBackOdds,
+            eventsForCalc,
+            puntaLeg.rimborsoValore ?? 0,
+          )
 
-          for (let i = 0; i < updatedBancaLegs.length; i++) {
-            const bl = updatedBancaLegs[i]!
+          for (let i = 0; i < updatedHedgeLegs.length; i++) {
+            const bl = updatedHedgeLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         } else if (puntaQuotaChanged) {
           const totalBackOdds = value as number
           const backStakeTotale = puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
-          const eventsForCalc = bancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+          const eventsForCalc = hedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
-          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
-          for (let i = 0; i < bancaLegs.length; i++) {
-            const bl = bancaLegs[i]!
+          const results = multiplaLayStakes(
+            backStakeTotale,
+            totalBackOdds,
+            eventsForCalc,
+            puntaLeg.rimborsoValore ?? 0,
+          )
+          for (let i = 0; i < hedgeLegs.length; i++) {
+            const bl = hedgeLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         } else if (puntaStakeChanged) {
           const backStakeTotale =
             field === 'stake'
               ? (value as number) + (puntaLeg.bonusValore ?? 0)
-              : puntaLeg.stake + (value as number)
-          const totalBackOdds = puntaLeg.quota
-          const eventsForCalc = bancaLegs.map((l) => ({
-            layOdds: l.quota,
-            commissionPercent: l.commissionePercentuale ?? 3,
+              : field === 'bonusValore'
+                ? puntaLeg.stake + (value as number)
+                : puntaLeg.stake + (puntaLeg.bonusValore ?? 0)
+          const rimborso =
+            field === 'rimborsoValore' ? (value as number) : (puntaLeg.rimborsoValore ?? 0)
+          const totalBackOdds =
+            hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
+          const eventsForCalc = hedgeLegs.map((l) => ({
+            type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+              | 'punta-banca'
+              | 'punta-punta',
+            coverOdds: l.quota,
+            commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
           }))
-          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
-          for (let i = 0; i < bancaLegs.length; i++) {
-            const bl = bancaLegs[i]!
+          const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc, rimborso)
+          for (let i = 0; i < hedgeLegs.length; i++) {
+            const bl = hedgeLegs[i]!
+            if (FINAL_STATES.has(bl.statoEvento)) continue
             const r = results[i]!
             await updateBetLeg(betId, bl.id, {
-              stake: r.layStake,
-              rischio: r.liability,
+              stake: r.hedgeStake,
+              rischio: r.hedgeCost,
             })
           }
         }
@@ -404,35 +483,67 @@ export default function BetDetailPage() {
       }
       await updateBetLeg(betId, legId, patch as Parameters<typeof updateBetLeg>[2])
 
-      // Ricalcola bancate se è una multipla e il bonus è cambiato
+      // Ricalcola coperture se è una multipla e il bonus è cambiato
       const puntaLeg = legs.find((l) => l.metodo === 'punta')
-      const bancaLegs = legs
-        .filter((l) => l.metodo === 'banca')
-        .sort((a, b) => {
-          const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
-          if (byDate !== 0) return byDate
-          return String(a.id).localeCompare(String(b.id))
-        })
-      const isMultipla = bancaLegs.length >= 2 && puntaLeg != null
+      const hedgeLegs = puntaLeg
+        ? legs
+            .filter((l) => l.id !== puntaLeg.id)
+            .sort((a, b) => {
+              const byDate = new Date(a.eventoData).getTime() - new Date(b.eventoData).getTime()
+              if (byDate !== 0) return byDate
+              return String(a.id).localeCompare(String(b.id))
+            })
+        : []
+      const isMultipla =
+        hedgeLegs.length >= 2 &&
+        puntaLeg != null &&
+        !hedgeLegs.every(
+          (l) =>
+            l.eventoNome === hedgeLegs[0].eventoNome &&
+            l.mercato === hedgeLegs[0].mercato &&
+            l.selezione === hedgeLegs[0].selezione,
+        )
       if (isMultipla && legId === puntaLeg.id) {
         const leg = legs.find((l) => l.id === legId)
         const oldBonus = leg?.bonusValore ?? 0
         const newBonus = tipoBonus !== 'bonus' ? 0 : oldBonus
+        const newRimborso = tipoBonus === 'rimborso' ? (puntaLeg.rimborsoValore ?? 0) : 0
         const backStakeTotale = puntaLeg.stake + newBonus
-        const totalBackOdds = puntaLeg.quota
-        const eventsForCalc = bancaLegs.map((l) => ({
-          layOdds: l.quota,
-          commissionPercent: l.commissionePercentuale ?? 3,
+        const totalBackOdds =
+          hedgeLegs.reduce((acc, l) => acc * (l.quotaRiferimento ?? 1), 1) || puntaLeg.quota
+        const eventsForCalc = hedgeLegs.map((l) => ({
+          type: (l.metodo === 'banca' ? 'punta-banca' : 'punta-punta') as
+            | 'punta-banca'
+            | 'punta-punta',
+          coverOdds: l.quota,
+          commissionPercent: l.commissionePercentuale ?? (l.metodo === 'banca' ? 3 : 0),
         }))
-        const results = multiplaLayStakes(backStakeTotale, totalBackOdds, eventsForCalc)
-        for (let i = 0; i < bancaLegs.length; i++) {
-          const bl = bancaLegs[i]!
+        const results = multiplaLayStakes(
+          backStakeTotale,
+          totalBackOdds,
+          eventsForCalc,
+          newRimborso,
+        )
+        for (let i = 0; i < hedgeLegs.length; i++) {
+          const bl = hedgeLegs[i]!
           const r = results[i]!
           await updateBetLeg(betId, bl.id, {
-            stake: r.layStake,
-            rischio: r.liability,
+            stake: r.hedgeStake,
+            rischio: r.hedgeCost,
           })
         }
+      }
+
+      // Sync modalitaSaldo on the bet when the punta leg's tipoBonus changes
+      const puntaLegForSync = legs.find((l) => l.metodo === 'punta')
+      if (puntaLegForSync && legId === puntaLegForSync.id) {
+        const modalita =
+          tipoBonus === 'bonus' || tipoBonus === 'freebet'
+            ? 'bonus'
+            : tipoBonus === 'rimborso'
+              ? 'rimborso'
+              : 'reale'
+        await updateBet(betId, { modalitaSaldo: modalita as ModalitaSaldo })
       }
 
       await fetchBetWithLegs(betId)
@@ -444,6 +555,11 @@ export default function BetDetailPage() {
   const handleAccountChange = async (legId: string, accountId: string) => {
     try {
       await updateBetLeg(betId, legId, { accountId })
+      // Sync accountId on the bet when the punta leg's account changes
+      const puntaLeg = legs.find((l) => l.metodo === 'punta')
+      if (puntaLeg && legId === puntaLeg.id) {
+        await updateBet(betId, { accountId })
+      }
       await fetchBetWithLegs(betId)
       await fetchAllAccounts()
     } catch (err) {
@@ -452,14 +568,16 @@ export default function BetDetailPage() {
   }
 
   const isLegEditable = (leg: BetLeg) => leg.statoEvento === 'bozza'
+  const mainPuntaLeg = legs.find((l) => l.metodo === 'punta')
   const totalRischio = legs
-    .filter((l) => l.metodo === 'banca')
+    .filter((l) => l.id !== mainPuntaLeg?.id)
     .reduce((s, l) => s + (l.rischio ?? 0), 0)
   const totalMovimento = legs.reduce((s, l) => s + l.movimento, 0)
   const canEditField = (leg: BetLeg, field: EditableField) => {
+    if (!isLegEditable(leg)) return false
     if (field === 'bonusValore') return leg.tipoBonus === 'bonus'
     if (field === 'rimborsoValore') return leg.tipoBonus === 'rimborso'
-    return isLegEditable(leg)
+    return true
   }
 
   const renderEditableCell = (
@@ -507,7 +625,7 @@ export default function BetDetailPage() {
             </button>
             <button
               type="button"
-              className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+              className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
               onClick={handleConfirmEdit}
               title="Conferma e salva"
               aria-label="Conferma e salva"
@@ -530,7 +648,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
         onClick={() => handleStartEdit(leg.id, field, displayValue)}
       >
         {format(displayValue)}
@@ -592,7 +710,7 @@ export default function BetDetailPage() {
             </button>
             <button
               type="button"
-              className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+              className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
               onClick={handleConfirmTextEdit}
               title="Conferma e salva"
               aria-label="Conferma e salva"
@@ -606,7 +724,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="whitespace-nowrap rounded bg-sky-50 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+        className="whitespace-nowrap rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
         onClick={() => handleStartTextEdit(leg.id, field, displayValue)}
       >
         {displayValue}
@@ -614,8 +732,7 @@ export default function BetDetailPage() {
     )
   }
 
-  const canEditLegEventDate = (leg: BetLeg) =>
-    leg.statoEvento === 'bozza' || leg.statoEvento === 'in_corso'
+  const canEditLegEventDate = (leg: BetLeg) => leg.statoEvento === 'bozza'
 
   const toDatetimeLocalValue = (iso: string) => {
     const d = new Date(iso)
@@ -674,63 +791,93 @@ export default function BetDetailPage() {
           </p>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Inserisci una nota"
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 pr-8 text-sm"
-            value={notaLocal}
-            onChange={(e) => setNotaLocal(e.target.value)}
-            onBlur={handleNotaBlur}
-          />
-          <Pencil
-            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            {notaEditing ? (
+              <>
+                <input
+                  type="text"
+                  placeholder="Inserisci una nota"
+                  className="w-full rounded-md border border-primary bg-background px-2 py-1.5 pr-8 text-sm ring-1 ring-primary/30"
+                  value={notaLocal}
+                  onChange={(e) => setNotaLocal(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNotaSave()}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-primary hover:bg-primary/10"
+                  onClick={handleNotaSave}
+                  title="Salva nota"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border border-border bg-background px-2 py-1.5 text-left text-sm hover:bg-muted/40"
+                onClick={() => setNotaEditing(true)}
+              >
+                <span className={notaLocal ? 'text-foreground' : 'text-muted-foreground'}>
+                  {notaLocal || 'Inserisci una nota'}
+                </span>
+                <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 sm:w-auto">
+            <span className="text-xs text-muted-foreground">Tag</span>
+            <select
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+              value={bet.tag ?? ''}
+              onChange={(e) => {
+                void updateBet(bet.id, { tag: e.target.value || undefined })
+              }}
+            >
+              {tagOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('punta')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Puntata
-          </button>
-          <button
-            type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            onClick={() => {
-              setAddLegMethod('banca')
-              setAddLegOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nuova Bancata
-          </button>
-          <Link
-            href="/profit-tracker/conti"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted sm:w-auto"
+            onClick={() => setDepositModalOpen(true)}
           >
             <Plus className="h-4 w-4" />
             Nuovo Deposito
-          </Link>
+          </button>
+          <div className="sm:ml-auto" />
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed opacity-50' : 'text-foreground hover:bg-muted'}`}
             onClick={handleArchive}
+            disabled={hasLegsInCorso}
+            title={
+              hasLegsInCorso
+                ? 'Non è possibile archiviare una giocata con scommesse in corso'
+                : undefined
+            }
           >
             <Archive className="h-4 w-4" />
             Archivia
           </button>
           <button
             type="button"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed text-destructive/50 opacity-50' : 'text-destructive hover:bg-destructive/10'}`}
             onClick={handleDeleteBet}
+            disabled={hasLegsInCorso}
+            title={
+              hasLegsInCorso
+                ? 'Non è possibile eliminare una giocata con scommesse in corso'
+                : undefined
+            }
           >
             <Trash2 className="h-4 w-4" />
             Elimina
@@ -755,7 +902,7 @@ export default function BetDetailPage() {
             <div
               key={leg.id}
               className={`rounded-xl border border-border bg-card/70 p-4 shadow-sm ${
-                shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                shouldHighlightLeg ? 'bg-amber-500/10' : ''
               } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
             >
               <div className="space-y-3">
@@ -788,7 +935,7 @@ export default function BetDetailPage() {
                         </button>
                         <button
                           type="button"
-                          className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                          className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
                           onClick={() => void handleConfirmDateEdit()}
                           aria-label="Conferma"
                           disabled={!Number.isFinite(new Date(draftDateLocal).getTime())}
@@ -800,7 +947,7 @@ export default function BetDetailPage() {
                   ) : canEditLegEventDate(leg) ? (
                     <button
                       type="button"
-                      className="rounded bg-sky-50 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40"
+                      className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
                       onClick={() => handleStartDateEdit(leg)}
                     >
                       {renderEventDateCell(leg.eventoData)}
@@ -824,12 +971,10 @@ export default function BetDetailPage() {
                     <span className="text-foreground">{leg.competizione}</span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Mercato</span>
-                    <span className="text-right text-foreground">{leg.mercato}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Selezione</span>
-                    <span className="text-right text-foreground">{leg.selezione || '—'}</span>
+                    <span className="text-right text-foreground">
+                      {[leg.mercato, leg.selezione].filter(Boolean).join(' - ') || '—'}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Tipo bonus</span>
@@ -934,7 +1079,7 @@ export default function BetDetailPage() {
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Mov.</span>
-                    <span className="font-medium text-foreground">
+                    <span className="font-mono font-medium text-foreground">
                       {leg.movimento.toFixed(2)} €
                     </span>
                   </div>
@@ -993,11 +1138,10 @@ export default function BetDetailPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium text-muted-foreground">
+            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
-              <th className="whitespace-nowrap px-3 py-2 text-left">Mercato</th>
               <th className="whitespace-nowrap px-3 py-2 text-left">Selezione</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Tipo bonus</th>
@@ -1032,7 +1176,7 @@ export default function BetDetailPage() {
                 <tr
                   key={leg.id}
                   className={`border-b border-border/40 align-top last:border-b-0 ${
-                    shouldHighlightLeg ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''
+                    shouldHighlightLeg ? 'bg-amber-500/10' : ''
                   } ${leg.statoEvento !== 'bozza' ? 'opacity-75' : ''}`}
                 >
                   <td className="px-3 py-2 text-center text-xs text-muted-foreground">
@@ -1061,7 +1205,7 @@ export default function BetDetailPage() {
                           </button>
                           <button
                             type="button"
-                            className="rounded p-0.5 text-amber-600 hover:bg-amber-500/20"
+                            className="rounded p-0.5 text-amber-400 hover:bg-amber-500/15"
                             onClick={() => void handleConfirmDateEdit()}
                             title="Conferma e salva"
                             aria-label="Conferma e salva"
@@ -1074,7 +1218,7 @@ export default function BetDetailPage() {
                     ) : canEditLegEventDate(leg) ? (
                       <button
                         type="button"
-                        className="rounded bg-sky-50 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-sky-200/60 hover:bg-sky-100 dark:bg-sky-950/30 dark:ring-sky-800/40 dark:hover:bg-sky-900/40"
+                        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
                         onClick={() => handleStartDateEdit(leg)}
                         title="Modifica data evento"
                       >
@@ -1091,10 +1235,7 @@ export default function BetDetailPage() {
                     {leg.competizione}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                    {leg.mercato}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                    {leg.selezione || '—'}
+                    {[leg.mercato, leg.selezione].filter(Boolean).join(' - ') || '—'}
                   </td>
                   <td className="px-3 py-2 text-xs capitalize text-muted-foreground">
                     {leg.metodo}
@@ -1192,7 +1333,7 @@ export default function BetDetailPage() {
                       v !== 0 ? `${v.toFixed(2)} €` : '—',
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs font-medium text-foreground">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-medium text-foreground">
                     {leg.movimento.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2">
@@ -1264,13 +1405,7 @@ export default function BetDetailPage() {
         </div>
       )}
 
-      <AddBetLegModal
-        open={addLegOpen}
-        onOpenChange={setAddLegOpen}
-        betId={betId}
-        defaultMethod={addLegMethod}
-        onSuccess={() => void fetchBetWithLegs(betId)}
-      />
+      <AccountMovementModal open={depositModalOpen} onOpenChange={setDepositModalOpen} />
     </section>
   )
 }

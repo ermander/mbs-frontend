@@ -8,14 +8,13 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ variant, children }: StatusBadgeProps) {
-  const base =
-    'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium border border-transparent'
+  const base = 'inline-flex rounded-pill px-2.5 py-0.5 text-[11px] font-medium border'
 
   const styles: Record<StatusBadgeProps['variant'], string> = {
-    enabled: 'bg-emerald-600/10 text-emerald-700',
-    disabled: 'bg-gray-500/10 text-gray-500',
-    exchange: 'bg-indigo-600/10 text-indigo-700',
-    bookmaker: 'bg-slate-500/10 text-slate-600',
+    enabled: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+    disabled: 'bg-white/5 text-white/40 border-white/10',
+    exchange: 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20',
+    bookmaker: 'bg-neon-blue/15 text-neon-blue border-neon-blue/20',
   }
 
   return <span className={cn(base, styles[variant])}>{children}</span>

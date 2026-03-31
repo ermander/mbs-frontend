@@ -154,7 +154,7 @@ function WalletCreateModalForm({
 }
 
 export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: WalletCreateModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
   const addWallet = useProfitTrackerStore((s) => s.addWallet)
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 

@@ -28,8 +28,7 @@ export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug
         <main className="py-12 sm:py-16">
           <Container className="max-w-3xl space-y-8">
             <h1 className="text-center text-3xl font-bold tracking-tight text-foreground">
-              Calcolatore
-              <br className="md:hidden" />
+              Calcolatore <br className="md:hidden" />
               <span className="whitespace-nowrap">Punta - Banca</span>
             </h1>
             <PuntaBancaCalculator />
@@ -47,8 +46,7 @@ export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug
         <main className="py-12 sm:py-16">
           <Container className="max-w-3xl space-y-8">
             <h1 className="text-center text-3xl font-bold tracking-tight text-foreground">
-              Calcolatore
-              <br className="md:hidden" />
+              Calcolatore <br className="md:hidden" />
               <span className="whitespace-nowrap">Punta - Punta</span>
             </h1>
             <PuntaPuntaCalculator />
@@ -66,8 +64,7 @@ export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug
         <main className="py-12 sm:py-16">
           <Container className="max-w-3xl space-y-8">
             <h1 className="text-center text-3xl font-bold tracking-tight text-foreground">
-              Calcolatore
-              <br className="md:hidden" />
+              Calcolatore <br className="md:hidden" />
               <span className="whitespace-nowrap">Tri-Punta</span>
             </h1>
             <TriPuntaCalculator />

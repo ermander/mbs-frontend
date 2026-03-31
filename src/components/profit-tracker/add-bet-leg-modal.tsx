@@ -40,7 +40,7 @@ export function AddBetLegModal({
 }: AddBetLegModalProps) {
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const addBetLegs = useProfitTrackerStore((s) => s.addBetLegs)
 
@@ -82,13 +82,13 @@ export function AddBetLegModal({
       }
       setCompetizione('')
       setMercato('')
-      setAccountId(filteredAccounts[0]?.id ?? '')
+      setAccountId('')
       setStake('')
       setQuota('')
       setCommissionePercentuale('0')
       setTag('')
     }
-  }, [open, bet, fetchAllAccounts, filteredAccounts])
+  }, [open, bet, fetchAllAccounts])
 
   const effectiveAccountId =
     accountId && filteredAccounts.some((a) => a.id === accountId)

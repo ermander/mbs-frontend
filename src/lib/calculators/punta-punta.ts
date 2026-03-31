@@ -60,6 +60,26 @@ export function isSurebet(oddsA: number, oddsB: number): boolean {
 }
 
 /**
+ * Dato stake A, quote e rimborso, calcola stake B per profitto uguale.
+ * Il rimborso viene ricevuto quando A perde (B vince).
+ * Se A vince: P = S_A * q_A - S_A - S_B
+ * Se B vince: P = S_B * q_B - S_A - S_B + rimborso
+ * Uguagliando: S_B = (S_A * q_A - rimborso) / q_B
+ */
+export function stakeBFromStakeARimborso(
+  stakeA: number,
+  oddsA: number,
+  oddsB: number,
+  refund: number,
+): number | null {
+  if (stakeA <= 0 || oddsA <= 0 || oddsB <= 0 || refund < 0) return null
+  const numerator = stakeA * oddsA - refund
+  if (numerator <= 0) return null
+  const sb = numerator / oddsB
+  return Number.isFinite(sb) ? sb : null
+}
+
+/**
  * Rating percentuale: dipende solo dalle quote.
  * Formula: q_A * (q_B - 1) / q_B * 100 (es. 2.3, 2.5 → 138%)
  */

@@ -10,7 +10,7 @@ export interface PuntaBancaEntry {
   id: string
   createdAt: string
   calculatorType: 'punta-banca'
-  tipologia: TipologiaCalcolo
+  tipologia?: TipologiaCalcolo
   puntata: number
   quotaPunta: number
   rimborso?: number

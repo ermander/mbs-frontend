@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Send, X } from 'lucide-react'
 import Link from 'next/link'
-import type { TipologiaCalcolo } from '@/stores/agenda-store'
 import type { Account, Book, Holder } from '@/types/profit-tracker'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
@@ -16,8 +15,6 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 interface PuntaBancaSaveModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-
-  tipologia: TipologiaCalcolo
 
   puntataEffettiva: number
   puntataNum: number
@@ -28,6 +25,14 @@ interface PuntaBancaSaveModalProps {
   layStake: number
   responsabilita: number
   commissioneNum: number
+  partialLays: { amount: string; newOdds: string }[]
+  partialLayResults: ({ newLayStake: number; newLiability: number } | null)[]
+}
+
+function parseNum(s: string): number | null {
+  if (s.trim() === '') return null
+  const n = Number.parseFloat(s.replace(',', '.'))
+  return Number.isFinite(n) ? n : null
 }
 
 function getDefaultEventDateTimeLocal(): string {
@@ -51,9 +56,8 @@ function getHolderName(holders: Holder[], holderId: string | undefined): string 
 export function PuntaBancaSaveModal({
   open,
   onOpenChange,
-  tipologia,
   puntataEffettiva,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- API consistency; puntataEffettiva used for stake
+
   puntataNum,
   bonusNum,
   rimborsoNum,
@@ -62,11 +66,13 @@ export function PuntaBancaSaveModal({
   layStake,
   responsabilita,
   commissioneNum,
+  partialLays,
+  partialLayResults,
 }: PuntaBancaSaveModalProps) {
-  const holders = useProfitTrackerStore((s) => s.holders)
-  const books = useProfitTrackerStore((s) => s.books)
-  const fetchHolders = useProfitTrackerStore((s) => s.fetchHolders)
-  const fetchBooks = useProfitTrackerStore((s) => s.fetchBooks)
+  const holders = useProfitTrackerStore((s) => s.allHolders)
+  const books = useProfitTrackerStore((s) => s.allBooks)
+  const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
   const [eventoNome, setEventoNome] = useState('')
@@ -80,10 +86,12 @@ export function PuntaBancaSaveModal({
   const [accountIdPunta, setAccountIdPunta] = useState('')
   const [accountIdBanca, setAccountIdBanca] = useState('')
 
+  const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+  const [exchangeHolderIds, setExchangeHolderIds] = useState<Set<string>>(new Set())
 
   const resetState = useCallback(() => {
     setEventoNome('')
@@ -95,9 +103,11 @@ export function PuntaBancaSaveModal({
     setAccountsBanca([])
     setAccountIdPunta('')
     setAccountIdBanca('')
+    setIsLoadingBasics(false)
     setIsSaving(false)
     setError(null)
     setSavedBetId(null)
+    setExchangeHolderIds(new Set())
   }, [])
 
   useEffect(() => {
@@ -107,19 +117,38 @@ export function PuntaBancaSaveModal({
     }
 
     const loadBasics = async () => {
-      if (holders.length === 0) {
-        await fetchHolders()
-      }
-      let currentBooks: Book[] = books
-      if (currentBooks.length === 0) {
-        await fetchBooks()
-        currentBooks = useProfitTrackerStore.getState().books
-      }
-      if (!mercato) {
-        const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
-        if (hasExchangeBooks) {
-          setMercato('Punta-Banca')
+      setIsLoadingBasics(true)
+      try {
+        if (holders.length === 0) {
+          await fetchHolders()
         }
+        let currentBooks: Book[] = books
+        if (currentBooks.length === 0) {
+          await fetchAllBooks()
+          currentBooks = useProfitTrackerStore.getState().allBooks
+        }
+        if (!mercato) {
+          const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
+          if (hasExchangeBooks) {
+            setMercato('Punta-Banca')
+          }
+        }
+
+        // Carica gli account exchange per filtrare gli intestatari banca
+        try {
+          const allAccounts = await getAccounts({ status: 'abilitato' })
+          const exchangeBookIds = new Set(currentBooks.filter((b) => b.isExchange).map((b) => b.id))
+          const holderIdsWithExchange = new Set(
+            allAccounts.items
+              .filter((acc) => exchangeBookIds.has(acc.bookId))
+              .map((acc) => acc.holderId),
+          )
+          setExchangeHolderIds(holderIdsWithExchange)
+        } catch {
+          // Se fallisce, non filtrare (fallback a tutti gli intestatari)
+        }
+      } finally {
+        setIsLoadingBasics(false)
       }
     }
 
@@ -129,7 +158,7 @@ export function PuntaBancaSaveModal({
     holders.length,
     books.length,
     fetchHolders,
-    fetchBooks,
+    fetchAllBooks,
     mercato,
     resetState,
     holders,
@@ -142,7 +171,7 @@ export function PuntaBancaSaveModal({
     }
     const res = await getAccounts({ holderId, status: 'abilitato' })
     if (!res.items.length) return []
-    const currentBooks: Book[] = useProfitTrackerStore.getState().books
+    const currentBooks: Book[] = useProfitTrackerStore.getState().allBooks
     const filtered = res.items.filter((acc) => {
       const book = currentBooks.find((b) => b.id === acc.bookId)
       if (!book) return false
@@ -207,10 +236,10 @@ export function PuntaBancaSaveModal({
   ])
 
   const tipoBonus = useMemo(() => {
-    if (tipologia === 'RIMBORSO (CR%)') return 'rimborso'
-    if (tipologia === 'BONUS') return 'bonus'
+    if (rimborsoNum > 0) return 'rimborso'
+    if (bonusNum > 0) return 'bonus'
     return 'none'
-  }, [tipologia])
+  }, [rimborsoNum, bonusNum])
 
   const handleSave = useCallback(async () => {
     if (!canSave) return
@@ -228,48 +257,95 @@ export function PuntaBancaSaveModal({
         nota: undefined as string | undefined,
       }
 
-      const legsPayload = [
-        {
-          eventoData: eventoDataIso,
-          sport: 'altro',
-          eventoNome,
-          competizione: 'N/D',
-          mercato,
-          metodo: 'punta' as const,
-          tipoBonus,
-          accountId: accountIdPunta,
-          stake: puntataEffettiva,
-          quota: quotaPuntaNum,
-          rischio: 0,
-          bonusValore: tipologia === 'BONUS' ? bonusNum || undefined : undefined,
-          rimborsoValore: tipologia === 'RIMBORSO (CR%)' ? rimborsoNum || undefined : undefined,
-          commissionePercentuale: commissioneNum,
-          movimento: 0,
-          statoEvento: 'bozza',
-          quotaRiferimento: undefined,
-          tag: undefined as string | undefined,
-        },
-        {
-          eventoData: eventoDataIso,
-          sport: 'altro',
-          eventoNome,
-          competizione: 'N/D',
-          mercato,
-          metodo: 'banca' as const,
-          tipoBonus,
-          accountId: accountIdBanca,
-          stake: layStake,
-          quota: quotaBancaNum,
-          quotaRiferimento: quotaPuntaNum,
-          rischio: responsabilita,
-          bonusValore: undefined,
-          rimborsoValore: undefined,
-          commissionePercentuale: commissioneNum,
-          movimento: 0,
-          statoEvento: 'bozza',
-          tag: undefined as string | undefined,
-        },
-      ]
+      const puntaLeg = {
+        eventoData: eventoDataIso,
+        sport: 'altro',
+        eventoNome,
+        competizione: 'N/D',
+        mercato,
+        metodo: 'punta' as const,
+        tipoBonus,
+        accountId: accountIdPunta,
+        stake: puntataNum,
+        quota: quotaPuntaNum,
+        rischio: 0,
+        bonusValore: bonusNum > 0 ? bonusNum : undefined,
+        rimborsoValore: rimborsoNum > 0 ? rimborsoNum : undefined,
+        commissionePercentuale: commissioneNum,
+        movimento: 0,
+        statoEvento: 'bozza',
+        quotaRiferimento: undefined,
+        tag: undefined as string | undefined,
+        posizione: 0,
+      }
+
+      const bancaLegBase = {
+        eventoData: eventoDataIso,
+        sport: 'altro',
+        eventoNome,
+        competizione: 'N/D',
+        mercato,
+        metodo: 'banca' as const,
+        tipoBonus,
+        accountId: accountIdBanca,
+        quotaRiferimento: quotaPuntaNum,
+        bonusValore: undefined,
+        rimborsoValore: undefined,
+        commissionePercentuale: commissioneNum,
+        movimento: 0,
+        statoEvento: 'bozza',
+        tag: undefined as string | undefined,
+      }
+
+      const hasPartialLays = partialLays.length > 0 && partialLayResults.every((r) => r != null)
+
+      let bancaLegs: (typeof bancaLegBase & {
+        stake: number
+        quota: number
+        rischio: number
+        posizione: number
+      })[]
+
+      if (hasPartialLays) {
+        bancaLegs = []
+
+        // Ogni "già bancato" è stato piazzato alla quota dello step precedente
+        for (let i = 0; i < partialLays.length; i++) {
+          const amount = parseNum(partialLays[i].amount) ?? 0
+          const odds = i === 0 ? quotaBancaNum : parseNum(partialLays[i - 1].newOdds)!
+          bancaLegs.push({
+            ...bancaLegBase,
+            stake: amount,
+            quota: odds,
+            rischio: amount * (odds - 1),
+            posizione: i + 1,
+          })
+        }
+
+        // Ultimo step: importo calcolato ancora da piazzare
+        const lastResult = partialLayResults[partialLayResults.length - 1]!
+        const lastOdds = parseNum(partialLays[partialLays.length - 1].newOdds)!
+        bancaLegs.push({
+          ...bancaLegBase,
+          stake: lastResult.newLayStake,
+          quota: lastOdds,
+          rischio: lastResult.newLiability,
+          posizione: partialLays.length + 1,
+        })
+      } else {
+        // Caso standard: singola bancata
+        bancaLegs = [
+          {
+            ...bancaLegBase,
+            stake: layStake,
+            quota: quotaBancaNum,
+            rischio: responsabilita,
+            posizione: 1,
+          },
+        ]
+      }
+
+      const legsPayload = [puntaLeg, ...bancaLegs]
 
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       if (process.env.NODE_ENV !== 'production') {
@@ -288,7 +364,7 @@ export function PuntaBancaSaveModal({
     mercato,
     accountIdPunta,
     accountIdBanca,
-    puntataEffettiva,
+    puntataNum,
     quotaPuntaNum,
     quotaBancaNum,
     layStake,
@@ -297,7 +373,8 @@ export function PuntaBancaSaveModal({
     commissioneNum,
     bonusNum,
     rimborsoNum,
-    tipologia,
+    partialLays,
+    partialLayResults,
     saveOngoingBetFromCalculator,
   ])
 
@@ -346,6 +423,13 @@ export function PuntaBancaSaveModal({
               >
                 Chiudi
               </Button>
+            </div>
+          </>
+        ) : isLoadingBasics ? (
+          <>
+            <DialogTitle className="sr-only">Caricamento</DialogTitle>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           </>
         ) : (
@@ -456,7 +540,11 @@ export function PuntaBancaSaveModal({
                     placeholder="Seleziona intestatario"
                     searchPlaceholder="Cerca intestatario..."
                     options={holders
-                      .filter((h) => h.stato === 'abilitato')
+                      .filter(
+                        (h) =>
+                          h.stato === 'abilitato' &&
+                          (exchangeHolderIds.size === 0 || exchangeHolderIds.has(h.id)),
+                      )
                       .map((h) => ({ value: h.id, label: h.nome }))}
                     value={holderIdBanca}
                     onChange={(val) => void handleChangeHolderBanca(val)}
@@ -506,11 +594,56 @@ export function PuntaBancaSaveModal({
                   Punta: <span className="font-mono">{puntataEffettiva.toFixed(2)} €</span> a quota{' '}
                   <span className="font-mono">{quotaPuntaNum.toFixed(2)}</span>
                 </p>
-                <p>
-                  Banca: <span className="font-mono">{layStake.toFixed(2)} €</span> a quota{' '}
-                  <span className="font-mono">{quotaBancaNum.toFixed(2)}</span> con responsabilità{' '}
-                  <span className="font-mono">{responsabilita.toFixed(2)} €</span>.
-                </p>
+                {partialLays.length > 0 && partialLayResults.every((r) => r != null) ? (
+                  <>
+                    <p>
+                      Banca target: <span className="font-mono">{layStake.toFixed(2)} €</span> a
+                      quota <span className="font-mono">{quotaBancaNum.toFixed(2)}</span>
+                    </p>
+                    {partialLays.map((pl, i) => {
+                      const amount = parseNum(pl.amount) ?? 0
+                      const odds =
+                        i === 0 ? quotaBancaNum : (parseNum(partialLays[i - 1].newOdds) ?? 0)
+                      return (
+                        <p key={i}>
+                          Già bancato #{i + 1}:{' '}
+                          <span className="font-mono">{amount.toFixed(2)} €</span> a quota{' '}
+                          <span className="font-mono">{odds.toFixed(2)}</span>
+                          <span className="text-muted-foreground/70">
+                            {' '}
+                            (resp. {(amount * (odds - 1)).toFixed(2)} €)
+                          </span>
+                        </p>
+                      )
+                    })}
+                    {(() => {
+                      const lastResult = partialLayResults[partialLayResults.length - 1]
+                      const lastOdds = parseNum(partialLays[partialLays.length - 1].newOdds)
+                      if (lastResult == null || lastOdds == null) return null
+                      return (
+                        <p>
+                          Da bancare:{' '}
+                          <span className="font-mono">{lastResult.newLayStake.toFixed(2)} €</span> a
+                          quota <span className="font-mono">{lastOdds.toFixed(2)}</span>
+                          <span className="text-muted-foreground/70">
+                            {' '}
+                            (resp. {lastResult.newLiability.toFixed(2)} €)
+                          </span>
+                        </p>
+                      )
+                    })()}
+                    <p className="mt-1 font-medium text-foreground">
+                      Responsabilità totale:{' '}
+                      <span className="font-mono">{responsabilita.toFixed(2)} €</span>
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    Banca: <span className="font-mono">{layStake.toFixed(2)} €</span> a quota{' '}
+                    <span className="font-mono">{quotaBancaNum.toFixed(2)}</span> con responsabilità{' '}
+                    <span className="font-mono">{responsabilita.toFixed(2)} €</span>.
+                  </p>
+                )}
               </div>
 
               {error && (

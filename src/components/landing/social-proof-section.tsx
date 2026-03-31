@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import { LandingSection } from '@/components/landing/landing-section'
 
 const stats = [
   { value: '10+', label: 'Bookmaker supportati' },
@@ -32,7 +33,7 @@ function StatsRow() {
     <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
       {stats.map(({ value, label }) => (
         <div key={label} className="text-center">
-          <div className="text-3xl font-bold text-primary sm:text-4xl">{value}</div>
+          <div className="font-mono text-3xl font-bold text-primary sm:text-4xl">{value}</div>
           <div className="mt-1 text-sm text-muted-foreground">{label}</div>
         </div>
       ))}
@@ -42,7 +43,7 @@ function StatsRow() {
 
 function TestimonialCard({ quote, name, role }: { quote: string; name: string; role?: string }) {
   return (
-    <Card>
+    <Card className="transition-all duration-200 hover:border-primary/20 hover:shadow-glow-sm">
       <CardContent className="pt-6">
         <p className="text-muted-foreground">&ldquo;{quote}&rdquo;</p>
         <p className="mt-4 font-medium text-foreground">{name}</p>
@@ -54,9 +55,9 @@ function TestimonialCard({ quote, name, role }: { quote: string; name: string; r
 
 export function SocialProofSection() {
   return (
-    <section className="py-20 sm:py-28">
+    <LandingSection accent="blue-wash" hairlineTop>
       <Container>
-        <h2 className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h2 className="text-center text-3xl font-bold tracking-[-0.03em] text-foreground sm:text-4xl">
           Cosa dicono di noi
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
@@ -71,6 +72,6 @@ export function SocialProofSection() {
           ))}
         </div>
       </Container>
-    </section>
+    </LandingSection>
   )
 }

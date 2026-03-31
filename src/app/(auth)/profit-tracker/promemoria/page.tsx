@@ -56,17 +56,27 @@ export default function PromemoriaPage() {
 
   const renderStatusBadge = (stato: ReminderStatus) => {
     if (stato === 'attivo') {
-      return <Badge className="bg-emerald-600 text-xs text-emerald-50">Attivo</Badge>
+      return (
+        <Badge className="border border-emerald-500/20 bg-emerald-500/15 text-xs text-emerald-400">
+          Attivo
+        </Badge>
+      )
     }
     if (stato === 'completato') {
       return (
-        <Badge variant="outline" className="border-emerald-500 text-xs text-emerald-700">
+        <Badge
+          variant="outline"
+          className="border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-400"
+        >
           Completato
         </Badge>
       )
     }
     return (
-      <Badge variant="outline" className="border-destructive text-xs text-destructive">
+      <Badge
+        variant="outline"
+        className="border-destructive/20 bg-destructive/10 text-xs text-destructive"
+      >
         Scaduto
       </Badge>
     )
@@ -122,12 +132,12 @@ export default function PromemoriaPage() {
 
       <div className="block space-y-4 sm:hidden">
         {isLoadingReminders && (
-          <div className="rounded-lg border bg-card px-3 py-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/70 px-3 py-4 text-center text-xs text-muted-foreground shadow-sm">
             Caricamento promemoria in corso...
           </div>
         )}
         {!isLoadingReminders && filteredReminders.length === 0 && (
-          <div className="rounded-lg border bg-card px-3 py-6 text-center text-xs text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/70 px-3 py-6 text-center text-xs text-muted-foreground shadow-sm">
             Nessun promemoria {filterStatus !== 'tutti' ? `con stato ${filterStatus}` : ''}.
           </div>
         )}
@@ -143,7 +153,10 @@ export default function PromemoriaPage() {
             if (rem.periodoNotifica === '12h') notificaLabel = '12h prima'
 
             return (
-              <div key={rem.id} className="rounded-lg border bg-card p-4 shadow-sm">
+              <div
+                key={rem.id}
+                className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+              >
                 <div className="grid gap-2 text-xs">
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Scadenza</span>
@@ -216,10 +229,10 @@ export default function PromemoriaPage() {
           })}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-lg border bg-card sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Scadenza</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
@@ -255,7 +268,10 @@ export default function PromemoriaPage() {
                 if (rem.periodoNotifica === '12h') notificaLabel = '12h prima'
 
                 return (
-                  <tr key={rem.id} className="border-t border-border/80">
+                  <tr
+                    key={rem.id}
+                    className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+                  >
                     <td className="px-3 py-2 align-top text-xs">{dataLabel}</td>
                     <td className="px-3 py-2 align-top text-xs">
                       {rem.accountId ? (

@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay } from '@/lib/utils'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { OngoingBet } from '@/types/profit-tracker'
 import { cn } from '@/lib/utils'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
 /** Icone sport già usate nel progetto (oddsmatcher) */
 const SPORT_ICON: Record<string, string> = {
@@ -25,25 +27,63 @@ function isMultipla(bet: OngoingBet) {
   return bet.eventoNome.toUpperCase().startsWith('MULTIPLA')
 }
 
-type EditingCell = { betId: string; field: 'tag' | 'nota'; value: string }
+type EditingCell = { betId: string; field: 'nota'; value: string }
 
+interface Filters {
+  dateFrom: string
+  dateTo: string
+  accountId: string
+  modalitaSaldo: string
+  tag: string
+}
+
+const EMPTY_FILTERS: Filters = {
+  dateFrom: '',
+  dateTo: '',
+  accountId: '',
+  modalitaSaldo: '',
+  tag: '',
+}
+
+export { GiocateInCorsoPage as GiocateInCorsoContent }
 export default function GiocateInCorsoPage() {
   const router = useRouter()
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [showFilters, setShowFilters] = useState(false)
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
-  const bets = useMemo(
-    () =>
-      ongoingBets
-        .filter((b) => !b.archiviata)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [ongoingBets],
-  )
+  const bets = useMemo(() => {
+    let list = ongoingBets
+      .filter((b) => !b.archiviata)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom)
+      list = list.filter((b) => new Date(b.eventoData) >= from)
+    }
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo + 'T23:59:59')
+      list = list.filter((b) => new Date(b.eventoData) <= to)
+    }
+    if (filters.accountId) {
+      list = list.filter((b) => b.accountId === filters.accountId)
+    }
+    if (filters.modalitaSaldo) {
+      list = list.filter((b) => b.modalitaSaldo === filters.modalitaSaldo)
+    }
+    if (filters.tag) {
+      list = list.filter((b) => (b.tag ?? '') === filters.tag)
+    }
+    return list
+  }, [ongoingBets, filters])
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
   const isLoadingOngoingBets = useProfitTrackerStore((s) => s.isLoadingOngoingBets)
-  const books = useProfitTrackerStore((s) => s.books)
+  const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.holders)
+  const tags = useProfitTrackerStore((s) => s.tags)
+  const fetchTags = useProfitTrackerStore((s) => s.fetchTags)
   const saveBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const fetchBetWithLegs = useProfitTrackerStore((s) => s.fetchBetWithLegs)
   const updateBet = useProfitTrackerStore((s) => s.updateOngoingBet)
@@ -52,7 +92,8 @@ export default function GiocateInCorsoPage() {
   useEffect(() => {
     void fetchOngoingBets()
     void fetchAllAccounts()
-  }, [fetchOngoingBets, fetchAllAccounts])
+    void fetchTags()
+  }, [fetchOngoingBets, fetchAllAccounts, fetchTags])
 
   const resolveAccountLabel = (accountId: string) => {
     const account = allAccounts.find((a) => a.id === accountId)
@@ -64,10 +105,11 @@ export default function GiocateInCorsoPage() {
   }
 
   const handleArchive = async (id: string) => {
+    if (!window.confirm('Vuoi davvero archiviare questa giocata?')) return
     try {
       await updateBet(id, { archiviata: true })
     } catch (err) {
-      window.alert(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
+      toast.error(getErrorMessage(err) ?? 'Impossibile archiviare la giocata.')
     }
   }
 
@@ -85,7 +127,7 @@ export default function GiocateInCorsoPage() {
         eventoNome: original.eventoNome,
         modalitaSaldo: original.modalitaSaldo,
         accountId: original.accountId,
-        tag: original.tag ? `${original.tag} (clonata)` : 'Clonata',
+        tag: null,
         nota: original.nota ?? null,
       }
       const legsPayload = legs.map((leg) => ({
@@ -122,15 +164,15 @@ export default function GiocateInCorsoPage() {
     if (!window.confirm('Vuoi davvero eliminare questa giocata?')) return
     try {
       await removeBet(id)
-    } catch {
-      // Error already set in store
+    } catch (err) {
+      toast.error(getErrorMessage(err) ?? 'Impossibile eliminare la giocata.')
     }
   }
 
   const handleCellBlur = (bet: OngoingBet) => {
     if (!editingCell || editingCell.betId !== bet.id) return
     const newValue = editingCell.value.trim() || undefined
-    const current = editingCell.field === 'tag' ? bet.tag : bet.nota
+    const current = bet.nota
     if (newValue !== (current ?? '')) {
       void updateBet(bet.id, { [editingCell.field]: newValue })
     }
@@ -146,6 +188,89 @@ export default function GiocateInCorsoPage() {
         <p className="text-sm text-muted-foreground">Caricamento giocate...</p>
       )}
 
+      {/* Filter bar */}
+      <div className="space-y-3">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+          onClick={() => setShowFilters((v) => !v)}
+        >
+          {showFilters ? 'Nascondi filtri' : 'Mostra filtri'}
+        </button>
+        {showFilters && (
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card/50 p-3">
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Data evento da</span>
+              <input
+                type="date"
+                className="block w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+              />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Data evento a</span>
+              <input
+                type="date"
+                className="block w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+                value={filters.dateTo}
+                onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+              />
+            </label>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <span>Conto</span>
+              <SearchableSelect
+                size="sm"
+                placeholder="Tutti"
+                searchPlaceholder="Cerca conto..."
+                options={allAccounts.map((a) => ({
+                  value: a.id,
+                  label: resolveAccountLabel(a.id),
+                }))}
+                value={filters.accountId}
+                onChange={(v) => setFilters((f) => ({ ...f, accountId: v }))}
+                className="min-w-[10rem]"
+              />
+            </div>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Modalità saldo</span>
+              <select
+                className="block w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+                value={filters.modalitaSaldo}
+                onChange={(e) => setFilters((f) => ({ ...f, modalitaSaldo: e.target.value }))}
+              >
+                <option value="">Tutte</option>
+                <option value="reale">Reale</option>
+                <option value="bonus">Bonus</option>
+                <option value="rimborso">Rimborso</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Tag</span>
+              <select
+                className="block w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+                value={filters.tag}
+                onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))}
+              >
+                <option value="">Tutti</option>
+                {tags.map((t) => (
+                  <option key={t.id} value={t.nome}>
+                    {t.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+              onClick={() => setFilters(EMPTY_FILTERS)}
+            >
+              Resetta
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="block space-y-4 sm:hidden">
         {bets.map((bet) => {
           const shouldHighlight = bet.eventoNotificato && bet.hasOpenLegs
@@ -156,7 +281,7 @@ export default function GiocateInCorsoPage() {
               key={bet.id}
               className={cn(
                 'rounded-xl border border-border bg-card/70 p-4 shadow-sm',
-                shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+                shouldHighlight && 'bg-amber-500/10',
               )}
             >
               <div className="flex items-start gap-2">
@@ -164,11 +289,11 @@ export default function GiocateInCorsoPage() {
                   {bet.eventoNome}
                 </h2>
                 {multipla ? (
-                  <span className="mt-0.5 shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
                     Multipla
                   </span>
                 ) : (
-                  <span className="mt-0.5 shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
                     Singola
                   </span>
                 )}
@@ -212,34 +337,20 @@ export default function GiocateInCorsoPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground">Tag</span>
-                  {editingCell?.betId === bet.id && editingCell?.field === 'tag' ? (
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={editingCell.value}
-                      onChange={(e) =>
-                        setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
-                      }
-                      onBlur={() => handleCellBlur(bet)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                      autoFocus
-                      placeholder="Tag"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full rounded-md border border-transparent bg-muted/30 px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                      onClick={() =>
-                        setEditingCell({
-                          betId: bet.id,
-                          field: 'tag',
-                          value: bet.tag ?? '',
-                        })
-                      }
-                    >
-                      {bet.tag ?? '—'}
-                    </button>
-                  )}
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={bet.tag ?? ''}
+                    onChange={(e) => {
+                      void updateBet(bet.id, { tag: e.target.value || undefined })
+                    }}
+                  >
+                    <option value="">Nessun tag</option>
+                    {tags.map((t) => (
+                      <option key={t.id} value={t.nome}>
+                        {t.nome}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <span className="text-muted-foreground">Nota</span>
@@ -320,7 +431,7 @@ export default function GiocateInCorsoPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Data creazione</th>
               <th className="px-3 py-2 text-left">Data evento</th>
@@ -346,8 +457,8 @@ export default function GiocateInCorsoPage() {
                 <tr
                   key={bet.id}
                   className={cn(
-                    'border-b border-border/40 last:border-b-0',
-                    shouldHighlight && 'bg-yellow-50 dark:bg-yellow-900/30',
+                    'border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent',
+                    shouldHighlight && 'bg-amber-500/10',
                   )}
                 >
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
@@ -379,11 +490,11 @@ export default function GiocateInCorsoPage() {
                   <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
                     <span className="inline-flex items-center gap-2">
                       {multipla ? (
-                        <span className="inline-flex shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                        <span className="inline-flex shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
                           Multipla
                         </span>
                       ) : (
-                        <span className="inline-flex shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                        <span className="inline-flex shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
                           Singola
                         </span>
                       )}
@@ -397,36 +508,20 @@ export default function GiocateInCorsoPage() {
                     {resolveAccountLabel(bet.accountId)}
                   </td>
                   <td className="px-3 py-2 align-top">
-                    {editingCell?.betId === bet.id && editingCell?.field === 'tag' ? (
-                      <input
-                        type="text"
-                        className="w-full min-w-[6rem] rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                        value={editingCell.value}
-                        onChange={(e) =>
-                          setEditingCell((c) => (c ? { ...c, value: e.target.value } : null))
-                        }
-                        onBlur={() => handleCellBlur(bet)}
-                        onKeyDown={(e) =>
-                          e.key === 'Enter' && (e.target as HTMLInputElement).blur()
-                        }
-                        autoFocus
-                        placeholder="Tag"
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        className="w-full min-w-[6rem] rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                        onClick={() =>
-                          setEditingCell({
-                            betId: bet.id,
-                            field: 'tag',
-                            value: bet.tag ?? '',
-                          })
-                        }
-                      >
-                        {bet.tag ?? '—'}
-                      </button>
-                    )}
+                    <select
+                      className="w-full min-w-[6rem] rounded border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={bet.tag ?? ''}
+                      onChange={(e) => {
+                        void updateBet(bet.id, { tag: e.target.value || undefined })
+                      }}
+                    >
+                      <option value="">Nessun tag</option>
+                      {tags.map((t) => (
+                        <option key={t.id} value={t.nome}>
+                          {t.nome}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-2 align-top">
                     {editingCell?.betId === bet.id && editingCell?.field === 'nota' ? (

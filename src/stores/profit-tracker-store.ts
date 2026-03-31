@@ -10,6 +10,7 @@ import type {
   Holder,
   OngoingBet,
   QuickBet,
+  Tag,
   Wallet,
   WalletMovement,
   Reminder,
@@ -19,6 +20,7 @@ import type {
   CreateBetLegPayload,
   CreateBetPayload,
   GetAccountsParams,
+  GetHoldersParams,
 } from '@/services/api/profit-tracker-client'
 import {
   createAccount as apiCreateAccount,
@@ -53,12 +55,20 @@ import {
   updateBetLeg as apiUpdateBetLeg,
   updateBook as apiUpdateBook,
   updateQuickBet as apiUpdateQuickBet,
+  getTags as apiGetTags,
+  createTag as apiCreateTag,
+  updateTag as apiUpdateTag,
+  deleteTag as apiDeleteTag,
 } from '@/services/api/profit-tracker-client'
 
 interface ProfitTrackerState {
   holders: Holder[]
+  holdersTotal: number | null
   isLoadingHolders: boolean
   holdersError?: string
+  allHolders: Holder[]
+  isLoadingAllHolders: boolean
+  allBooks: Book[]
   books: Book[]
   booksTotal: number | null
   isLoadingBooks: boolean
@@ -86,6 +96,10 @@ interface ProfitTrackerState {
   isSavingWalletMovement: boolean
   walletMovementsError?: string
 
+  tags: Tag[]
+  isLoadingTags: boolean
+  tagsError?: string
+
   reminders: Reminder[]
   isLoadingReminders: boolean
   remindersError?: string
@@ -96,10 +110,12 @@ interface ProfitTrackerState {
   isGeneratingTelegramCode: boolean
   generatedTelegramCode?: string
 
-  fetchHolders: () => Promise<void>
+  fetchHolders: (params?: GetHoldersParams) => Promise<void>
+  fetchAllHolders: () => Promise<void>
   fetchQuickBets: () => Promise<void>
   addHolder: (holder: Omit<Holder, 'id'>) => Promise<void>
   updateHolder: (id: string, patch: Partial<Holder>) => void
+  fetchAllBooks: () => Promise<void>
   fetchBooks: (params?: {
     page?: number
     limit?: number
@@ -108,6 +124,10 @@ interface ProfitTrackerState {
   }) => Promise<void>
   addBook: (book: Omit<Book, 'id'>) => Promise<void>
   updateBook: (id: string, patch: Partial<Book>) => Promise<void>
+  fetchTags: () => Promise<void>
+  addTag: (data: { nome: string; colore?: string }) => Promise<void>
+  updateTag: (id: string, patch: Partial<{ nome: string; colore: string }>) => Promise<void>
+  deleteTag: (id: string) => Promise<void>
   fetchAccounts: (params?: GetAccountsParams) => Promise<void>
   fetchAllAccounts: () => Promise<void>
   addAccount: (account: {
@@ -213,8 +233,12 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
 
   return {
     holders: initialHolders,
+    holdersTotal: null,
     isLoadingHolders: false,
     holdersError: undefined,
+    allHolders: [],
+    isLoadingAllHolders: false,
+    allBooks: [],
     books: initialBooks,
     booksTotal: null,
     isLoadingBooks: false,
@@ -242,6 +266,10 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     isSavingWalletMovement: false,
     walletMovementsError: undefined,
 
+    tags: [],
+    isLoadingTags: false,
+    tagsError: undefined,
+
     reminders: [],
     isLoadingReminders: false,
     remindersError: undefined,
@@ -252,16 +280,27 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     isGeneratingTelegramCode: false,
     generatedTelegramCode: undefined,
 
-    fetchHolders: async () => {
+    fetchHolders: async (params?: GetHoldersParams) => {
       set(() => ({ isLoadingHolders: true, holdersError: undefined }))
       try {
-        const holders = await apiGetHolders()
-        set(() => ({ holders, isLoadingHolders: false }))
+        const result = await apiGetHolders(params)
+        set(() => ({ holders: result.items, holdersTotal: result.total, isLoadingHolders: false }))
       } catch (error: unknown) {
         set(() => ({
           isLoadingHolders: false,
           holdersError: getErrorMessage(error) || 'Errore nel caricamento degli intestatari',
         }))
+      }
+    },
+    fetchAllHolders: async () => {
+      set(() => ({ isLoadingAllHolders: true }))
+      try {
+        const { items } = await apiGetHolders({ limit: 5000 })
+        set(() => ({ allHolders: items }))
+      } catch {
+        set(() => ({ allHolders: [] }))
+      } finally {
+        set(() => ({ isLoadingAllHolders: false }))
       }
     },
     addHolder: async (holder) => {
@@ -273,6 +312,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         })
         set((state) => ({
           holders: [...state.holders, created],
+          holdersTotal: (state.holdersTotal ?? 0) + 1,
+          allHolders: [...state.allHolders, created],
         }))
       } catch (error: unknown) {
         if (getErrorCode(error) === 'HOLDER_NAME_ALREADY_EXISTS') {
@@ -289,8 +330,17 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     updateHolder: (id, patch) =>
       set((state) => ({
         holders: state.holders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
+        allHolders: state.allHolders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
       })),
 
+    fetchAllBooks: async () => {
+      try {
+        const { items } = await apiGetBooks({ limit: 5000 })
+        set(() => ({ allBooks: items }))
+      } catch {
+        set(() => ({ allBooks: [] }))
+      }
+    },
     fetchBooks: async (params) => {
       set(() => ({ isLoadingBooks: true, booksError: undefined }))
       try {
@@ -320,6 +370,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           externalId: book.externalId ?? null,
         })
         set((state) => ({
+          allBooks: [...state.allBooks, created],
           books: [...state.books, created],
         }))
       } catch (error: unknown) {
@@ -344,11 +395,68 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           externalId: patch.externalId ?? null,
         })
         set((state) => ({
+          allBooks: state.allBooks.map((b) => (b.id === id ? updated : b)),
           books: state.books.map((b) => (b.id === id ? updated : b)),
         }))
       } catch (error: unknown) {
         set(() => ({
           booksError: getErrorMessage(error) || 'Errore nel salvataggio del book',
+        }))
+      }
+    },
+
+    fetchTags: async () => {
+      set(() => ({ isLoadingTags: true, tagsError: undefined }))
+      try {
+        const tags = await apiGetTags()
+        set(() => ({ tags, isLoadingTags: false }))
+      } catch (error: unknown) {
+        set(() => ({
+          isLoadingTags: false,
+          tagsError: getErrorMessage(error) || 'Errore nel caricamento dei tag',
+        }))
+      }
+    },
+    addTag: async (data) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        const created = await apiCreateTag(data)
+        set((state) => ({ tags: [...state.tags, created] }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'TAG_NAME_ALREADY_EXISTS') {
+          set(() => ({ tagsError: 'Esiste già un tag con questo nome' }))
+          return
+        }
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nel salvataggio del tag',
+        }))
+      }
+    },
+    updateTag: async (id, patch) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        const updated = await apiUpdateTag(id, patch)
+        set((state) => ({
+          tags: state.tags.map((t) => (t.id === id ? updated : t)),
+        }))
+      } catch (error: unknown) {
+        if (getErrorCode(error) === 'TAG_NAME_ALREADY_EXISTS') {
+          set(() => ({ tagsError: 'Esiste già un tag con questo nome' }))
+          return
+        }
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nel salvataggio del tag',
+        }))
+      }
+    },
+    deleteTag: async (id) => {
+      set(() => ({ tagsError: undefined }))
+      try {
+        await apiDeleteTag(id)
+        set((state) => ({ tags: state.tags.filter((t) => t.id !== id) }))
+      } catch (error: unknown) {
+        set(() => ({
+          tagsError: getErrorMessage(error) || 'Errore nella cancellazione del tag',
         }))
       }
     },

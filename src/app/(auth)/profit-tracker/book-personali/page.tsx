@@ -5,14 +5,43 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs } from '@/components/ui/tabs'
 import { Loader2 } from 'lucide-react'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BookCreateModal, BookEditModal } from '@/components/profit-tracker/book-modals'
+import {
+  TagCreateModal,
+  TagEditModal,
+  TagDeleteModal,
+} from '@/components/profit-tracker/tag-modals'
 
 const PAGE_SIZE = 20
 
+const SECTION_TABS = [
+  { id: 'books', label: 'Book' },
+  { id: 'tags', label: 'Tag' },
+] as const
+
 export default function BookPersonaliPage() {
+  const [activeTab, setActiveTab] = useState<string>('books')
+
+  return (
+    <ProfitTrackerPageShell
+      sectionTitle="Book e Tag"
+      sectionDescription="Gestisci i bookmaker personali e i tag da assegnare alle giocate."
+    >
+      <Tabs tabs={[...SECTION_TABS]} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === 'books' && <BooksSection />}
+      {activeTab === 'tags' && <TagsSection />}
+    </ProfitTrackerPageShell>
+  )
+}
+
+// ── Books Section ─────────────────────────────────────────────────────
+
+function BooksSection() {
   const books = useProfitTrackerStore((s) => s.books)
   const booksTotal = useProfitTrackerStore((s) => s.booksTotal)
   const isLoadingBooks = useProfitTrackerStore((s) => s.isLoadingBooks)
@@ -59,15 +88,14 @@ export default function BookPersonaliPage() {
   }
 
   return (
-    <ProfitTrackerPageShell
-      sectionTitle="Book personali"
-      sectionDescription="Gestisci i bookmaker personali oltre a quelli globali preconfigurati."
-      actions={
-        <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-foreground">Book personali</h2>
+        <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
           Nuovo book
         </Button>
-      }
-    >
+      </div>
+
       {isLoadingBooks && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -119,18 +147,18 @@ export default function BookPersonaliPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{book.nome}</span>
                 {book.isGlobal && (
-                  <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                  <span className="inline-flex rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[11px] font-medium text-neon-blue">
                     Globale
                   </span>
                 )}
               </div>
               <div className="text-xs">
                 {book.isExchange ? (
-                  <span className="inline-flex rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                  <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                     Exchange
                   </span>
                 ) : (
-                  <span className="inline-flex rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                  <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/40">
                     Bookmaker
                   </span>
                 )}
@@ -167,7 +195,7 @@ export default function BookPersonaliPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Exchange</th>
@@ -176,12 +204,15 @@ export default function BookPersonaliPage() {
           </thead>
           <tbody>
             {books.map((book) => (
-              <tr key={book.id} className="border-b border-border/40 last:border-b-0">
+              <tr
+                key={book.id}
+                className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+              >
                 <td className="px-3 py-2 text-sm text-foreground">
                   <span className="flex items-center gap-2">
                     {book.nome}
                     {book.isGlobal && (
-                      <span className="inline-flex rounded-full bg-blue-600/10 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      <span className="inline-flex rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[11px] font-medium text-neon-blue">
                         Globale
                       </span>
                     )}
@@ -192,11 +223,11 @@ export default function BookPersonaliPage() {
                 </td>
                 <td className="px-3 py-2 text-xs">
                   {book.isExchange ? (
-                    <span className="inline-flex rounded-full bg-emerald-600/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                    <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                       Exchange
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/40">
                       Bookmaker
                     </span>
                   )}
@@ -276,6 +307,169 @@ export default function BookPersonaliPage() {
         }}
         book={currentBook}
       />
-    </ProfitTrackerPageShell>
+    </div>
+  )
+}
+
+// ── Tags Section ──────────────────────────────────────────────────────
+
+function TagsSection() {
+  const tags = useProfitTrackerStore((s) => s.tags)
+  const isLoadingTags = useProfitTrackerStore((s) => s.isLoadingTags)
+  const tagsError = useProfitTrackerStore((s) => s.tagsError)
+  const fetchTags = useProfitTrackerStore((s) => s.fetchTags)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editTagId, setEditTagId] = useState<string | null>(null)
+  const [deleteTagId, setDeleteTagId] = useState<string | null>(null)
+
+  const currentEditTag = tags.find((t) => t.id === editTagId) ?? null
+  const currentDeleteTag = tags.find((t) => t.id === deleteTagId) ?? null
+
+  useEffect(() => {
+    fetchTags().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-foreground">Tag personali</h2>
+        <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+          Nuovo tag
+        </Button>
+      </div>
+
+      {isLoadingTags && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+          <span>Caricamento tag in corso...</span>
+        </div>
+      )}
+      {tagsError && !isLoadingTags && <p className="text-xs text-destructive">{tagsError}</p>}
+
+      {/* Vista mobile: cards */}
+      <div className="block space-y-3 sm:hidden">
+        {tags.map((tag) => (
+          <div key={tag.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span
+                className="h-4 w-4 shrink-0 rounded-full"
+                style={{ backgroundColor: tag.colore }}
+              />
+              <span className="text-sm font-medium text-foreground">{tag.nome}</span>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setEditTagId(tag.id)}
+              >
+                Modifica
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteTagId(tag.id)}
+              >
+                Elimina
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        {tags.length === 0 && !isLoadingTags && (
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nessun tag creato. Usa &quot;Nuovo tag&quot; per crearne uno.
+          </div>
+        )}
+      </div>
+
+      {/* Vista desktop: tabella */}
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="px-3 py-2 text-left">Colore</th>
+              <th className="px-3 py-2 text-left">Nome</th>
+              <th className="px-3 py-2 text-right">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tags.map((tag) => (
+              <tr
+                key={tag.id}
+                className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
+              >
+                <td className="px-3 py-2">
+                  <span
+                    className="inline-block h-4 w-4 rounded-full"
+                    style={{ backgroundColor: tag.colore }}
+                  />
+                </td>
+                <td className="px-3 py-2 text-sm text-foreground">{tag.nome}</td>
+                <td className="px-3 py-2">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                      onClick={() => setEditTagId(tag.id)}
+                    >
+                      Modifica
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md border border-destructive/30 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTagId(tag.id)}
+                    >
+                      Elimina
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {tags.length === 0 && !isLoadingTags && (
+              <tr>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={3}>
+                  Nessun tag creato. Usa &quot;Nuovo tag&quot; per crearne uno.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <TagCreateModal
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open) fetchTags().catch(() => {})
+          setCreateOpen(open)
+        }}
+      />
+      <TagEditModal
+        open={editTagId != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditTagId(null)
+            fetchTags().catch(() => {})
+          }
+        }}
+        tag={currentEditTag}
+      />
+      <TagDeleteModal
+        open={deleteTagId != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTagId(null)
+            fetchTags().catch(() => {})
+          }
+        }}
+        tag={currentDeleteTag}
+      />
+    </div>
   )
 }

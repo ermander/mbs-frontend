@@ -7,15 +7,11 @@ import { cn } from '@/lib/utils'
 
 export const profitTrackerNavItems = [
   { href: '/profit-tracker/dashboard', label: 'Dashboard' },
-  { href: '/profit-tracker/giocate-in-corso', label: 'Giocate in corso' },
-  { href: '/profit-tracker/giocate-archiviate', label: 'Giocate archiviate' },
-  { href: '/profit-tracker/giocate-rapide', label: 'Giocate rapide' },
-  { href: '/profit-tracker/storico-movimenti', label: 'Storico movimenti' },
+  { href: '/profit-tracker/giocate', label: 'Giocate' },
+  { href: '/profit-tracker/archivio', label: 'Archivio' },
+  { href: '/profit-tracker/gestione-conti', label: 'Gestione Conti' },
+  { href: '/profit-tracker/book-personali', label: 'Impostazioni' },
   { href: '/profit-tracker/promemoria', label: 'Promemoria' },
-  { href: '/profit-tracker/conti', label: 'Conti' },
-  { href: '/profit-tracker/wallets', label: 'Wallets' },
-  { href: '/profit-tracker/intestatari', label: 'Intestatari' },
-  { href: '/profit-tracker/book-personali', label: 'Book personali' },
 ] as const
 
 export function ProfitTrackerNav() {

@@ -45,7 +45,7 @@ export function TelegramLinkWidget({ botUsername }: TelegramLinkWidgetProps) {
             </p>
           ) : telegramStatus?.linked ? (
             <>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              <p className="text-xs text-emerald-400">
                 Il tuo account è collegato a Telegram. Riceverai qui i promemoria del Profit
                 Tracker.
               </p>

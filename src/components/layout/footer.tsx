@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import Image from 'next/image'
+import { useAuthStore } from '@/stores/auth-store'
 
 const footerColumns = [
   {
@@ -29,16 +33,18 @@ const footerColumns = [
 
 export function Footer() {
   const year = new Date().getFullYear()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
 
   return (
-    <footer className="border-t border-white/10 bg-black/20">
+    <footer className="border-t border-border bg-surface-1">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="rounded text-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-2 rounded text-lg font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              <Image src="/loghi/mbs-icon.svg" alt="" width={24} height={24} className="h-6 w-6" />
               MBS
             </Link>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -63,21 +69,23 @@ export function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
             &copy; {year} MBS. Tutti i diritti riservati.
           </p>
-          <div className="flex gap-4">
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
-              Accedi
-            </Link>
-            <Link
-              href="/registrazione"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Registrati
-            </Link>
-          </div>
+          {!isLoggedIn && (
+            <div className="flex gap-4">
+              <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
+                Accedi
+              </Link>
+              <Link
+                href="/registrazione"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Registrati
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </footer>

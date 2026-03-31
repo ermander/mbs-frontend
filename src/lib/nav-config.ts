@@ -3,7 +3,6 @@
  * Used by Header for dropdowns and mobile nav.
  */
 
-import { profitTrackerNavItems } from '@/components/profit-tracker/profit-tracker-nav'
 export interface NavLinkItem {
   label: string
   href: string
@@ -16,48 +15,34 @@ export interface NavDropdownItem {
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
-    label: 'OFFERTE',
-    items: [
-      { label: 'Bonus di benvenuto', href: '/offerte/bonus-benvenuto' },
-      { label: 'Promozioni ricorrenti', href: '/offerte/promozioni' },
-      { label: 'Guadagni extra', href: '/offerte/guadagni-extra' },
-      { label: 'Canale Telegram', href: '/offerte/telegram' },
-    ],
-  },
-  {
-    label: 'STRUMENTI',
-    items: [
-      { label: 'Oddsmatcher', href: '/oddsmatcher' },
-      { label: 'Dutcher', href: '/dutcher' },
-      { label: 'Trimatcher', href: '/trimatcher' },
-      { label: 'Targeter', href: '/targeter' },
-    ],
-  },
-  {
-    label: 'CALCOLATORI',
+    label: 'STRUMENTI OFFLINE',
     items: [
       { label: 'Punta-Banca', href: '/calcolatori/punta-banca' },
       { label: 'Punta-Punta', href: '/calcolatori/punta-punta' },
       { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
-      { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
-      { label: 'Condizionato', href: '/calcolatori/condizionato' },
-      { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
-      { label: 'Converter', href: '/calcolatori/converter' },
-      { label: 'Casino', href: '/calcolatori/casino' },
+      { label: 'Multipla', href: '/strumenti-offline/multipla' },
+      // { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
+      // { label: 'Condizionato', href: '/calcolatori/condizionato' },
+      // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
+      // { label: 'Converter', href: '/calcolatori/converter' },
+      // { label: 'Casino', href: '/calcolatori/casino' },
     ],
   },
   {
-    label: 'PROFIT TRACKER',
-    items: profitTrackerNavItems.map((item) => ({
-      label: item.label,
-      href: item.href,
-    })),
+    label: 'DASHBOARD',
+    items: [
+      { label: 'Dashboard', href: '/profit-tracker/dashboard' },
+      { label: 'Giocate', href: '/profit-tracker/giocate' },
+      { label: 'Archivio', href: '/profit-tracker/archivio' },
+      { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti' },
+      { label: 'Impostazioni', href: '/profit-tracker/book-personali' },
+      { label: 'Promemoria', href: '/profit-tracker/promemoria' },
+    ],
   },
   {
     label: 'ACCOUNT',
     items: [
       { label: 'Profilo', href: '/account/profilo' },
-      { label: 'Area affiliato', href: '/account/affiliato' },
       // Logout is handled as action in Header, not a link
     ],
   },
@@ -66,8 +51,6 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 /** Direct links (no dropdown); order: HOME, GUIDE, then dropdowns go in between, then AGENDA, FORUM */
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
-  { label: 'GUIDE', href: '/guide' },
+  { label: 'ODDS SCANNER', href: '/odds-scanner' },
 ]
-export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = [
-  { label: 'FORUM', href: '/forum' },
-]
+export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

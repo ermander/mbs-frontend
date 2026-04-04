@@ -38,10 +38,56 @@ export interface CompetitionEvent {
   venue: string | null
   round: string | null
   seasonName: string | null
+  confirmationStatus?: string
+  confirmedBookmakerCount?: number
 }
 
 export interface CompetitionEventsResponse {
   events: CompetitionEvent[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// --- Event matchings response ---
+
+export interface EventBookmaker {
+  id: string
+  bookmakerSlug: string
+  bookmakerName: string
+  bookmakerHomeName: string | null
+  bookmakerAwayName: string | null
+  bookmakerCompetitionName: string | null
+  matchStatus: string
+  matchMethod: string
+  matchConfidence: number
+  matchedAt: string
+}
+
+export interface EventMatching {
+  id: string
+  eventId: string
+  matchStatus: string
+  matchMethod: string
+  matchConfidence: number
+  matchedAt: string
+  reviewedBy: string | null
+  reviewedAt: string | null
+  bookmakerSlug: string
+  bookmakerName: string
+  bookmakerHomeName: string | null
+  bookmakerAwayName: string | null
+  bookmakerCompetitionName: string | null
+  canonicalHome: string | null
+  canonicalAway: string | null
+  competitionName: string
+  sportName: string
+  startTime: string
+  eventConfirmationStatus: string
+}
+
+export interface MatchingsResponse {
+  matchings: EventMatching[]
   total: number
   limit: number
   offset: number
@@ -56,6 +102,8 @@ export interface OddsCollectionStats {
   seasons: number
   events_total: number
   events_scheduled: number
+  events_provisional: number
+  events_confirmed: number
   participants: number
   participant_aliases: number
   bookmakers_active: number

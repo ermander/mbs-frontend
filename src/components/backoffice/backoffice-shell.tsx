@@ -14,6 +14,10 @@ interface BackofficeShellProps {
 const navItems = [
   { href: '/backoffice/dashboard', label: 'Dashboard' },
   { href: '/backoffice/books', label: 'Bookmaker' },
+  { href: '/backoffice/scrapers', label: 'Scraper' },
+  { href: '/backoffice/sport-mappings', label: 'Sport Mappings' },
+  { href: '/backoffice/matchings', label: 'Matchings' },
+  { href: '/backoffice/matcher', label: 'Matcher' },
   { href: '/backoffice/eventi-sportradar', label: 'Eventi SR' },
   { href: '/backoffice/users', label: 'Utenti' },
 ]

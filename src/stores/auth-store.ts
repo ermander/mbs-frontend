@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authClient } from '@/services/api/auth-client'
@@ -13,6 +14,14 @@ interface AuthState {
   finishBootstrapping: () => void
   logout: () => Promise<void>
   clearUser: () => void
+}
+
+let _hydrated = false
+const _listeners = new Set<() => void>()
+
+function setHydrated() {
+  _hydrated = true
+  _listeners.forEach((l) => l())
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -46,6 +55,20 @@ export const useAuthStore = create<AuthState>()(
         ...current,
         ...(persisted as { isLoggedIn?: boolean }),
       }),
+      onRehydrateStorage: () => () => {
+        setHydrated()
+      },
     },
   ),
 )
+
+export function useAuthHydrated(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      _listeners.add(cb)
+      return () => _listeners.delete(cb)
+    },
+    () => _hydrated,
+    () => false,
+  )
+}

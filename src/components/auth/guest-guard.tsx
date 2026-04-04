@@ -2,19 +2,21 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
 
 export function GuestGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const isHydrated = useAuthHydrated()
 
   useEffect(() => {
+    if (!isHydrated) return
     if (isLoggedIn) {
       router.replace('/')
     }
-  }, [isLoggedIn, router])
+  }, [isHydrated, isLoggedIn, router])
 
-  if (isLoggedIn) return null
+  if (!isHydrated || isLoggedIn) return null
 
   return <>{children}</>
 }

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
 import { syncThemeToLocalStorage } from '@/hooks/use-theme'
 
@@ -11,6 +11,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
   const user = useAuthStore((s) => s.user)
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping)
+  const isHydrated = useAuthHydrated()
   const setUser = useAuthStore((s) => s.setUser)
   const startBootstrapping = useAuthStore((s) => s.startBootstrapping)
   const finishBootstrapping = useAuthStore((s) => s.finishBootstrapping)
@@ -18,6 +19,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const bootstrap = async () => {
+      if (!isHydrated) return
       if (user || isBootstrapping) return
       if (!isLoggedIn) {
         router.replace('/login')
@@ -45,6 +47,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
     clearUser,
     finishBootstrapping,
     isBootstrapping,
+    isHydrated,
     isLoggedIn,
     router,
     setUser,

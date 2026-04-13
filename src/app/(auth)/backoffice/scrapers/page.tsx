@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import {
@@ -109,7 +110,12 @@ export default function BackofficeScrapersPage() {
                 <div className="flex items-center gap-4 px-4 py-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{scraper.name}</span>
+                      <Link
+                        href={`/backoffice/scrapers/${scraper.slug}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {scraper.name}
+                      </Link>
                       <span className="font-mono text-xs text-muted-foreground">
                         {scraper.slug}
                       </span>

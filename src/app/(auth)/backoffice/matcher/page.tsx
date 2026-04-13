@@ -3,7 +3,13 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import { getMatcherResults, getMatcherMeta } from '@/services/api/matcher-client'
-import type { MatcherResult, MatcherMeta, MatcherFilters, MatchType } from '@/types/matcher'
+import type {
+  MatcherResult,
+  MatcherMeta,
+  MatcherFilters,
+  MatchType,
+  MatcherLeg,
+} from '@/types/matcher'
 
 const PAGE_SIZE = 50
 const AUTO_REFRESH_MS = 60_000
@@ -17,8 +23,8 @@ const MATCH_TYPES: Array<{ value: string; label: string }> = [
 
 function ratingBadge(rating: number) {
   const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
-  if (rating > 0) return `${base} bg-emerald-500/15 text-emerald-400`
-  if (rating > -2) return `${base} bg-amber-500/15 text-amber-400`
+  if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-400`
+  if (rating >= 98) return `${base} bg-amber-500/15 text-amber-400`
   return `${base} bg-red-500/15 text-red-400`
 }
 
@@ -58,6 +64,36 @@ function formatDate(iso: string) {
   })
 }
 
+function isLayLeg(leg: MatcherLeg): boolean {
+  return leg.outcomeLabel.startsWith('LAY ')
+}
+
+function LegCell({ leg }: { leg: MatcherLeg }) {
+  const lay = isLayLeg(leg)
+  const oddsColor = lay ? 'text-pink-400' : 'text-blue-400'
+  const tagClass = lay
+    ? 'bg-pink-500/15 text-pink-400 border-pink-500/20'
+    : 'bg-blue-500/15 text-blue-400 border-blue-500/20'
+  const tagLabel = lay ? 'LAY' : 'BACK'
+
+  return (
+    <>
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium">{leg.bookmakerName}</span>
+        <span
+          className={`inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-bold ${tagClass}`}
+        >
+          {tagLabel}
+        </span>
+      </div>
+      <div className="text-xs">
+        {leg.outcomeLabel.replace(/^(BACK|LAY)\s+/, '')}{' '}
+        <span className={`font-bold ${oddsColor}`}>{leg.odds.toFixed(2)}</span>
+      </div>
+    </>
+  )
+}
+
 function marketLabel(key: string, line: number | null) {
   const labels: Record<string, string> = {
     '1x2': '1X2',
@@ -84,7 +120,7 @@ export default function MatcherPage() {
   const [sport, setSport] = useState('')
   const [matchType, setMatchType] = useState('')
   const [marketTypeFilter, setMarketTypeFilter] = useState('')
-  const [minRating, setMinRating] = useState('-5')
+  const [minRating, setMinRating] = useState('')
   const [bookmaker, setBookmaker] = useState('')
   const [search, setSearch] = useState('')
 
@@ -130,12 +166,13 @@ export default function MatcherPage() {
     setLoading(false)
   }, [page, sport, matchType, marketTypeFilter, minRating, bookmaker, search])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
     loadMeta()
   }, [loadMeta])
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
     loadResults()
   }, [loadResults])
 
@@ -265,10 +302,7 @@ export default function MatcherPage() {
               results.map((r, i) => (
                 <tr key={i} className="border-b hover:bg-muted/30">
                   <td className="px-3 py-2">
-                    <span className={ratingBadge(r.rating)}>
-                      {r.rating >= 0 ? '+' : ''}
-                      {r.rating.toFixed(2)}%
-                    </span>
+                    <span className={ratingBadge(r.rating)}>{r.rating.toFixed(2)}%</span>
                   </td>
                   <td className="px-3 py-2">
                     <span className={matchTypeBadge(r.matchType)}>
@@ -289,32 +323,24 @@ export default function MatcherPage() {
                   </td>
                   {/* Leg 1 */}
                   <td className="px-3 py-2">
-                    <div className="font-medium">{r.legs[0]?.bookmakerName}</div>
-                    <div className="text-xs">
-                      {r.legs[0]?.outcomeLabel}{' '}
-                      <span className="font-bold text-blue-400">{r.legs[0]?.odds.toFixed(2)}</span>
-                    </div>
+                    {r.legs[0] ? (
+                      <LegCell leg={r.legs[0]} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   {/* Leg 2 */}
                   <td className="px-3 py-2">
-                    <div className="font-medium">{r.legs[1]?.bookmakerName}</div>
-                    <div className="text-xs">
-                      {r.legs[1]?.outcomeLabel}{' '}
-                      <span className="font-bold text-blue-400">{r.legs[1]?.odds.toFixed(2)}</span>
-                    </div>
+                    {r.legs[1] ? (
+                      <LegCell leg={r.legs[1]} />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   {/* Leg 3 */}
                   <td className="px-3 py-2">
                     {r.legs[2] ? (
-                      <>
-                        <div className="font-medium">{r.legs[2].bookmakerName}</div>
-                        <div className="text-xs">
-                          {r.legs[2].outcomeLabel}{' '}
-                          <span className="font-bold text-blue-400">
-                            {r.legs[2].odds.toFixed(2)}
-                          </span>
-                        </div>
-                      </>
+                      <LegCell leg={r.legs[2]} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

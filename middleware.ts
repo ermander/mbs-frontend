@@ -13,7 +13,7 @@ export function middleware(req: NextRequest) {
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob:`,
+    `img-src 'self' data: blob: https://flagcdn.com`,
     `font-src 'self' data:`,
     `connect-src 'self' https://api.matched-betting-system.com`,
     `base-uri 'self'`,

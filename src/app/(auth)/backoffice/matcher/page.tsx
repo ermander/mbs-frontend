@@ -13,6 +13,7 @@ import type {
 
 const PAGE_SIZE = 50
 const AUTO_REFRESH_MS = 60_000
+const SEARCH_DEBOUNCE_MS = 350
 
 const MATCH_TYPES: Array<{ value: string; label: string }> = [
   { value: '', label: 'Tutti i tipi' },
@@ -123,6 +124,7 @@ export default function MatcherPage() {
   const [minRating, setMinRating] = useState('')
   const [bookmaker, setBookmaker] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   const setFilter =
     <T,>(setter: React.Dispatch<React.SetStateAction<T>>) =>
@@ -130,6 +132,14 @@ export default function MatcherPage() {
       setter(value)
       setPage(0)
     }
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(0)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(handle)
+  }, [search])
 
   const loadMeta = useCallback(async () => {
     try {
@@ -154,7 +164,7 @@ export default function MatcherPage() {
       if (marketTypeFilter) filters.market_type = marketTypeFilter
       if (minRating) filters.min_rating = parseFloat(minRating)
       if (bookmaker) filters.bookmaker = bookmaker
-      if (search) filters.search = search
+      if (debouncedSearch) filters.search = debouncedSearch
 
       const res = await getMatcherResults(filters)
       setResults(res.results)
@@ -164,7 +174,7 @@ export default function MatcherPage() {
       /* ignore */
     }
     setLoading(false)
-  }, [page, sport, matchType, marketTypeFilter, minRating, bookmaker, search])
+  }, [page, sport, matchType, marketTypeFilter, minRating, bookmaker, debouncedSearch])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
@@ -176,14 +186,17 @@ export default function MatcherPage() {
     loadResults()
   }, [loadResults])
 
-  // Auto-refresh
+  // Auto-refresh: skip when user is on deeper pages or tab is hidden, to avoid
+  // costly refetches the user isn't waiting for.
   useEffect(() => {
     const interval = setInterval(() => {
+      if (page > 0) return
+      if (typeof document !== 'undefined' && document.hidden) return
       loadResults()
       loadMeta()
     }, AUTO_REFRESH_MS)
     return () => clearInterval(interval)
-  }, [loadResults, loadMeta])
+  }, [loadResults, loadMeta, page])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 

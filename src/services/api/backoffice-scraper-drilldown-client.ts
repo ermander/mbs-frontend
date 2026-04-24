@@ -146,7 +146,6 @@ export interface OutcomeDrilldownItemDto {
   oddsStatus: OdOutcomeStatus | null
   lastSeenAt: string | null
   scrapedAt: string | null
-  version: number | null
   rawOutcomeLabel: string | null
   rawMarketLabel: string | null
 }

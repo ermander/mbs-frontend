@@ -475,7 +475,7 @@ export function PuntaPuntaCalculator() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
+    <div className="mx-auto max-w-2xl">
       {/* Sezione input */}
       <div className="border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -570,7 +570,7 @@ export function PuntaPuntaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="border-b border-border p-4">
+      <div className="calc-advanced border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento della Puntata B</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">−30%</span>
@@ -659,7 +659,7 @@ export function PuntaPuntaCalculator() {
         returnB != null &&
         profitIfAWins != null &&
         profitIfBWins != null && (
-          <div className="border-b border-border bg-card">
+          <div className="calc-advanced border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO \u2022 '
@@ -821,7 +821,7 @@ export function PuntaPuntaCalculator() {
 
       {/* Contropuntata parziale (multi-step) */}
       {stakeB != null && (
-        <div className="border-b border-border p-4">
+        <div className="calc-advanced border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntas.map((pp, i) => {
               const result = partialPuntaResults[i] ?? null
@@ -897,7 +897,7 @@ export function PuntaPuntaCalculator() {
       )}
 
       {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
+      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
         <Button onClick={handleOpenModal} variant="default" disabled={!showSummary}>
           Invia al Profit Tracker
         </Button>
@@ -1069,7 +1069,7 @@ export function PuntaPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaA && accountsPuntaA.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                         Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                         Profit Tracker → Conti.
                       </p>
@@ -1125,7 +1125,7 @@ export function PuntaPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaB && accountsPuntaB.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                         Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                         Profit Tracker → Conti.
                       </p>

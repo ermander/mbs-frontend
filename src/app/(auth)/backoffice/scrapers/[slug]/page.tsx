@@ -952,8 +952,7 @@ function OutcomesList({ data }: { data: OutcomeListDto }) {
               <th className="py-2 pr-4">Raw</th>
               <th className="py-2 pr-4">Quota</th>
               <th className="py-2 pr-4">Stato</th>
-              <th className="py-2 pr-4">Ultimo update</th>
-              <th className="py-2">Ver.</th>
+              <th className="py-2">Ultimo update</th>
             </tr>
           </thead>
           <tbody>
@@ -978,10 +977,9 @@ function OutcomesList({ data }: { data: OutcomeListDto }) {
                     {o.oddsStatus ?? o.outcomeStatus}
                   </Badge>
                 </td>
-                <td className="py-2 pr-4 text-xs text-muted-foreground">
+                <td className="py-2 text-xs text-muted-foreground">
                   {o.lastSeenAt ? formatDateTime(o.lastSeenAt) : '—'}
                 </td>
-                <td className="py-2 text-xs text-muted-foreground">{o.version ?? '—'}</td>
               </tr>
             ))}
           </tbody>

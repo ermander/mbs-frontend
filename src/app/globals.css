@@ -3,135 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* ═══════════════════════════════════════════════════════
-     NEON (default) — near-black with vibrant neon accents
-     ═══════════════════════════════════════════════════════ */
-  :root,
-  [data-theme="neon"] {
-    --background: 220 12% 4%;
-    --foreground: 0 0% 100%;
-    --card: 220 8% 8%;
-    --card-foreground: 0 0% 100%;
-    --popover: 220 8% 8%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 160 97% 65%;
-    --primary-foreground: 220 12% 4%;
-    --secondary: 220 8% 12%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 220 8% 12%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 220 8% 14%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 348 100% 65%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 8% 14%;
-    --input: 220 8% 14%;
-    --ring: 160 97% 65%;
-    --chart-1: 160 97% 65%;
-    --chart-2: 231 100% 77%;
-    --chart-3: 30 100% 66%;
-    --chart-4: 268 100% 77%;
-    --chart-5: 348 100% 65%;
-    --radius: 0.75rem;
-
-    --glass-bg: rgba(255, 255, 255, 0.04);
-    --glass-border: rgba(255, 255, 255, 0.08);
-
-    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.15);
-    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.25);
-    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.15);
-
-    --surface-1: 220 8% 6%;
-    --surface-2: 220 8% 8%;
-    --surface-3: 220 8% 11%;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     NEON WARM — warmer undertones, same neon accents
-     ═══════════════════════════════════════════════════════ */
-  [data-theme="neon-warm"] {
-    --background: 210 10% 5%;
-    --foreground: 0 0% 100%;
-    --card: 210 8% 9%;
-    --card-foreground: 0 0% 100%;
-    --popover: 210 8% 9%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 160 97% 65%;
-    --primary-foreground: 210 10% 5%;
-    --secondary: 210 8% 13%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 8% 13%;
-    --muted-foreground: 210 10% 55%;
-    --accent: 210 8% 15%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 348 100% 65%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 210 8% 16%;
-    --input: 210 8% 16%;
-    --ring: 160 97% 65%;
-    --chart-1: 160 97% 65%;
-    --chart-2: 231 100% 77%;
-    --chart-3: 30 100% 66%;
-    --chart-4: 268 100% 77%;
-    --chart-5: 348 100% 65%;
-
-    --glass-bg: rgba(255, 255, 255, 0.04);
-    --glass-border: rgba(255, 255, 255, 0.08);
-
-    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.15);
-    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.25);
-    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.15);
-
-    --surface-1: 210 8% 7%;
-    --surface-2: 210 8% 9%;
-    --surface-3: 210 8% 12%;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     NEON OLED — pure black backgrounds for OLED screens
-     ═══════════════════════════════════════════════════════ */
-  [data-theme="neon-oled"] {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 160 97% 65%;
-    --primary-foreground: 0 0% 2%;
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 8%;
-    --muted-foreground: 0 0% 50%;
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 348 100% 65%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
-    --ring: 160 97% 65%;
-    --chart-1: 160 97% 65%;
-    --chart-2: 231 100% 77%;
-    --chart-3: 30 100% 66%;
-    --chart-4: 268 100% 77%;
-    --chart-5: 348 100% 65%;
-
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.06);
-
-    --glow-primary: 0 0 20px rgba(82, 254, 202, 0.12);
-    --glow-primary-strong: 0 0 30px rgba(82, 254, 202, 0.2);
-    --glow-destructive: 0 0 20px rgba(255, 77, 106, 0.12);
-
-    --surface-1: 0 0% 3%;
-    --surface-2: 0 0% 5%;
-    --surface-3: 0 0% 8%;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-     LIGHT CLEAN — clean light mode with adjusted accents
-     ═══════════════════════════════════════════════════════ */
-  [data-theme="light-clean"] {
+  :root {
     --background: 0 0% 98%;
     --foreground: 220 12% 10%;
     --card: 0 0% 100%;
@@ -223,6 +95,11 @@
   }
   .text-gradient-primary {
     @apply bg-gradient-to-r from-primary to-[hsl(var(--chart-2))] bg-clip-text text-transparent;
+  }
+
+  /* Calculator dashboard: nascondi sezioni avanzate dei calcolatori quando il wrapper è in modalità compatta */
+  [data-compact='true'] .calc-advanced {
+    display: none !important;
   }
 }
 

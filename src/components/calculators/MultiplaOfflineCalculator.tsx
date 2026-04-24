@@ -154,7 +154,7 @@ export function MultiplaOfflineCalculator() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
+    <div className="mx-auto max-w-3xl">
       {/* Sezione Stake */}
       <div className="border-b border-border bg-primary/5 p-4">
         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-primary">
@@ -539,7 +539,7 @@ export function MultiplaOfflineCalculator() {
 
       {/* Riepilogo Multipla */}
       {showSummary && (
-        <div className="border-b border-border bg-card">
+        <div className="calc-advanced border-b border-border bg-card">
           <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
             {stakeBonusNum > 0 && rimborsoNum > 0
               ? 'BONUS + RIMBORSO • '
@@ -566,7 +566,7 @@ export function MultiplaOfflineCalculator() {
                         'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                         ev.type === 'punta-banca'
                           ? 'bg-primary/15 text-primary'
-                          : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                          : 'bg-amber-500/15 text-amber-600',
                       )}
                     >
                       {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
@@ -631,7 +631,7 @@ export function MultiplaOfflineCalculator() {
                             'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                             ev.type === 'punta-banca'
                               ? 'bg-primary/15 text-primary'
-                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                              : 'bg-amber-500/15 text-amber-600',
                           )}
                         >
                           {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
@@ -696,7 +696,7 @@ export function MultiplaOfflineCalculator() {
       )}
 
       {/* Bottone Salva */}
-      <div className="flex flex-col items-center gap-2 p-4">
+      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
         <Button onClick={() => setSaveModalOpen(true)} variant="default" disabled={!canSave}>
           Invia al Profit Tracker
         </Button>

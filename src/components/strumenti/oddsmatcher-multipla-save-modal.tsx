@@ -354,7 +354,7 @@ export function OddsmatcherMultiplaSaveModal({
                   portalContainer={holderPortalEl}
                 />
                 {accountsPunta.length === 0 && bookNamePunta && (
-                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                     Nessun conto con {bookNamePunta}. Aggiungine uno in Profit Tracker → Conti.
                   </p>
                 )}
@@ -382,7 +382,7 @@ export function OddsmatcherMultiplaSaveModal({
                   portalContainer={holderPortalEl}
                 />
                 {accountsBanca.length === 0 && bookNameBanca && (
-                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                  <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                     Nessun conto con {bookNameBanca}. Aggiungine uno in Profit Tracker → Conti.
                   </p>
                 )}

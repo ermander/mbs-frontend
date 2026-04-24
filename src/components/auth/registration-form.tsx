@@ -25,6 +25,8 @@ export function RegistrationForm() {
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
+      name: '',
+      surname: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -39,7 +41,7 @@ export function RegistrationForm() {
       const response = await authClient.register({
         email: data.email,
         password: data.password,
-        name: data.email.split('@')[0],
+        name: `${data.name} ${data.surname}`.trim(),
         username: data.email,
       })
 
@@ -71,6 +73,44 @@ export function RegistrationForm() {
           {submitMessage}
         </p>
       )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nome</Label>
+          <Input
+            id="name"
+            type="text"
+            autoComplete="given-name"
+            placeholder="Mario"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'name-error' : undefined}
+            {...register('name')}
+          />
+          {errors.name && (
+            <p id="name-error" className="text-sm text-destructive">
+              {errors.name.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="surname">Cognome</Label>
+          <Input
+            id="surname"
+            type="text"
+            autoComplete="family-name"
+            placeholder="Rossi"
+            aria-invalid={Boolean(errors.surname)}
+            aria-describedby={errors.surname ? 'surname-error' : undefined}
+            {...register('surname')}
+          />
+          {errors.surname && (
+            <p id="surname-error" className="text-sm text-destructive">
+              {errors.surname.message}
+            </p>
+          )}
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>

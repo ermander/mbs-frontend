@@ -112,5 +112,4 @@ export interface OddsCollectionStats {
   event_mappings_review: number
   latest_odds: number
   latest_odds_active: number
-  odds_history: number
 }

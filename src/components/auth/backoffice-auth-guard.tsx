@@ -1,71 +1,31 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
-import { authClient } from '@/services/api/auth-client'
-import { syncThemeToLocalStorage } from '@/hooks/use-theme'
+import { useRouter } from 'next/navigation'
+
+import { useAuthStore } from '@/stores/auth-store'
+import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 
 const ADMIN_ROLE = 'ADMIN_ROLE'
 
+/**
+ * Second-layer guard per le rotte `/backoffice/*`.
+ *
+ * L'autenticazione + il bootstrap di `/me` sono già garantiti dal `DashboardAuthGuard`
+ * montato nel layout `(auth)`. Qui controlliamo solo il ruolo: se l'utente non è admin
+ * redirige a `POST_AUTH_REDIRECT`.
+ */
 export function BackofficeAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
-  const isBootstrapping = useAuthStore((s) => s.isBootstrapping)
-  const isHydrated = useAuthHydrated()
-  const setUser = useAuthStore((s) => s.setUser)
-  const startBootstrapping = useAuthStore((s) => s.startBootstrapping)
-  const finishBootstrapping = useAuthStore((s) => s.finishBootstrapping)
-  const clearUser = useAuthStore((s) => s.clearUser)
 
   useEffect(() => {
-    const bootstrap = async () => {
-      if (!isHydrated) return
-      if (user || isBootstrapping) return
-      if (!isLoggedIn) {
-        router.replace('/backoffice/login')
-        return
-      }
-      startBootstrapping()
-      try {
-        const { user: me } = await authClient.me()
-        setUser(me)
-        syncThemeToLocalStorage(me.settings.theme)
-      } catch (error) {
-        console.error('[BackofficeAuthGuard] /me failed', error)
-        clearUser()
-        router.replace('/backoffice/login')
-        if (typeof window !== 'undefined') {
-          window.location.href = '/backoffice/login'
-        }
-      } finally {
-        finishBootstrapping()
-      }
+    if (user && user.role !== ADMIN_ROLE) {
+      router.replace(POST_AUTH_REDIRECT)
     }
+  }, [user, router])
 
-    void bootstrap()
-  }, [
-    clearUser,
-    finishBootstrapping,
-    isBootstrapping,
-    isHydrated,
-    isLoggedIn,
-    router,
-    setUser,
-    startBootstrapping,
-    user,
-  ])
-
-  if (!user) return null
-
-  if (user.role !== ADMIN_ROLE) {
-    if (typeof window !== 'undefined') {
-      router.replace('/')
-      window.location.href = '/'
-    }
-    return null
-  }
+  if (!user || user.role !== ADMIN_ROLE) return null
 
   return <>{children}</>
 }

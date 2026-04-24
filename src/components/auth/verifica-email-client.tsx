@@ -4,6 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { authClient } from '@/services/api/auth-client'
+import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -80,10 +81,10 @@ export function VerificaEmailClient() {
               Email verificata con successo per {userEmail}.
             </p>
             <p className="text-sm text-muted-foreground">
-              Il tuo account è attivo. Verrai reindirizzato alla homepage autenticata.
+              Il tuo account è attivo. Verrai reindirizzato alla tua dashboard.
             </p>
             <Button asChild className="w-full sm:w-auto">
-              <Link href="/">Vai alla home</Link>
+              <Link href={POST_AUTH_REDIRECT}>Vai alla dashboard</Link>
             </Button>
           </div>
         </CardContent>

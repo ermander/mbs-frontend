@@ -521,7 +521,7 @@ export function PuntaBancaSaveModal({
                     portalContainer={dropdownPortalEl}
                   />
                   {holderIdPunta && accountsPunta.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                       Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                       Profit Tracker → Conti.
                     </p>
@@ -580,7 +580,7 @@ export function PuntaBancaSaveModal({
                     portalContainer={dropdownPortalEl}
                   />
                   {holderIdBanca && accountsBanca.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                       Nessun conto exchange disponibile per questo intestatario. Aggiungine uno in
                       Profit Tracker → Conti.
                     </p>

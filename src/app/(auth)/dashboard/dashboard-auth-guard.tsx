@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
-import { syncThemeToLocalStorage } from '@/hooks/use-theme'
 
 export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -29,7 +28,6 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
       try {
         const { user: me } = await authClient.me()
         setUser(me)
-        syncThemeToLocalStorage(me.settings.theme)
       } catch (error) {
         console.error('[DashboardAuthGuard] /me failed', error)
         clearUser()

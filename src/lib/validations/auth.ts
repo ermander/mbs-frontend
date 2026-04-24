@@ -14,6 +14,8 @@ const passwordRules = z
 
 export const registrationSchema = z
   .object({
+    name: z.string().trim().min(2, 'Il nome deve avere almeno 2 caratteri'),
+    surname: z.string().trim().min(2, 'Il cognome deve avere almeno 2 caratteri'),
     email: z.string().min(1, 'Campo obbligatorio').email('Email non valida'),
     password: passwordRules,
     confirmPassword: z.string().min(1, 'Campo obbligatorio'),

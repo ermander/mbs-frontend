@@ -7,7 +7,6 @@ import {
   getImbalanceFactor,
   liability,
   layStakeRimborso,
-  minGain,
   ratingPercent,
 } from '@/lib/calculators/punta-banca'
 import { PuntaBancaSaveModal } from '@/components/calculators/PuntaBancaSaveModal'
@@ -186,11 +185,6 @@ export function PuntaBancaCalculator() {
     return ratingPercent(puntataEffettiva, layStakeValue)
   }, [puntataEffettiva, layStakeValue])
 
-  const baseMinGain = useMemo(() => {
-    if (quotaPuntaNum == null || effectiveLiability == null) return null
-    return minGain(puntataEffettiva, quotaPuntaNum, effectiveLiability)
-  }, [puntataEffettiva, quotaPuntaNum, effectiveLiability])
-
   /** Totale se vinci la puntata sul Book */
   const totalSeVinciPuntata = useMemo(() => {
     if (puntataNum == null || quotaPuntaNum == null || effectiveLiability == null) return null
@@ -253,7 +247,7 @@ export function PuntaBancaCalculator() {
   const showRimborsoColumn = rimborsoNum > 0
 
   return (
-    <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
+    <div className="mx-auto max-w-2xl">
       {/* Sezione Puntata */}
       <div className="border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -384,7 +378,7 @@ export function PuntaBancaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="border-b border-border p-4">
+      <div className="calc-advanced border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">−30%</span>
@@ -469,7 +463,7 @@ export function PuntaBancaCalculator() {
 
       {/* Bancata parziale (multi-step) */}
       {layStakeValue != null && (
-        <div className="border-b border-border p-4">
+        <div className="calc-advanced border-b border-border p-4">
           <div className="space-y-3">
             {partialLays.map((pl, i) => {
               const result = partialLayResults[i] ?? null
@@ -560,7 +554,7 @@ export function PuntaBancaCalculator() {
         quotaPuntaNum != null &&
         layStakeValue != null &&
         responsabilita != null && (
-          <div className="border-b border-border bg-card">
+          <div className="calc-advanced border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO • '
@@ -742,7 +736,7 @@ export function PuntaBancaCalculator() {
         )}
 
       {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
+      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
         <Button
           onClick={() => setSaveModalOpen(true)}
           variant="default"

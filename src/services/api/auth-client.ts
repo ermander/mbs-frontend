@@ -1,11 +1,8 @@
 import { apiClient } from './client'
-import type { ThemeId } from '@/lib/theme'
 
 export type UserRole = 'USER_ROLE' | 'ADMIN_ROLE'
 
-export interface UserSettings {
-  theme: ThemeId
-}
+export type UserSettings = Record<string, unknown>
 
 export interface AuthUser {
   id: string
@@ -66,11 +63,6 @@ export const authClient = {
 
   async resetPassword(payload: { token: string; password: string }) {
     const { data } = await apiClient.post<AuthResponse>('/auth/reset-password', payload)
-    return data
-  },
-
-  async updateSettings(settings: Partial<UserSettings>) {
-    const { data } = await apiClient.patch<{ settings: UserSettings }>('/auth/settings', settings)
     return data
   },
 }

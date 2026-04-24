@@ -7,6 +7,7 @@ export interface MatcherLeg {
   outcomeKey: string
   outcomeLabel: string
   odds: number
+  liquidity?: number | null
 }
 
 export interface MatcherResult {
@@ -21,6 +22,8 @@ export interface MatcherResult {
   startTime: string
   sportName: string
   competitionName: string
+  nationName: string | null
+  nationCode: string | null
 }
 
 export interface MatcherResultsResponse {
@@ -35,6 +38,7 @@ export interface MatcherMeta {
   sports: string[]
   bookmakers: Array<{ slug: string; name: string }>
   marketTypes: string[]
+  nations: string[]
 }
 
 export interface MatcherFilters {
@@ -42,10 +46,14 @@ export interface MatcherFilters {
   match_type?: MatchType
   market_type?: string
   min_rating?: number
+  max_rating?: number
   bookmaker?: string
+  nation?: string
   search?: string
   sort_by?: 'rating' | 'start_time'
   sort_dir?: 'ASC' | 'DESC'
+  start_time_from?: string
+  start_time_to?: string
   limit?: number
   offset?: number
 }

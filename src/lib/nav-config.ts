@@ -3,6 +3,25 @@
  * Used by Header for dropdowns and mobile nav.
  */
 
+import type { LucideIcon } from 'lucide-react'
+import {
+  Search,
+  Radar,
+  Calculator,
+  BarChart3,
+  ListChecks,
+  Archive,
+  Wallet,
+  BookOpen,
+  Bell,
+  Gift,
+  MessageSquare,
+  User,
+  ShieldCheck,
+} from 'lucide-react'
+
+import type { UserRole } from '@/services/api/auth-client'
+
 export interface NavLinkItem {
   label: string
   href: string
@@ -12,6 +31,54 @@ export interface NavDropdownItem {
   label: string
   items: NavLinkItem[]
 }
+
+export interface AuthSidebarNavItem {
+  label: string
+  /** Omesso per voci-gruppo (solo figli navigabili) */
+  href?: string
+  icon: LucideIcon
+  section?: string
+  /** Se presente, la voce viene mostrata solo agli utenti con quel ruolo */
+  requiresRole?: UserRole
+  /** Se presente, la voce è un gruppo espandibile con sotto-voci */
+  children?: NavLinkItem[]
+}
+
+export const authSidebarNav: AuthSidebarNavItem[] = [
+  { section: 'STRUMENTI', label: 'Odds Scanner', href: '/odds-scanner', icon: Search },
+  { label: 'Odds Scanner v2', href: '/odds-scanner-v2', icon: Radar },
+  { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
+
+  { section: 'DASHBOARD', label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
+  { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
+  { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
+  { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti', icon: Wallet },
+  { label: 'Impostazioni', href: '/profit-tracker/book-personali', icon: BookOpen },
+  { label: 'Promemoria', href: '/profit-tracker/promemoria', icon: Bell },
+
+  { section: 'ALTRO', label: 'Offerte', href: '/offerte', icon: Gift },
+  { label: 'Guide', href: '/guide', icon: BookOpen },
+  { label: 'Forum', href: '/forum', icon: MessageSquare },
+
+  {
+    section: 'AMMINISTRAZIONE',
+    label: 'Backoffice',
+    icon: ShieldCheck,
+    requiresRole: 'ADMIN_ROLE',
+    children: [
+      { label: 'Dashboard', href: '/backoffice/dashboard' },
+      { label: 'Bookmaker', href: '/backoffice/books' },
+      { label: 'Scraper', href: '/backoffice/scrapers' },
+      { label: 'Sport Mappings', href: '/backoffice/sport-mappings' },
+      { label: 'Matchings', href: '/backoffice/matchings' },
+      { label: 'Matcher', href: '/backoffice/matcher' },
+      { label: 'Eventi SR', href: '/backoffice/eventi-sportradar' },
+      { label: 'Utenti', href: '/backoffice/users' },
+    ],
+  },
+
+  { section: 'ACCOUNT', label: 'Profilo', href: '/account/profilo', icon: User },
+]
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
@@ -52,5 +119,6 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
+  { label: 'ODDS SCANNER v2', href: '/odds-scanner-v2' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

@@ -61,6 +61,29 @@ export async function updateEnabledSports(
   return data.scraper
 }
 
+// --- Global scraping kill switch ---
+
+export interface GlobalScrapingStatus {
+  enabled: boolean
+  updated_at: string
+  updated_by: string | null
+}
+
+export async function getGlobalScrapingStatus(): Promise<GlobalScrapingStatus> {
+  const { data } = await apiClient.get<{ status: GlobalScrapingStatus }>(
+    '/backoffice/scraping/global-status',
+  )
+  return data.status
+}
+
+export async function setGlobalScrapingStatus(enabled: boolean): Promise<GlobalScrapingStatus> {
+  const { data } = await apiClient.patch<{ status: GlobalScrapingStatus }>(
+    '/backoffice/scraping/global-status',
+    { enabled },
+  )
+  return data.status
+}
+
 // --- Sport-bookmaker mappings ---
 
 export async function getSportMappings(): Promise<SportMapping[]> {

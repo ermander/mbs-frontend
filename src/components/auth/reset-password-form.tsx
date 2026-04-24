@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
 import { authClient } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
-import { syncThemeToLocalStorage } from '@/hooks/use-theme'
+import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,8 +49,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         setSubmitMessage('Password aggiornata. Puoi accedere con la nuova password.')
         if (response.user) {
           setUser(response.user)
-          syncThemeToLocalStorage(response.user.settings.theme)
-          router.push('/dashboard')
+          router.push(POST_AUTH_REDIRECT)
         }
       } catch (err) {
         setSubmitStatus('error')

@@ -663,7 +663,7 @@ export function TriPuntaCalculator() {
   ])
 
   return (
-    <div className="mx-auto max-w-2xl rounded-lg border border-border bg-card p-0 shadow-xl backdrop-blur-xl">
+    <div className="mx-auto max-w-2xl">
       {/* Barra superiore */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 backdrop-blur-xl">
         <div className="flex items-center gap-2">
@@ -805,7 +805,7 @@ export function TriPuntaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="border-b border-border p-4">
+      <div className="calc-advanced border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento delle Puntate B e C</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">&minus;30%</span>
@@ -911,7 +911,7 @@ export function TriPuntaCalculator() {
         profitIfAWins != null &&
         profitIfBWins != null &&
         profitIfCWins != null && (
-          <div className="border-b border-border bg-card">
+          <div className="calc-advanced border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO \u2022 '
@@ -1160,7 +1160,7 @@ export function TriPuntaCalculator() {
 
       {/* Contropuntata parziale B (multi-step) */}
       {stakeB != null && (
-        <div className="border-b border-border p-4">
+        <div className="calc-advanced border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntasB.map((pp, i) => {
               const result = partialPuntaResultsB[i] ?? null
@@ -1237,7 +1237,7 @@ export function TriPuntaCalculator() {
 
       {/* Contropuntata parziale C (multi-step) */}
       {stakeC != null && (
-        <div className="border-b border-border p-4">
+        <div className="calc-advanced border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntasC.map((pp, i) => {
               const result = partialPuntaResultsC[i] ?? null
@@ -1313,7 +1313,7 @@ export function TriPuntaCalculator() {
       )}
 
       {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
+      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
         <Button onClick={handleOpenModal} variant="default" disabled={!showSummary}>
           Invia al Profit Tracker
         </Button>
@@ -1495,7 +1495,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaA && accountsPuntaA.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                         Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>
@@ -1552,7 +1552,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaB && accountsPuntaB.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                         Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>
@@ -1609,7 +1609,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaC && accountsPuntaC.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
                         Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>

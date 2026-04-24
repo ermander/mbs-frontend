@@ -7,7 +7,10 @@ import {
   getScrapers,
   toggleScraper,
   updateEnabledSports,
+  getGlobalScrapingStatus,
+  setGlobalScrapingStatus,
   type BackofficeScraper,
+  type GlobalScrapingStatus,
 } from '@/services/api/backoffice-scrapers-client'
 
 const ADAPTER_TYPE_LABELS: Record<string, string> = {
@@ -16,11 +19,23 @@ const ADAPTER_TYPE_LABELS: Record<string, string> = {
   websocket: 'WebSocket',
 }
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default function BackofficeScrapersPage() {
   const [scrapers, setScrapers] = useState<BackofficeScraper[]>([])
+  const [globalStatus, setGlobalStatus] = useState<GlobalScrapingStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [togglingGlobal, setTogglingGlobal] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingSportsId, setSavingSportsId] = useState<string | null>(null)
 
@@ -28,8 +43,12 @@ export default function BackofficeScrapersPage() {
     setLoading(true)
     setError(null)
     try {
-      const scrapersData = await getScrapers()
+      const [scrapersData, globalData] = await Promise.all([
+        getScrapers(),
+        getGlobalScrapingStatus(),
+      ])
       setScrapers(scrapersData)
+      setGlobalStatus(globalData)
     } catch {
       setError('Errore nel caricamento dei dati.')
     } finally {
@@ -40,6 +59,19 @@ export default function BackofficeScrapersPage() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  const handleGlobalToggle = async () => {
+    if (!globalStatus) return
+    setTogglingGlobal(true)
+    try {
+      const updated = await setGlobalScrapingStatus(!globalStatus.enabled)
+      setGlobalStatus(updated)
+    } catch {
+      setError("Errore nell'aggiornamento dello stato globale.")
+    } finally {
+      setTogglingGlobal(false)
+    }
+  }
 
   const handleToggle = async (scraper: BackofficeScraper) => {
     setTogglingId(scraper.id)
@@ -83,6 +115,8 @@ export default function BackofficeScrapersPage() {
     return scraper.enabled_sports ?? scraper.mapped_sports
   }
 
+  const globalEnabled = globalStatus?.enabled ?? true
+
   return (
     <Container>
       <div className="mb-6">
@@ -92,7 +126,61 @@ export default function BackofficeScrapersPage() {
         </p>
       </div>
 
+      {/* Global kill switch */}
+      {globalStatus && (
+        <div
+          className={`mb-6 rounded-lg border px-5 py-4 ${
+            globalEnabled ? 'border-border bg-card' : 'border-amber-500/40 bg-amber-500/5'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span
+                className={`h-3 w-3 shrink-0 rounded-full ${
+                  globalEnabled ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
+              <div>
+                <p className="font-medium text-foreground">
+                  Scraping globale:{' '}
+                  <span className={globalEnabled ? 'text-green-600' : 'text-red-500'}>
+                    {globalEnabled ? 'ATTIVO' : 'IN PAUSA'}
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Aggiornato il {formatDate(globalStatus.updated_at)}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={togglingGlobal}
+              onClick={handleGlobalToggle}
+              title={globalEnabled ? 'Metti in pausa tutto lo scraping' : 'Riattiva lo scraping'}
+              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
+                globalEnabled ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            >
+              <span
+                className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  globalEnabled ? 'translate-x-8' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+
+      {/* Warning banner when globally paused */}
+      {!globalEnabled && (
+        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
+          Lo scraping è globalmente in pausa. I toggle dei singoli bookmaker restano modificabili ma
+          non avranno effetto finché il globale non viene riattivato.
+        </div>
+      )}
 
       <div className="space-y-3">
         {loading ? (
@@ -104,6 +192,13 @@ export default function BackofficeScrapersPage() {
             const isExpanded = expandedId === scraper.id
             const activeSports = getActiveSports(scraper)
             const mappedSports = scraper.mapped_sports
+            // When scraping is globally paused, an enabled scraper shows amber
+            // to communicate "configured but suspended"
+            const toggleColor = scraper.scrape_enabled
+              ? globalEnabled
+                ? 'bg-primary'
+                : 'bg-amber-400'
+              : 'bg-muted-foreground/30'
 
             return (
               <div key={scraper.id} className="rounded-md border border-border bg-card">
@@ -156,9 +251,7 @@ export default function BackofficeScrapersPage() {
                           ? 'Disattiva scraping'
                           : 'Attiva scraping'
                     }
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
-                      scraper.scrape_enabled ? 'bg-primary' : 'bg-muted-foreground/30'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${toggleColor}`}
                   >
                     <span
                       className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${

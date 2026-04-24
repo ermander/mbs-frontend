@@ -1,6 +1,7 @@
 import './globals.css'
 
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Providers } from '@/components/providers'
@@ -34,7 +35,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://matched-betting-system.com'),
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Reading headers forces dynamic rendering so Next.js injects the per-request
+  // nonce (from middleware x-nonce header) into its generated <script> tags.
+  await headers()
   return (
     <html lang="it" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans antialiased">

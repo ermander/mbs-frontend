@@ -40,6 +40,9 @@ export interface CompetitionEvent {
   seasonName: string | null
   confirmationStatus?: string
   confirmedBookmakerCount?: number
+  externalSource?: 'apisports' | 'bookmaker_only_pending_review'
+  providerStatus?: string | null
+  apisportsFixtureId?: number | null
 }
 
 export interface CompetitionEventsResponse {
@@ -112,4 +115,46 @@ export interface OddsCollectionStats {
   event_mappings_review: number
   latest_odds: number
   latest_odds_active: number
+}
+
+// --- Review queue (orphan bookmaker events) ---
+
+export type ReviewQueueStatus = 'pending' | 'attached' | 'rejected' | 'created_canonical'
+
+export interface ReviewQueueItem {
+  id: string
+  bookmakerId: string
+  bookmakerSlug: string
+  scraperRunId: string | null
+  bookmakerExternalId: string | null
+  bookmakerHomeName: string | null
+  bookmakerAwayName: string | null
+  bookmakerCompetitionName: string | null
+  bookmakerCountryName: string | null
+  bookmakerSportName: string | null
+  startTime: string | null
+  rawEventPayload: Record<string, unknown>
+  status: ReviewQueueStatus
+  resolvedEventId: string | null
+  resolvedBy: string | null
+  resolvedAt: string | null
+  createdAt: string
+}
+
+export interface ReviewQueueListResponse {
+  items: ReviewQueueItem[]
+}
+
+export interface ReviewQueueStats {
+  pending: number
+  attached: number
+  rejected: number
+  createdCanonical: number
+}
+
+export interface ProviderBudget {
+  date: string
+  callsUsed: number
+  planDailyLimit: number
+  lastCallAt: string | null
 }

@@ -60,12 +60,22 @@ export interface CompetitionDrilldownItemDto {
   sportSlug: string
   eventCount: number
   rawCompetitionName: string | null
+  matchedEvents: EventDrilldownItemDto[]
+}
+
+export interface CompetitionListTotalsDto {
+  totalCompetitions: number
+  totalEvents: number
+  filteredCompetitions: number
+  filteredEvents: number
 }
 
 export interface CompetitionListDto {
   bookmaker: BookmakerRefDto
   competitions: CompetitionDrilldownItemDto[]
   includePast: boolean
+  query: string | null
+  totals: CompetitionListTotalsDto
 }
 
 export interface EventDrilldownItemDto {
@@ -193,10 +203,13 @@ export async function getBookmakerSummary(slug: string): Promise<BookmakerSummar
 export async function getScrapedCompetitions(
   slug: string,
   includePast: boolean,
+  q?: string,
 ): Promise<CompetitionListDto> {
+  const params: Record<string, string | boolean> = { includePast }
+  if (typeof q === 'string' && q.length > 0) params.q = q
   const { data } = await apiClient.get<CompetitionListDto>(
     `/backoffice/scrapers/${slug}/competitions`,
-    { params: { includePast } },
+    { params },
   )
   return data
 }

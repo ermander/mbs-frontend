@@ -1,12 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { Tabs } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { getCountryFlagUrl } from '@/lib/country-flags'
+import {
+  getCountryFlagUrl,
+  getCountryFlagUrlFromIso,
+  getItalianCountryName,
+} from '@/lib/country-flags'
 import {
   extractMessage,
   getBookmakerSummary,
@@ -16,15 +20,13 @@ import {
   getScrapedMarketOutcomes,
   type BookmakerSummaryDto,
   type CompetitionDrilldownItemDto,
-  type CompetitionListDto,
+  type CompetitionListTotalsDto,
   type EventDrilldownItemDto,
-  type EventListDto,
   type MarketDrilldownItemDto,
-  type MarketListDto,
+  type OutcomeDrilldownItemDto,
   type OdMarketStatus,
   type OdMatchStatus,
   type OdOutcomeStatus,
-  type OutcomeListDto,
 } from '@/services/api/backoffice-scraper-drilldown-client'
 
 const ADAPTER_TYPE_LABELS: Record<string, string> = {
@@ -33,43 +35,26 @@ const ADAPTER_TYPE_LABELS: Record<string, string> = {
   websocket: 'WebSocket',
 }
 
-type DrillLevel = 'competitions' | 'events' | 'markets' | 'outcomes'
-
 const TABS = [
   { id: 'config', label: 'Configurazione' },
   { id: 'data', label: 'Dati scrapati' },
 ] as const
+
+const SEARCH_DEBOUNCE_MS = 350
+const SEARCH_MIN_LENGTH = 2
+
+// =====================================================================
+// Page
+// =====================================================================
 
 export default function ScraperDetailPage() {
   const params = useParams<{ slug: string }>()
   const slug = params?.slug ?? ''
 
   const [activeTab, setActiveTab] = useState<'config' | 'data'>('config')
-
-  // --- Summary ---
   const [summary, setSummary] = useState<BookmakerSummaryDto | null>(null)
-  const [summaryLoading, setSummaryLoading] = useState<boolean>(true)
+  const [summaryLoading, setSummaryLoading] = useState(true)
   const [summaryError, setSummaryError] = useState<string | null>(null)
-
-  // --- Drill-down state ---
-  const [level, setLevel] = useState<DrillLevel>('competitions')
-  const [includePast, setIncludePast] = useState<boolean>(false)
-
-  const [competitions, setCompetitions] = useState<CompetitionListDto | null>(null)
-  const [events, setEvents] = useState<EventListDto | null>(null)
-  const [markets, setMarkets] = useState<MarketListDto | null>(null)
-  const [outcomes, setOutcomes] = useState<OutcomeListDto | null>(null)
-
-  const [dataLoading, setDataLoading] = useState<boolean>(false)
-  const [dataError, setDataError] = useState<string | null>(null)
-
-  // --- Breadcrumb selections ---
-  const [selectedCompetition, setSelectedCompetition] =
-    useState<CompetitionDrilldownItemDto | null>(null)
-  const [selectedEvent, setSelectedEvent] = useState<EventDrilldownItemDto | null>(null)
-  const [selectedMarket, setSelectedMarket] = useState<MarketDrilldownItemDto | null>(null)
-
-  // --- Loaders ---
 
   const loadSummary = useCallback(async () => {
     if (!slug) return
@@ -86,161 +71,13 @@ export default function ScraperDetailPage() {
     }
   }, [slug])
 
-  const loadCompetitions = useCallback(async () => {
-    if (!slug) return
-    setDataLoading(true)
-    setDataError(null)
-    try {
-      const data = await getScrapedCompetitions(slug, includePast)
-      setCompetitions(data)
-    } catch (err) {
-      setDataError(extractMessage(err, 'Errore nel caricamento delle competizioni.'))
-    } finally {
-      setDataLoading(false)
-    }
-  }, [slug, includePast])
-
-  const loadEvents = useCallback(
-    async (competitionId: string) => {
-      if (!slug) return
-      setDataLoading(true)
-      setDataError(null)
-      try {
-        const data = await getScrapedCompetitionEvents(slug, competitionId, includePast)
-        setEvents(data)
-      } catch (err) {
-        setDataError(extractMessage(err, 'Errore nel caricamento degli eventi.'))
-      } finally {
-        setDataLoading(false)
-      }
-    },
-    [slug, includePast],
-  )
-
-  const loadMarkets = useCallback(
-    async (eventId: string) => {
-      if (!slug) return
-      setDataLoading(true)
-      setDataError(null)
-      try {
-        const data = await getScrapedEventMarkets(slug, eventId)
-        setMarkets(data)
-      } catch (err) {
-        setDataError(extractMessage(err, 'Errore nel caricamento dei mercati.'))
-      } finally {
-        setDataLoading(false)
-      }
-    },
-    [slug],
-  )
-
-  const loadOutcomes = useCallback(
-    async (marketId: string) => {
-      if (!slug) return
-      setDataLoading(true)
-      setDataError(null)
-      try {
-        const data = await getScrapedMarketOutcomes(slug, marketId)
-        setOutcomes(data)
-      } catch (err) {
-        setDataError(extractMessage(err, 'Errore nel caricamento degli esiti.'))
-      } finally {
-        setDataLoading(false)
-      }
-    },
-    [slug],
-  )
-
   useEffect(() => {
     void loadSummary()
   }, [loadSummary])
 
-  // Load competitions when data tab first opens, or when includePast flips
-  // while we're at the competitions level.
-  useEffect(() => {
-    if (activeTab !== 'data') return
-    if (level !== 'competitions') return
-    void loadCompetitions()
-  }, [activeTab, level, loadCompetitions])
-
-  // When includePast flips while drilled into events, re-fetch events too.
-  useEffect(() => {
-    if (activeTab !== 'data') return
-    if (level !== 'events') return
-    if (!selectedCompetition) return
-    void loadEvents(selectedCompetition.competitionId)
-    // we intentionally omit loadEvents from deps to avoid loops; includePast
-    // is already a dependency via loadEvents' own useCallback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includePast])
-
-  // --- Click handlers ---
-
-  const onCompetitionClick = (c: CompetitionDrilldownItemDto) => {
-    setSelectedCompetition(c)
-    setSelectedEvent(null)
-    setSelectedMarket(null)
-    setEvents(null)
-    setMarkets(null)
-    setOutcomes(null)
-    setLevel('events')
-    void loadEvents(c.competitionId)
-  }
-
-  const onEventClick = (e: EventDrilldownItemDto) => {
-    setSelectedEvent(e)
-    setSelectedMarket(null)
-    setMarkets(null)
-    setOutcomes(null)
-    setLevel('markets')
-    void loadMarkets(e.eventId)
-  }
-
-  const onMarketClick = (m: MarketDrilldownItemDto) => {
-    setSelectedMarket(m)
-    setOutcomes(null)
-    setLevel('outcomes')
-    void loadOutcomes(m.canonicalMarketId)
-  }
-
-  // --- Breadcrumb navigation ---
-
-  const goToCompetitions = () => {
-    setLevel('competitions')
-    setSelectedCompetition(null)
-    setSelectedEvent(null)
-    setSelectedMarket(null)
-  }
-
-  const goToEvents = () => {
-    setLevel('events')
-    setSelectedEvent(null)
-    setSelectedMarket(null)
-  }
-
-  const goToMarkets = () => {
-    setLevel('markets')
-    setSelectedMarket(null)
-  }
-
-  // --- Refresh current level ---
-
-  const refreshCurrentLevel = () => {
-    if (level === 'competitions') void loadCompetitions()
-    else if (level === 'events' && selectedCompetition)
-      void loadEvents(selectedCompetition.competitionId)
-    else if (level === 'markets' && selectedEvent) void loadMarkets(selectedEvent.eventId)
-    else if (level === 'outcomes' && selectedMarket)
-      void loadOutcomes(selectedMarket.canonicalMarketId)
-  }
-
-  // --- Render helpers ---
-
   const enabledSportsLabel = useMemo(() => {
     if (!summary) return ''
-    if (summary.enabledSports === null) {
-      return `Tutti i mappati (${summary.mappedSports.length})`
-    }
+    if (summary.enabledSports === null) return `Tutti i mappati (${summary.mappedSports.length})`
     return summary.enabledSports.join(', ') || 'nessuno'
   }, [summary])
 
@@ -286,27 +123,7 @@ export default function ScraperDetailPage() {
           {activeTab === 'config' ? (
             <ConfigurationTab summary={summary} enabledSportsLabel={enabledSportsLabel} />
           ) : (
-            <DataTab
-              level={level}
-              includePast={includePast}
-              onIncludePastChange={setIncludePast}
-              onRefresh={refreshCurrentLevel}
-              dataLoading={dataLoading}
-              dataError={dataError}
-              competitions={competitions}
-              events={events}
-              markets={markets}
-              outcomes={outcomes}
-              selectedCompetition={selectedCompetition}
-              selectedEvent={selectedEvent}
-              selectedMarket={selectedMarket}
-              onCompetitionClick={onCompetitionClick}
-              onEventClick={onEventClick}
-              onMarketClick={onMarketClick}
-              onGoToCompetitions={goToCompetitions}
-              onGoToEvents={goToEvents}
-              onGoToMarkets={goToMarkets}
-            />
+            <ScrapedDataTree slug={slug} />
           )}
         </>
       ) : null}
@@ -315,7 +132,7 @@ export default function ScraperDetailPage() {
 }
 
 // =====================================================================
-// Configurazione tab — read-only summary grid
+// Configuration tab
 // =====================================================================
 
 function ConfigurationTab({
@@ -366,7 +183,7 @@ function ConfigurationTab({
   )
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col">
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
@@ -376,272 +193,245 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 // =====================================================================
-// Dati scrapati tab — breadcrumb + level-specific list
+// Tree types and builder
 // =====================================================================
 
-interface DataTabProps {
-  level: DrillLevel
-  includePast: boolean
-  onIncludePastChange: (v: boolean) => void
-  onRefresh: () => void
-  dataLoading: boolean
-  dataError: string | null
-  competitions: CompetitionListDto | null
-  events: EventListDto | null
-  markets: MarketListDto | null
-  outcomes: OutcomeListDto | null
-  selectedCompetition: CompetitionDrilldownItemDto | null
-  selectedEvent: EventDrilldownItemDto | null
-  selectedMarket: MarketDrilldownItemDto | null
-  onCompetitionClick: (c: CompetitionDrilldownItemDto) => void
-  onEventClick: (e: EventDrilldownItemDto) => void
-  onMarketClick: (m: MarketDrilldownItemDto) => void
-  onGoToCompetitions: () => void
-  onGoToEvents: () => void
-  onGoToMarkets: () => void
+const UNKNOWN_COUNTRY = '—'
+
+// UK constituent nations: all share ISO country_code='GB' but must remain
+// as separate tree nodes (England, Scotland, Wales, N.Ireland are distinct
+// football federations). Map every variant → canonical Italian display name
+// so that "England", "Inghilterra", "GBR" all collapse to "Inghilterra",
+// and "Scotland"/"Scozia" collapse to "Scozia", etc.
+const GB_CONSTITUENT_CANONICAL: Record<string, string> = {
+  inghilterra: 'Inghilterra',
+  england: 'Inghilterra',
+  gbr: 'Inghilterra',
+  gb: 'Inghilterra',
+  'gran bretagna': 'Inghilterra',
+  'great britain': 'Inghilterra',
+  'united kingdom': 'Inghilterra',
+  scozia: 'Scozia',
+  scotland: 'Scozia',
+  galles: 'Galles',
+  wales: 'Galles',
+  'irlanda del nord': 'Irlanda del Nord',
+  'northern ireland': 'Irlanda del Nord',
+  'irlanda del nord amatori': 'Irlanda del Nord',
 }
 
-function DataTab(props: DataTabProps) {
-  const {
-    level,
-    includePast,
-    onIncludePastChange,
-    onRefresh,
-    dataLoading,
-    dataError,
-    competitions,
-    events,
-    markets,
-    outcomes,
-    selectedCompetition,
-    selectedEvent,
-    selectedMarket,
-    onCompetitionClick,
-    onEventClick,
-    onMarketClick,
-    onGoToCompetitions,
-    onGoToEvents,
-    onGoToMarkets,
-  } = props
+function getGroupKey(c: CompetitionDrilldownItemDto): string {
+  const catNorm = (c.categoryName ?? '').toLowerCase().trim()
+  // GB constituent nations: group by canonical display name so that the GB
+  // country_code never produces a single mixed "GB" bucket.
+  if (c.countryCode === 'GB' || GB_CONSTITUENT_CANONICAL[catNorm] !== undefined) {
+    return GB_CONSTITUENT_CANONICAL[catNorm] ?? c.categoryName ?? 'GB'
+  }
+  return c.countryCode ?? c.categoryName ?? UNKNOWN_COUNTRY
+}
 
-  return (
-    <div className="rounded-md border border-border bg-card">
-      {/* Breadcrumb + controls */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
-        <nav className="flex flex-wrap items-center gap-1 text-sm">
-          <button
-            type="button"
-            onClick={onGoToCompetitions}
-            className={
-              level === 'competitions'
-                ? 'font-medium text-foreground'
-                : 'text-primary hover:underline'
-            }
-          >
-            Competizioni
-          </button>
-          {selectedCompetition && (
-            <>
-              <span className="text-muted-foreground">›</span>
-              <button
-                type="button"
-                onClick={onGoToEvents}
-                className={
-                  level === 'events'
-                    ? 'font-medium text-foreground'
-                    : 'text-primary hover:underline'
-                }
-              >
-                {selectedCompetition.competitionName}
-              </button>
-            </>
-          )}
-          {selectedEvent && (
-            <>
-              <span className="text-muted-foreground">›</span>
-              <button
-                type="button"
-                onClick={onGoToMarkets}
-                className={
-                  level === 'markets'
-                    ? 'font-medium text-foreground'
-                    : 'text-primary hover:underline'
-                }
-              >
-                {selectedEvent.homeName ?? '?'} - {selectedEvent.awayName ?? '?'}
-              </button>
-            </>
-          )}
-          {selectedMarket && (
-            <>
-              <span className="text-muted-foreground">›</span>
-              <span className="font-medium text-foreground">{selectedMarket.marketTypeName}</span>
-            </>
-          )}
-        </nav>
+type CountryGroup = {
+  categoryName: string
+  countryCode: string | null
+  competitions: CompetitionDrilldownItemDto[]
+  totalEventCount: number
+}
 
-        <div className="ml-auto flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={includePast}
-              onChange={(e) => onIncludePastChange(e.target.checked)}
-              className="h-3 w-3"
-            />
-            Mostra anche conclusi
-          </label>
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={dataLoading}
-            className="rounded border border-border bg-transparent px-3 py-1 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
-          >
-            {dataLoading ? 'Caricamento...' : 'Aggiorna'}
-          </button>
-        </div>
-      </div>
+type SportGroup = {
+  sportName: string
+  countries: CountryGroup[]
+  totalCompetitionCount: number
+  totalEventCount: number
+}
 
-      {/* Body */}
-      <div className="px-4 py-3">
-        {dataError && <p className="mb-3 text-sm text-destructive">{dataError}</p>}
-
-        {level === 'competitions' &&
-          (competitions ? (
-            <CompetitionsList items={competitions.competitions} onClick={onCompetitionClick} />
-          ) : dataLoading ? (
-            <LoadingLine />
-          ) : null)}
-
-        {level === 'events' &&
-          (events ? (
-            <EventsList items={events.events} onClick={onEventClick} />
-          ) : dataLoading ? (
-            <LoadingLine />
-          ) : null)}
-
-        {level === 'markets' &&
-          (markets ? (
-            <MarketsList
-              items={markets.markets}
-              onClick={onMarketClick}
-              eventContext={markets.event}
-            />
-          ) : dataLoading ? (
-            <LoadingLine />
-          ) : null)}
-
-        {level === 'outcomes' &&
-          (outcomes ? <OutcomesList data={outcomes} /> : dataLoading ? <LoadingLine /> : null)}
-      </div>
-    </div>
+// When multiple categoryNames share the same countryCode, prefer the most
+// descriptive one. ISO-2/3 bare codes (e.g. "GTM", "ISR", "ROU") are not
+// considered descriptive — fall back to the Italian ICU name in that case.
+function pickDisplayName(names: string[], countryCode: string | null): string {
+  if (!countryCode) return names[0] ?? UNKNOWN_COUNTRY
+  const preferred = names.find(
+    (n) => n.length > 2 && n.toLowerCase() !== countryCode.toLowerCase() && !/^[A-Z]{2,3}$/.test(n), // skip bare ISO-2 / ISO-3 codes
   )
+  if (preferred) return preferred
+  // All stored names look like ISO codes — resolve to proper Italian display name.
+  const italianName = getItalianCountryName(countryCode)
+  if (italianName) return italianName
+  return names.find((n) => n.length > 2) ?? countryCode
 }
 
-function LoadingLine() {
-  return <p className="py-6 text-center text-sm text-muted-foreground">Caricamento...</p>
+function buildTree(competitions: CompetitionDrilldownItemDto[]): SportGroup[] {
+  const sportMap = new Map<
+    string,
+    Map<
+      string,
+      { comps: CompetitionDrilldownItemDto[]; countryCode: string | null; names: string[] }
+    >
+  >()
+
+  for (const c of competitions) {
+    const groupKey = getGroupKey(c)
+    if (!sportMap.has(c.sportName)) sportMap.set(c.sportName, new Map())
+    const countryMap = sportMap.get(c.sportName)!
+    if (!countryMap.has(groupKey))
+      countryMap.set(groupKey, { comps: [], countryCode: c.countryCode ?? null, names: [] })
+    const bucket = countryMap.get(groupKey)!
+    bucket.comps.push(c)
+    // For GB constituent nations always push the canonical name so that
+    // pickDisplayName reliably returns it regardless of insertion order.
+    const catNorm = (c.categoryName ?? '').toLowerCase().trim()
+    const canonicalName = GB_CONSTITUENT_CANONICAL[catNorm] ?? c.categoryName
+    if (canonicalName && !bucket.names.includes(canonicalName)) bucket.names.push(canonicalName)
+  }
+
+  const sports: SportGroup[] = []
+  for (const [sportName, countryMap] of sportMap) {
+    const countries: CountryGroup[] = []
+    for (const [, { comps, countryCode, names }] of countryMap) {
+      const categoryName = pickDisplayName(names, countryCode)
+      countries.push({
+        categoryName,
+        countryCode,
+        competitions: comps,
+        totalEventCount: comps.reduce((s, c) => s + c.eventCount, 0),
+      })
+    }
+    countries.sort((a, b) => {
+      if (a.categoryName === UNKNOWN_COUNTRY) return 1
+      if (b.categoryName === UNKNOWN_COUNTRY) return -1
+      return a.categoryName.localeCompare(b.categoryName)
+    })
+    sports.push({
+      sportName,
+      countries,
+      totalCompetitionCount: countries.reduce((s, c) => s + c.competitions.length, 0),
+      totalEventCount: countries.reduce((s, c) => s + c.totalEventCount, 0),
+    })
+  }
+  return sports.sort((a, b) => a.sportName.localeCompare(b.sportName))
 }
 
 // =====================================================================
-// Level 1: competitions list
+// ScrapedDataTree
 // =====================================================================
 
-const UNKNOWN_NATION_KEY = '—'
+function ScrapedDataTree({ slug }: { slug: string }) {
+  const [includePast, setIncludePast] = useState(false)
+  const [refreshCounter, setRefreshCounter] = useState(0)
+  const [competitions, setCompetitions] = useState<CompetitionDrilldownItemDto[] | null>(null)
+  const [totals, setTotals] = useState<CompetitionListTotalsDto | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-function CompetitionsList({
-  items,
-  onClick,
-}: {
-  items: CompetitionDrilldownItemDto[]
-  onClick: (c: CompetitionDrilldownItemDto) => void
-}) {
-  const [filterSport, setFilterSport] = useState<string>('')
-  const [filterCountry, setFilterCountry] = useState<string>('')
-  const [filterName, setFilterName] = useState<string>('')
-  const [expandedNations, setExpandedNations] = useState<Set<string>>(() => new Set())
+  const [filterSport, setFilterSport] = useState('')
+  const [filterCountry, setFilterCountry] = useState('')
+  const [filterName, setFilterName] = useState('')
+  const [debouncedFilterName, setDebouncedFilterName] = useState('')
+
+  const [expandedSports, setExpandedSports] = useState<Set<string>>(new Set())
+  const [expandedCountries, setExpandedCountries] = useState<Set<string>>(new Set())
+
+  // Debounce typing in the search field — keeps the previous tree visible while
+  // the next request is in flight (see searchLoading vs loading split).
+  useEffect(() => {
+    if (filterName === debouncedFilterName) return
+    const t = setTimeout(() => setDebouncedFilterName(filterName), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [filterName, debouncedFilterName])
+
+  const trimmedQuery = debouncedFilterName.trim()
+  const hasQuery = trimmedQuery.length >= SEARCH_MIN_LENGTH
+
+  // Changing this key remounts all CompetitionNode components, resetting their lazy-loaded state.
+  // Includes debouncedFilterName so toggling the query refreshes per-node state cleanly.
+  const nodeResetKey = `${String(includePast)}_${refreshCounter}_${debouncedFilterName}`
+
+  const doLoad = useCallback(
+    async (mode: 'full' | 'search') => {
+      if (mode === 'search') setSearchLoading(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        const qToSend = trimmedQuery.length >= SEARCH_MIN_LENGTH ? trimmedQuery : undefined
+        const data = await getScrapedCompetitions(slug, includePast, qToSend)
+        setCompetitions(data.competitions)
+        setTotals(data.totals)
+      } catch (err) {
+        setError(extractMessage(err, 'Errore nel caricamento delle competizioni.'))
+      } finally {
+        if (mode === 'search') setSearchLoading(false)
+        else setLoading(false)
+      }
+    },
+    [slug, includePast, trimmedQuery],
+  )
+
+  // Initial load + reload on includePast / refresh / query change.
+  // We pick "full" vs "search" so that typing in the search field doesn't blank
+  // out the tree currently on screen.
+  const isInitial = competitions === null
+  useEffect(() => {
+    void doLoad(isInitial ? 'full' : 'search')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doLoad])
+
+  const handleRefresh = () => {
+    setRefreshCounter((c) => c + 1)
+    void doLoad('full')
+  }
 
   const availableSports = useMemo(
-    () => Array.from(new Set(items.map((c) => c.sportName))).sort(),
-    [items],
+    () => Array.from(new Set(competitions?.map((c) => c.sportName) ?? [])).sort(),
+    [competitions],
   )
-
   const availableCountries = useMemo(
     () =>
       Array.from(
         new Set(
-          items
-            .map((c) => c.categoryName)
-            .filter((v): v is string => typeof v === 'string' && v.length > 0),
+          competitions
+            ?.map((c) => c.categoryName)
+            .filter((v): v is string => typeof v === 'string' && v.length > 0) ?? [],
         ),
       ).sort(),
-    [items],
+    [competitions],
   )
 
-  const filteredItems = useMemo(() => {
-    const needle = filterName.trim().toLowerCase()
-    return items.filter((c) => {
+  // Server filters by name/event-name; here we only further narrow by sport/country.
+  const filteredCompetitions = useMemo(() => {
+    if (!competitions) return []
+    return competitions.filter((c) => {
       if (filterSport && c.sportName !== filterSport) return false
-      if (filterCountry && c.categoryName !== filterCountry) return false
-      if (needle && !c.competitionName.toLowerCase().includes(needle)) return false
+      if (filterCountry && (c.categoryName ?? UNKNOWN_COUNTRY) !== filterCountry) return false
       return true
     })
-  }, [items, filterSport, filterCountry, filterName])
+  }, [competitions, filterSport, filterCountry])
 
-  // Group by nation (categoryName). Preserve the natural sort order we get
-  // from the backend (which already groups by sport → nation → competition).
-  const groupedByNation = useMemo(() => {
-    const map = new Map<string, CompetitionDrilldownItemDto[]>()
-    for (const c of filteredItems) {
-      const key = c.categoryName ?? UNKNOWN_NATION_KEY
-      const bucket = map.get(key)
-      if (bucket) bucket.push(c)
-      else map.set(key, [c])
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [filteredItems])
+  const hasFilter = filterSport !== '' || filterCountry !== '' || filterName !== ''
+  const autoExpandAll = hasFilter
+  const tree = useMemo(() => buildTree(filteredCompetitions), [filteredCompetitions])
 
-  if (items.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Questo bookmaker non sta attualmente scrapando competizioni. Prova ad abilitare &apos;Mostra
-        anche conclusi&apos; o verifica la configurazione dalla lista scraper.
-      </p>
-    )
-  }
-
-  const hasActiveFilter = filterSport !== '' || filterCountry !== '' || filterName !== ''
-  const resetFilters = () => {
-    setFilterSport('')
-    setFilterCountry('')
-    setFilterName('')
-  }
-
-  // When any filter is active we auto-expand so the user immediately sees
-  // the matches without a second click. Without filters, nations are
-  // collapsed by default and the user toggles them manually.
-  const autoExpandAll = hasActiveFilter
-  const isExpanded = (nation: string) => autoExpandAll || expandedNations.has(nation)
-
-  const toggleNation = (nation: string) => {
-    setExpandedNations((prev) => {
+  const toggleSport = (sportName: string) => {
+    setExpandedSports((prev) => {
       const next = new Set(prev)
-      if (next.has(nation)) next.delete(nation)
-      else next.add(nation)
+      if (next.has(sportName)) next.delete(sportName)
+      else next.add(sportName)
       return next
     })
   }
 
-  const expandAll = () => {
-    setExpandedNations(new Set(groupedByNation.map(([nation]) => nation)))
-  }
-
-  const collapseAll = () => {
-    setExpandedNations(new Set())
+  const toggleCountry = (key: string) => {
+    setExpandedCountries((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   return (
-    <div>
-      {/* Filter bar */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="rounded-md border border-border bg-card">
+      {/* Controls bar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <select
           value={filterSport}
           onChange={(e) => setFilterSport(e.target.value)}
@@ -668,18 +458,30 @@ function CompetitionsList({
           ))}
         </select>
 
-        <input
-          type="text"
-          value={filterName}
-          onChange={(e) => setFilterName(e.target.value)}
-          placeholder="Cerca competizione..."
-          className="min-w-[160px] flex-1 rounded border border-border bg-surface-1 px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground"
-        />
+        <div className="relative flex min-w-[160px] flex-1 items-center">
+          <input
+            type="text"
+            value={filterName}
+            onChange={(e) => setFilterName(e.target.value)}
+            placeholder="Cerca competizione o evento..."
+            className="w-full rounded border border-border bg-surface-1 px-2 py-1 pr-7 text-xs text-foreground placeholder:text-muted-foreground"
+          />
+          {searchLoading && (
+            <span className="absolute right-2 text-xs text-muted-foreground" aria-hidden>
+              ...
+            </span>
+          )}
+        </div>
 
-        {hasActiveFilter && (
+        {hasFilter && (
           <button
             type="button"
-            onClick={resetFilters}
+            onClick={() => {
+              setFilterSport('')
+              setFilterCountry('')
+              setFilterName('')
+              setDebouncedFilterName('')
+            }}
             className="rounded border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             Reset
@@ -687,304 +489,447 @@ function CompetitionsList({
         )}
 
         <span className="text-xs text-muted-foreground">
-          {filteredItems.length} / {items.length}
+          {totals ? (
+            <>
+              {filteredCompetitions.length} / {totals.totalCompetitions} comp.
+              {' · '}
+              {hasQuery
+                ? `${filteredCompetitions.reduce((s, c) => s + c.matchedEvents.length, 0)} / ${totals.totalEvents} eventi`
+                : `${totals.totalEvents} eventi`}
+            </>
+          ) : (
+            filteredCompetitions.length
+          )}
         </span>
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={includePast}
+              onChange={(e) => setIncludePast(e.target.checked)}
+              className="h-3 w-3"
+            />
+            Mostra anche conclusi
+          </label>
           <button
             type="button"
-            onClick={expandAll}
-            disabled={autoExpandAll}
-            className="rounded border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="rounded border border-border bg-transparent px-3 py-1 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
           >
-            Espandi tutto
-          </button>
-          <button
-            type="button"
-            onClick={collapseAll}
-            disabled={autoExpandAll}
-            className="rounded border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-          >
-            Comprimi tutto
+            {loading ? 'Caricamento...' : 'Aggiorna'}
           </button>
         </div>
       </div>
 
-      {filteredItems.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Nessuna competizione corrisponde ai filtri applicati.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {groupedByNation.map(([nation, nationItems]) => {
-            const expanded = isExpanded(nation)
-            const totalEvents = nationItems.reduce((sum, c) => sum + c.eventCount, 0)
-            const flagUrl = getCountryFlagUrl(nation)
-            return (
-              <li key={nation} className="rounded-md border border-border bg-surface-1">
-                <button
-                  type="button"
-                  onClick={() => toggleNation(nation)}
-                  disabled={autoExpandAll}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted disabled:cursor-default disabled:hover:bg-transparent"
-                  aria-expanded={expanded}
-                >
-                  <span aria-hidden className="w-3 text-xs text-muted-foreground">
-                    {expanded ? '▾' : '▸'}
-                  </span>
-                  <span className="inline-flex h-4 w-6 shrink-0 items-center justify-center overflow-hidden rounded-sm">
-                    {flagUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={flagUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    ) : null}
-                  </span>
-                  <span className="font-medium text-foreground">{nation}</span>
-                  <span className="text-xs text-muted-foreground">
-                    · {nationItems.length} competiz. · {totalEvents} eventi
-                  </span>
-                </button>
-                {expanded && (
-                  <ul className="flex flex-col gap-1 border-t border-border px-3 py-2">
-                    {nationItems.map((c) => (
-                      <li key={c.competitionId}>
-                        <button
-                          type="button"
-                          onClick={() => onClick(c)}
-                          className="flex w-full items-center gap-3 rounded-md border border-border/50 bg-background px-3 py-2 text-left hover:bg-muted"
-                        >
-                          <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="info">{c.sportName}</Badge>
-                              <span className="font-medium text-foreground">
-                                {c.competitionName}
-                              </span>
-                            </div>
-                            {c.rawCompetitionName && c.rawCompetitionName !== c.competitionName && (
-                              <div className="mt-0.5 text-xs text-muted-foreground">
-                                Raw: &quot;{c.rawCompetitionName}&quot;
-                              </div>
-                            )}
-                          </div>
-                          <Badge variant="outline">{c.eventCount} eventi</Badge>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
-  )
-}
+      {/* Tree body */}
+      <div className="px-4 py-3">
+        {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
-// =====================================================================
-// Level 2: events list
-// =====================================================================
-
-function EventsList({
-  items,
-  onClick,
-}: {
-  items: EventDrilldownItemDto[]
-  onClick: (e: EventDrilldownItemDto) => void
-}) {
-  if (items.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Nessun evento futuro per questa competizione.
-      </p>
-    )
-  }
-  return (
-    <ul className="flex flex-col gap-2">
-      {items.map((e) => (
-        <li key={e.eventId}>
-          <button
-            type="button"
-            onClick={() => onClick(e)}
-            className="flex w-full items-start gap-3 rounded-md border border-border bg-surface-1 px-3 py-2 text-left hover:bg-muted"
-          >
-            <div className="min-w-[96px] text-xs text-muted-foreground">
-              {formatDateTime(e.startTime)}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-foreground">
-                  {e.homeName ?? '?'} - {e.awayName ?? '?'}
-                </span>
-                <Badge variant="outline">{e.status}</Badge>
-                <Badge variant={matchStatusVariant(e.matchStatus)}>
-                  {e.matchStatus} · {formatConfidence(e.matchConfidence)}
-                </Badge>
-              </div>
-              {(e.rawHomeName || e.rawAwayName) && (
-                <div className="mt-0.5 text-xs text-muted-foreground">
-                  Raw: &quot;{e.rawHomeName ?? '?'}&quot; vs &quot;{e.rawAwayName ?? '?'}&quot;
-                </div>
-              )}
-            </div>
-          </button>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-// =====================================================================
-// Level 3: markets list
-// =====================================================================
-
-function MarketsList({
-  items,
-  onClick,
-  eventContext,
-}: {
-  items: MarketDrilldownItemDto[]
-  onClick: (m: MarketDrilldownItemDto) => void
-  eventContext: MarketListDto['event']
-}) {
-  if (items.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Nessun mercato trovato per questo evento.
-      </p>
-    )
-  }
-  return (
-    <div>
-      {/* Event context header with raw info */}
-      <div className="mb-3 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-muted-foreground">
-        <div>
-          <span className="font-medium text-foreground">
-            {eventContext.homeName ?? '?'} - {eventContext.awayName ?? '?'}
-          </span>
-          {' · '}
-          {formatDateTime(eventContext.startTime)}
-        </div>
-        {(eventContext.rawHomeName ||
-          eventContext.rawAwayName ||
-          eventContext.rawCompetitionName) && (
-          <div className="mt-0.5">
-            Raw: &quot;{eventContext.rawHomeName ?? '?'}&quot; vs &quot;
-            {eventContext.rawAwayName ?? '?'}&quot;
-            {eventContext.rawCompetitionName && ` (${eventContext.rawCompetitionName})`}
-          </div>
-        )}
-      </div>
-      <ul className="flex flex-col gap-2">
-        {items.map((m) => (
-          <li key={m.canonicalMarketId}>
-            <button
-              type="button"
-              onClick={() => onClick(m)}
-              className="flex w-full items-start gap-3 rounded-md border border-border bg-surface-1 px-3 py-2 text-left hover:bg-muted"
-            >
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="lavender">{m.marketTypeKey}</Badge>
-                  <span className="font-medium text-foreground">{m.marketTypeName}</span>
-                  <Badge variant={marketStatusVariant(m.marketStatus)}>{m.marketStatus}</Badge>
-                </div>
-                <div className="mt-0.5 text-xs text-muted-foreground">
-                  {formatMarketParams(m)}
-                  {' · '}
-                  {m.activeOutcomeCount}/{m.outcomeCount} esiti attivi
-                  {m.lastSeenAt && ` · ultimo update ${formatDateTime(m.lastSeenAt)}`}
-                </div>
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function formatMarketParams(m: MarketDrilldownItemDto): string {
-  const parts: string[] = []
-  if (m.line !== null) parts.push(`line=${m.line}`)
-  if (m.handicap !== null) parts.push(`handicap=${m.handicap}`)
-  if (m.teamScope) parts.push(`team=${m.teamScope}`)
-  if (m.periodScope) parts.push(`period=${m.periodScope}`)
-  return parts.length > 0 ? parts.join(' · ') : 'nessun parametro'
-}
-
-// =====================================================================
-// Level 4: outcomes table
-// =====================================================================
-
-function OutcomesList({ data }: { data: OutcomeListDto }) {
-  const { market, outcomes } = data
-  if (outcomes.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        Nessun esito configurato per questo mercato.
-      </p>
-    )
-  }
-  return (
-    <div>
-      <div className="mb-3 rounded border border-border bg-surface-1 px-3 py-2 text-xs text-muted-foreground">
-        <div>
-          <Badge variant="lavender">{market.marketTypeKey}</Badge>{' '}
-          <span className="font-medium text-foreground">{market.marketTypeName}</span>
-        </div>
-        {market.rawMarketLabel && (
-          <div className="mt-0.5">Raw: &quot;{market.rawMarketLabel}&quot;</div>
-        )}
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="py-2 pr-4">Esito</th>
-              <th className="py-2 pr-4">Raw</th>
-              <th className="py-2 pr-4">Quota</th>
-              <th className="py-2 pr-4">Stato</th>
-              <th className="py-2">Ultimo update</th>
-            </tr>
-          </thead>
-          <tbody>
-            {outcomes.map((o) => (
-              <tr key={o.canonicalOutcomeId} className="border-b border-border/50">
-                <td className="py-2 pr-4">
-                  <span className="font-mono text-xs">{o.canonicalKey}</span>{' '}
-                  <span className="text-foreground">{o.canonicalLabel}</span>
-                </td>
-                <td className="py-2 pr-4 text-muted-foreground">{o.rawOutcomeLabel ?? '—'}</td>
-                <td className="py-2 pr-4">
-                  {o.decimalValue !== null ? (
-                    <span className="font-mono font-medium text-foreground">
-                      {o.decimalValue.toFixed(2)}
+        {loading && competitions === null ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Caricamento...</p>
+        ) : totals && totals.totalCompetitions === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Nessuna competizione. Prova ad abilitare &apos;Mostra anche conclusi&apos; o verifica la
+            configurazione.
+          </p>
+        ) : !competitions || filteredCompetitions.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Nessuna competizione corrisponde ai filtri applicati.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-0.5">
+            {tree.map((sport) => {
+              const sportExpanded = autoExpandAll || expandedSports.has(sport.sportName)
+              return (
+                <li key={sport.sportName}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!autoExpandAll) toggleSport(sport.sportName)
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-muted"
+                    aria-expanded={sportExpanded}
+                  >
+                    <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
+                      {sportExpanded ? '▾' : '▸'}
                     </span>
-                  ) : (
-                    <span className="text-muted-foreground">— non quotato</span>
+                    <span className="font-semibold text-foreground">{sport.sportName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      · {sport.totalCompetitionCount} comp. · {sport.totalEventCount} eventi
+                    </span>
+                  </button>
+
+                  {sportExpanded && (
+                    <ul className="ml-5 flex flex-col gap-0.5">
+                      {sport.countries.map((country) => {
+                        const countryKey = `${sport.sportName}::${country.categoryName}`
+                        const countryExpanded = autoExpandAll || expandedCountries.has(countryKey)
+                        const flagUrl =
+                          getCountryFlagUrl(country.categoryName) ??
+                          getCountryFlagUrlFromIso(country.countryCode)
+                        return (
+                          <li key={country.categoryName}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!autoExpandAll) toggleCountry(countryKey)
+                              }}
+                              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-muted"
+                              aria-expanded={countryExpanded}
+                            >
+                              <span
+                                className="w-3 shrink-0 text-xs text-muted-foreground"
+                                aria-hidden
+                              >
+                                {countryExpanded ? '▾' : '▸'}
+                              </span>
+                              <span className="inline-flex h-3.5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-sm">
+                                {flagUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={flagUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : null}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {country.categoryName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                · {country.competitions.length} comp. · {country.totalEventCount}{' '}
+                                eventi
+                              </span>
+                            </button>
+
+                            {countryExpanded && (
+                              <ul className="ml-5 flex flex-col gap-1 py-1">
+                                {country.competitions.map((competition) => (
+                                  <CompetitionNode
+                                    key={`${nodeResetKey}_${competition.competitionId}`}
+                                    slug={slug}
+                                    competition={competition}
+                                    includePast={includePast}
+                                    preloadedEvents={
+                                      hasQuery && competition.matchedEvents.length > 0
+                                        ? competition.matchedEvents
+                                        : undefined
+                                    }
+                                  />
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
                   )}
-                </td>
-                <td className="py-2 pr-4">
-                  <Badge variant={outcomeStatusVariant(o.oddsStatus ?? o.outcomeStatus)}>
-                    {o.oddsStatus ?? o.outcomeStatus}
-                  </Badge>
-                </td>
-                <td className="py-2 text-xs text-muted-foreground">
-                  {o.lastSeenAt ? formatDateTime(o.lastSeenAt) : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
+    </div>
+  )
+}
+
+// =====================================================================
+// CompetitionNode — lazy-loads events on expand
+// =====================================================================
+
+function CompetitionNode({
+  slug,
+  competition,
+  includePast,
+  preloadedEvents,
+}: {
+  slug: string
+  competition: CompetitionDrilldownItemDto
+  includePast: boolean
+  preloadedEvents?: EventDrilldownItemDto[]
+}) {
+  const hasPreloaded = preloadedEvents !== undefined && preloadedEvents.length > 0
+  const [expanded, setExpanded] = useState(hasPreloaded)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [events, setEvents] = useState<EventDrilldownItemDto[] | null>(
+    hasPreloaded ? preloadedEvents! : null,
+  )
+
+  const toggle = async () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && events === null && !loading) {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getScrapedCompetitionEvents(slug, competition.competitionId, includePast)
+        setEvents(data.events)
+      } catch (err) {
+        setError(extractMessage(err, 'Errore nel caricamento degli eventi.'))
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  return (
+    <li className="rounded border border-border/50 bg-background">
+      <button
+        type="button"
+        onClick={() => {
+          void toggle()
+        }}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted"
+        aria-expanded={expanded}
+      >
+        <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
+          {expanded ? '▾' : '▸'}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <span className="font-medium text-foreground">{competition.competitionName}</span>
+          {competition.rawCompetitionName &&
+            competition.rawCompetitionName !== competition.competitionName && (
+              <span className="text-xs text-muted-foreground">
+                raw: &quot;{competition.rawCompetitionName}&quot;
+              </span>
+            )}
+        </div>
+        <Badge variant="outline">{competition.eventCount} eventi</Badge>
+        {hasPreloaded && <Badge variant="success">{preloadedEvents!.length} matchanti</Badge>}
+        {loading && <span className="shrink-0 text-xs text-muted-foreground">...</span>}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border/50 px-3 py-2">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {loading && events === null && (
+            <p className="py-3 text-center text-xs text-muted-foreground">Caricamento eventi...</p>
+          )}
+          {events !== null &&
+            (events.length === 0 ? (
+              <p className="py-3 text-center text-xs text-muted-foreground">
+                Nessun evento per questa competizione.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {events.map((event) => (
+                  <EventNode key={event.eventId} slug={slug} event={event} />
+                ))}
+              </ul>
+            ))}
+        </div>
+      )}
+    </li>
+  )
+}
+
+// =====================================================================
+// EventNode — lazy-loads markets on expand
+// =====================================================================
+
+function EventNode({ slug, event }: { slug: string; event: EventDrilldownItemDto }) {
+  const [expanded, setExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [markets, setMarkets] = useState<MarketDrilldownItemDto[] | null>(null)
+
+  const toggle = async () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && markets === null && !loading) {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getScrapedEventMarkets(slug, event.eventId)
+        setMarkets(data.markets)
+      } catch (err) {
+        setError(extractMessage(err, 'Errore nel caricamento dei mercati.'))
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  return (
+    <li className="rounded border border-border/30 bg-surface-1">
+      <button
+        type="button"
+        onClick={() => {
+          void toggle()
+        }}
+        className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+        aria-expanded={expanded}
+      >
+        <span className="mt-0.5 w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
+          {expanded ? '▾' : '▸'}
+        </span>
+        <div className="min-w-[96px] shrink-0 text-xs text-muted-foreground">
+          {formatDateTime(event.startTime)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">
+              {event.homeName ?? '?'} — {event.awayName ?? '?'}
+            </span>
+            <Badge variant="outline">{event.status}</Badge>
+            <Badge variant={matchStatusVariant(event.matchStatus)}>
+              {event.matchStatus} · {formatConfidence(event.matchConfidence)}
+            </Badge>
+          </div>
+          {(event.rawHomeName || event.rawAwayName) && (
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Raw: &quot;{event.rawHomeName ?? '?'}&quot; vs &quot;{event.rawAwayName ?? '?'}&quot;
+            </div>
+          )}
+        </div>
+        {loading && <span className="shrink-0 text-xs text-muted-foreground">...</span>}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border/30 px-3 py-2">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {loading && markets === null && (
+            <p className="py-2 text-center text-xs text-muted-foreground">Caricamento mercati...</p>
+          )}
+          {markets !== null &&
+            (markets.length === 0 ? (
+              <p className="py-2 text-center text-xs text-muted-foreground">
+                Nessun mercato per questo evento.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {markets.map((market) => (
+                  <MarketNode key={market.canonicalMarketId} slug={slug} market={market} />
+                ))}
+              </ul>
+            ))}
+        </div>
+      )}
+    </li>
+  )
+}
+
+// =====================================================================
+// MarketNode — lazy-loads outcomes on expand
+// =====================================================================
+
+function MarketNode({ slug, market }: { slug: string; market: MarketDrilldownItemDto }) {
+  const [expanded, setExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [outcomes, setOutcomes] = useState<OutcomeDrilldownItemDto[] | null>(null)
+
+  const toggle = async () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && outcomes === null && !loading) {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getScrapedMarketOutcomes(slug, market.canonicalMarketId)
+        setOutcomes(data.outcomes)
+      } catch (err) {
+        setError(extractMessage(err, 'Errore nel caricamento degli esiti.'))
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => {
+          void toggle()
+        }}
+        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+        aria-expanded={expanded}
+      >
+        <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
+          {expanded ? '▾' : '▸'}
+        </span>
+        <Badge variant="lavender">{market.marketTypeKey}</Badge>
+        <span className="font-medium text-foreground">{market.marketTypeName}</span>
+        <Badge variant={marketStatusVariant(market.marketStatus)}>{market.marketStatus}</Badge>
+        <span className="text-xs text-muted-foreground">
+          {formatMarketParams(market)} · {market.activeOutcomeCount}/{market.outcomeCount} esiti
+        </span>
+        {loading && <span className="ml-auto shrink-0 text-xs text-muted-foreground">...</span>}
+      </button>
+
+      {expanded && (
+        <div className="mb-1.5 ml-5 mt-1">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {loading && outcomes === null && (
+            <p className="py-2 text-center text-xs text-muted-foreground">Caricamento esiti...</p>
+          )}
+          {outcomes !== null &&
+            (outcomes.length === 0 ? (
+              <p className="py-2 text-xs text-muted-foreground">Nessun esito configurato.</p>
+            ) : (
+              <OutcomesInlineTable outcomes={outcomes} />
+            ))}
+        </div>
+      )}
+    </li>
+  )
+}
+
+// =====================================================================
+// OutcomesInlineTable
+// =====================================================================
+
+function OutcomesInlineTable({ outcomes }: { outcomes: OutcomeDrilldownItemDto[] }) {
+  return (
+    <div className="overflow-x-auto rounded border border-border/50 bg-background">
+      <table className="w-full text-xs">
+        <thead className="border-b border-border/50 text-left uppercase text-muted-foreground">
+          <tr>
+            <th className="px-3 py-1.5 pr-4">Esito</th>
+            <th className="py-1.5 pr-4">Raw</th>
+            <th className="py-1.5 pr-4">Quota</th>
+            <th className="py-1.5 pr-4">Stato</th>
+            <th className="py-1.5">Ultimo update</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outcomes.map((o) => (
+            <tr key={o.canonicalOutcomeId} className="border-b border-border/30 last:border-0">
+              <td className="px-3 py-1.5 pr-4">
+                <span className="font-mono">{o.canonicalKey}</span>{' '}
+                <span className="text-foreground">{o.canonicalLabel}</span>
+              </td>
+              <td className="py-1.5 pr-4 text-muted-foreground">{o.rawOutcomeLabel ?? '—'}</td>
+              <td className="py-1.5 pr-4">
+                {o.decimalValue !== null ? (
+                  <span className="font-mono font-medium text-foreground">
+                    {o.decimalValue.toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </td>
+              <td className="py-1.5 pr-4">
+                <Badge variant={outcomeStatusVariant(o.oddsStatus ?? o.outcomeStatus)}>
+                  {o.oddsStatus ?? o.outcomeStatus}
+                </Badge>
+              </td>
+              <td className="py-1.5 text-muted-foreground">
+                {o.lastSeenAt ? formatDateTime(o.lastSeenAt) : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -995,8 +940,7 @@ function OutcomesList({ data }: { data: OutcomeListDto }) {
 
 function formatDateTime(iso: string): string {
   try {
-    const d = new Date(iso)
-    return d.toLocaleString('it-IT', {
+    return new Date(iso).toLocaleString('it-IT', {
       day: '2-digit',
       month: '2-digit',
       year: '2-digit',
@@ -1010,6 +954,15 @@ function formatDateTime(iso: string): string {
 
 function formatConfidence(v: number): string {
   return (v * 100).toFixed(0) + '%'
+}
+
+function formatMarketParams(m: MarketDrilldownItemDto): string {
+  const parts: string[] = []
+  if (m.line !== null) parts.push(`line=${m.line}`)
+  if (m.handicap !== null) parts.push(`handicap=${m.handicap}`)
+  if (m.teamScope) parts.push(`team=${m.teamScope}`)
+  if (m.periodScope) parts.push(`period=${m.periodScope}`)
+  return parts.length > 0 ? parts.join(' · ') : 'nessun parametro'
 }
 
 function matchStatusVariant(
@@ -1039,8 +992,6 @@ function marketStatusVariant(
       return 'warning'
     case 'removed':
       return 'destructive'
-    case 'settled':
-      return 'outline'
     default:
       return 'outline'
   }
@@ -1058,8 +1009,6 @@ function outcomeStatusVariant(
     case 'removed':
     case 'lost':
       return 'destructive'
-    case 'void':
-      return 'outline'
     default:
       return 'outline'
   }

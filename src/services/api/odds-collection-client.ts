@@ -5,6 +5,10 @@ import type {
   OddsCollectionStats,
   MatchingsResponse,
   EventBookmaker,
+  ReviewQueueListResponse,
+  ReviewQueueStats,
+  ReviewQueueStatus,
+  ProviderBudget,
 } from '@/types/odds-collection'
 
 export async function getEventTree(): Promise<TreeResponse> {
@@ -49,4 +53,58 @@ export async function getEventBookmakers(eventId: string): Promise<EventBookmake
     `/odds-collection/admin/events/${eventId}/bookmakers`,
   )
   return response.data.bookmakers
+}
+
+// --- Review queue (orphan bookmaker events) ---
+
+export async function getReviewQueue(params?: {
+  limit?: number
+  offset?: number
+  bookmakerId?: string
+  status?: ReviewQueueStatus
+}): Promise<ReviewQueueListResponse> {
+  const response = await apiClient.get<ReviewQueueListResponse>('/odds-collection/review-queue', {
+    params,
+  })
+  return response.data
+}
+
+export async function getReviewQueueStats(): Promise<ReviewQueueStats> {
+  const response = await apiClient.get<ReviewQueueStats>('/odds-collection/review-queue/stats')
+  return response.data
+}
+
+export async function attachReviewQueueItem(id: string, eventId: string): Promise<void> {
+  await apiClient.post(`/odds-collection/review-queue/${id}/attach`, { eventId })
+}
+
+export async function rejectReviewQueueItem(id: string): Promise<void> {
+  await apiClient.post(`/odds-collection/review-queue/${id}/reject`)
+}
+
+export async function getProviderBudget(): Promise<ProviderBudget> {
+  const response = await apiClient.get<ProviderBudget>(
+    '/odds-collection/review-queue/provider/budget',
+  )
+  return response.data
+}
+
+export async function triggerProviderSync(
+  sportKey: string,
+  type: 'catalog' | 'fixtures' | 'status' = 'fixtures',
+): Promise<{
+  type: string
+  leaguesSynced?: number
+  upserted?: number
+  updated?: number
+  apiCalls: number
+}> {
+  const response = await apiClient.post<{
+    type: string
+    leaguesSynced?: number
+    upserted?: number
+    updated?: number
+    apiCalls: number
+  }>(`/odds-collection/review-queue/provider/sync/${sportKey}`, null, { params: { type } })
+  return response.data
 }

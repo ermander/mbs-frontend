@@ -23,7 +23,8 @@ import {
   type BackfillOperatorResult,
   type CapitalSummary,
   type PayoutEntry,
-  type PayoutRecipient,
+  type DepositEntry,
+  type SeedProfitEntry,
 } from '@/services/api/admin-collaborators-client'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 
@@ -47,8 +48,10 @@ export default function BackofficeCollaboratoriPage() {
 
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
+  const allHolders = useProfitTrackerStore((s) => s.allHolders)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
+  const fetchAllHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -73,7 +76,8 @@ export default function BackofficeCollaboratoriPage() {
     void load()
     void fetchAllAccounts()
     void fetchWallets()
-  }, [load, fetchAllAccounts, fetchWallets])
+    void fetchAllHolders()
+  }, [load, fetchAllAccounts, fetchWallets, fetchAllHolders])
 
   const editing = useMemo(() => items.find((c) => c.id === editingId) ?? null, [items, editingId])
 
@@ -174,6 +178,7 @@ export default function BackofficeCollaboratoriPage() {
         onClose={() => setEditingId(null)}
         accounts={allAccounts}
         wallets={wallets}
+        holders={allHolders}
         onUpdated={() => {
           void load()
         }}
@@ -313,6 +318,7 @@ function EditCollaboratorDialog({
   onUpdated,
   accounts,
   wallets,
+  holders,
 }: {
   collaborator: Collaborator | null
   tab: 'data' | 'accounts' | 'wallets' | 'share' | 'capital'
@@ -321,7 +327,28 @@ function EditCollaboratorDialog({
   onUpdated: () => void
   accounts: Array<{ id: string; nome: string; holderId: string; bookId: string }>
   wallets: Array<{ id: string; nome: string; holderId: string }>
+  holders: Array<{ id: string; nome: string }>
 }) {
+  const holderById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const h of holders) map.set(h.id, h.nome)
+    return map
+  }, [holders])
+  const walletLabel = useCallback(
+    (w: { nome: string; holderId: string }) => {
+      const holderName = holderById.get(w.holderId)
+      return holderName ? `${w.nome} · ${holderName}` : w.nome
+    },
+    [holderById],
+  )
+  const accountLabel = useCallback(
+    (a: { nome: string; holderId: string }) => {
+      const holderName = holderById.get(a.holderId)
+      // accounts.nome è già "Book (Intestatario)" ma per coerenza la versione esplicita
+      return holderName && !a.nome.includes(holderName) ? `${a.nome} · ${holderName}` : a.nome
+    },
+    [holderById],
+  )
   const [shares, setShares] = useState<CollaboratorShares>({ accountIds: [], walletIds: [] })
   const [loadingShares, setLoadingShares] = useState(false)
   const [name, setName] = useState('')
@@ -508,8 +535,8 @@ function EditCollaboratorDialog({
 
   return (
     <Dialog open={!!collaborator} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{collaborator.name}</DialogTitle>
           <DialogDescription>
             Username: <span className="font-medium">{collaborator.username}</span>
@@ -520,7 +547,7 @@ function EditCollaboratorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-4 pt-2">
+        <div className="shrink-0 px-4 pt-3">
           <Tabs
             tabs={[
               { id: 'data', label: 'Dati' },
@@ -534,7 +561,7 @@ function EditCollaboratorDialog({
           />
         </div>
 
-        <div className="px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
           {tab === 'data' && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -609,7 +636,7 @@ function EditCollaboratorDialog({
                           onChange={() => toggleAccount(a.id)}
                         />
                         <Label htmlFor={`acc-${a.id}`} className="cursor-pointer text-sm">
-                          {a.nome}
+                          {accountLabel(a)}
                         </Label>
                       </li>
                     ))}
@@ -693,7 +720,7 @@ function EditCollaboratorDialog({
                           onChange={() => toggleWallet(w.id)}
                         />
                         <Label htmlFor={`wal-${w.id}`} className="cursor-pointer text-sm">
-                          {w.nome}
+                          {walletLabel(w)}
                         </Label>
                       </li>
                     ))}
@@ -709,10 +736,10 @@ function EditCollaboratorDialog({
           {tab === 'capital' && <CapitalPanel collaborator={collaborator} />}
         </div>
 
-        {err && <p className="px-4 text-sm text-destructive">{err}</p>}
-        {info && <p className="px-4 text-sm text-emerald-500">{info}</p>}
+        {err && <p className="shrink-0 px-4 pt-2 text-sm text-destructive">{err}</p>}
+        {info && <p className="shrink-0 px-4 pt-2 text-sm text-emerald-500">{info}</p>}
 
-        <DialogFooter className="p-4 pt-0">
+        <DialogFooter className="shrink-0 p-4 pt-3">
           <Button variant="outline" onClick={onClose}>
             Chiudi
           </Button>
@@ -726,45 +753,68 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
 
-const PAYOUT_LABELS: Record<PayoutRecipient, string> = {
-  admin: 'Prelievo tua quota',
-  collaborator: 'Pagamento collaboratore',
-}
-
 function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
   const wallets = useProfitTrackerStore((s) => s.wallets)
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
-  const [shares, setShares] = useState<{ walletIds: string[] }>({ walletIds: [] })
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
+  const allHolders = useProfitTrackerStore((s) => s.allHolders)
+  const fetchAllHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  const holderById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const h of allHolders) map.set(h.id, h.nome)
+    return map
+  }, [allHolders])
+  const [shares, setShares] = useState<CollaboratorShares>({ accountIds: [], walletIds: [] })
   const [summary, setSummary] = useState<CapitalSummary | null>(null)
   const [payouts, setPayouts] = useState<PayoutEntry[]>([])
+  const [deposits, setDeposits] = useState<DepositEntry[]>([])
+  const [seeds, setSeeds] = useState<SeedProfitEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
-  const [formRecipient, setFormRecipient] = useState<PayoutRecipient>('admin')
   const [formWalletId, setFormWalletId] = useState('')
   const [formAmount, setFormAmount] = useState('')
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
   const [formDescr, setFormDescr] = useState('')
 
+  const [depWalletId, setDepWalletId] = useState('')
+  const [depAmount, setDepAmount] = useState('')
+  const [depDate, setDepDate] = useState(new Date().toISOString().slice(0, 10))
+  const [depDescr, setDepDescr] = useState('')
+
+  const [seedAccountId, setSeedAccountId] = useState('')
+  const [seedAmount, setSeedAmount] = useState('')
+  const [seedDate, setSeedDate] = useState(new Date().toISOString().slice(0, 10))
+  const [seedDescr, setSeedDescr] = useState('')
+
   const sharedWallets = useMemo(
     () => wallets.filter((w) => shares.walletIds.includes(w.id)),
     [wallets, shares.walletIds],
+  )
+  const sharedAccounts = useMemo(
+    () => allAccounts.filter((a) => shares.accountIds.includes(a.id)),
+    [allAccounts, shares.accountIds],
   )
 
   const reload = useCallback(async () => {
     setLoading(true)
     setErr(null)
     try {
-      const [s, list, sh] = await Promise.all([
+      const [s, list, sh, seedList, depList] = await Promise.all([
         adminCollaboratorsClient.getCapitalSummary(collaborator.id),
         adminCollaboratorsClient.listPayouts(collaborator.id, { page: 1, limit: 100 }),
         adminCollaboratorsClient.getShares(collaborator.id),
+        adminCollaboratorsClient.listSeedProfits(collaborator.id),
+        adminCollaboratorsClient.listDeposits(collaborator.id, { page: 1, limit: 100 }),
       ])
       setSummary(s)
       setPayouts(list.items)
-      setShares({ walletIds: sh.walletIds })
+      setShares(sh)
+      setSeeds(seedList)
+      setDeposits(depList.items)
     } catch {
       setErr('Errore nel caricamento del capitale')
     } finally {
@@ -774,15 +824,130 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
 
   useEffect(() => {
     void fetchWallets()
+    void fetchAllAccounts()
+    void fetchAllHolders()
     void reload()
-  }, [reload, fetchWallets])
+  }, [reload, fetchWallets, fetchAllAccounts, fetchAllHolders])
 
-  // Seleziona automaticamente il primo wallet condiviso quando arrivano i dati
+  // Seleziona automaticamente il primo wallet/conto condiviso quando arrivano i dati
   useEffect(() => {
     if (!formWalletId && sharedWallets.length > 0) {
       setFormWalletId(sharedWallets[0].id)
     }
-  }, [sharedWallets, formWalletId])
+    if (!depWalletId && sharedWallets.length > 0) {
+      setDepWalletId(sharedWallets[0].id)
+    }
+  }, [sharedWallets, formWalletId, depWalletId])
+
+  useEffect(() => {
+    if (!seedAccountId && sharedAccounts.length > 0) {
+      setSeedAccountId(sharedAccounts[0].id)
+    }
+  }, [sharedAccounts, seedAccountId])
+
+  const submitDeposit = useCallback(async () => {
+    const amount = Number.parseFloat(depAmount.replace(',', '.'))
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setErr('Importo non valido')
+      return
+    }
+    if (!depWalletId) {
+      setErr('Seleziona un wallet condiviso su cui depositare')
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    setInfo(null)
+    try {
+      await adminCollaboratorsClient.createDeposit(collaborator.id, {
+        walletId: depWalletId,
+        amount,
+        dataRegistrazione: new Date(depDate).toISOString(),
+        descrizione: depDescr || undefined,
+      })
+      setDepAmount('')
+      setDepDescr('')
+      setInfo('Deposito registrato come capitale del collaboratore')
+      await reload()
+    } catch (e: unknown) {
+      const apiMsg = getApiErrorMessage(e)
+      setErr(apiMsg ?? 'Errore durante il salvataggio')
+    } finally {
+      setBusy(false)
+    }
+  }, [collaborator.id, depWalletId, depAmount, depDate, depDescr, reload])
+
+  const handleDeleteDeposit = useCallback(
+    async (movementId: string) => {
+      if (
+        typeof window !== 'undefined' &&
+        !window.confirm("Eliminare il deposito? Il saldo del wallet verrà ridotto dell'importo.")
+      )
+        return
+      setBusy(true)
+      setErr(null)
+      try {
+        await adminCollaboratorsClient.deleteDeposit(collaborator.id, movementId)
+        await reload()
+      } catch (e: unknown) {
+        const apiMsg = getApiErrorMessage(e)
+        setErr(apiMsg ?? "Errore durante l'eliminazione")
+      } finally {
+        setBusy(false)
+      }
+    },
+    [collaborator.id, reload],
+  )
+
+  const submitSeed = useCallback(async () => {
+    const amount = Number.parseFloat(seedAmount.replace(',', '.'))
+    if (!Number.isFinite(amount) || amount === 0) {
+      setErr('Importo non valido (diverso da zero)')
+      return
+    }
+    if (!seedAccountId) {
+      setErr('Seleziona un conto condiviso')
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    setInfo(null)
+    try {
+      await adminCollaboratorsClient.createSeedProfit(collaborator.id, {
+        accountId: seedAccountId,
+        amount,
+        dataRegistrazione: new Date(seedDate).toISOString(),
+        descrizione: seedDescr || undefined,
+      })
+      setSeedAmount('')
+      setSeedDescr('')
+      setInfo('Profitto pregresso registrato')
+      await reload()
+    } catch (e: unknown) {
+      const apiMsg = getApiErrorMessage(e)
+      setErr(apiMsg ?? 'Errore durante il salvataggio')
+    } finally {
+      setBusy(false)
+    }
+  }, [collaborator.id, seedAccountId, seedAmount, seedDate, seedDescr, reload])
+
+  const handleDeleteSeed = useCallback(
+    async (seedId: string) => {
+      if (typeof window !== 'undefined' && !window.confirm('Eliminare questo profitto pregresso?'))
+        return
+      setBusy(true)
+      setErr(null)
+      try {
+        await adminCollaboratorsClient.deleteSeedProfit(collaborator.id, seedId)
+        await reload()
+      } catch {
+        setErr("Errore durante l'eliminazione")
+      } finally {
+        setBusy(false)
+      }
+    },
+    [collaborator.id, reload],
+  )
 
   const submit = useCallback(async () => {
     const amount = Number.parseFloat(formAmount.replace(',', '.'))
@@ -801,24 +966,19 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
       await adminCollaboratorsClient.createPayout(collaborator.id, {
         walletId: formWalletId,
         amount,
-        recipient: formRecipient,
         dataRegistrazione: new Date(formDate).toISOString(),
         descrizione: formDescr || undefined,
       })
       setFormAmount('')
       setFormDescr('')
-      setInfo(
-        formRecipient === 'admin'
-          ? 'Prelievo registrato sulla tua quota'
-          : 'Pagamento al collaboratore registrato',
-      )
+      setInfo('Pagamento al collaboratore registrato')
       await reload()
     } catch (e) {
       setErr(getApiErrorMessage(e) ?? 'Errore durante il salvataggio')
     } finally {
       setBusy(false)
     }
-  }, [collaborator.id, formRecipient, formWalletId, formAmount, formDate, formDescr, reload])
+  }, [collaborator.id, formWalletId, formAmount, formDate, formDescr, reload])
 
   const handleDelete = useCallback(
     async (movementId: string) => {
@@ -870,7 +1030,6 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
                     : ''}
                   : {formatCurrency(summary.adminShareAmount)}
                 </li>
-                <li>Tuoi prelievi: -{formatCurrency(summary.adminWithdrawals)}</li>
               </ul>
             </div>
             <div className="rounded-lg border border-border bg-card p-3">
@@ -890,6 +1049,7 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
                   {summary.sharePercentage != null ? `(${summary.sharePercentage}%)` : ''}:{' '}
                   {formatCurrency(summary.collaboratorShareAmount)}
                 </li>
+                <li>Depositi accreditati: +{formatCurrency(summary.collaboratorCredits)}</li>
                 <li>Già pagato al collab: -{formatCurrency(summary.collaboratorWithdrawals)}</li>
               </ul>
             </div>
@@ -910,33 +1070,22 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
               </span>
             </div>
             <p className="mt-2 text-[11px] leading-snug">
-              Per aumentare il capitale ricarica un wallet condiviso dalla Gestione Conti (sezione
-              Wallet → Ricarica). Per prelevare tua quota o pagare il collaboratore, usa il form qui
-              sotto.
+              Il tuo capitale è derivato: cresce/cala automaticamente al variare dei saldi reali dei
+              conti/wallet condivisi (che restano comunque <strong>tuoi conti</strong>) e dei
+              profitti generati dal collab. Per movimentare il tuo capitale usa la Gestione Conti
+              come al solito (Ricarica/Spesa/Trasferimento). I form qui sotto registrano invece le
+              operazioni che riguardano <strong>il capitale del collaboratore</strong>.
             </p>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-3">
-            <p className="text-sm font-medium text-foreground">Nuovo payout</p>
+            <p className="text-sm font-medium text-foreground">Paga il collaboratore</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Crea un movimento reale di spesa sul wallet condiviso scelto. Il saldo del wallet
-              diminuisce dell&apos;importo indicato.
+              Registra il pagamento della quota dovuta al collaboratore. Crea un movimento reale di
+              spesa sul wallet condiviso scelto: il saldo del wallet diminuisce dell&apos;importo
+              indicato e il debito verso il collaboratore si riduce dello stesso ammontare.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="po-recipient" className="text-xs">
-                  Destinatario
-                </Label>
-                <select
-                  id="po-recipient"
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                  value={formRecipient}
-                  onChange={(e) => setFormRecipient(e.target.value as PayoutRecipient)}
-                >
-                  <option value="admin">Tua quota (admin)</option>
-                  <option value="collaborator">Quota collaboratore</option>
-                </select>
-              </div>
               <div className="space-y-1">
                 <Label htmlFor="po-wallet" className="text-xs">
                   Wallet (condiviso)
@@ -951,11 +1100,15 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
                   {sharedWallets.length === 0 ? (
                     <option value="">Nessun wallet condiviso</option>
                   ) : (
-                    sharedWallets.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.nome} ({w.saldoAttuale.toFixed(2)} €)
-                      </option>
-                    ))
+                    sharedWallets.map((w) => {
+                      const holderName = holderById.get(w.holderId)
+                      return (
+                        <option key={w.id} value={w.id}>
+                          {holderName ? `${w.nome} · ${holderName}` : w.nome} (
+                          {w.saldoAttuale.toFixed(2)} €)
+                        </option>
+                      )
+                    })
                   )}
                 </select>
               </div>
@@ -1000,18 +1153,94 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
               onClick={submit}
               disabled={busy || !formAmount || !formWalletId}
             >
-              Registra payout
+              Registra pagamento
             </Button>
           </div>
 
-          <div className="rounded-lg border border-border bg-card">
-            <p className="border-b border-border px-3 py-2 text-sm font-medium text-foreground">
-              Storico payout
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3">
+            <p className="text-sm font-medium text-foreground">
+              Deposito capitale del collaboratore
             </p>
-            {payouts.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-muted-foreground">Nessun payout registrato.</p>
-            ) : (
-              <div className="max-h-72 overflow-auto">
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Registra una ricarica di un wallet condiviso accreditata{' '}
+              <strong>interamente al collaboratore</strong> (es. soldi suoi versati nel pool, o
+              capitale che ha già guadagnato e che gli riconosci). Il saldo del wallet aumenta
+              dell&apos;importo indicato e il suo capitale cresce dello stesso ammontare. Niente
+              split sulla %.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="dep-wallet" className="text-xs">
+                  Wallet (condiviso)
+                </Label>
+                <select
+                  id="dep-wallet"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={depWalletId}
+                  onChange={(e) => setDepWalletId(e.target.value)}
+                  disabled={sharedWallets.length === 0}
+                >
+                  {sharedWallets.length === 0 ? (
+                    <option value="">Nessun wallet condiviso</option>
+                  ) : (
+                    sharedWallets.map((w) => {
+                      const holderName = holderById.get(w.holderId)
+                      return (
+                        <option key={w.id} value={w.id}>
+                          {holderName ? `${w.nome} · ${holderName}` : w.nome} (
+                          {w.saldoAttuale.toFixed(2)} €)
+                        </option>
+                      )
+                    })
+                  )}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dep-amount" className="text-xs">
+                  Importo (€)
+                </Label>
+                <Input
+                  id="dep-amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={depAmount}
+                  onChange={(e) => setDepAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dep-date" className="text-xs">
+                  Data
+                </Label>
+                <Input
+                  id="dep-date"
+                  type="date"
+                  value={depDate}
+                  onChange={(e) => setDepDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="dep-descr" className="text-xs">
+                  Descrizione (opzionale)
+                </Label>
+                <Input
+                  id="dep-descr"
+                  type="text"
+                  value={depDescr}
+                  onChange={(e) => setDepDescr(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              className="mt-3"
+              onClick={submitDeposit}
+              disabled={busy || !depAmount || !depWalletId}
+            >
+              Registra deposito
+            </Button>
+
+            {deposits.length > 0 && (
+              <div className="mt-4 overflow-x-auto rounded-md border border-border bg-card">
                 <table className="min-w-full text-sm">
                   <thead className="bg-muted/40">
                     <tr>
@@ -1019,7 +1248,212 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
                         Data
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">
-                        Tipo
+                        Wallet
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                        Importo
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                        Note
+                      </th>
+                      <th className="px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deposits.map((d) => (
+                      <tr key={d.id} className="border-t border-border">
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {new Date(d.dataRegistrazione).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{d.walletNome ?? '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono text-emerald-400">
+                          +{formatCurrency(d.amount)}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{d.descrizione ?? '—'}</td>
+                        <td className="px-3 py-2 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteDeposit(d.id)}
+                            disabled={busy}
+                          >
+                            Elimina
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="text-sm font-medium text-foreground">
+              Profitto pregresso del collaboratore
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Registra qui i profitti generati dal collaboratore <strong>prima</strong> di iniziare
+              a tracciare le sue giocate nel sistema. Il saldo del conto/wallet condiviso{' '}
+              <strong>non</strong> viene modificato (è già aggiornato sulla realtà); il sistema
+              riconosce X € come totale profitti del collaboratore e applica la sua quota{' '}
+              {summary.sharePercentage != null ? `(${summary.sharePercentage}%)` : ''} per
+              alimentare il suo capitale.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="seed-account" className="text-xs">
+                  Conto (condiviso)
+                </Label>
+                <select
+                  id="seed-account"
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={seedAccountId}
+                  onChange={(e) => setSeedAccountId(e.target.value)}
+                  disabled={sharedAccounts.length === 0}
+                >
+                  {sharedAccounts.length === 0 ? (
+                    <option value="">Nessun conto condiviso</option>
+                  ) : (
+                    sharedAccounts.map((a) => {
+                      const holderName = holderById.get(a.holderId)
+                      const label =
+                        holderName && !a.nome.includes(holderName)
+                          ? `${a.nome} · ${holderName}`
+                          : a.nome
+                      return (
+                        <option key={a.id} value={a.id}>
+                          {label}
+                        </option>
+                      )
+                    })
+                  )}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="seed-amount" className="text-xs">
+                  Importo lordo (€)
+                </Label>
+                <Input
+                  id="seed-amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={seedAmount}
+                  onChange={(e) => setSeedAmount(e.target.value)}
+                  placeholder="es. 200.00"
+                />
+                {Number.isFinite(Number.parseFloat(seedAmount.replace(',', '.'))) &&
+                  summary.sharePercentage != null && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Quota collab:{' '}
+                      {formatCurrency(
+                        (Number.parseFloat(seedAmount.replace(',', '.')) *
+                          summary.sharePercentage) /
+                          100,
+                      )}
+                    </p>
+                  )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="seed-date" className="text-xs">
+                  Data di riferimento
+                </Label>
+                <Input
+                  id="seed-date"
+                  type="date"
+                  value={seedDate}
+                  onChange={(e) => setSeedDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="seed-descr" className="text-xs">
+                  Descrizione (opzionale)
+                </Label>
+                <Input
+                  id="seed-descr"
+                  type="text"
+                  value={seedDescr}
+                  onChange={(e) => setSeedDescr(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              className="mt-3"
+              onClick={submitSeed}
+              disabled={busy || !seedAmount || !seedAccountId}
+            >
+              Registra profitto pregresso
+            </Button>
+
+            {seeds.length > 0 && (
+              <div className="mt-4 overflow-x-auto rounded-md border border-border bg-card">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                        Data
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                        Conto
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+                        Importo lordo
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                        Note
+                      </th>
+                      <th className="px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seeds.map((s) => (
+                      <tr key={s.id} className="border-t border-border">
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {new Date(s.dataRegistrazione).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-3 py-2 text-foreground">{s.accountNome ?? '—'}</td>
+                        <td
+                          className={`px-3 py-2 text-right font-mono ${
+                            s.amount >= 0 ? 'text-emerald-400' : 'text-destructive'
+                          }`}
+                        >
+                          {s.amount >= 0 ? '+' : ''}
+                          {formatCurrency(s.amount)}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{s.descrizione ?? '—'}</td>
+                        <td className="px-3 py-2 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteSeed(s.id)}
+                            disabled={busy}
+                          >
+                            Elimina
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-card">
+            <p className="border-b border-border px-3 py-2 text-sm font-medium text-foreground">
+              Storico pagamenti al collaboratore
+            </p>
+            {payouts.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-muted-foreground">
+                Nessun pagamento al collaboratore registrato.
+              </p>
+            ) : (
+              <div className="max-h-72 overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                        Data
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                         Wallet
@@ -1039,7 +1473,6 @@ function CapitalPanel({ collaborator }: { collaborator: Collaborator }) {
                         <td className="px-3 py-2 text-muted-foreground">
                           {new Date(p.dataRegistrazione).toLocaleDateString('it-IT')}
                         </td>
-                        <td className="px-3 py-2 text-foreground">{PAYOUT_LABELS[p.recipient]}</td>
                         <td className="px-3 py-2 text-muted-foreground">{p.walletNome ?? '—'}</td>
                         <td className="px-3 py-2 text-right font-mono text-destructive">
                           -{formatCurrency(p.amount)}

@@ -13,6 +13,7 @@ import { WalletCreateModal } from '@/components/profit-tracker/wallet-create-mod
 import { WalletEditModal } from '@/components/profit-tracker/wallet-edit-modal'
 import { WalletTransferModal } from '@/components/profit-tracker/wallet-transfer-modal'
 import { WalletTopupExpenseModal } from '@/components/profit-tracker/wallet-topup-expense-modal'
+import { useAuthStore } from '@/stores/auth-store'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
 import type { Wallet } from '@/types/profit-tracker'
 
@@ -31,6 +32,9 @@ export default function WalletsPage() {
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const updateWallet = useProfitTrackerStore((s) => s.updateWallet)
+
+  const userRole = useAuthStore((s) => s.user?.role)
+  const isCollaborator = userRole === 'COLLABORATOR_ROLE'
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -100,27 +104,29 @@ export default function WalletsPage() {
       sectionTitle="Wallets"
       sectionDescription="Configura e monitora i metodi di pagamento e la liquidità disponibile."
       actions={
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => setTransferOpen(true)}
-            className="w-full sm:w-auto"
-          >
-            Trasferisci
-          </Button>
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => setTopupOpen(true)}
-            className="w-full sm:w-auto"
-          >
-            Ricarica/Spesa
-          </Button>
-          <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
-            Nuovo wallet
-          </Button>
-        </div>
+        isCollaborator ? null : (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setTransferOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              Trasferisci
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setTopupOpen(true)}
+              className="w-full sm:w-auto"
+            >
+              Ricarica/Spesa
+            </Button>
+            <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
+              Nuovo wallet
+            </Button>
+          </div>
+        )
       }
     >
       <div

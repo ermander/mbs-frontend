@@ -209,7 +209,9 @@ export interface WalletMovement {
   toWalletId?: string
   valore: number
   dataRegistrazione: string
-  descrizione?: string
+  descrizione?: string | null
+  payoutToUserId?: string | null
+  creditToUserId?: string | null
 }
 
 export interface Tag {

@@ -261,7 +261,9 @@ export interface CreateWalletMovementPayload {
   toWalletId?: string
   valore: number
   dataRegistrazione: string
-  descrizione?: string
+  descrizione?: string | null
+  payoutToUserId?: string | null
+  creditToUserId?: string | null
 }
 
 export async function createWalletMovement(

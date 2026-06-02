@@ -49,8 +49,6 @@ export interface BackfillOperatorResult {
   quickBetsUpdated: number
 }
 
-export type PayoutRecipient = 'admin' | 'collaborator'
-
 export interface PayoutEntry {
   id: string
   walletId: string | null
@@ -58,14 +56,29 @@ export interface PayoutEntry {
   amount: number
   dataRegistrazione: string
   descrizione: string | null
-  recipient: PayoutRecipient
   createdAt: string
 }
 
 export interface CreatePayoutPayload {
   walletId: string
   amount: number
-  recipient: PayoutRecipient
+  dataRegistrazione?: string
+  descrizione?: string | null
+}
+
+export interface SeedProfitEntry {
+  id: string
+  accountId: string
+  accountNome: string | null
+  amount: number
+  dataRegistrazione: string
+  descrizione: string | null
+  createdAt: string
+}
+
+export interface CreateSeedProfitPayload {
+  accountId: string
+  amount: number
   dataRegistrazione?: string
   descrizione?: string | null
 }
@@ -78,11 +91,28 @@ export interface CapitalSummary {
   poolAccountsBalance: number
   poolWalletsBalance: number
   poolTotalBalance: number
-  adminWithdrawals: number
   collaboratorWithdrawals: number
+  collaboratorCredits: number
   adminCapital: number
   collaboratorCapital: number
   totalCapital: number
+}
+
+export interface DepositEntry {
+  id: string
+  walletId: string | null
+  walletNome: string | null
+  amount: number
+  dataRegistrazione: string
+  descrizione: string | null
+  createdAt: string
+}
+
+export interface CreateDepositPayload {
+  walletId: string
+  amount: number
+  dataRegistrazione?: string
+  descrizione?: string | null
 }
 
 export const adminCollaboratorsClient = {
@@ -165,7 +195,7 @@ export const adminCollaboratorsClient = {
 
   async listPayouts(
     id: string,
-    params?: { page?: number; limit?: number; recipient?: PayoutRecipient },
+    params?: { page?: number; limit?: number },
   ): Promise<{ items: PayoutEntry[]; total: number; page: number; limit: number }> {
     const { data } = await apiClient.get<{
       items: PayoutEntry[]
@@ -186,5 +216,49 @@ export const adminCollaboratorsClient = {
 
   async deletePayout(id: string, movementId: string): Promise<void> {
     await apiClient.delete(`/admin/collaborators/${id}/capital/payouts/${movementId}`)
+  },
+
+  async listDeposits(
+    id: string,
+    params?: { page?: number; limit?: number },
+  ): Promise<{ items: DepositEntry[]; total: number; page: number; limit: number }> {
+    const { data } = await apiClient.get<{
+      items: DepositEntry[]
+      total: number
+      page: number
+      limit: number
+    }>(`/admin/collaborators/${id}/capital/deposits`, { params: params ?? {} })
+    return data
+  },
+
+  async createDeposit(id: string, payload: CreateDepositPayload): Promise<DepositEntry> {
+    const { data } = await apiClient.post<{ item: DepositEntry }>(
+      `/admin/collaborators/${id}/capital/deposits`,
+      payload,
+    )
+    return data.item
+  },
+
+  async deleteDeposit(id: string, movementId: string): Promise<void> {
+    await apiClient.delete(`/admin/collaborators/${id}/capital/deposits/${movementId}`)
+  },
+
+  async listSeedProfits(id: string): Promise<SeedProfitEntry[]> {
+    const { data } = await apiClient.get<{ items: SeedProfitEntry[] }>(
+      `/admin/collaborators/${id}/capital/seed-profits`,
+    )
+    return data.items
+  },
+
+  async createSeedProfit(id: string, payload: CreateSeedProfitPayload): Promise<SeedProfitEntry> {
+    const { data } = await apiClient.post<{ item: SeedProfitEntry }>(
+      `/admin/collaborators/${id}/capital/seed-profits`,
+      payload,
+    )
+    return data.item
+  },
+
+  async deleteSeedProfit(id: string, seedId: string): Promise<void> {
+    await apiClient.delete(`/admin/collaborators/${id}/capital/seed-profits/${seedId}`)
   },
 }

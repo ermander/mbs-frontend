@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-import { Wallet as WalletIcon } from 'lucide-react'
+import { Wallet as WalletIcon, Lock, LockOpen } from 'lucide-react'
+import { updateWallet as apiUpdateWallet } from '@/services/api/profit-tracker-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,7 @@ import { WalletTransferModal } from '@/components/profit-tracker/wallet-transfer
 import { WalletTopupExpenseModal } from '@/components/profit-tracker/wallet-topup-expense-modal'
 import { useAuthStore } from '@/stores/auth-store'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
+import { adminCollaboratorsClient } from '@/services/api/admin-collaborators-client'
 import type { Wallet } from '@/types/profit-tracker'
 
 const PER_PAGE = 20
@@ -35,6 +37,69 @@ export default function WalletsPage() {
 
   const userRole = useAuthStore((s) => s.user?.role)
   const isCollaborator = userRole === 'COLLABORATOR_ROLE'
+  const isAdmin = userRole === 'ADMIN_ROLE'
+  const [collaboratorNameById, setCollaboratorNameById] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!isAdmin) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const list = await adminCollaboratorsClient.list()
+        if (cancelled) return
+        const map: Record<string, string> = {}
+        for (const c of list) map[c.id] = c.name
+        setCollaboratorNameById(map)
+      } catch {
+        // tooltip senza nomi se la fetch fallisce
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  const renderSharedBadge = (ids: string[] | undefined) => {
+    if (!isAdmin || !ids || ids.length === 0) return null
+    const names = ids.map((id) => collaboratorNameById[id] ?? '…').join(', ')
+    return (
+      <StatusBadge variant="shared" title={`Condiviso con: ${names}`}>
+        Condiviso
+      </StatusBadge>
+    )
+  }
+
+  const toggleBloccato = async (id: string, current: boolean) => {
+    try {
+      const updated = await apiUpdateWallet(id, { bloccato: !current })
+      updateWallet(id, { bloccato: updated.bloccato })
+    } catch {
+      // silently ignore — toggle non riuscito
+    }
+  }
+
+  const renderBloccatoToggle = (id: string, current: boolean) => {
+    if (!isAdmin) return current ? <StatusBadge variant="blocked">Bloccato</StatusBadge> : null
+    return (
+      <button
+        type="button"
+        title={
+          current ? 'Wallet bloccato — clicca per sbloccare' : 'Clicca per segnare come bloccato'
+        }
+        aria-label={current ? 'Sblocca wallet' : 'Blocca wallet'}
+        onClick={() => void toggleBloccato(id, current)}
+        className={
+          'inline-flex h-6 items-center gap-1 rounded-pill border px-2 text-[11px] font-medium transition-colors ' +
+          (current
+            ? 'border-amber-500/30 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+            : 'border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/60')
+        }
+      >
+        {current ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+        {current ? 'Bloccato' : 'Libero'}
+      </button>
+    )
+  }
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -46,6 +111,7 @@ export default function WalletsPage() {
   const [walletNameFilter, setWalletNameFilter] = useState('')
   const [descrizioneFilter, setDescrizioneFilter] = useState('')
   const [filterStato, setFilterStato] = useState('')
+  const [filterBloccato, setFilterBloccato] = useState<'' | 'solo' | 'no'>('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
 
@@ -56,6 +122,8 @@ export default function WalletsPage() {
     const filteredList = wallets.filter((wallet) => {
       if (holderIds.length > 0 && !holderIds.includes(wallet.holderId)) return false
       if (filterStato && wallet.stato !== filterStato) return false
+      if (filterBloccato === 'solo' && !wallet.bloccato) return false
+      if (filterBloccato === 'no' && wallet.bloccato) return false
       return (
         matchFilter(wallet.nome, walletNameFilter) &&
         matchFilter(wallet.descrizione, descrizioneFilter)
@@ -74,7 +142,16 @@ export default function WalletsPage() {
       total: totalCount,
       maxPage: maxPageNum,
     }
-  }, [wallets, holderIds, walletNameFilter, descrizioneFilter, filterStato, sortOrder, page])
+  }, [
+    wallets,
+    holderIds,
+    walletNameFilter,
+    descrizioneFilter,
+    filterStato,
+    filterBloccato,
+    sortOrder,
+    page,
+  ])
 
   const onWalletNameFilterChange = (value: string) => {
     setWalletNameFilter(value)
@@ -202,6 +279,24 @@ export default function WalletsPage() {
             <option value="disabilitato">Non abilitato</option>
           </select>
         </div>
+        <div className="space-y-1.5 sm:min-w-[160px]">
+          <Label htmlFor="filter-bloccato-wallet" className="text-xs">
+            Bloccato
+          </Label>
+          <select
+            id="filter-bloccato-wallet"
+            value={filterBloccato}
+            onChange={(e) => {
+              setFilterBloccato(e.target.value as '' | 'solo' | 'no')
+              setPage(1)
+            }}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">Tutti</option>
+            <option value="solo">Solo bloccati</option>
+            <option value="no">Non bloccati</option>
+          </select>
+        </div>
       </div>
 
       <div className="block space-y-4 sm:hidden">
@@ -232,18 +327,22 @@ export default function WalletsPage() {
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Stato</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateWallet(wallet.id, {
-                      stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                    })
-                  }
-                >
-                  <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
-                    {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
-                  </StatusBadge>
-                </button>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateWallet(wallet.id, {
+                        stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                      })
+                    }
+                  >
+                    <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
+                      {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                    </StatusBadge>
+                  </button>
+                  {renderBloccatoToggle(wallet.id, wallet.bloccato === true)}
+                  {renderSharedBadge(wallet.sharedWithCollaboratorIds)}
+                </div>
               </div>
             </div>
             <div className="mt-4 border-t border-border/60 pt-3">
@@ -317,18 +416,22 @@ export default function WalletsPage() {
                   {wallet.saldoAttuale.toFixed(2)} €
                 </td>
                 <td className="px-3 py-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateWallet(wallet.id, {
-                        stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                      })
-                    }
-                  >
-                    <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
-                      {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
-                    </StatusBadge>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateWallet(wallet.id, {
+                          stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                        })
+                      }
+                    >
+                      <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
+                        {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                      </StatusBadge>
+                    </button>
+                    {renderBloccatoToggle(wallet.id, wallet.bloccato === true)}
+                    {renderSharedBadge(wallet.sharedWithCollaboratorIds)}
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-2">

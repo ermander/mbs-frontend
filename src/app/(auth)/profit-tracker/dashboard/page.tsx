@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Scale, Wallet, Loader2, Banknote, PieChart, UserCog } from 'lucide-react'
+import { Scale, Wallet, Loader2, Banknote, PieChart, UserCog, Lock } from 'lucide-react'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -88,7 +88,22 @@ export default function ProfitTrackerDashboardPage() {
     const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
     const saldoWallets = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
     const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorsoValue
-    return { saldoBookmakers, saldoWallets, puntateInCorso: puntateInCorsoValue, saldoTotale }
+    const saldoBloccatoConti = allAccounts
+      .filter((a) => a.bloccato)
+      .reduce((sum, a) => sum + a.saldoAttuale, 0)
+    const saldoBloccatoWallets = wallets
+      .filter((w) => w.bloccato)
+      .reduce((sum, w) => sum + w.saldoAttuale, 0)
+    const saldoBloccato = saldoBloccatoConti + saldoBloccatoWallets
+    return {
+      saldoBookmakers,
+      saldoWallets,
+      puntateInCorso: puntateInCorsoValue,
+      saldoTotale,
+      saldoBloccato,
+      saldoBloccatoConti,
+      saldoBloccatoWallets,
+    }
   }, [allAccounts, wallets, puntateInCorsoValue])
 
   const kpi = useMemo(() => {
@@ -137,7 +152,7 @@ export default function ProfitTrackerDashboardPage() {
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Bilancio
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -162,6 +177,23 @@ export default function ProfitTrackerDashboardPage() {
             </div>
             <div className={BALANCE_ICON_CLASS}>
               <Wallet className="size-full" />
+            </div>
+          </div>
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Saldo bloccato
+              </p>
+              <p className="mt-2 font-mono text-2xl font-semibold text-amber-400">
+                {formatCurrency(bilancio.saldoBloccato)}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Conti: {formatCurrency(bilancio.saldoBloccatoConti)} · Wallet:{' '}
+                {formatCurrency(bilancio.saldoBloccatoWallets)}
+              </p>
+            </div>
+            <div className="size-8 rounded-full bg-amber-500/15 p-1.5 text-amber-400">
+              <Lock className="size-full" />
             </div>
           </div>
           <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">

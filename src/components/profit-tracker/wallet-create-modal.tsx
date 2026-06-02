@@ -171,6 +171,7 @@ export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: Walle
       descrizione: payload.descrizione || undefined,
       saldoAttuale: payload.saldoIniziale,
       stato: payload.stato,
+      bloccato: false,
     })
     onOpenChange(false)
   }

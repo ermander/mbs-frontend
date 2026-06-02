@@ -141,7 +141,7 @@ interface ProfitTrackerState {
 
   updateAccount: (
     id: string,
-    patch: Partial<Pick<Account, 'nome' | 'descrizione' | 'stato'>>,
+    patch: Partial<Pick<Account, 'nome' | 'descrizione' | 'stato' | 'bloccato'>>,
   ) => Promise<void>
 
   updateWallet: (id: string, patch: Partial<Wallet>) => void
@@ -473,6 +473,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           holderIds: params?.holderIds,
           bookIds: params?.bookIds,
           status: params?.status,
+          blocked: params?.blocked,
         })
         set(() => ({ accounts: items, accountsTotal: total, isLoadingAccounts: false }))
       } catch (error: unknown) {
@@ -538,6 +539,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           nome: patch.nome,
           descrizione: patch.descrizione,
           stato: patch.stato,
+          bloccato: patch.bloccato,
         })
         set((state) => ({
           accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),

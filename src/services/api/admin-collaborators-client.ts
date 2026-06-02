@@ -34,21 +34,6 @@ export interface UpdateCollaboratorPayload {
   status?: 'active' | 'disabled'
 }
 
-export interface BackfillOperatorPayload {
-  accountIds: string[]
-  fromDate?: string
-  toDate?: string
-  onlyUnassigned?: boolean
-}
-
-export interface BackfillOperatorResult {
-  ongoingBetsUpdated: number
-  betLegsUpdated: number
-  accountMovementsUpdated: number
-  ledgerUpdated: number
-  quickBetsUpdated: number
-}
-
 export interface PayoutEntry {
   id: string
   walletId: string | null
@@ -171,17 +156,6 @@ export const adminCollaboratorsClient = {
     const { data } = await apiClient.put<{ item: CollaboratorShares }>(
       `/admin/collaborators/${id}/wallet-shares`,
       { ids },
-    )
-    return data.item
-  },
-
-  async backfillOperator(
-    id: string,
-    payload: BackfillOperatorPayload,
-  ): Promise<BackfillOperatorResult> {
-    const { data } = await apiClient.post<{ item: BackfillOperatorResult }>(
-      `/admin/collaborators/${id}/backfill-operator`,
-      payload,
     )
     return data.item
   },

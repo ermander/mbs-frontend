@@ -25,6 +25,7 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
 
   const [stato, setStato] = useState<EnabledStatus>(account.stato)
   const [descrizione, setDescrizione] = useState(account.descrizione ?? '')
+  const [bloccato, setBloccato] = useState<boolean>(account.bloccato === true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
 
@@ -32,8 +33,9 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
     if (!open) return
     setStato(account.stato)
     setDescrizione(account.descrizione ?? '')
+    setBloccato(account.bloccato === true)
     setError(undefined)
-  }, [open, account.stato, account.descrizione])
+  }, [open, account.stato, account.descrizione, account.bloccato])
 
   const handleClose = (nextOpen: boolean) => {
     if (!nextOpen || !isSaving) {
@@ -48,6 +50,7 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
       await updateAccount(account.id, {
         stato,
         descrizione: descrizione.trim() === '' ? undefined : descrizione.trim(),
+        bloccato,
       })
       onOpenChange(false)
     } catch (e) {
@@ -58,7 +61,10 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
     }
   }
 
-  const hasChanges = stato !== account.stato || (account.descrizione ?? '') !== descrizione.trim()
+  const hasChanges =
+    stato !== account.stato ||
+    (account.descrizione ?? '') !== descrizione.trim() ||
+    bloccato !== (account.bloccato === true)
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -96,6 +102,22 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
               onChange={(e) => setDescrizione(e.target.value)}
             />
           </div>
+
+          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 cursor-pointer"
+              checked={bloccato}
+              onChange={(e) => setBloccato(e.target.checked)}
+            />
+            <span className="space-y-0.5">
+              <span className="block font-medium text-foreground">Conto bloccato</span>
+              <span className="block text-muted-foreground">
+                Segnala che il sito ha bloccato il conto. Il saldo viene incluso nella card
+                &quot;Saldo bloccato&quot; della dashboard. Non limita l&apos;operatività.
+              </span>
+            </span>
+          </label>
 
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>

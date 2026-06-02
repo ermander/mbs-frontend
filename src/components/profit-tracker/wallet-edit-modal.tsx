@@ -29,6 +29,7 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
 
   const [descrizione, setDescrizione] = useState('')
   const [stato, setStato] = useState<EnabledStatus>('abilitato')
+  const [bloccato, setBloccato] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,6 +40,7 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
     if (open && wallet) {
       setDescrizione(wallet.descrizione ?? '')
       setStato(wallet.stato)
+      setBloccato(wallet.bloccato === true)
       setError(null)
     }
   }, [open, wallet])
@@ -51,10 +53,12 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
       const updated = await apiUpdateWallet(wallet.id, {
         descrizione: descrizione.trim() || null,
         stato,
+        bloccato,
       })
       updateWallet(wallet.id, {
         descrizione: updated.descrizione ?? undefined,
         stato: updated.stato,
+        bloccato: updated.bloccato,
       })
       onOpenChange(false)
     } catch (err: unknown) {
@@ -123,6 +127,21 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
                   <option value="disabilitato">Non abilitato</option>
                 </select>
               </div>
+              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 cursor-pointer"
+                  checked={bloccato}
+                  onChange={(e) => setBloccato(e.target.checked)}
+                />
+                <span className="space-y-0.5">
+                  <span className="block font-medium text-foreground">Wallet bloccato</span>
+                  <span className="block text-muted-foreground">
+                    Segnala che il provider ha bloccato il wallet. Il saldo viene incluso nella card
+                    &quot;Saldo bloccato&quot; della dashboard. Non limita l&apos;operatività.
+                  </span>
+                </span>
+              </label>
               {error != null && (
                 <p className="text-xs text-destructive" role="alert">
                   {error}

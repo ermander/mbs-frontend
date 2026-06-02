@@ -20,7 +20,6 @@ import {
   adminCollaboratorsClient,
   type Collaborator,
   type CollaboratorShares,
-  type BackfillOperatorResult,
   type CapitalSummary,
   type PayoutEntry,
   type DepositEntry,
@@ -357,9 +356,8 @@ function EditCollaboratorDialog({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-  const [backfillFrom, setBackfillFrom] = useState('')
-  const [backfillTo, setBackfillTo] = useState('')
-  const [backfillResult, setBackfillResult] = useState<BackfillOperatorResult | null>(null)
+  const [accountQuery, setAccountQuery] = useState('')
+  const [walletQuery, setWalletQuery] = useState('')
 
   useEffect(() => {
     if (collaborator) {
@@ -372,9 +370,8 @@ function EditCollaboratorDialog({
       )
       setErr(null)
       setInfo(null)
-      setBackfillFrom('')
-      setBackfillTo('')
-      setBackfillResult(null)
+      setAccountQuery('')
+      setWalletQuery('')
       setLoadingShares(true)
       adminCollaboratorsClient
         .getShares(collaborator.id)
@@ -458,44 +455,6 @@ function EditCollaboratorDialog({
       setBusy(false)
     }
   }, [collaborator, shares.accountIds, onUpdated])
-
-  const runBackfill = useCallback(async () => {
-    if (!collaborator) return
-    if (shares.accountIds.length === 0) {
-      setErr('Nessun conto condiviso: condividi prima i conti, poi esegui il backfill')
-      return
-    }
-    const confirmMsg = `Riassegnare a ${collaborator.name} le operazioni pregresse senza operatore${
-      backfillFrom || backfillTo ? ' nel periodo selezionato' : ''
-    } sui ${shares.accountIds.length} conti condivisi? L'azione è reversibile solo manualmente.`
-    if (typeof window !== 'undefined' && !window.confirm(confirmMsg)) return
-
-    setBusy(true)
-    setErr(null)
-    setInfo(null)
-    setBackfillResult(null)
-    try {
-      const result = await adminCollaboratorsClient.backfillOperator(collaborator.id, {
-        accountIds: shares.accountIds,
-        fromDate: backfillFrom ? new Date(backfillFrom).toISOString() : undefined,
-        toDate: backfillTo ? new Date(backfillTo + 'T23:59:59').toISOString() : undefined,
-        onlyUnassigned: true,
-      })
-      setBackfillResult(result)
-      const total =
-        result.ongoingBetsUpdated +
-        result.betLegsUpdated +
-        result.accountMovementsUpdated +
-        result.ledgerUpdated +
-        result.quickBetsUpdated
-      setInfo(`Backfill completato: ${total} righe aggiornate.`)
-      onUpdated()
-    } catch (e) {
-      setErr(getApiErrorMessage(e) ?? 'Errore durante il backfill')
-    } finally {
-      setBusy(false)
-    }
-  }, [collaborator, shares.accountIds, backfillFrom, backfillTo, onUpdated])
 
   const saveWallets = useCallback(async () => {
     if (!collaborator) return
@@ -621,82 +580,57 @@ function EditCollaboratorDialog({
               <p className="text-sm text-muted-foreground">
                 Seleziona i conti che il collaboratore potrà gestire (deposito/prelievo + giocate).
               </p>
-              <div className="max-h-72 overflow-auto rounded border border-border">
-                {loadingShares ? (
-                  <p className="p-3 text-sm text-muted-foreground">Caricamento...</p>
-                ) : accounts.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">Nessun conto disponibile.</p>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {accounts.map((a) => (
-                      <li key={a.id} className="flex items-center gap-2 px-3 py-2">
-                        <Checkbox
-                          id={`acc-${a.id}`}
-                          checked={shares.accountIds.includes(a.id)}
-                          onChange={() => toggleAccount(a.id)}
-                        />
-                        <Label htmlFor={`acc-${a.id}`} className="cursor-pointer text-sm">
-                          {accountLabel(a)}
-                        </Label>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <Input
+                type="search"
+                placeholder="Cerca conto, intestatario, book..."
+                value={accountQuery}
+                onChange={(e) => setAccountQuery(e.target.value)}
+              />
+              {(() => {
+                const q = accountQuery.trim().toLowerCase()
+                const filtered = q
+                  ? accounts.filter((a) => accountLabel(a).toLowerCase().includes(q))
+                  : accounts
+                return (
+                  <>
+                    <div className="max-h-72 overflow-auto rounded border border-border">
+                      {loadingShares ? (
+                        <p className="p-3 text-sm text-muted-foreground">Caricamento...</p>
+                      ) : accounts.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">
+                          Nessun conto disponibile.
+                        </p>
+                      ) : filtered.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">
+                          Nessun conto corrisponde alla ricerca.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-border">
+                          {filtered.map((a) => (
+                            <li key={a.id} className="flex items-center gap-2 px-3 py-2">
+                              <Checkbox
+                                id={`acc-${a.id}`}
+                                checked={shares.accountIds.includes(a.id)}
+                                onChange={() => toggleAccount(a.id)}
+                              />
+                              <Label htmlFor={`acc-${a.id}`} className="cursor-pointer text-sm">
+                                {accountLabel(a)}
+                              </Label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {shares.accountIds.length} selezionati · {filtered.length} visibili su{' '}
+                      {accounts.length} totali
+                    </p>
+                  </>
+                )
+              })()}
               <Button onClick={saveAccounts} disabled={busy || loadingShares}>
                 Salva conti condivisi
               </Button>
-
-              <div className="mt-6 rounded-md border border-border bg-muted/30 p-3">
-                <p className="text-sm font-medium text-foreground">Backfill operazioni pregresse</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Riassegna a questo collaboratore tutte le giocate, movimenti conto e quick bet già
-                  esistenti sui conti condivisi sopra, dove l&apos;operatore non è ancora impostato.
-                  Utile per ricostruire lo storico quando il collaboratore è stato aggiunto dopo
-                  l&apos;inizio dell&apos;attività.
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="bf-from" className="text-xs">
-                      Dal (opzionale)
-                    </Label>
-                    <Input
-                      id="bf-from"
-                      type="date"
-                      value={backfillFrom}
-                      onChange={(e) => setBackfillFrom(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="bf-to" className="text-xs">
-                      Al (opzionale)
-                    </Label>
-                    <Input
-                      id="bf-to"
-                      type="date"
-                      value={backfillTo}
-                      onChange={(e) => setBackfillTo(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button
-                  className="mt-3"
-                  variant="outline"
-                  onClick={runBackfill}
-                  disabled={busy || loadingShares || shares.accountIds.length === 0}
-                >
-                  Esegui backfill
-                </Button>
-                {backfillResult && (
-                  <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <li>Giocate aggiornate: {backfillResult.ongoingBetsUpdated}</li>
-                    <li>Leg aggiornate: {backfillResult.betLegsUpdated}</li>
-                    <li>Movimenti conto aggiornati: {backfillResult.accountMovementsUpdated}</li>
-                    <li>Settlement (ledger) aggiornati: {backfillResult.ledgerUpdated}</li>
-                    <li>Quick bet aggiornate: {backfillResult.quickBetsUpdated}</li>
-                  </ul>
-                )}
-              </div>
             </div>
           )}
 
@@ -705,28 +639,54 @@ function EditCollaboratorDialog({
               <p className="text-sm text-muted-foreground">
                 Seleziona i wallet che il collaboratore potrà usare nei deposito/prelievo.
               </p>
-              <div className="max-h-72 overflow-auto rounded border border-border">
-                {loadingShares ? (
-                  <p className="p-3 text-sm text-muted-foreground">Caricamento...</p>
-                ) : wallets.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">Nessun wallet disponibile.</p>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {wallets.map((w) => (
-                      <li key={w.id} className="flex items-center gap-2 px-3 py-2">
-                        <Checkbox
-                          id={`wal-${w.id}`}
-                          checked={shares.walletIds.includes(w.id)}
-                          onChange={() => toggleWallet(w.id)}
-                        />
-                        <Label htmlFor={`wal-${w.id}`} className="cursor-pointer text-sm">
-                          {walletLabel(w)}
-                        </Label>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <Input
+                type="search"
+                placeholder="Cerca wallet o intestatario..."
+                value={walletQuery}
+                onChange={(e) => setWalletQuery(e.target.value)}
+              />
+              {(() => {
+                const q = walletQuery.trim().toLowerCase()
+                const filtered = q
+                  ? wallets.filter((w) => walletLabel(w).toLowerCase().includes(q))
+                  : wallets
+                return (
+                  <>
+                    <div className="max-h-72 overflow-auto rounded border border-border">
+                      {loadingShares ? (
+                        <p className="p-3 text-sm text-muted-foreground">Caricamento...</p>
+                      ) : wallets.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">
+                          Nessun wallet disponibile.
+                        </p>
+                      ) : filtered.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">
+                          Nessun wallet corrisponde alla ricerca.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-border">
+                          {filtered.map((w) => (
+                            <li key={w.id} className="flex items-center gap-2 px-3 py-2">
+                              <Checkbox
+                                id={`wal-${w.id}`}
+                                checked={shares.walletIds.includes(w.id)}
+                                onChange={() => toggleWallet(w.id)}
+                              />
+                              <Label htmlFor={`wal-${w.id}`} className="cursor-pointer text-sm">
+                                {walletLabel(w)}
+                              </Label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {shares.walletIds.length} selezionati · {filtered.length} visibili su{' '}
+                      {wallets.length} totali
+                    </p>
+                  </>
+                )
+              })()}
               <Button onClick={saveWallets} disabled={busy || loadingShares}>
                 Salva wallet condivisi
               </Button>

@@ -174,6 +174,7 @@ export interface GetAccountsParams {
   /** Comma-separated book IDs for multi-select filter */
   bookIds?: string
   status?: string
+  blocked?: boolean
   page?: number
   limit?: number
   sortSaldo?: 'asc' | 'desc'
@@ -200,6 +201,7 @@ export interface UpdateAccountPayload {
   nome?: string
   descrizione?: string | null
   stato?: EnabledStatus
+  bloccato?: boolean
 }
 
 export async function updateAccount(id: string, payload: UpdateAccountPayload): Promise<Account> {
@@ -226,8 +228,10 @@ export async function createWallet(payload: CreateWalletPayload): Promise<Wallet
 }
 
 export interface UpdateWalletPayload {
+  nome?: string
   descrizione?: string | null
   stato?: EnabledStatus
+  bloccato?: boolean
 }
 
 export async function updateWallet(id: string, payload: UpdateWalletPayload): Promise<Wallet> {

@@ -2,16 +2,18 @@
 
 import { useEffect, useCallback, useMemo, useState } from 'react'
 
-import { Scale } from 'lucide-react'
+import { Scale, Lock, LockOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { AccountCreateModal } from '@/components/profit-tracker/account-create-modal'
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import { AccountEditModal } from '@/components/profit-tracker/account-edit-modal'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
+import { adminCollaboratorsClient } from '@/services/api/admin-collaborators-client'
 
 const PAGE_SIZE = 20
 
@@ -37,7 +39,64 @@ export default function ContiPage() {
   const [holderIds, setHolderIds] = useState<string[]>([])
   const [bookIds, setBookIds] = useState<string[]>([])
   const [filterStato, setFilterStato] = useState('')
+  const [filterBloccato, setFilterBloccato] = useState<'' | 'solo' | 'no'>('')
   const [sortSaldo, setSortSaldo] = useState<'asc' | 'desc'>('desc')
+
+  const userRole = useAuthStore((s) => s.user?.role)
+  const isAdmin = userRole === 'ADMIN_ROLE'
+  const [collaboratorNameById, setCollaboratorNameById] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!isAdmin) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const list = await adminCollaboratorsClient.list()
+        if (cancelled) return
+        const map: Record<string, string> = {}
+        for (const c of list) map[c.id] = c.name
+        setCollaboratorNameById(map)
+      } catch {
+        // tooltip senza nomi se la fetch fallisce
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  const renderSharedBadge = (ids: string[] | undefined) => {
+    if (!isAdmin || !ids || ids.length === 0) return null
+    const names = ids.map((id) => collaboratorNameById[id] ?? '…').join(', ')
+    return (
+      <StatusBadge variant="shared" title={`Condiviso con: ${names}`}>
+        Condiviso
+      </StatusBadge>
+    )
+  }
+
+  const renderBloccatoToggle = (id: string, current: boolean) => {
+    if (!isAdmin) return current ? <StatusBadge variant="blocked">Bloccato</StatusBadge> : null
+    return (
+      <button
+        type="button"
+        title={
+          current ? 'Conto bloccato — clicca per sbloccare' : 'Clicca per segnare come bloccato'
+        }
+        aria-label={current ? 'Sblocca conto' : 'Blocca conto'}
+        onClick={() => updateAccount(id, { bloccato: !current })}
+        className={
+          'inline-flex h-6 items-center gap-1 rounded-pill border px-2 text-[11px] font-medium transition-colors ' +
+          (current
+            ? 'border-amber-500/30 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+            : 'border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/60')
+        }
+      >
+        {current ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+        {current ? 'Bloccato' : 'Libero'}
+      </button>
+    )
+  }
 
   const loadAccounts = useCallback(() => {
     void fetchAccounts({
@@ -46,9 +105,10 @@ export default function ContiPage() {
       holderIds: holderIds.length > 0 ? holderIds.join(',') : undefined,
       bookIds: bookIds.length > 0 ? bookIds.join(',') : undefined,
       status: filterStato || undefined,
+      blocked: filterBloccato === 'solo' ? true : filterBloccato === 'no' ? false : undefined,
       sortSaldo,
     })
-  }, [fetchAccounts, page, holderIds, bookIds, filterStato, sortSaldo])
+  }, [fetchAccounts, page, holderIds, bookIds, filterStato, filterBloccato, sortSaldo])
 
   useEffect(() => {
     void fetchHolders()
@@ -155,6 +215,24 @@ export default function ContiPage() {
             <option value="disabilitato">Non abilitato</option>
           </select>
         </div>
+        <div className="space-y-1.5 sm:min-w-[160px]">
+          <Label htmlFor="filter-bloccato-conto" className="text-xs">
+            Bloccato
+          </Label>
+          <select
+            id="filter-bloccato-conto"
+            value={filterBloccato}
+            onChange={(e) => {
+              setFilterBloccato(e.target.value as '' | 'solo' | 'no')
+              setPage(1)
+            }}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <option value="">Tutti</option>
+            <option value="solo">Solo bloccati</option>
+            <option value="no">Non bloccati</option>
+          </select>
+        </div>
       </div>
 
       {accountsError && (
@@ -208,18 +286,22 @@ export default function ContiPage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Stato</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateAccount(account.id, {
-                        stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                      })
-                    }
-                  >
-                    <StatusBadge variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}>
-                      {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
-                    </StatusBadge>
-                  </button>
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateAccount(account.id, {
+                          stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                        })
+                      }
+                    >
+                      <StatusBadge variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}>
+                        {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                      </StatusBadge>
+                    </button>
+                    {renderBloccatoToggle(account.id, account.bloccato === true)}
+                    {renderSharedBadge(account.sharedWithCollaboratorIds)}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
@@ -307,18 +389,24 @@ export default function ContiPage() {
                     {account.saldoAttuale.toFixed(2)} €
                   </td>
                   <td className="px-3 py-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateAccount(account.id, {
-                          stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                        })
-                      }
-                    >
-                      <StatusBadge variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}>
-                        {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
-                      </StatusBadge>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateAccount(account.id, {
+                            stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+                          })
+                        }
+                      >
+                        <StatusBadge
+                          variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}
+                        >
+                          {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
+                        </StatusBadge>
+                      </button>
+                      {renderBloccatoToggle(account.id, account.bloccato === true)}
+                      {renderSharedBadge(account.sharedWithCollaboratorIds)}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-2">

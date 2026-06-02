@@ -50,6 +50,8 @@ export interface Account {
   descrizione?: string
   saldoAttuale: number
   stato: EnabledStatus
+  bloccato: boolean
+  sharedWithCollaboratorIds?: string[]
   createdAt: string
 }
 
@@ -60,6 +62,8 @@ export interface Wallet {
   descrizione?: string
   saldoAttuale: number
   stato: EnabledStatus
+  bloccato: boolean
+  sharedWithCollaboratorIds?: string[]
   createdAt: string
 }
 

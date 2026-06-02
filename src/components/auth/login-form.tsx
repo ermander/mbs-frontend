@@ -31,7 +31,7 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      usernameOrEmail: '',
       password: '',
     },
   })
@@ -42,7 +42,7 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
       setSubmitMessage('')
       try {
         const response = await authClient.login({
-          email: data.email,
+          usernameOrEmail: data.usernameOrEmail,
           password: data.password,
         })
         setUser(response.user)
@@ -76,19 +76,19 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="login-email">Email</Label>
+        <Label htmlFor="login-identifier">Email o username</Label>
         <Input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          placeholder="nome@esempio.it"
-          aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? 'login-email-error' : undefined}
-          {...register('email')}
+          id="login-identifier"
+          type="text"
+          autoComplete="username"
+          placeholder="nome@esempio.it oppure username"
+          aria-invalid={Boolean(errors.usernameOrEmail)}
+          aria-describedby={errors.usernameOrEmail ? 'login-identifier-error' : undefined}
+          {...register('usernameOrEmail')}
         />
-        {errors.email && (
-          <p id="login-email-error" className="text-sm text-destructive">
-            {errors.email.message}
+        {errors.usernameOrEmail && (
+          <p id="login-identifier-error" className="text-sm text-destructive">
+            {errors.usernameOrEmail.message}
           </p>
         )}
       </div>

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { sanitizeDecimal } from '@/lib/utils'
 import type { AccountMovementType } from '@/types/profit-tracker'
 
@@ -35,6 +36,8 @@ export function AccountMovementModal({
   const addAccountMovement = useProfitTrackerStore((s) => s.addAccountMovement)
   const isSavingAccountMovement = useProfitTrackerStore((s) => s.isSavingAccountMovement)
   const accountMovementsError = useProfitTrackerStore((s) => s.accountMovementsError)
+  const userRole = useAuthStore((s) => s.user?.role)
+  const isCollaborator = userRole === 'COLLABORATOR_ROLE'
 
   const [accountId, setAccountId] = useState(defaultAccountId ?? allAccounts[0]?.id ?? '')
   const [walletId, setWalletId] = useState('')
@@ -134,7 +137,7 @@ export function AccountMovementModal({
             >
               <option value="deposito">Deposito</option>
               <option value="prelievo">Prelievo</option>
-              <option value="riconciliazione">Riconciliazione</option>
+              {!isCollaborator && <option value="riconciliazione">Riconciliazione</option>}
             </select>
           </div>
           <SearchableSelect

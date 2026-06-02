@@ -1,16 +1,18 @@
 import { apiClient } from './client'
 
-export type UserRole = 'USER_ROLE' | 'ADMIN_ROLE'
+export type UserRole = 'USER_ROLE' | 'ADMIN_ROLE' | 'COLLABORATOR_ROLE'
 
 export type UserSettings = Record<string, unknown>
 
 export interface AuthUser {
   id: string
-  email: string
+  email: string | null
   name: string
   username: string
   role: UserRole
   settings: UserSettings
+  parentAdminId?: string | null
+  profitSharePercentage?: number | null
 }
 
 export interface AuthResponse {
@@ -28,7 +30,7 @@ export const authClient = {
     return data
   },
 
-  async login(payload: { email: string; password: string }) {
+  async login(payload: { usernameOrEmail: string; password: string }) {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', payload)
     return data
   },

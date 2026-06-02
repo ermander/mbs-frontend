@@ -30,6 +30,10 @@ export interface NavLinkItem {
 export interface NavDropdownItem {
   label: string
   items: NavLinkItem[]
+  /** Se presente, il dropdown è visibile solo agli utenti con quel ruolo */
+  requiresRole?: UserRole
+  /** Se presente, il dropdown è nascosto per gli utenti con uno di questi ruoli */
+  hiddenForRoles?: UserRole[]
 }
 
 export interface AuthSidebarNavItem {
@@ -40,25 +44,56 @@ export interface AuthSidebarNavItem {
   section?: string
   /** Se presente, la voce viene mostrata solo agli utenti con quel ruolo */
   requiresRole?: UserRole
+  /** Se presente, la voce è nascosta per gli utenti con uno di questi ruoli */
+  hiddenForRoles?: UserRole[]
   /** Se presente, la voce è un gruppo espandibile con sotto-voci */
   children?: NavLinkItem[]
 }
 
+const HIDE_FOR_COLLAB: UserRole[] = ['COLLABORATOR_ROLE']
+
 export const authSidebarNav: AuthSidebarNavItem[] = [
-  { section: 'STRUMENTI', label: 'Odds Scanner', href: '/odds-scanner', icon: Search },
-  { label: 'Odds Scanner v2', href: '/odds-scanner-v2', icon: Radar },
+  {
+    section: 'STRUMENTI',
+    label: 'Odds Scanner',
+    href: '/odds-scanner',
+    icon: Search,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
+  {
+    label: 'Odds Scanner v2',
+    href: '/odds-scanner-v2',
+    icon: Radar,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
   { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
 
   { section: 'DASHBOARD', label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
   { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
   { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
   { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti', icon: Wallet },
-  { label: 'Impostazioni', href: '/profit-tracker/book-personali', icon: BookOpen },
-  { label: 'Promemoria', href: '/profit-tracker/promemoria', icon: Bell },
+  {
+    label: 'Impostazioni',
+    href: '/profit-tracker/book-personali',
+    icon: BookOpen,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
+  {
+    label: 'Promemoria',
+    href: '/profit-tracker/promemoria',
+    icon: Bell,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
 
-  { section: 'ALTRO', label: 'Offerte', href: '/offerte', icon: Gift },
-  { label: 'Guide', href: '/guide', icon: BookOpen },
-  { label: 'Forum', href: '/forum', icon: MessageSquare },
+  {
+    section: 'ALTRO',
+    label: 'Offerte',
+    href: '/offerte',
+    icon: Gift,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
+  { label: 'Guide', href: '/guide', icon: BookOpen, hiddenForRoles: HIDE_FOR_COLLAB },
+  { label: 'Forum', href: '/forum', icon: MessageSquare, hiddenForRoles: HIDE_FOR_COLLAB },
 
   {
     section: 'AMMINISTRAZIONE',
@@ -74,10 +109,17 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
       { label: 'Matcher', href: '/backoffice/matcher' },
       { label: 'Eventi SR', href: '/backoffice/eventi-sportradar' },
       { label: 'Utenti', href: '/backoffice/users' },
+      { label: 'Collaboratori', href: '/backoffice/collaboratori' },
     ],
   },
 
-  { section: 'ACCOUNT', label: 'Profilo', href: '/account/profilo', icon: User },
+  {
+    section: 'ACCOUNT',
+    label: 'Profilo',
+    href: '/account/profilo',
+    icon: User,
+    hiddenForRoles: HIDE_FOR_COLLAB,
+  },
 ]
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
@@ -104,6 +146,15 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti' },
       { label: 'Impostazioni', href: '/profit-tracker/book-personali' },
       { label: 'Promemoria', href: '/profit-tracker/promemoria' },
+    ],
+  },
+  {
+    label: 'AMMINISTRAZIONE',
+    requiresRole: 'ADMIN_ROLE',
+    items: [
+      { label: 'Backoffice', href: '/backoffice/dashboard' },
+      { label: 'Collaboratori', href: '/backoffice/collaboratori' },
+      { label: 'Utenti', href: '/backoffice/users' },
     ],
   },
   {

@@ -516,6 +516,29 @@ export async function getUnifiedProfitSummary(
   return response.data
 }
 
+// Collaborator profit breakdown (admin only)
+
+export interface CollaboratorBreakdownEntry {
+  collaboratorId: string
+  name: string
+  username: string
+  profitSharePercentage: number | null
+  totalProfit: number
+  myShareAmount: number
+  adminShareAmount: number
+}
+
+export async function getCollaboratorBreakdown(params?: {
+  fromDate?: string
+  toDate?: string
+}): Promise<CollaboratorBreakdownEntry[]> {
+  const response = await apiClient.get<{ items: CollaboratorBreakdownEntry[] }>(
+    '/profit-tracker/collaborator-breakdown',
+    { params: params ?? {} },
+  )
+  return response.data.items
+}
+
 // Puntate in corso totale
 
 export async function getPuntateInCorsoTotale(): Promise<PuntateInCorsoTotale> {

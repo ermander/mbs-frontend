@@ -73,6 +73,17 @@ export function Header() {
 
   const isAuthenticated = isLoggedIn || user !== null
 
+  const userRole = user?.role
+  const visibleDropdowns = React.useMemo(
+    () =>
+      authenticatedNavDropdowns.filter((d) => {
+        if (d.requiresRole && d.requiresRole !== userRole) return false
+        if (d.hiddenForRoles && userRole && d.hiddenForRoles.includes(userRole)) return false
+        return true
+      }),
+    [userRole],
+  )
+
   // Track scroll for pill border effect
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -148,7 +159,7 @@ export function Header() {
                       {label}
                     </Link>
                   ))}
-                  {authenticatedNavDropdowns
+                  {visibleDropdowns
                     .filter((d) => d.label !== 'ACCOUNT')
                     .map((dropdown) => (
                       <div
@@ -350,7 +361,7 @@ export function Header() {
                     </Link>
                   ))}
                   <Accordion type="multiple" className="w-full gap-0">
-                    {authenticatedNavDropdowns.map((dropdown) => (
+                    {visibleDropdowns.map((dropdown) => (
                       <AccordionItem
                         key={dropdown.label}
                         value={dropdown.label}

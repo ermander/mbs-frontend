@@ -16,7 +16,12 @@ export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
   const userRole = useAuthStore((s) => s.user?.role)
 
   const items = React.useMemo(
-    () => authSidebarNav.filter((item) => !item.requiresRole || item.requiresRole === userRole),
+    () =>
+      authSidebarNav.filter((item) => {
+        if (item.requiresRole && item.requiresRole !== userRole) return false
+        if (item.hiddenForRoles && userRole && item.hiddenForRoles.includes(userRole)) return false
+        return true
+      }),
     [userRole],
   )
 

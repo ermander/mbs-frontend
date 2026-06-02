@@ -34,7 +34,7 @@ export function SidebarUserChip({ collapsed }: SidebarUserChipProps) {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
-  const initials = getInitials(user?.name, user?.email)
+  const initials = getInitials(user?.name, user?.email ?? undefined)
   const displayName = user?.name ?? user?.username ?? 'Account'
   const email = user?.email ?? ''
 

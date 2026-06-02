@@ -148,6 +148,9 @@ export interface BetLegRealizedLedgerSummaryResult {
   granularity: BetLegRealizedLedgerGranularity
   rangeTotal: number
   buckets: BetLegRealizedLedgerSummaryBucket[]
+  sharePercentage?: number | null
+  myShareAmount?: number
+  adminShareAmount?: number
 }
 
 export interface BetLeg {

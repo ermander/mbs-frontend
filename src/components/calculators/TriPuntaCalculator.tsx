@@ -8,8 +8,9 @@ import {
   stakeBCFromStakeA,
   stakeBCFromStakeARimborso,
 } from '@/lib/calculators/tri-punta'
+import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { getAccounts, type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
+import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import type { Account, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
@@ -282,17 +283,7 @@ export function TriPuntaCalculator() {
     stakeB != null &&
     stakeC != null
 
-  const loadAccountsForHolder = useCallback(async (holderId: string) => {
-    if (!holderId) return []
-    const res = await getAccounts({ holderId, status: 'abilitato' })
-    if (!res.items.length) return []
-    const currentBooks = useProfitTrackerStore.getState().allBooks
-    return res.items.filter((acc) => {
-      const book = currentBooks.find((b) => b.id === acc.bookId)
-      if (!book) return false
-      return !book.isExchange
-    })
-  }, [])
+  const loadAccountsForHolder = useCallback((holderId: string) => loadHolderAccounts(holderId), [])
 
   const handleChangeHolderPuntaA = useCallback(
     async (holderId: string) => {

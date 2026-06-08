@@ -187,11 +187,11 @@ export function PuntaBancaCalculator() {
 
   /** Totale se vinci la puntata sul Book */
   const totalSeVinciPuntata = useMemo(() => {
-    if (puntataNum == null || quotaPuntaNum == null || effectiveLiability == null) return null
-    // Book profit: puntataEffettiva * quotaPunta - puntataNum (bonus vinto, reale restituito)
+    if (quotaPuntaNum == null || effectiveLiability == null) return null
+    // Book profit: puntataEffettiva * quotaPunta - saldo reale (bonus vinto, reale restituito)
     // Exchange loss: -effectiveLiability
     // Rimborso: 0 (non si ottiene se la puntata vince)
-    return puntataEffettiva * quotaPuntaNum - puntataNum - effectiveLiability
+    return puntataEffettiva * quotaPuntaNum - (puntataNum ?? 0) - effectiveLiability
   }, [puntataNum, puntataEffettiva, quotaPuntaNum, effectiveLiability])
 
   /** Totale se vinci la bancata sull'Exchange */

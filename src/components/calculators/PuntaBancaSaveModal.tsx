@@ -10,6 +10,7 @@ import Link from 'next/link'
 import type { Account, Book, Holder } from '@/types/profit-tracker'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
+import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 
 interface PuntaBancaSaveModalProps {
@@ -165,20 +166,11 @@ export function PuntaBancaSaveModal({
     books,
   ])
 
-  const loadAccountsForHolder = useCallback(async (holderId: string, forExchange: boolean) => {
-    if (!holderId) {
-      return []
-    }
-    const res = await getAccounts({ holderId, status: 'abilitato' })
-    if (!res.items.length) return []
-    const currentBooks: Book[] = useProfitTrackerStore.getState().allBooks
-    const filtered = res.items.filter((acc) => {
-      const book = currentBooks.find((b) => b.id === acc.bookId)
-      if (!book) return false
-      return forExchange ? book.isExchange : !book.isExchange
-    })
-    return filtered
-  }, [])
+  const loadAccountsForHolder = useCallback(
+    (holderId: string, forExchange: boolean) =>
+      loadHolderAccounts(holderId, forExchange ? 'exchange' : 'non-exchange'),
+    [],
+  )
 
   const handleChangeHolderPunta = useCallback(
     async (holderId: string) => {

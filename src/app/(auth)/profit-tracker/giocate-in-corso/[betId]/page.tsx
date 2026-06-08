@@ -147,10 +147,7 @@ export default function BetDetailPage() {
   const puntaAccountOptions = useMemo(
     () =>
       allAccounts
-        .filter((a) => {
-          const book = books.find((b) => b.id === a.bookId)
-          return book && !book.isExchange
-        })
+        .filter((a) => books.some((b) => b.id === a.bookId))
         .map((a) => ({ value: a.id, label: resolveAccountLabel(a.id) })),
     [allAccounts, books, resolveAccountLabel],
   )

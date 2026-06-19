@@ -16,19 +16,21 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { sanitizeDecimal } from '@/lib/utils'
-import type { AccountMovementType } from '@/types/profit-tracker'
+import type { Account, AccountMovementType } from '@/types/profit-tracker'
 
 interface AccountMovementModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultAccountId?: string
+  /**
+   * Quando valorizzato, la modale è aperta da un bottone "Nuovo movimento" legato a
+   * uno specifico conto: il conto viene mostrato bloccato e non è possibile sceglierne
+   * un altro. Si passa l'oggetto completo (non solo l'id) per non dipendere da
+   * `allAccounts`, che è limitato lato backend e potrebbe non contenere conti a saldo basso.
+   */
+  account?: Account
 }
 
-export function AccountMovementModal({
-  open,
-  onOpenChange,
-  defaultAccountId,
-}: AccountMovementModalProps) {
+export function AccountMovementModal({ open, onOpenChange, account }: AccountMovementModalProps) {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
@@ -39,7 +41,7 @@ export function AccountMovementModal({
   const userRole = useAuthStore((s) => s.user?.role)
   const isCollaborator = userRole === 'COLLABORATOR_ROLE'
 
-  const [accountId, setAccountId] = useState(defaultAccountId ?? allAccounts[0]?.id ?? '')
+  const [accountId, setAccountId] = useState('')
   const [walletId, setWalletId] = useState('')
   const [tipo, setTipo] = useState<AccountMovementType>('deposito')
   const [valore, setValore] = useState('')
@@ -49,19 +51,20 @@ export function AccountMovementModal({
 
   useEffect(() => {
     if (!open) return
-    void fetchAllAccounts()
+    // In modalità "conto bloccato" non serve l'elenco completo dei conti.
+    if (!account) void fetchAllAccounts()
     void fetchWallets()
-  }, [open, fetchAllAccounts, fetchWallets])
+  }, [open, account, fetchAllAccounts, fetchWallets])
 
-  const effectiveAccountId =
-    defaultAccountId ??
-    (accountId && allAccounts.some((a) => a.id === accountId)
+  const effectiveAccountId = account
+    ? account.id
+    : accountId && allAccounts.some((a) => a.id === accountId)
       ? accountId
-      : (allAccounts[0]?.id ?? ''))
+      : (allAccounts[0]?.id ?? '')
 
   const selectedAccount = useMemo(
-    () => allAccounts.find((a) => a.id === effectiveAccountId),
-    [allAccounts, effectiveAccountId],
+    () => account ?? allAccounts.find((a) => a.id === effectiveAccountId),
+    [account, allAccounts, effectiveAccountId],
   )
 
   const holderWallets = useMemo(() => {
@@ -140,17 +143,29 @@ export function AccountMovementModal({
               {!isCollaborator && <option value="riconciliazione">Riconciliazione</option>}
             </select>
           </div>
-          <SearchableSelect
-            id="mov-account"
-            label="Conto"
-            options={accountOptions}
-            value={effectiveAccountId}
-            onChange={setAccountId}
-            allowEmpty={false}
-            placeholder="Seleziona conto"
-            searchPlaceholder="Cerca conto..."
-            portalContainer={dropdownPortalEl}
-          />
+          {account ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="mov-account-locked">Conto</Label>
+              <div
+                id="mov-account-locked"
+                className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
+              >
+                {account.nome}
+              </div>
+            </div>
+          ) : (
+            <SearchableSelect
+              id="mov-account"
+              label="Conto"
+              options={accountOptions}
+              value={effectiveAccountId}
+              onChange={setAccountId}
+              allowEmpty={false}
+              placeholder="Seleziona conto"
+              searchPlaceholder="Cerca conto..."
+              portalContainer={dropdownPortalEl}
+            />
+          )}
           {tipo !== 'riconciliazione' && (
             <SearchableSelect
               id="mov-wallet"

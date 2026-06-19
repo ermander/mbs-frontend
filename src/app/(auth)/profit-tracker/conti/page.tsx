@@ -14,6 +14,7 @@ import { AccountMovementModal } from '@/components/profit-tracker/account-moveme
 import { AccountEditModal } from '@/components/profit-tracker/account-edit-modal'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
 import { adminCollaboratorsClient } from '@/services/api/admin-collaborators-client'
+import type { Account } from '@/types/profit-tracker'
 
 const PAGE_SIZE = 20
 
@@ -33,7 +34,7 @@ export default function ContiPage() {
   const updateAccount = useProfitTrackerStore((s) => s.updateAccount)
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [movementForAccount, setMovementForAccount] = useState<string | undefined>(undefined)
+  const [movementForAccount, setMovementForAccount] = useState<Account | undefined>(undefined)
   const [editingAccountId, setEditingAccountId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [holderIds, setHolderIds] = useState<string[]>([])
@@ -308,7 +309,7 @@ export default function ContiPage() {
                 <button
                   type="button"
                   className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                  onClick={() => setMovementForAccount(account.id)}
+                  onClick={() => setMovementForAccount(account)}
                 >
                   Nuovo movimento
                 </button>
@@ -413,7 +414,7 @@ export default function ContiPage() {
                       <button
                         type="button"
                         className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                        onClick={() => setMovementForAccount(account.id)}
+                        onClick={() => setMovementForAccount(account)}
                       >
                         Nuovo movimento
                       </button>
@@ -482,7 +483,7 @@ export default function ContiPage() {
             loadAccounts()
           }
         }}
-        defaultAccountId={movementForAccount}
+        account={movementForAccount}
       />
       {editingAccountId && (
         <AccountEditModal

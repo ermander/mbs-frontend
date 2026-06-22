@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay } from '@/lib/utils'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
+import { SingolaBetModal } from '@/components/profit-tracker/singola-bet-modal'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { OngoingBet } from '@/types/profit-tracker'
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ export default function GiocateInCorsoPage() {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
+  const [singolaModalOpen, setSingolaModalOpen] = useState(false)
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const bets = useMemo(() => {
     let list = ongoingBets
@@ -190,13 +192,22 @@ export default function GiocateInCorsoPage() {
 
       {/* Filter bar */}
       <div className="space-y-3">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          {showFilters ? 'Nascondi filtri' : 'Mostra filtri'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            {showFilters ? 'Nascondi filtri' : 'Mostra filtri'}
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+            onClick={() => setSingolaModalOpen(true)}
+          >
+            Nuova giocata singola
+          </button>
+        </div>
         {showFilters && (
           <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card/50 p-3">
             <label className="space-y-1 text-xs text-muted-foreground">
@@ -601,6 +612,8 @@ export default function GiocateInCorsoPage() {
           </tbody>
         </table>
       </div>
+
+      <SingolaBetModal open={singolaModalOpen} onOpenChange={setSingolaModalOpen} />
     </ProfitTrackerPageShell>
   )
 }

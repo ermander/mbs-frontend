@@ -34,6 +34,8 @@ interface SearchableMultiSelectProps {
   size?: 'default' | 'sm'
   /** Custom render for each option in the dropdown list */
   renderOption?: (option: SearchableMultiSelectOption) => React.ReactNode
+  /** When inside a modal (e.g. Radix Dialog), pass the container element so the dropdown is portaled there and receives pointer events. Use a callback ref to capture: ref={(el) => setPortalContainer(el)}. */
+  portalContainer?: HTMLElement | null
 }
 
 const PANEL_OFFSET = 4
@@ -59,12 +61,13 @@ export function SearchableMultiSelect({
   showBadges = false,
   size = 'default',
   renderOption,
+  portalContainer,
 }: SearchableMultiSelectProps) {
   const isSmall = size === 'sm'
   const listboxId = useId()
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, useAbsolute: false })
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -98,12 +101,23 @@ export function SearchableMultiSelect({
     if (typeof document === 'undefined') return
     const rect = getAnchorRect()
     if (!rect) return
+    if (portalContainer) {
+      const portalRect = portalContainer.getBoundingClientRect()
+      setPosition({
+        top: rect.bottom - portalRect.top + PANEL_OFFSET,
+        left: rect.left - portalRect.left,
+        width: Math.max(rect.width, 140),
+        useAbsolute: true,
+      })
+      return
+    }
     setPosition({
       top: rect.bottom + PANEL_OFFSET,
       left: rect.left,
       width: Math.max(rect.width, 140),
+      useAbsolute: false,
     })
-  }, [getAnchorRect])
+  }, [getAnchorRect, portalContainer])
 
   useEffect(() => {
     if (!open) return
@@ -154,18 +168,22 @@ export function SearchableMultiSelect({
     }
   }, [open, updatePosition])
 
+  const portalTarget = typeof document !== 'undefined' ? (portalContainer ?? document.body) : null
+
   const dropdownPanel =
     open &&
-    typeof document !== 'undefined' &&
+    portalTarget &&
     createPortal(
       <div
         ref={panelRef}
         id={listboxId}
         role="listbox"
         aria-multiselectable="true"
-        className="flex flex-col overflow-hidden rounded-md border border-border bg-popover text-foreground shadow-lg"
+        className={cn(
+          'pointer-events-auto flex flex-col overflow-hidden rounded-md border border-border bg-popover text-foreground shadow-lg',
+          position.useAbsolute ? 'absolute' : 'fixed',
+        )}
         style={{
-          position: 'fixed',
           top: position.top,
           left: position.left,
           width: position.width,
@@ -234,7 +252,7 @@ export function SearchableMultiSelect({
           )}
         </div>
       </div>,
-      document.body,
+      portalTarget,
     )
 
   // Badge mode: shows selected items as removable badges

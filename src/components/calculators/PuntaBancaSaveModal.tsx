@@ -540,6 +540,7 @@ export function PuntaBancaSaveModal({
                       showBadges
                       size="sm"
                       className="w-full"
+                      portalContainer={dropdownPortalEl}
                     />
                     <p
                       className={cn(

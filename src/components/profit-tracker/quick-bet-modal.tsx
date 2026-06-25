@@ -166,6 +166,7 @@ export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
                   }
                   showBadges
                   className="w-full"
+                  portalContainer={dropdownPortalEl}
                 />
                 {selectedAccountIds.length > 0 && (
                   <p className="text-xs text-muted-foreground">

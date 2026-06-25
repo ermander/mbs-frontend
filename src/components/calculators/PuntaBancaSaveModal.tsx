@@ -12,6 +12,8 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
+import { cn } from '@/lib/utils'
 
 interface PuntaBancaSaveModalProps {
   open: boolean
@@ -28,6 +30,8 @@ interface PuntaBancaSaveModalProps {
   commissioneNum: number
   partialLays: { amount: string; newOdds: string }[]
   partialLayResults: ({ newLayStake: number; newLiability: number } | null)[]
+  /** Numero di conti su cui duplicare la gamba punta (stessa quota/stake, copertura unica). */
+  numConti: number
 }
 
 function parseNum(s: string): number | null {
@@ -69,12 +73,17 @@ export function PuntaBancaSaveModal({
   commissioneNum,
   partialLays,
   partialLayResults,
+  numConti,
 }: PuntaBancaSaveModalProps) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const books = useProfitTrackerStore((s) => s.allBooks)
+  const allAccountsList = useProfitTrackerStore((s) => s.allAccounts)
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
+
+  const isMultiConto = numConti > 1
 
   const [eventoNome, setEventoNome] = useState('')
   const [eventoDataLocal, setEventoDataLocal] = useState(getDefaultEventDateTimeLocal)
@@ -86,6 +95,7 @@ export function PuntaBancaSaveModal({
   const [accountsBanca, setAccountsBanca] = useState<Account[]>([])
   const [accountIdPunta, setAccountIdPunta] = useState('')
   const [accountIdBanca, setAccountIdBanca] = useState('')
+  const [selectedPuntaAccountIds, setSelectedPuntaAccountIds] = useState<string[]>([])
 
   const [isLoadingBasics, setIsLoadingBasics] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -104,6 +114,7 @@ export function PuntaBancaSaveModal({
     setAccountsBanca([])
     setAccountIdPunta('')
     setAccountIdBanca('')
+    setSelectedPuntaAccountIds([])
     setIsLoadingBasics(false)
     setIsSaving(false)
     setError(null)
@@ -127,6 +138,9 @@ export function PuntaBancaSaveModal({
         if (currentBooks.length === 0) {
           await fetchAllBooks()
           currentBooks = useProfitTrackerStore.getState().allBooks
+        }
+        if (isMultiConto) {
+          await fetchAllAccounts()
         }
         if (!mercato) {
           const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
@@ -160,6 +174,8 @@ export function PuntaBancaSaveModal({
     books.length,
     fetchHolders,
     fetchAllBooks,
+    fetchAllAccounts,
+    isMultiConto,
     mercato,
     resetState,
     holders,
@@ -204,11 +220,37 @@ export function PuntaBancaSaveModal({
     [loadAccountsForHolder],
   )
 
+  // Conti punta (non-exchange) di tutti gli intestatari, per la modalità "moltiplica su N conti"
+  const puntaAccountOptions = useMemo(() => {
+    if (!isMultiConto) return []
+    return allAccountsList
+      .filter((acc) => {
+        const book = books.find((b) => b.id === acc.bookId)
+        return book && !book.isExchange
+      })
+      .map((acc) => {
+        const holderName = getHolderName(holders, acc.holderId)
+        const book = books.find((b) => b.id === acc.bookId)
+        return { id: acc.id, name: `${holderName} • ${book?.nome ?? acc.nome}` }
+      })
+  }, [isMultiConto, allAccountsList, books, holders])
+
+  const toggleSelectedPuntaAccount = useCallback((id: string) => {
+    setSelectedPuntaAccountIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }, [])
+
   const canSave = useMemo(() => {
     if (!eventoNome.trim()) return false
     if (!mercato.trim()) return false
     if (!eventoDataLocal) return false
-    if (!accountIdPunta || !accountIdBanca) return false
+    if (isMultiConto) {
+      if (selectedPuntaAccountIds.length !== numConti) return false
+    } else if (!accountIdPunta) {
+      return false
+    }
+    if (!accountIdBanca) return false
     if (!Number.isFinite(puntataEffettiva) || puntataEffettiva <= 0) return false
     if (!Number.isFinite(quotaPuntaNum) || !Number.isFinite(quotaBancaNum)) return false
     if (!Number.isFinite(layStake) || layStake <= 0) return false
@@ -218,6 +260,9 @@ export function PuntaBancaSaveModal({
     eventoNome,
     mercato,
     eventoDataLocal,
+    isMultiConto,
+    selectedPuntaAccountIds,
+    numConti,
     accountIdPunta,
     accountIdBanca,
     puntataEffettiva,
@@ -239,17 +284,19 @@ export function PuntaBancaSaveModal({
     setError(null)
     try {
       const eventoDataIso = new Date(eventoDataLocal).toISOString()
+      const puntaAccountIds = isMultiConto ? selectedPuntaAccountIds : [accountIdPunta]
+
       const betPayload = {
         eventoData: eventoDataIso,
         sport: 'altro' as const,
         eventoNome,
         modalitaSaldo: 'reale' as const,
-        accountId: accountIdPunta,
+        accountId: puntaAccountIds[0],
         tag: undefined as string | undefined,
         nota: undefined as string | undefined,
       }
 
-      const puntaLeg = {
+      const puntaLegBase = {
         eventoData: eventoDataIso,
         sport: 'altro',
         eventoNome,
@@ -257,7 +304,6 @@ export function PuntaBancaSaveModal({
         mercato,
         metodo: 'punta' as const,
         tipoBonus,
-        accountId: accountIdPunta,
         stake: puntataNum,
         quota: quotaPuntaNum,
         rischio: 0,
@@ -268,8 +314,13 @@ export function PuntaBancaSaveModal({
         statoEvento: 'bozza',
         quotaRiferimento: undefined,
         tag: undefined as string | undefined,
-        posizione: 0,
       }
+
+      const puntaLegs = puntaAccountIds.map((accId, i) => ({
+        ...puntaLegBase,
+        accountId: accId,
+        posizione: i,
+      }))
 
       const bancaLegBase = {
         eventoData: eventoDataIso,
@@ -310,7 +361,7 @@ export function PuntaBancaSaveModal({
             stake: amount,
             quota: odds,
             rischio: amount * (odds - 1),
-            posizione: i + 1,
+            posizione: puntaLegs.length + i,
           })
         }
 
@@ -322,7 +373,7 @@ export function PuntaBancaSaveModal({
           stake: lastResult.newLayStake,
           quota: lastOdds,
           rischio: lastResult.newLiability,
-          posizione: partialLays.length + 1,
+          posizione: puntaLegs.length + partialLays.length,
         })
       } else {
         // Caso standard: singola bancata
@@ -332,12 +383,12 @@ export function PuntaBancaSaveModal({
             stake: layStake,
             quota: quotaBancaNum,
             rischio: responsabilita,
-            posizione: 1,
+            posizione: puntaLegs.length,
           },
         ]
       }
 
-      const legsPayload = [puntaLeg, ...bancaLegs]
+      const legsPayload = [...puntaLegs, ...bancaLegs]
 
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       if (process.env.NODE_ENV !== 'production') {
@@ -354,6 +405,8 @@ export function PuntaBancaSaveModal({
     eventoDataLocal,
     eventoNome,
     mercato,
+    isMultiConto,
+    selectedPuntaAccountIds,
     accountIdPunta,
     accountIdBanca,
     puntataNum,
@@ -470,55 +523,90 @@ export function PuntaBancaSaveModal({
                 <Label className="text-xs font-medium uppercase tracking-wide text-primary">
                   Intestatario Punta
                 </Label>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Seleziona intestatario</Label>
-                  <SearchableSelect
-                    id="holder-punta"
-                    placeholder="Seleziona intestatario"
-                    searchPlaceholder="Cerca intestatario..."
-                    options={holders
-                      .filter((h) => h.stato === 'abilitato')
-                      .map((h) => ({ value: h.id, label: h.nome }))}
-                    value={holderIdPunta}
-                    onChange={(val) => void handleChangeHolderPunta(val)}
-                    allowEmpty={false}
-                    size="sm"
-                    className="w-full"
-                    portalContainer={dropdownPortalEl}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Conto punta</Label>
-                  <SearchableSelect
-                    id="account-punta"
-                    placeholder={
-                      holderIdPunta ? 'Seleziona conto' : 'Seleziona prima un intestatario'
-                    }
-                    searchPlaceholder="Cerca conto..."
-                    options={accountsPunta.map((acc) => {
-                      const holderName = getHolderName(holders, acc.holderId)
-                      const book = books.find((b) => b.id === acc.bookId)
-                      return {
-                        value: acc.id,
-                        label: `${holderName} • ${book?.nome ?? acc.nome}`,
+                {isMultiConto ? (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Seleziona {numConti} conti (uno per intestatario, stessa quota/stake)
+                    </Label>
+                    <SearchableMultiSelect
+                      options={puntaAccountOptions}
+                      selectedIds={selectedPuntaAccountIds}
+                      onToggle={toggleSelectedPuntaAccount}
+                      buttonLabel={
+                        selectedPuntaAccountIds.length > 0
+                          ? `${selectedPuntaAccountIds.length} conti selezionati`
+                          : 'Seleziona conti'
                       }
-                    })}
-                    value={accountIdPunta}
-                    onChange={setAccountIdPunta}
-                    disabled={!holderIdPunta || accountsPunta.length === 0}
-                    allowEmpty={false}
-                    size="sm"
-                    className="w-full"
-                    portalContainer={dropdownPortalEl}
-                  />
-                  {holderIdPunta && accountsPunta.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
-                      Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
-                      Profit Tracker → Conti.
+                      showBadges
+                      size="sm"
+                      className="w-full"
+                    />
+                    <p
+                      className={cn(
+                        'text-xs',
+                        selectedPuntaAccountIds.length === numConti
+                          ? 'text-muted-foreground'
+                          : 'text-amber-600',
+                      )}
+                    >
+                      {selectedPuntaAccountIds.length}/{numConti} conti selezionati.
                     </p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Seleziona intestatario
+                      </Label>
+                      <SearchableSelect
+                        id="holder-punta"
+                        placeholder="Seleziona intestatario"
+                        searchPlaceholder="Cerca intestatario..."
+                        options={holders
+                          .filter((h) => h.stato === 'abilitato')
+                          .map((h) => ({ value: h.id, label: h.nome }))}
+                        value={holderIdPunta}
+                        onChange={(val) => void handleChangeHolderPunta(val)}
+                        allowEmpty={false}
+                        size="sm"
+                        className="w-full"
+                        portalContainer={dropdownPortalEl}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Conto punta</Label>
+                      <SearchableSelect
+                        id="account-punta"
+                        placeholder={
+                          holderIdPunta ? 'Seleziona conto' : 'Seleziona prima un intestatario'
+                        }
+                        searchPlaceholder="Cerca conto..."
+                        options={accountsPunta.map((acc) => {
+                          const holderName = getHolderName(holders, acc.holderId)
+                          const book = books.find((b) => b.id === acc.bookId)
+                          return {
+                            value: acc.id,
+                            label: `${holderName} • ${book?.nome ?? acc.nome}`,
+                          }
+                        })}
+                        value={accountIdPunta}
+                        onChange={setAccountIdPunta}
+                        disabled={!holderIdPunta || accountsPunta.length === 0}
+                        allowEmpty={false}
+                        size="sm"
+                        className="w-full"
+                        portalContainer={dropdownPortalEl}
+                      />
+                      {holderIdPunta && accountsPunta.length === 0 && (
+                        <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                          Nessun conto punta disponibile per questo intestatario. Aggiungine uno in
+                          Profit Tracker → Conti.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
@@ -585,6 +673,15 @@ export function PuntaBancaSaveModal({
                 <p className="mt-1">
                   Punta: <span className="font-mono">{puntataEffettiva.toFixed(2)} €</span> a quota{' '}
                   <span className="font-mono">{quotaPuntaNum.toFixed(2)}</span>
+                  {isMultiConto && (
+                    <>
+                      {' '}
+                      × {numConti} conti = totale{' '}
+                      <span className="font-mono">
+                        {(puntataEffettiva * numConti).toFixed(2)} €
+                      </span>
+                    </>
+                  )}
                 </p>
                 {partialLays.length > 0 && partialLayResults.every((r) => r != null) ? (
                   <>

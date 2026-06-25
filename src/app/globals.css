@@ -96,11 +96,6 @@
   .text-gradient-primary {
     @apply bg-gradient-to-r from-primary to-[hsl(var(--chart-2))] bg-clip-text text-transparent;
   }
-
-  /* Calculator dashboard: nascondi sezioni avanzate dei calcolatori quando il wrapper è in modalità compatta */
-  [data-compact='true'] .calc-advanced {
-    display: none !important;
-  }
 }
 
 @keyframes fade-in {

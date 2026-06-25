@@ -561,7 +561,7 @@ export function PuntaPuntaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="calc-advanced border-b border-border p-4">
+      <div className="border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento della Puntata B</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">−30%</span>
@@ -650,7 +650,7 @@ export function PuntaPuntaCalculator() {
         returnB != null &&
         profitIfAWins != null &&
         profitIfBWins != null && (
-          <div className="calc-advanced border-b border-border bg-card">
+          <div className="border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO \u2022 '
@@ -812,7 +812,7 @@ export function PuntaPuntaCalculator() {
 
       {/* Contropuntata parziale (multi-step) */}
       {stakeB != null && (
-        <div className="calc-advanced border-b border-border p-4">
+        <div className="border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntas.map((pp, i) => {
               const result = partialPuntaResults[i] ?? null
@@ -888,7 +888,7 @@ export function PuntaPuntaCalculator() {
       )}
 
       {/* Invia al Profit Tracker */}
-      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
+      <div className="flex flex-col items-center gap-2 p-4">
         <Button onClick={handleOpenModal} variant="default" disabled={!showSummary}>
           Invia al Profit Tracker
         </Button>

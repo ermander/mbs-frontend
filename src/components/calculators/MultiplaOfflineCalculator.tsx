@@ -539,7 +539,7 @@ export function MultiplaOfflineCalculator() {
 
       {/* Riepilogo Multipla */}
       {showSummary && (
-        <div className="calc-advanced border-b border-border bg-card">
+        <div className="border-b border-border bg-card">
           <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
             {stakeBonusNum > 0 && rimborsoNum > 0
               ? 'BONUS + RIMBORSO • '
@@ -696,7 +696,7 @@ export function MultiplaOfflineCalculator() {
       )}
 
       {/* Bottone Salva */}
-      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
+      <div className="flex flex-col items-center gap-2 p-4">
         <Button onClick={() => setSaveModalOpen(true)} variant="default" disabled={!canSave}>
           Invia al Profit Tracker
         </Button>

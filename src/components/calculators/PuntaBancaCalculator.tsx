@@ -43,6 +43,7 @@ export function PuntaBancaCalculator() {
   const [imbalance, setImbalance] = useState<number>(0)
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
   const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [numConti, setNumConti] = useState('1')
 
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
@@ -53,6 +54,14 @@ export function PuntaBancaCalculator() {
   const quotaBancaNum = parseNum(quotaBanca)
   const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
 
+  // Quando si moltiplica la gamba punta su più conti (es. quota maggiorata
+  // giocata a nome di più persone), la copertura va calcolata sull'esposizione
+  // totale, non sulla singola puntata.
+  const numContiNum = Math.max(1, Math.round(parseNum(numConti) ?? 1))
+  const totalPuntataNum = (puntataNum ?? 0) * numContiNum
+  const totalPuntataEffettiva = puntataEffettiva * numContiNum
+  const totalRimborsoNum = rimborsoNum * numContiNum
+
   const quotaPuntaEquivalente = useMemo(() => {
     if (quotaBancaNum == null) return null
     return equivalentBackOdds(quotaBancaNum, commissioneNum)
@@ -61,11 +70,11 @@ export function PuntaBancaCalculator() {
   // Formula unica: (puntataEffettiva * quotaPunta - rimborso) / (quotaBanca - comm%)
   // Quando rimborso=0 → formula standard. Quando bonus=0 → formula rimborso pura.
   const layStakeValue = useMemo(() => {
-    if (puntataEffettiva <= 0 || quotaPuntaNum == null || quotaBancaNum == null) return null
+    if (totalPuntataEffettiva <= 0 || quotaPuntaNum == null || quotaBancaNum == null) return null
     const base = layStakeRimborso(
-      puntataEffettiva,
+      totalPuntataEffettiva,
       quotaPuntaNum,
-      rimborsoNum,
+      totalRimborsoNum,
       quotaBancaNum,
       commissioneNum,
     )
@@ -74,8 +83,8 @@ export function PuntaBancaCalculator() {
     const adjusted = base * factor
     return Number.isFinite(adjusted) ? adjusted : null
   }, [
-    puntataEffettiva,
-    rimborsoNum,
+    totalPuntataEffettiva,
+    totalRimborsoNum,
     quotaPuntaNum,
     quotaBancaNum,
     commissioneNum,
@@ -181,18 +190,18 @@ export function PuntaBancaCalculator() {
   const effectiveExchangeProfit = partialLayTotals?.totalExchangeProfit ?? singleExchangeProfit
 
   const rating = useMemo(() => {
-    if (puntataEffettiva <= 0 || layStakeValue == null) return null
-    return ratingPercent(puntataEffettiva, layStakeValue)
-  }, [puntataEffettiva, layStakeValue])
+    if (totalPuntataEffettiva <= 0 || layStakeValue == null) return null
+    return ratingPercent(totalPuntataEffettiva, layStakeValue)
+  }, [totalPuntataEffettiva, layStakeValue])
 
-  /** Totale se vinci la puntata sul Book */
+  /** Totale se vinci la puntata sul Book (su tutti i conti moltiplicati) */
   const totalSeVinciPuntata = useMemo(() => {
     if (quotaPuntaNum == null || effectiveLiability == null) return null
     // Book profit: puntataEffettiva * quotaPunta - saldo reale (bonus vinto, reale restituito)
     // Exchange loss: -effectiveLiability
     // Rimborso: 0 (non si ottiene se la puntata vince)
-    return puntataEffettiva * quotaPuntaNum - (puntataNum ?? 0) - effectiveLiability
-  }, [puntataNum, puntataEffettiva, quotaPuntaNum, effectiveLiability])
+    return totalPuntataEffettiva * quotaPuntaNum - totalPuntataNum - effectiveLiability
+  }, [totalPuntataNum, totalPuntataEffettiva, quotaPuntaNum, effectiveLiability])
 
   /** Totale se vinci la bancata sull'Exchange */
   const totalSeVinciBancata = useMemo(() => {
@@ -200,8 +209,8 @@ export function PuntaBancaCalculator() {
     // Book loss: -puntataNum (perdi solo saldo reale)
     // Exchange profit: +effectiveExchangeProfit
     // Rimborso: +rimborsoNum
-    return -(puntataNum ?? 0) + effectiveExchangeProfit + rimborsoNum
-  }, [puntataNum, rimborsoNum, effectiveExchangeProfit])
+    return -totalPuntataNum + effectiveExchangeProfit + totalRimborsoNum
+  }, [totalPuntataNum, totalRimborsoNum, effectiveExchangeProfit])
 
   const guadagnoMinimo = useMemo(() => {
     if (totalSeVinciPuntata == null || totalSeVinciBancata == null) return null
@@ -210,8 +219,8 @@ export function PuntaBancaCalculator() {
   }, [totalSeVinciPuntata, totalSeVinciBancata])
 
   const crPercent =
-    rimborsoNum > 0 && guadagnoMinimo != null && Number.isFinite(guadagnoMinimo)
-      ? (guadagnoMinimo / rimborsoNum) * 100
+    totalRimborsoNum > 0 && guadagnoMinimo != null && Number.isFinite(guadagnoMinimo)
+      ? (guadagnoMinimo / totalRimborsoNum) * 100
       : null
 
   const showSummary =
@@ -320,6 +329,24 @@ export function PuntaBancaCalculator() {
             </div>
           </div>
         </div>
+        <div className="mt-4 space-y-2">
+          <Label htmlFor="num-conti">Moltiplica gamba punta per N conti</Label>
+          <Input
+            id="num-conti"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            placeholder="1"
+            value={numConti}
+            onChange={(e) => setNumConti(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Usalo per quote maggiorate giocate allo stesso book a nome di più intestatari: la
+            puntata sopra è quella di un singolo conto, la copertura viene calcolata
+            sull&apos;esposizione totale ({numContiNum > 1 ? `${numContiNum} conti` : '1 conto'}).
+          </p>
+        </div>
       </div>
 
       {/* Sezione Banca */}
@@ -378,7 +405,7 @@ export function PuntaBancaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="calc-advanced border-b border-border p-4">
+      <div className="border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento della Bancata</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">−30%</span>
@@ -429,7 +456,17 @@ export function PuntaBancaCalculator() {
                   (di cui {formatNum(bonusNum)} € bonus)
                 </span>
               )}{' '}
-              a quota <span className="font-mono">{formatNum(quotaPuntaNum)}</span> sul Book.
+              a quota <span className="font-mono">{formatNum(quotaPuntaNum)}</span> sul Book
+              {numContiNum > 1 && (
+                <span className="text-muted-foreground">
+                  {' '}
+                  × {numContiNum} conti = totale{' '}
+                  <span className="font-mono text-primary">
+                    {formatNum(totalPuntataEffettiva)} €
+                  </span>
+                </span>
+              )}
+              .
             </p>
             <p>
               <span className="font-medium text-destructive">Banca</span>{' '}
@@ -463,7 +500,7 @@ export function PuntaBancaCalculator() {
 
       {/* Bancata parziale (multi-step) */}
       {layStakeValue != null && (
-        <div className="calc-advanced border-b border-border p-4">
+        <div className="border-b border-border p-4">
           <div className="space-y-3">
             {partialLays.map((pl, i) => {
               const result = partialLayResults[i] ?? null
@@ -554,7 +591,7 @@ export function PuntaBancaCalculator() {
         quotaPuntaNum != null &&
         layStakeValue != null &&
         responsabilita != null && (
-          <div className="calc-advanced border-b border-border bg-card">
+          <div className="border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO • '
@@ -575,7 +612,7 @@ export function PuntaBancaCalculator() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Book</span>
                     <span className="text-primary">
-                      {formatSigned(puntataEffettiva * quotaPuntaNum - (puntataNum ?? 0))} €
+                      {formatSigned(totalPuntataEffettiva * quotaPuntaNum - totalPuntataNum)} €
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -611,7 +648,7 @@ export function PuntaBancaCalculator() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Book</span>
-                    <span className="text-destructive">{formatSigned(-(puntataNum ?? 0))} €</span>
+                    <span className="text-destructive">{formatSigned(-totalPuntataNum)} €</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Exchange</span>
@@ -625,7 +662,7 @@ export function PuntaBancaCalculator() {
                   {showRimborsoColumn && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-primary">{formatSigned(rimborsoNum)} €</span>
+                      <span className="text-primary">{formatSigned(totalRimborsoNum)} €</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-border pt-2 font-medium">
@@ -684,7 +721,7 @@ export function PuntaBancaCalculator() {
                   <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci la puntata sul Book:</td>
                     <td className="p-3 text-right text-primary">
-                      {formatSigned(puntataEffettiva * quotaPuntaNum - (puntataNum ?? 0))}
+                      {formatSigned(totalPuntataEffettiva * quotaPuntaNum - totalPuntataNum)}
                     </td>
                     <td className="p-3 text-right text-destructive">
                       {formatSigned(-(effectiveLiability ?? 0))}
@@ -707,7 +744,7 @@ export function PuntaBancaCalculator() {
                   <tr className="bg-destructive/10 transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci la bancata sull&apos;Exchange:</td>
                     <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(puntataNum ?? 0))}
+                      {formatSigned(-totalPuntataNum)}
                     </td>
                     <td className="p-3 text-right text-primary">
                       {effectiveExchangeProfit != null
@@ -715,7 +752,9 @@ export function PuntaBancaCalculator() {
                         : '—'}
                     </td>
                     {showRimborsoColumn && (
-                      <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
+                      <td className="p-3 text-right text-primary">
+                        {formatSigned(totalRimborsoNum)}
+                      </td>
                     )}
                     <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
                       <span
@@ -736,7 +775,7 @@ export function PuntaBancaCalculator() {
         )}
 
       {/* Invia al Profit Tracker */}
-      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
+      <div className="flex flex-col items-center gap-2 p-4">
         <Button
           onClick={() => setSaveModalOpen(true)}
           variant="default"
@@ -760,6 +799,7 @@ export function PuntaBancaCalculator() {
         commissioneNum={commissioneNum}
         partialLays={partialLays}
         partialLayResults={partialLayResults}
+        numConti={numContiNum}
       />
     </div>
   )

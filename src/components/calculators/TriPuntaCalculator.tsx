@@ -796,7 +796,7 @@ export function TriPuntaCalculator() {
       </div>
 
       {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="calc-advanced border-b border-border p-4">
+      <div className="border-b border-border p-4">
         <Label className="mb-2 block">Sbilanciamento delle Puntate B e C</Label>
         <div className="flex items-center gap-3">
           <span className="text-xs text-muted-foreground">&minus;30%</span>
@@ -902,7 +902,7 @@ export function TriPuntaCalculator() {
         profitIfAWins != null &&
         profitIfBWins != null &&
         profitIfCWins != null && (
-          <div className="calc-advanced border-b border-border bg-card">
+          <div className="border-b border-border bg-card">
             <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
               {bonusNum > 0 && rimborsoNum > 0
                 ? 'BONUS + RIMBORSO \u2022 '
@@ -1151,7 +1151,7 @@ export function TriPuntaCalculator() {
 
       {/* Contropuntata parziale B (multi-step) */}
       {stakeB != null && (
-        <div className="calc-advanced border-b border-border p-4">
+        <div className="border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntasB.map((pp, i) => {
               const result = partialPuntaResultsB[i] ?? null
@@ -1228,7 +1228,7 @@ export function TriPuntaCalculator() {
 
       {/* Contropuntata parziale C (multi-step) */}
       {stakeC != null && (
-        <div className="calc-advanced border-b border-border p-4">
+        <div className="border-b border-border p-4">
           <div className="space-y-3">
             {partialPuntasC.map((pp, i) => {
               const result = partialPuntaResultsC[i] ?? null
@@ -1304,7 +1304,7 @@ export function TriPuntaCalculator() {
       )}
 
       {/* Invia al Profit Tracker */}
-      <div className="calc-advanced flex flex-col items-center gap-2 p-4">
+      <div className="flex flex-col items-center gap-2 p-4">
         <Button onClick={handleOpenModal} variant="default" disabled={!showSummary}>
           Invia al Profit Tracker
         </Button>

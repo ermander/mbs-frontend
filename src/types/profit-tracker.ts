@@ -51,7 +51,6 @@ export interface Account {
   saldoAttuale: number
   stato: EnabledStatus
   bloccato: boolean
-  sharedWithCollaboratorIds?: string[]
   createdAt: string
 }
 
@@ -63,7 +62,6 @@ export interface Wallet {
   saldoAttuale: number
   stato: EnabledStatus
   bloccato: boolean
-  sharedWithCollaboratorIds?: string[]
   createdAt: string
 }
 
@@ -152,9 +150,6 @@ export interface BetLegRealizedLedgerSummaryResult {
   granularity: BetLegRealizedLedgerGranularity
   rangeTotal: number
   buckets: BetLegRealizedLedgerSummaryBucket[]
-  sharePercentage?: number | null
-  myShareAmount?: number
-  adminShareAmount?: number
 }
 
 export interface BetLeg {
@@ -214,8 +209,6 @@ export interface WalletMovement {
   valore: number
   dataRegistrazione: string
   descrizione?: string | null
-  payoutToUserId?: string | null
-  creditToUserId?: string | null
 }
 
 export interface Tag {

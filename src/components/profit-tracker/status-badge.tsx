@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 
 interface StatusBadgeProps {
-  variant: 'enabled' | 'disabled' | 'exchange' | 'bookmaker' | 'blocked' | 'shared'
+  variant: 'enabled' | 'disabled' | 'exchange' | 'bookmaker' | 'blocked'
   children: React.ReactNode
   title?: string
   className?: string
@@ -18,7 +18,6 @@ export function StatusBadge({ variant, children, title, className }: StatusBadge
     exchange: 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20',
     bookmaker: 'bg-neon-blue/15 text-neon-blue border-neon-blue/20',
     blocked: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    shared: 'bg-neon-lavender/10 text-neon-lavender border-neon-lavender/20',
   }
 
   return (

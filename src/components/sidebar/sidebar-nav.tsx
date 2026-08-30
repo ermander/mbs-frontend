@@ -19,7 +19,6 @@ export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
     () =>
       authSidebarNav.filter((item) => {
         if (item.requiresRole && item.requiresRole !== userRole) return false
-        if (item.hiddenForRoles && userRole && item.hiddenForRoles.includes(userRole)) return false
         return true
       }),
     [userRole],

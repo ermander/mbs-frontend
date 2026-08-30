@@ -13,7 +13,6 @@ import { AccountCreateModal } from '@/components/profit-tracker/account-create-m
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import { AccountEditModal } from '@/components/profit-tracker/account-edit-modal'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
-import { adminCollaboratorsClient } from '@/services/api/admin-collaborators-client'
 import type { Account } from '@/types/profit-tracker'
 
 const PAGE_SIZE = 20
@@ -45,36 +44,6 @@ export default function ContiPage() {
 
   const userRole = useAuthStore((s) => s.user?.role)
   const isAdmin = userRole === 'ADMIN_ROLE'
-  const [collaboratorNameById, setCollaboratorNameById] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    if (!isAdmin) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const list = await adminCollaboratorsClient.list()
-        if (cancelled) return
-        const map: Record<string, string> = {}
-        for (const c of list) map[c.id] = c.name
-        setCollaboratorNameById(map)
-      } catch {
-        // tooltip senza nomi se la fetch fallisce
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin])
-
-  const renderSharedBadge = (ids: string[] | undefined) => {
-    if (!isAdmin || !ids || ids.length === 0) return null
-    const names = ids.map((id) => collaboratorNameById[id] ?? '…').join(', ')
-    return (
-      <StatusBadge variant="shared" title={`Condiviso con: ${names}`}>
-        Condiviso
-      </StatusBadge>
-    )
-  }
 
   const renderBloccatoToggle = (id: string, current: boolean) => {
     if (!isAdmin) return current ? <StatusBadge variant="blocked">Bloccato</StatusBadge> : null
@@ -301,7 +270,6 @@ export default function ContiPage() {
                       </StatusBadge>
                     </button>
                     {renderBloccatoToggle(account.id, account.bloccato === true)}
-                    {renderSharedBadge(account.sharedWithCollaboratorIds)}
                   </div>
                 </div>
               </div>
@@ -406,7 +374,6 @@ export default function ContiPage() {
                         </StatusBadge>
                       </button>
                       {renderBloccatoToggle(account.id, account.bloccato === true)}
-                      {renderSharedBadge(account.sharedWithCollaboratorIds)}
                     </div>
                   </td>
                   <td className="px-3 py-2">

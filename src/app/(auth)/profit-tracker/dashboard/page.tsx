@@ -1,17 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Scale, Wallet, Loader2, Banknote, PieChart, UserCog, Lock } from 'lucide-react'
+import { Scale, Wallet, Loader2, Banknote, Lock } from 'lucide-react'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { useAuthStore } from '@/stores/auth-store'
 import {
   getUnifiedProfitSummary,
   getPuntateInCorsoTotale,
   getBetLegRealizedLedger,
-  getCollaboratorBreakdown,
-  type CollaboratorBreakdownEntry,
 } from '@/services/api/profit-tracker-client'
 import type {
   BetLegRealizedLedgerSummaryResult,
@@ -36,9 +33,6 @@ const BALANCE_ICON_CLASS = 'size-8 rounded-full bg-amber-500/15 p-1.5 text-amber
 const CURRENT_YEAR = new Date().getFullYear()
 
 export default function ProfitTrackerDashboardPage() {
-  const userRole = useAuthStore((s) => s.user?.role)
-  const isCollaborator = userRole === 'COLLABORATOR_ROLE'
-  const isAdmin = userRole === 'ADMIN_ROLE'
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
@@ -49,9 +43,6 @@ export default function ProfitTrackerDashboardPage() {
   const [ledgerSummary, setLedgerSummary] = useState<BetLegRealizedLedgerSummaryResult | null>(null)
   const [recentLedgerEntries, setRecentLedgerEntries] = useState<BetLegRealizedLedgerEntry[]>([])
   const [puntateInCorsoValue, setPuntateInCorsoValue] = useState(0)
-  const [collaboratorBreakdown, setCollaboratorBreakdown] = useState<CollaboratorBreakdownEntry[]>(
-    [],
-  )
 
   useEffect(() => {
     void fetchAllAccounts()
@@ -74,15 +65,7 @@ export default function ProfitTrackerDashboardPage() {
       .catch((err) => {
         console.error('Dashboard data fetch error:', err)
       })
-
-    if (isAdmin) {
-      getCollaboratorBreakdown({ fromDate, toDate })
-        .then(setCollaboratorBreakdown)
-        .catch((err) => {
-          console.error('Collaborator breakdown fetch error:', err)
-        })
-    }
-  }, [fetchAllAccounts, fetchWallets, fetchOngoingBets, isAdmin])
+  }, [fetchAllAccounts, fetchWallets, fetchOngoingBets])
 
   const bilancio = useMemo(() => {
     const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
@@ -260,123 +243,6 @@ export default function ProfitTrackerDashboardPage() {
           </p>
         </div>
       </div>
-
-      {isCollaborator && ledgerSummary && ledgerSummary.sharePercentage != null && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Mia quota ({ledgerSummary.sharePercentage}%)
-              </p>
-              <PieChart className="size-5 text-emerald-500" />
-            </div>
-            <p className="mt-2 font-mono text-2xl font-semibold text-emerald-400">
-              {formatCurrency(ledgerSummary.myShareAmount ?? 0)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Quota a te derivante dalle operazioni che hai effettuato nell&apos;anno {CURRENT_YEAR}
-              .
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Quota admin ({Math.max(0, 100 - ledgerSummary.sharePercentage)}%)
-              </p>
-              <UserCog className="size-5 text-muted-foreground" />
-            </div>
-            <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
-              {formatCurrency(ledgerSummary.adminShareAmount ?? 0)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Quota destinata all&apos;admin (proprietario di conti e capitale).
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isAdmin && collaboratorBreakdown.length > 0 && (
-        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-foreground">
-              Performance collaboratori {CURRENT_YEAR}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Profitto generato da ogni collaboratore e split secondo la quota configurata.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-muted/40">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-muted-foreground">
-                    Collaboratore
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Quota %
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Profitto totale
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Quota collab.
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Tua quota
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {collaboratorBreakdown.map((c) => (
-                  <tr key={c.collaboratorId} className="border-t border-border">
-                    <td className="px-3 py-2 text-foreground">
-                      <div className="font-medium">{c.name}</div>
-                      <div className="text-xs text-muted-foreground">@{c.username}</div>
-                    </td>
-                    <td className="px-3 py-2 text-right text-foreground">
-                      {c.profitSharePercentage != null ? `${c.profitSharePercentage}%` : '—'}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right font-mono ${
-                        c.totalProfit >= 0 ? 'text-foreground' : 'text-destructive'
-                      }`}
-                    >
-                      {formatCurrency(c.totalProfit)}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono text-muted-foreground">
-                      {formatCurrency(c.myShareAmount)}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right font-mono font-semibold ${
-                        c.adminShareAmount >= 0 ? 'text-emerald-400' : 'text-destructive'
-                      }`}
-                    >
-                      {formatCurrency(c.adminShareAmount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border bg-muted/30">
-                  <td className="px-3 py-2 font-medium text-foreground">Totale</td>
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2 text-right font-mono font-semibold text-foreground">
-                    {formatCurrency(collaboratorBreakdown.reduce((s, c) => s + c.totalProfit, 0))}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-muted-foreground">
-                    {formatCurrency(collaboratorBreakdown.reduce((s, c) => s + c.myShareAmount, 0))}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono font-semibold text-emerald-400">
-                    {formatCurrency(
-                      collaboratorBreakdown.reduce((s, c) => s + c.adminShareAmount, 0),
-                    )}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
 
       <div className="grid gap-4 lg:grid-cols-[2fr,1fr] lg:gap-6">
         <div className="min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">

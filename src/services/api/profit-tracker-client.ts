@@ -266,8 +266,6 @@ export interface CreateWalletMovementPayload {
   valore: number
   dataRegistrazione: string
   descrizione?: string | null
-  payoutToUserId?: string | null
-  creditToUserId?: string | null
 }
 
 export async function createWalletMovement(
@@ -520,29 +518,6 @@ export async function getUnifiedProfitSummary(
     { params },
   )
   return response.data
-}
-
-// Collaborator profit breakdown (admin only)
-
-export interface CollaboratorBreakdownEntry {
-  collaboratorId: string
-  name: string
-  username: string
-  profitSharePercentage: number | null
-  totalProfit: number
-  myShareAmount: number
-  adminShareAmount: number
-}
-
-export async function getCollaboratorBreakdown(params?: {
-  fromDate?: string
-  toDate?: string
-}): Promise<CollaboratorBreakdownEntry[]> {
-  const response = await apiClient.get<{ items: CollaboratorBreakdownEntry[] }>(
-    '/profit-tracker/collaborator-breakdown',
-    { params: params ?? {} },
-  )
-  return response.data.items
 }
 
 // Puntate in corso totale

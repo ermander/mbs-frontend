@@ -16,7 +16,6 @@ import { WalletTransferModal } from '@/components/profit-tracker/wallet-transfer
 import { WalletTopupExpenseModal } from '@/components/profit-tracker/wallet-topup-expense-modal'
 import { useAuthStore } from '@/stores/auth-store'
 import { StatusBadge } from '@/components/profit-tracker/status-badge'
-import { adminCollaboratorsClient } from '@/services/api/admin-collaborators-client'
 import type { Wallet } from '@/types/profit-tracker'
 
 const PER_PAGE = 20
@@ -36,38 +35,7 @@ export default function WalletsPage() {
   const updateWallet = useProfitTrackerStore((s) => s.updateWallet)
 
   const userRole = useAuthStore((s) => s.user?.role)
-  const isCollaborator = userRole === 'COLLABORATOR_ROLE'
   const isAdmin = userRole === 'ADMIN_ROLE'
-  const [collaboratorNameById, setCollaboratorNameById] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    if (!isAdmin) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const list = await adminCollaboratorsClient.list()
-        if (cancelled) return
-        const map: Record<string, string> = {}
-        for (const c of list) map[c.id] = c.name
-        setCollaboratorNameById(map)
-      } catch {
-        // tooltip senza nomi se la fetch fallisce
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin])
-
-  const renderSharedBadge = (ids: string[] | undefined) => {
-    if (!isAdmin || !ids || ids.length === 0) return null
-    const names = ids.map((id) => collaboratorNameById[id] ?? '…').join(', ')
-    return (
-      <StatusBadge variant="shared" title={`Condiviso con: ${names}`}>
-        Condiviso
-      </StatusBadge>
-    )
-  }
 
   const toggleBloccato = async (id: string, current: boolean) => {
     try {
@@ -181,29 +149,27 @@ export default function WalletsPage() {
       sectionTitle="Wallets"
       sectionDescription="Configura e monitora i metodi di pagamento e la liquidità disponibile."
       actions={
-        isCollaborator ? null : (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setTransferOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              Trasferisci
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setTopupOpen(true)}
-              className="w-full sm:w-auto"
-            >
-              Ricarica/Spesa
-            </Button>
-            <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
-              Nuovo wallet
-            </Button>
-          </div>
-        )
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setTransferOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            Trasferisci
+          </Button>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setTopupOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            Ricarica/Spesa
+          </Button>
+          <Button type="button" onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
+            Nuovo wallet
+          </Button>
+        </div>
       }
     >
       <div
@@ -341,7 +307,6 @@ export default function WalletsPage() {
                     </StatusBadge>
                   </button>
                   {renderBloccatoToggle(wallet.id, wallet.bloccato === true)}
-                  {renderSharedBadge(wallet.sharedWithCollaboratorIds)}
                 </div>
               </div>
             </div>
@@ -430,7 +395,6 @@ export default function WalletsPage() {
                       </StatusBadge>
                     </button>
                     {renderBloccatoToggle(wallet.id, wallet.bloccato === true)}
-                    {renderSharedBadge(wallet.sharedWithCollaboratorIds)}
                   </div>
                 </td>
                 <td className="px-3 py-2">

@@ -78,7 +78,6 @@ export function Header() {
     () =>
       authenticatedNavDropdowns.filter((d) => {
         if (d.requiresRole && d.requiresRole !== userRole) return false
-        if (d.hiddenForRoles && userRole && d.hiddenForRoles.includes(userRole)) return false
         return true
       }),
     [userRole],

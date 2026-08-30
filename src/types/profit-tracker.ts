@@ -25,6 +25,12 @@ export type QuickGameMethod =
   | 'trading'
   | 'altro'
 
+/** Categoria del profitto per le giocate (ongoing bets). Le giocate rapide usano QuickGameMethod. */
+export type BetCategory = 'matched_betting' | 'surebet' | 'valuebet'
+
+/** Categoria come appare nella sezione Report: BetCategory oppure un QuickGameMethod. */
+export type ProfitCategory = BetCategory | QuickGameMethod
+
 export interface Holder {
   id: string
   nome: string
@@ -70,6 +76,7 @@ export type ModalitaSaldo = 'reale' | 'bonus' | 'rimborso'
 export interface OngoingBet {
   id: string
   eventoData: string
+  categoria?: BetCategory
   eventoNotificato?: boolean
   hasOpenLegs?: boolean
   sport: SportType
@@ -150,6 +157,57 @@ export interface BetLegRealizedLedgerSummaryResult {
   granularity: BetLegRealizedLedgerGranularity
   rangeTotal: number
   buckets: BetLegRealizedLedgerSummaryBucket[]
+}
+
+// Profit report (sezione "Report")
+
+export interface ProfitReportFilters {
+  fromDate?: string
+  toDate?: string
+  holderId?: string
+  accountId?: string
+  bookId?: string
+  categoria?: string
+}
+
+export interface ProfitReportRow {
+  periodStart: string
+  categoria: string
+  accountId: string
+  bookId: string
+  holderId: string
+  totale: number
+  giocate: number
+}
+
+export interface ProfitReportBucket {
+  periodStart: string
+  totale: number
+  giocate: number
+}
+
+export interface ProfitReportResult {
+  rows: ProfitReportRow[]
+  buckets: ProfitReportBucket[]
+  totale: number
+  giocate: number
+}
+
+export interface ProfitReportDetailItem {
+  kind: 'bet' | 'quick'
+  id: string
+  nome: string | null
+  categoria: string
+  data: string
+  importo: number
+  accountIds: string[]
+}
+
+export interface ProfitReportDetailResult {
+  items: ProfitReportDetailItem[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface BetLeg {

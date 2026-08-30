@@ -15,7 +15,8 @@ import { Label } from '@/components/ui/label'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
-import type { BetBonusType, ModalitaSaldo, SportType } from '@/types/profit-tracker'
+import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
+import type { BetBonusType, BetCategory, ModalitaSaldo, SportType } from '@/types/profit-tracker'
 
 interface SingolaBetModalProps {
   open: boolean
@@ -84,6 +85,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
   const [accountId, setAccountId] = useState('')
   const [quota, setQuota] = useState('')
   const [tipoBonus, setTipoBonus] = useState<BetBonusType>('none')
+  const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [stake, setStake] = useState('')
   const [nota, setNota] = useState('')
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
@@ -99,6 +101,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
     setAccountId('')
     setQuota('')
     setTipoBonus('none')
+    setCategoria('matched_betting')
     setStake('')
     setNota('')
     setIsSaving(false)
@@ -147,6 +150,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
       const eventoDataIso = new Date(eventoDataLocal).toISOString()
       const betPayload = {
         eventoData: eventoDataIso,
+        categoria,
         sport,
         eventoNome,
         modalitaSaldo: modalitaSaldoFromTipoBonus(tipoBonus),
@@ -191,6 +195,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
     sport,
     eventoNome,
     tipoBonus,
+    categoria,
     accountId,
     nota,
     mercato,
@@ -268,6 +273,8 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
               placeholder="Es. Over 2.5"
             />
           </div>
+
+          <BetCategorySelect value={categoria} onChange={setCategoria} />
 
           <SearchableSelect
             id="singola-conto"

@@ -9,6 +9,7 @@ import {
   Radar,
   Calculator,
   BarChart3,
+  PieChart,
   ListChecks,
   Archive,
   Wallet,
@@ -61,6 +62,7 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
   { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
 
   { section: 'DASHBOARD', label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
+  { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
   { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
   { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
   { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti', icon: Wallet },
@@ -128,6 +130,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
     label: 'DASHBOARD',
     items: [
       { label: 'Dashboard', href: '/profit-tracker/dashboard' },
+      { label: 'Report', href: '/profit-tracker/report' },
       { label: 'Giocate', href: '/profit-tracker/giocate' },
       { label: 'Archivio', href: '/profit-tracker/archivio' },
       { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti' },

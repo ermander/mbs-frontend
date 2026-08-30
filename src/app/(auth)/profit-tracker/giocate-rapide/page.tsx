@@ -7,24 +7,15 @@ import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-track
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { QuickBetModal } from '@/components/profit-tracker/quick-bet-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import { QUICK_METHODS } from '@/lib/profit-tracker/categories'
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('it-IT')
 }
 
-const QUICK_METHOD_LABELS: Record<string, string> = {
-  baccarat: 'Baccarat',
-  bingo: 'Bingo',
-  blackjack: 'Blackjack',
-  casino_live: 'Casino live',
-  gratta_e_vinci: 'Gratta e vinci',
-  quick_games: 'Quick games',
-  roulette: 'Roulette',
-  slot_machine: 'Slot machine',
-  sport: 'Sport',
-  trading: 'Trading',
-  altro: 'Altro',
-}
+const QUICK_METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  QUICK_METHODS.map((m) => [m.value, m.label]),
+)
 
 interface Filters {
   dateFrom: string

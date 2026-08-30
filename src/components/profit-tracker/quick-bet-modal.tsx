@@ -16,26 +16,13 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
+import { QUICK_METHODS } from '@/lib/profit-tracker/categories'
 import type { QuickGameMethod } from '@/types/profit-tracker'
 
 interface QuickBetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
-
-const QUICK_METHODS: { value: QuickGameMethod; label: string }[] = [
-  { value: 'baccarat', label: 'Baccarat' },
-  { value: 'bingo', label: 'Bingo' },
-  { value: 'blackjack', label: 'Blackjack' },
-  { value: 'casino_live', label: 'Casino Live' },
-  { value: 'gratta_e_vinci', label: 'Gratta e Vinci' },
-  { value: 'quick_games', label: 'Quick Games' },
-  { value: 'roulette', label: 'Roulette' },
-  { value: 'slot_machine', label: 'Slot Machine' },
-  { value: 'sport', label: 'Sport' },
-  { value: 'trading', label: 'Trading' },
-  { value: 'altro', label: 'Altro' },
-]
 
 export function QuickBetModal({ open, onOpenChange }: QuickBetModalProps) {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)

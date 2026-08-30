@@ -7,6 +7,7 @@ import type {
   ActivityFeedFilters,
   ActivityFeedResult,
   ActivityFeedSummary,
+  BetCategory,
   BetLeg,
   BetLegRealizedLedgerListFilters,
   BetLegRealizedLedgerListResult,
@@ -16,6 +17,9 @@ import type {
   EnabledStatus,
   Holder,
   OngoingBet,
+  ProfitReportDetailResult,
+  ProfitReportFilters,
+  ProfitReportResult,
   PuntateInCorsoTotale,
   QuickBet,
   Wallet,
@@ -333,6 +337,7 @@ export interface GetBetsParams {
 export interface CreateBetPayload {
   eventoData: string
   source?: 'oddsmatcher'
+  categoria?: BetCategory
   sport: string
   eventoNome: string
   modalitaSaldo: string
@@ -516,6 +521,27 @@ export async function getUnifiedProfitSummary(
   const response = await apiClient.get<BetLegRealizedLedgerSummaryResult>(
     '/profit-tracker/unified-profit-summary',
     { params },
+  )
+  return response.data
+}
+
+// Profit report (sezione "Report")
+
+export async function getProfitReport(
+  params?: ProfitReportFilters,
+): Promise<ProfitReportResult> {
+  const response = await apiClient.get<ProfitReportResult>('/profit-tracker/report', {
+    params: params ?? {},
+  })
+  return response.data
+}
+
+export async function getProfitReportDetail(
+  params?: ProfitReportFilters & { page?: number; limit?: number },
+): Promise<ProfitReportDetailResult> {
+  const response = await apiClient.get<ProfitReportDetailResult>(
+    '/profit-tracker/report/detail',
+    { params: params ?? {} },
   )
   return response.data
 }

@@ -12,7 +12,8 @@ import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
 import { SearchableSelect } from '@/components/ui/searchable-select'
-import type { Account, Holder } from '@/types/profit-tracker'
+import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
+import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -115,6 +116,7 @@ export function TriPuntaCalculator() {
   const [mercatoPuntaA, setMercatoPuntaA] = useState('')
   const [mercatoPuntaB, setMercatoPuntaB] = useState('')
   const [mercatoPuntaC, setMercatoPuntaC] = useState('')
+  const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
@@ -354,6 +356,7 @@ export function TriPuntaCalculator() {
     setAccountIdPuntaC('')
     setHolderModalError(null)
     setSavedBetId(null)
+    setCategoria('matched_betting')
   }, [])
 
   const handleOpenModal = () => {
@@ -380,6 +383,7 @@ export function TriPuntaCalculator() {
     try {
       const betPayload = {
         eventoData: eventoDataIso,
+        categoria,
         sport: 'calcio' as const,
         eventoNome: eventoNomeVal,
         modalitaSaldo: 'reale' as const,
@@ -1436,6 +1440,8 @@ export function TriPuntaCalculator() {
                     ))}
                   </select>
                 </div>
+
+                <BetCategorySelect value={categoria} onChange={setCategoria} />
 
                 {/* Intestatario Punta 1 */}
                 <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">

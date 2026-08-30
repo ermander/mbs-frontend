@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Send, X } from 'lucide-react'
 import Link from 'next/link'
-import type { Account, Book, Holder } from '@/types/profit-tracker'
+import type { Account, BetCategory, Book, Holder } from '@/types/profit-tracker'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
+import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import { cn } from '@/lib/utils'
 
 interface PuntaBancaSaveModalProps {
@@ -88,6 +89,7 @@ export function PuntaBancaSaveModal({
   const [eventoNome, setEventoNome] = useState('')
   const [eventoDataLocal, setEventoDataLocal] = useState(getDefaultEventDateTimeLocal)
   const [mercato, setMercato] = useState('')
+  const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
 
   const [holderIdPunta, setHolderIdPunta] = useState('')
   const [holderIdBanca, setHolderIdBanca] = useState('')
@@ -108,6 +110,7 @@ export function PuntaBancaSaveModal({
     setEventoNome('')
     setEventoDataLocal(getDefaultEventDateTimeLocal())
     setMercato('')
+    setCategoria('matched_betting')
     setHolderIdPunta('')
     setHolderIdBanca('')
     setAccountsPunta([])
@@ -288,6 +291,7 @@ export function PuntaBancaSaveModal({
 
       const betPayload = {
         eventoData: eventoDataIso,
+        categoria,
         sport: 'altro' as const,
         eventoNome,
         modalitaSaldo: 'reale' as const,
@@ -405,6 +409,7 @@ export function PuntaBancaSaveModal({
     eventoDataLocal,
     eventoNome,
     mercato,
+    categoria,
     isMultiConto,
     selectedPuntaAccountIds,
     accountIdPunta,
@@ -518,6 +523,8 @@ export function PuntaBancaSaveModal({
                   placeholder="Es. Esito finale 1X2"
                 />
               </div>
+
+              <BetCategorySelect value={categoria} onChange={setCategoria} />
 
               <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <Label className="text-xs font-medium uppercase tracking-wide text-primary">

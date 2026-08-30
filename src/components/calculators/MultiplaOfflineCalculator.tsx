@@ -3,10 +3,13 @@
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
+import { MARKET_OPTIONS, formatMercatoString, isTeamScopedMarket } from '@/lib/calculators/markets'
 import { MultiplaOfflineSaveModal } from '@/components/calculators/MultiplaOfflineSaveModal'
+import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { cn } from '@/lib/utils'
 import type { OfflineMultiplaEvent } from '@/types/offline-multipla-event'
 
@@ -50,7 +53,7 @@ function createEmptyEvent(): OfflineMultiplaEvent {
     sport: 'calcio',
     competition: '',
     market: '',
-    selection: '',
+    marketScope: '',
     mainOdds: '',
     coverOdds: '',
     commissionPercent: '0',
@@ -336,7 +339,7 @@ export function MultiplaOfflineCalculator() {
                               {dateFormatted}
                             </td>
                             <td className="pr-3 font-sans text-muted-foreground">
-                              {[ev.market, ev.selection].filter(Boolean).join(' • ') || '—'}
+                              {formatMercatoString(ev.market, ev.marketScope) || '—'}
                             </td>
                             <td className="pr-3 text-right">{formatNum(parseNum(ev.mainOdds))}</td>
                             <td className="pr-3 text-right">{formatNum(parseNum(ev.coverOdds))}</td>
@@ -413,26 +416,31 @@ export function MultiplaOfflineCalculator() {
                         <Label htmlFor={`ev-market-${ev.id}`} className="text-xs">
                           Mercato
                         </Label>
-                        <Input
+                        <SearchableSelect
                           id={`ev-market-${ev.id}`}
-                          placeholder="Es. 1X2"
+                          placeholder="Seleziona"
+                          searchPlaceholder="Cerca mercato..."
+                          options={MARKET_OPTIONS}
                           value={ev.market}
-                          onChange={(e) => updateEvent(ev.id, { market: e.target.value })}
-                          className="h-8"
+                          onChange={(v) =>
+                            updateEvent(ev.id, {
+                              market: v,
+                              marketScope: isTeamScopedMarket(v) ? ev.marketScope || 'CASA' : '',
+                            })
+                          }
+                          className="[&>button]:h-8"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-sel-${ev.id}`} className="text-xs">
-                          Selezione
-                        </Label>
-                        <Input
-                          id={`ev-sel-${ev.id}`}
-                          placeholder="Es. 1"
-                          value={ev.selection}
-                          onChange={(e) => updateEvent(ev.id, { selection: e.target.value })}
-                          className="h-8"
-                        />
-                      </div>
+                      {isTeamScopedMarket(ev.market) && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Squadra</Label>
+                          <TeamScopeToggle
+                            value={ev.marketScope}
+                            onChange={(s) => updateEvent(ev.id, { marketScope: s })}
+                            className="h-8 items-stretch"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Quote e commissione */}

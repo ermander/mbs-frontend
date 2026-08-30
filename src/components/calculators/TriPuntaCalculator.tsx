@@ -12,6 +12,13 @@ import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
 import { SearchableSelect } from '@/components/ui/searchable-select'
+import {
+  MARKET_OPTIONS,
+  formatMercatoString,
+  isTeamScopedMarket,
+  type TeamScope,
+} from '@/lib/calculators/markets'
+import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
@@ -28,28 +35,6 @@ import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
 
 const TIPOLOGIE = ['NORMALE'] as const
-
-const MERCATI_TRI_PUNTA = [
-  '1X2 - 1',
-  '1X2 - X',
-  '1X2 - 2',
-  'Under/Over 0.5 - Under',
-  'Under/Over 0.5 - Over',
-  'Under/Over 1.5 - Under',
-  'Under/Over 1.5 - Over',
-  'Under/Over 2.5 - Under',
-  'Under/Over 2.5 - Over',
-  'Under/Over 3.5 - Under',
-  'Under/Over 3.5 - Over',
-  'GG/NG - GG',
-  'GG/NG - NG',
-  'Doppia Chance - 1X',
-  'Doppia Chance - X2',
-  'Doppia Chance - 12',
-  'Handicap',
-  'Parziale/Finale',
-  'Altro',
-] as const
 
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
@@ -116,6 +101,9 @@ export function TriPuntaCalculator() {
   const [mercatoPuntaA, setMercatoPuntaA] = useState('')
   const [mercatoPuntaB, setMercatoPuntaB] = useState('')
   const [mercatoPuntaC, setMercatoPuntaC] = useState('')
+  const [scopePuntaA, setScopePuntaA] = useState<TeamScope | ''>('')
+  const [scopePuntaB, setScopePuntaB] = useState<TeamScope | ''>('')
+  const [scopePuntaC, setScopePuntaC] = useState<TeamScope | ''>('')
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
@@ -398,7 +386,7 @@ export function TriPuntaCalculator() {
         sport: 'calcio',
         eventoNome: eventoNomeVal,
         competizione,
-        mercato: mercatoPuntaA || '—',
+        mercato: formatMercatoString(mercatoPuntaA, scopePuntaA) || '—',
         metodo: 'punta' as const,
         tipoBonus: tipoBonusA as 'none' | 'bonus' | 'rimborso' | 'freebet',
         accountId: accountIdPuntaA,
@@ -426,7 +414,7 @@ export function TriPuntaCalculator() {
             sport: 'calcio',
             eventoNome: eventoNomeVal,
             competizione,
-            mercato: mercatoPuntaB || '—',
+            mercato: formatMercatoString(mercatoPuntaB, scopePuntaB) || '—',
             metodo: 'punta' as const,
             tipoBonus: 'none',
             accountId: accountIdPuntaB,
@@ -450,7 +438,7 @@ export function TriPuntaCalculator() {
             sport: 'calcio',
             eventoNome: eventoNomeVal,
             competizione,
-            mercato: mercatoPuntaB || '—',
+            mercato: formatMercatoString(mercatoPuntaB, scopePuntaB) || '—',
             metodo: 'punta' as const,
             tipoBonus: 'none',
             accountId: accountIdPuntaB,
@@ -472,7 +460,7 @@ export function TriPuntaCalculator() {
           sport: 'calcio',
           eventoNome: eventoNomeVal,
           competizione,
-          mercato: mercatoPuntaB || '—',
+          mercato: formatMercatoString(mercatoPuntaB, scopePuntaB) || '—',
           metodo: 'punta' as const,
           tipoBonus: 'none',
           accountId: accountIdPuntaB,
@@ -502,7 +490,7 @@ export function TriPuntaCalculator() {
             sport: 'calcio',
             eventoNome: eventoNomeVal,
             competizione,
-            mercato: mercatoPuntaC || '—',
+            mercato: formatMercatoString(mercatoPuntaC, scopePuntaC) || '—',
             metodo: 'punta' as const,
             tipoBonus: 'none',
             accountId: accountIdPuntaC,
@@ -526,7 +514,7 @@ export function TriPuntaCalculator() {
             sport: 'calcio',
             eventoNome: eventoNomeVal,
             competizione,
-            mercato: mercatoPuntaC || '—',
+            mercato: formatMercatoString(mercatoPuntaC, scopePuntaC) || '—',
             metodo: 'punta' as const,
             tipoBonus: 'none',
             accountId: accountIdPuntaC,
@@ -548,7 +536,7 @@ export function TriPuntaCalculator() {
           sport: 'calcio',
           eventoNome: eventoNomeVal,
           competizione,
-          mercato: mercatoPuntaC || '—',
+          mercato: formatMercatoString(mercatoPuntaC, scopePuntaC) || '—',
           metodo: 'punta' as const,
           tipoBonus: 'none',
           accountId: accountIdPuntaC,
@@ -1394,51 +1382,66 @@ export function TriPuntaCalculator() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tp-modal-mercato-a">Mercato Punta 1</Label>
-                  <select
+                  <SearchableSelect
                     id="tp-modal-mercato-a"
+                    placeholder="Seleziona"
+                    searchPlaceholder="Cerca mercato..."
+                    options={MARKET_OPTIONS}
                     value={mercatoPuntaA}
-                    onChange={(e) => setMercatoPuntaA(e.target.value)}
-                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                  >
-                    <option value="">Seleziona</option>
-                    {MERCATI_TRI_PUNTA.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => {
+                      setMercatoPuntaA(v)
+                      setScopePuntaA((prev) => (isTeamScopedMarket(v) ? prev || 'CASA' : ''))
+                    }}
+                    portalContainer={dropdownPortalEl}
+                  />
+                  {isTeamScopedMarket(mercatoPuntaA) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Squadra</span>
+                      <TeamScopeToggle value={scopePuntaA} onChange={setScopePuntaA} />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tp-modal-mercato-b">Mercato Punta 2</Label>
-                  <select
+                  <SearchableSelect
                     id="tp-modal-mercato-b"
+                    placeholder="Seleziona"
+                    searchPlaceholder="Cerca mercato..."
+                    options={MARKET_OPTIONS}
                     value={mercatoPuntaB}
-                    onChange={(e) => setMercatoPuntaB(e.target.value)}
-                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                  >
-                    <option value="">Seleziona</option>
-                    {MERCATI_TRI_PUNTA.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => {
+                      setMercatoPuntaB(v)
+                      setScopePuntaB((prev) => (isTeamScopedMarket(v) ? prev || 'CASA' : ''))
+                    }}
+                    portalContainer={dropdownPortalEl}
+                  />
+                  {isTeamScopedMarket(mercatoPuntaB) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Squadra</span>
+                      <TeamScopeToggle value={scopePuntaB} onChange={setScopePuntaB} />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tp-modal-mercato-c">Mercato Punta 3</Label>
-                  <select
+                  <SearchableSelect
                     id="tp-modal-mercato-c"
+                    placeholder="Seleziona"
+                    searchPlaceholder="Cerca mercato..."
+                    options={MARKET_OPTIONS}
                     value={mercatoPuntaC}
-                    onChange={(e) => setMercatoPuntaC(e.target.value)}
-                    className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 [&>option]:bg-background"
-                  >
-                    <option value="">Seleziona</option>
-                    {MERCATI_TRI_PUNTA.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => {
+                      setMercatoPuntaC(v)
+                      setScopePuntaC((prev) => (isTeamScopedMarket(v) ? prev || 'CASA' : ''))
+                    }}
+                    portalContainer={dropdownPortalEl}
+                  />
+                  {isTeamScopedMarket(mercatoPuntaC) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Squadra</span>
+                      <TeamScopeToggle value={scopePuntaC} onChange={setScopePuntaC} />
+                    </div>
+                  )}
                 </div>
 
                 <BetCategorySelect value={categoria} onChange={setCategoria} />

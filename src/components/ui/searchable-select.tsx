@@ -60,9 +60,12 @@ export function SearchableSelect({
   const displayLabel = selectedOption ? selectedOption.label : placeholder
 
   const filteredOptions = useMemo(() => {
-    if (!query.trim()) return options
-    const q = query.toLowerCase().trim()
-    return options.filter((o) => o.label.toLowerCase().includes(q))
+    const tokens = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return options
+    return options.filter((o) => {
+      const l = o.label.toLowerCase()
+      return tokens.every((t) => l.includes(t))
+    })
   }, [options, query])
 
   const updatePosition = useCallback(() => {

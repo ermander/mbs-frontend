@@ -9,6 +9,7 @@ import { Loader2, Send, X } from 'lucide-react'
 import type { Account, Book, Holder } from '@/types/profit-tracker'
 import type { OfflineMultiplaEvent } from '@/types/offline-multipla-event'
 import type { MultiplaHedgeResult } from '@/lib/calculators/multipla'
+import { formatMercatoString } from '@/lib/calculators/markets'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getAccounts } from '@/services/api/profit-tracker-client'
@@ -233,8 +234,8 @@ export function MultiplaOfflineSaveModal({
           sport: ev.sport,
           eventoNome: ev.eventName || `Evento ${i + 1}`,
           competizione: ev.competition || 'N/D',
-          mercato: ev.market || 'N/D',
-          selezione: ev.selection || undefined,
+          mercato: formatMercatoString(ev.market, ev.marketScope) || 'N/D',
+          selezione: undefined as string | undefined,
           metodo: (ev.type === 'punta-punta' ? 'punta' : 'banca') as 'punta' | 'banca',
           tipoBonus: 'none',
           accountId: accountIdBanca,

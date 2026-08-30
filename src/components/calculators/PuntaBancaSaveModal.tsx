@@ -13,6 +13,14 @@ import { getAccounts } from '@/services/api/profit-tracker-client'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
+import {
+  PUNTA_BANCA_MARKET_OPTIONS,
+  PUNTA_BANCA_OPTION,
+  formatMercatoString,
+  isTeamScopedMarket,
+  type TeamScope,
+} from '@/lib/calculators/markets'
+import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import { cn } from '@/lib/utils'
 
@@ -89,6 +97,7 @@ export function PuntaBancaSaveModal({
   const [eventoNome, setEventoNome] = useState('')
   const [eventoDataLocal, setEventoDataLocal] = useState(getDefaultEventDateTimeLocal)
   const [mercato, setMercato] = useState('')
+  const [mercatoScope, setMercatoScope] = useState<TeamScope | ''>('')
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
 
   const [holderIdPunta, setHolderIdPunta] = useState('')
@@ -110,6 +119,7 @@ export function PuntaBancaSaveModal({
     setEventoNome('')
     setEventoDataLocal(getDefaultEventDateTimeLocal())
     setMercato('')
+    setMercatoScope('')
     setCategoria('matched_betting')
     setHolderIdPunta('')
     setHolderIdBanca('')
@@ -148,7 +158,7 @@ export function PuntaBancaSaveModal({
         if (!mercato) {
           const hasExchangeBooks = currentBooks.some((b) => b.isExchange)
           if (hasExchangeBooks) {
-            setMercato('Punta-Banca')
+            setMercato(PUNTA_BANCA_OPTION.value)
           }
         }
 
@@ -288,6 +298,7 @@ export function PuntaBancaSaveModal({
     try {
       const eventoDataIso = new Date(eventoDataLocal).toISOString()
       const puntaAccountIds = isMultiConto ? selectedPuntaAccountIds : [accountIdPunta]
+      const mercatoFinale = formatMercatoString(mercato, mercatoScope)
 
       const betPayload = {
         eventoData: eventoDataIso,
@@ -305,7 +316,7 @@ export function PuntaBancaSaveModal({
         sport: 'altro',
         eventoNome,
         competizione: 'N/D',
-        mercato,
+        mercato: mercatoFinale,
         metodo: 'punta' as const,
         tipoBonus,
         stake: puntataNum,
@@ -331,7 +342,7 @@ export function PuntaBancaSaveModal({
         sport: 'altro',
         eventoNome,
         competizione: 'N/D',
-        mercato,
+        mercato: mercatoFinale,
         metodo: 'banca' as const,
         tipoBonus,
         accountId: accountIdBanca,
@@ -409,6 +420,7 @@ export function PuntaBancaSaveModal({
     eventoDataLocal,
     eventoNome,
     mercato,
+    mercatoScope,
     categoria,
     isMultiConto,
     selectedPuntaAccountIds,
@@ -516,12 +528,24 @@ export function PuntaBancaSaveModal({
 
               <div className="space-y-2">
                 <Label htmlFor="mercato">Mercato</Label>
-                <Input
+                <SearchableSelect
                   id="mercato"
+                  placeholder="Seleziona"
+                  searchPlaceholder="Cerca mercato..."
+                  options={PUNTA_BANCA_MARKET_OPTIONS}
                   value={mercato}
-                  onChange={(e) => setMercato(e.target.value)}
-                  placeholder="Es. Esito finale 1X2"
+                  onChange={(v) => {
+                    setMercato(v)
+                    setMercatoScope((prev) => (isTeamScopedMarket(v) ? prev || 'CASA' : ''))
+                  }}
+                  portalContainer={dropdownPortalEl}
                 />
+                {isTeamScopedMarket(mercato) && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Squadra</span>
+                    <TeamScopeToggle value={mercatoScope} onChange={setMercatoScope} />
+                  </div>
+                )}
               </div>
 
               <BetCategorySelect value={categoria} onChange={setCategoria} />

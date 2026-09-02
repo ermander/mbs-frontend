@@ -8,6 +8,8 @@ export interface MatcherLeg {
   outcomeLabel: string
   odds: number
   liquidity?: number | null
+  /** last_seen_at (ISO) of the price behind this leg; null for rows built before 2026-09 */
+  lastSeenAt?: string | null
 }
 
 export interface MatcherResult {

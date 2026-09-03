@@ -11,8 +11,13 @@ import type {
 } from '@/types/matcher'
 
 const PAGE_SIZE = 50
-const AUTO_REFRESH_MS = 60_000
+// Fase 2: results follow ingestion by seconds on the backend, so the page polls
+// every 20 s (first page, visible tab only) instead of once a minute.
+const AUTO_REFRESH_MS = 20_000
 const SEARCH_DEBOUNCE_MS = 350
+// A price older than this is worth a second look before betting on it.
+const STALE_LEG_SECONDS = 180
+const OLD_LEG_SECONDS = 600
 
 const MATCH_TYPES: Array<{ value: string; label: string }> = [
   { value: '', label: 'Tutti i tipi' },
@@ -83,7 +88,40 @@ function isLayLeg(leg: MatcherLeg): boolean {
   return leg.outcomeLabel.startsWith('LAY ')
 }
 
-function LegCell({ leg }: { leg: MatcherLeg }) {
+/** Seconds elapsed since an ISO timestamp, never negative. */
+function ageSeconds(iso: string, nowMs: number): number {
+  return Math.max(0, Math.floor((nowMs - new Date(iso).getTime()) / 1000))
+}
+
+function ageLabel(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min`
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`
+}
+
+function ageClass(seconds: number): string {
+  if (seconds < STALE_LEG_SECONDS) return 'text-emerald-400'
+  if (seconds < OLD_LEG_SECONDS) return 'text-amber-400'
+  return 'text-red-400'
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+/** A ticking clock so the ages on screen keep moving between polls. */
+function useNow(intervalMs: number): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const handle = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(handle)
+  }, [intervalMs])
+  return now
+}
+
+function LegCell({ leg, now }: { leg: MatcherLeg; now: number }) {
   const lay = isLayLeg(leg)
   const oddsColor = lay ? 'text-pink-400' : 'text-blue-400'
   const tagClass = lay
@@ -105,6 +143,14 @@ function LegCell({ leg }: { leg: MatcherLeg }) {
         {leg.outcomeLabel.replace(/^(BACK|LAY)\s+/, '')}{' '}
         <span className={`font-bold ${oddsColor}`}>{leg.odds.toFixed(2)}</span>
       </div>
+      {leg.lastSeenAt && (
+        <div
+          className={`text-[10px] tabular-nums ${ageClass(ageSeconds(leg.lastSeenAt, now))}`}
+          title={`Quota confermata dal bookmaker alle ${formatTime(leg.lastSeenAt)}`}
+        >
+          vista {ageLabel(ageSeconds(leg.lastSeenAt, now))} fa
+        </div>
+      )}
     </div>
   )
 }
@@ -116,6 +162,7 @@ export function OddsScannerV2Table() {
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [calculatedAt, setCalculatedAt] = useState<string | null>(null)
+  const now = useNow(5_000)
 
   // Filters (all server-side)
   const [sport, setSport] = useState('')
@@ -226,7 +273,17 @@ export function OddsScannerV2Table() {
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {total.toLocaleString('it-IT')} risultati
-          {calculatedAt && ` — aggiornato ${formatDate(calculatedAt)}`}
+          {calculatedAt && (
+            <>
+              {' — aggiornato '}
+              <span
+                className={`tabular-nums ${ageClass(ageSeconds(calculatedAt, now))}`}
+                title={formatDate(calculatedAt)}
+              >
+                {ageLabel(ageSeconds(calculatedAt, now))} fa
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -395,21 +452,21 @@ export function OddsScannerV2Table() {
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[0] ? (
-                      <LegCell leg={r.legs[0]} />
+                      <LegCell leg={r.legs[0]} now={now} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[1] ? (
-                      <LegCell leg={r.legs[1]} />
+                      <LegCell leg={r.legs[1]} now={now} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[2] ? (
-                      <LegCell leg={r.legs[2]} />
+                      <LegCell leg={r.legs[2]} now={now} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

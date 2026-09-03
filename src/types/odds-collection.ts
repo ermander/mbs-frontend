@@ -256,3 +256,25 @@ export interface HealthReport {
 export interface OddsHealthResponse {
   report: HealthReport
 }
+
+// --- Metric history (GET /odds-collection/admin/health/history) ---
+
+export interface MetricPoint {
+  t: string
+  v: number
+}
+
+export interface MetricSeries {
+  metric: string
+  /** '' per le serie globali, altrimenti lo slug del bookmaker. */
+  bookmaker: string
+  points: MetricPoint[]
+}
+
+export interface MetricsHistory {
+  hours: number
+  stepMinutes: number
+  sampleMinutes: number
+  retentionDays: number
+  series: MetricSeries[]
+}

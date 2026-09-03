@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import { getOddsHealth } from '@/services/api/odds-collection-client'
 import type { HealthCron, HealthReport } from '@/types/odds-collection'
+import { TrendCharts } from './trend-charts'
 
 const POLL_MS = 30_000
 
@@ -18,6 +19,7 @@ const CRON_LABELS: Record<string, string> = {
   OdMatcherRebuild: 'Matcher (rebuild)',
   OdReconciliation: 'Riconciliazione',
   OdMisplacedCompetitionsAudit: 'Audit competizioni',
+  OdOpsMetricsSample: 'Campioni metriche',
 }
 
 const RUN_TYPE_LABELS: Record<string, string> = {
@@ -287,6 +289,9 @@ export default function BackofficeSalutePage() {
               </table>
             </div>
           </Card>
+
+          {/* Andamento (storia delle metriche) */}
+          <TrendCharts />
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Crons */}

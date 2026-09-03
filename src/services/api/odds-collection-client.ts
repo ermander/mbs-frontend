@@ -11,6 +11,7 @@ import type {
   ProviderBudget,
   HealthReport,
   OddsHealthResponse,
+  MetricsHistory,
 } from '@/types/odds-collection'
 
 export async function getEventTree(): Promise<TreeResponse> {
@@ -116,4 +117,11 @@ export async function getOddsHealth(hours = 24): Promise<HealthReport> {
     params: { hours },
   })
   return response.data.report
+}
+
+export async function getOddsHealthHistory(hours = 24): Promise<MetricsHistory> {
+  const response = await apiClient.get<MetricsHistory>('/odds-collection/admin/health/history', {
+    params: { hours },
+  })
+  return response.data
 }

@@ -158,3 +158,101 @@ export interface ProviderBudget {
   planDailyLimit: number
   lastCallAt: string | null
 }
+
+// --- Health report (backoffice «Salute», GET /odds-collection/admin/health) ---
+
+export interface HealthCron {
+  name: string
+  scheduledAt: string | null
+  lastStartAt: string | null
+  lastSuccessAt: string | null
+  lastFailureAt: string | null
+  lastError: string | null
+  runs: number
+  failures: number
+  lastDurationMs: number | null
+}
+
+export interface HealthAlert {
+  key: string
+  severity: 'critical' | 'warning'
+  title: string
+  detail?: string
+  since: string
+  lastNotifiedAt: string
+}
+
+export interface HealthAdapter {
+  slug: string
+  name: string
+  lastCompletedAt: string | null
+  lastRunStatus: string | null
+  lastRunAt: string | null
+  lastError: string | null
+  recentRuns: number
+  recentFailed: number
+  windowRuns: number
+  windowEvents: number
+  windowOdds: number
+  windowMatched: number
+  windowOrphaned: number
+  schedulable: boolean
+  skipReason: string | null
+  initialized: boolean
+  silentForMinutes: number
+  circuitOpenUntil: string | null
+  circuitFailures: number | null
+}
+
+export interface HealthProviderRun {
+  runType: string
+  status: string
+  startedAt: string
+  completedAt: string | null
+  leaguesSynced: number
+  fixturesUpserted: number
+  fixturesUpdated: number
+  apiCallsUsed: number
+  error: string | null
+}
+
+export interface HealthReport {
+  now: string
+  bootedAt: string
+  scrapingGloballyEnabled: boolean
+  thresholds: {
+    adapterSilenceMinutes: number
+    ingestionWindowMinutes: number
+    matcherStaleMinutes: number
+    matcherRebuildStaleMinutes: number
+  }
+  alerts: HealthAlert[]
+  adapters: HealthAdapter[]
+  runs: Array<{
+    bookmakerSlug: string
+    totalRuns: number
+    successRuns: number
+    failedRuns: number
+    lastRunAt: string | null
+    lastStatus: string | null
+  }>
+  hoursBack: number
+  crons: HealthCron[]
+  matcher: {
+    rows: number
+    calculatedAt: string | null
+    pendingEvents: number
+    rebuild: HealthCron | null
+    tick: HealthCron | null
+  }
+  refresh: { trackedPairs: number; heartbeat: HealthCron | null }
+  provider: { budget: ProviderBudget | null; lastRuns: HealthProviderRun[] }
+  reviewQueue: Record<string, number>
+  coverage: { fixturesNext48h: number; mappedNext48h: number }
+  odds: Array<{ slug: string; status: string; rows: number; events: number }>
+  storage: { databaseBytes: number; tables: Array<{ name: string; bytes: number; liveRows: number }> }
+}
+
+export interface OddsHealthResponse {
+  report: HealthReport
+}

@@ -9,6 +9,8 @@ import type {
   ReviewQueueStats,
   ReviewQueueStatus,
   ProviderBudget,
+  HealthReport,
+  OddsHealthResponse,
 } from '@/types/odds-collection'
 
 export async function getEventTree(): Promise<TreeResponse> {
@@ -107,4 +109,11 @@ export async function triggerProviderSync(
     apiCalls: number
   }>(`/odds-collection/review-queue/provider/sync/${sportKey}`, null, { params: { type } })
   return response.data
+}
+
+export async function getOddsHealth(hours = 24): Promise<HealthReport> {
+  const response = await apiClient.get<OddsHealthResponse>('/odds-collection/admin/health', {
+    params: { hours },
+  })
+  return response.data.report
 }

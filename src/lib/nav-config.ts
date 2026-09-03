@@ -93,6 +93,7 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
     requiresRole: 'ADMIN_ROLE',
     children: [
       { label: 'Dashboard', href: '/backoffice/dashboard' },
+      { label: 'Salute', href: '/backoffice/salute' },
       { label: 'Bookmaker', href: '/backoffice/books' },
       { label: 'Scraper', href: '/backoffice/scrapers' },
       { label: 'Sport Mappings', href: '/backoffice/sport-mappings' },

@@ -26,6 +26,8 @@ export interface MatcherResult {
   competitionName: string
   nationName: string | null
   nationCode: string | null
+  /** Seconds a leg price may go unconfirmed for this event (15 min near kickoff, up to 2 h far away); absent on rows from older backends. */
+  staleAfterSeconds?: number
 }
 
 export interface MatcherResultsResponse {

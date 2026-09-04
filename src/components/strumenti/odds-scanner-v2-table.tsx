@@ -101,9 +101,17 @@ function ageLabel(seconds: number): string {
   return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`
 }
 
-function ageClass(seconds: number): string {
-  if (seconds < STALE_LEG_SECONDS) return 'text-emerald-400'
-  if (seconds < OLD_LEG_SECONDS) return 'text-amber-400'
+/**
+ * Colour of a price age. Near kickoff the fixed thresholds apply (3 and 10
+ * minutes, a 15-minute tolerance behind them); when the backend says the
+ * event's prices are re-read more slowly (`staleAfterSeconds`, up to 2 h for
+ * a match weeks away) the same proportions scale with that tolerance, so a
+ * price seen 40 minutes ago for a match in October is not painted red.
+ */
+function ageClass(seconds: number, staleAfterSeconds?: number): string {
+  const scale = staleAfterSeconds && staleAfterSeconds > 900 ? staleAfterSeconds / 900 : 1
+  if (seconds < STALE_LEG_SECONDS * scale) return 'text-emerald-400'
+  if (seconds < OLD_LEG_SECONDS * scale) return 'text-amber-400'
   return 'text-red-400'
 }
 
@@ -121,7 +129,7 @@ function useNow(intervalMs: number): number {
   return now
 }
 
-function LegCell({ leg, now }: { leg: MatcherLeg; now: number }) {
+function LegCell({ leg, now, staleAfter }: { leg: MatcherLeg; now: number; staleAfter?: number }) {
   const lay = isLayLeg(leg)
   const oddsColor = lay ? 'text-pink-400' : 'text-blue-400'
   const tagClass = lay
@@ -145,7 +153,7 @@ function LegCell({ leg, now }: { leg: MatcherLeg; now: number }) {
       </div>
       {leg.lastSeenAt && (
         <div
-          className={`text-[10px] tabular-nums ${ageClass(ageSeconds(leg.lastSeenAt, now))}`}
+          className={`text-[10px] tabular-nums ${ageClass(ageSeconds(leg.lastSeenAt, now), staleAfter)}`}
           title={`Quota confermata dal bookmaker alle ${formatTime(leg.lastSeenAt)}`}
         >
           vista {ageLabel(ageSeconds(leg.lastSeenAt, now))} fa
@@ -452,21 +460,21 @@ export function OddsScannerV2Table() {
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[0] ? (
-                      <LegCell leg={r.legs[0]} now={now} />
+                      <LegCell leg={r.legs[0]} now={now} staleAfter={r.staleAfterSeconds} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[1] ? (
-                      <LegCell leg={r.legs[1]} now={now} />
+                      <LegCell leg={r.legs[1]} now={now} staleAfter={r.staleAfterSeconds} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {r.legs[2] ? (
-                      <LegCell leg={r.legs[2]} now={now} />
+                      <LegCell leg={r.legs[2]} now={now} staleAfter={r.staleAfterSeconds} />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

@@ -11,7 +11,8 @@ const POLL_MS = 30_000
 const CRON_LABELS: Record<string, string> = {
   OdOpsAlerts: 'Alert operativi',
   OdProviderCatalogSync: 'Catalogo api-sports',
-  OdProviderFixturesSync: 'Fixture api-sports',
+  OdProviderFixturesSync: 'Fixture api-sports (stagione)',
+  OdProviderFixturesNearSync: 'Fixture api-sports (14 giorni)',
   OdProviderStatusSync: 'Stati api-sports',
   OdEventDiscovery: 'Discovery',
   OdOddsRefresh: 'Refresh quote',
@@ -24,7 +25,8 @@ const CRON_LABELS: Record<string, string> = {
 
 const RUN_TYPE_LABELS: Record<string, string> = {
   catalog: 'Catalogo',
-  fixtures: 'Fixture',
+  fixtures: 'Fixture (stagione)',
+  fixtures_near: 'Fixture (14 giorni, per data)',
   status: 'Stati',
 }
 

@@ -245,7 +245,7 @@ export default function BackofficeSalutePage() {
                   {report.adapters.map((a) => {
                     const runs = report.runs.find((r) => r.bookmakerSlug === a.slug)
                     const silent = a.silentForMinutes >= report.thresholds.adapterSilenceMinutes
-                    const tone = !a.schedulable ? 'off' : a.circuitOpenUntil ? 'warn' : silent ? 'bad' : a.lastRunStatus === 'failed' ? 'warn' : 'ok'
+                    const tone = !a.schedulable ? 'off' : a.circuitPhase ? 'warn' : silent ? 'bad' : a.lastRunStatus === 'failed' ? 'warn' : 'ok'
                     return (
                       <tr key={a.slug} className="border-t border-border">
                         <td className="py-2 pr-3">
@@ -273,8 +273,10 @@ export default function BackofficeSalutePage() {
                           {runs ? `${num(runs.successRuns)} ok / ${num(runs.failedRuns)} ko` : '—'}
                         </td>
                         <td className="py-2 text-xs">
-                          {a.circuitOpenUntil ? (
+                          {a.circuitPhase === 'open' ? (
                             <span className="text-amber-500">aperto, riprova tra {until(a.circuitOpenUntil, now)}</span>
+                          ) : a.circuitPhase === 'probing' ? (
+                            <span className="text-amber-500">in prova, cooldown finito {ago(a.circuitOpenUntil, now)}</span>
                           ) : (
                             <span className="text-muted-foreground">chiuso</span>
                           )}

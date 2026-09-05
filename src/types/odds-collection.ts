@@ -202,6 +202,8 @@ export interface HealthAdapter {
   silentForMinutes: number
   circuitOpenUntil: string | null
   circuitFailures: number | null
+  /** 'open' while calls are refused, 'probing' after the cooldown until a call succeeds, null when closed */
+  circuitPhase: 'open' | 'probing' | null
 }
 
 export interface HealthProviderRun {

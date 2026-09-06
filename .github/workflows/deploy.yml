@@ -58,6 +58,12 @@ jobs:
       - name: Deploy frontend with Docker Compose
         run: |
           set -e
+          # One deploy or cleanup at a time on this host: the backend workflow
+          # runs on a second runner here and its cleanup pruned this container
+          # while still "Created" (backend ADAPTER_STATUS §14.26). The lock is
+          # released when this step's shell exits.
+          exec 9>/srv/mbs-infra/.deploy.lock
+          flock -w 1200 9
           cd /srv/mbs-infra
 
           echo "Pull latest frontend image"
@@ -98,5 +104,10 @@ jobs:
       - name: Clean up Docker (free disk for next run)
         if: always()
         run: |
-          docker system prune -af
+          exec 9>/srv/mbs-infra/.deploy.lock
+          flock -w 1200 9 || { echo "deploy lock busy for 20 minutes, cleanup skipped"; exit 1; }
+          # Images only: `system prune` also removes stopped containers, and a
+          # container the other workflow has just created but not yet started
+          # counts as stopped (§14.26).
+          docker image prune -af
           docker builder prune -af

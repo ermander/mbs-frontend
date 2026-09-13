@@ -10,6 +10,13 @@ export interface MatcherLeg {
   liquidity?: number | null
   /** last_seen_at (ISO) of the price behind this leg; null for rows built before 2026-09 */
   lastSeenAt?: string | null
+  /**
+   * Whether the leg sits on an exchange (§14.95). On a dutch row the exchange
+   * leg's `odds` is already net of the commission; on a back/lay row the LAY
+   * leg is the exchange. Absent on rows served by a backend older than §14.95
+   * or cached before it: see `legIsExchange()` in `lib/bookmakers`.
+   */
+  isExchange?: boolean
 }
 
 export interface MatcherResult {
@@ -56,11 +63,23 @@ export interface MatcherCompetition {
   results: number
 }
 
+export interface MatcherBookmaker {
+  slug: string
+  name: string
+  /** Absent on backends older than §14.95 (or on a meta cached before it). */
+  isExchange?: boolean
+}
+
 export interface MatcherMeta {
   totalResults: number
   calculatedAt: string | null
+  /**
+   * Commission the ratings and the net dutch prices were computed with
+   * (0.045 = 4.5%); the calculators use the same. Absent on older backends.
+   */
+  exchangeCommission?: number
   sports: string[]
-  bookmakers: Array<{ slug: string; name: string }>
+  bookmakers: MatcherBookmaker[]
   marketTypes: string[]
   nations: string[]
   /** Absent on backends older than migration 0004. */
@@ -73,7 +92,13 @@ export interface MatcherFilters {
   market_type?: string
   min_rating?: number
   max_rating?: number
+  /** Rows with at least one leg on this bookmaker (slug). */
   bookmaker?: string
+  /** Comma-separated slugs: rows whose EVERY leg sits on one of them (§14.95). */
+  allowed_bookmakers?: string
+  /** Bounds on the price of the leg the stake goes on (§14.95). */
+  min_odds?: number
+  max_odds?: number
   nation?: string
   /** Comma-separated od_competitions ids; any of them. */
   competitions?: string

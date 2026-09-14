@@ -89,7 +89,6 @@ export function OddsScannerV2() {
   const [meta, setMeta] = useState<MatcherMeta | null>(null)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [calculatedAt, setCalculatedAt] = useState<string | null>(null)
   const [calculatorRow, setCalculatorRow] = useState<MatcherResult | null>(null)
   const now = useNow(5_000)
 
@@ -261,7 +260,6 @@ export function OddsScannerV2() {
       const res = await getMatcherResults(query)
       setResults(res.results)
       setTotal(res.total)
-      setCalculatedAt(res.calculatedAt)
     } catch {
       /* ignore: the next poll retries */
     }
@@ -420,10 +418,7 @@ export function OddsScannerV2() {
         meta={meta}
         books={books}
         exchanges={exchanges}
-        total={total}
-        calculatedAt={calculatedAt}
         loading={loading}
-        now={now}
         multiplaOpen={multiplaOpen}
         onMultiplaOpenChange={openMultipla}
         multiplaSelected={multiplaRows.length}

@@ -10,14 +10,7 @@ import {
 } from '@/components/strumenti/matcher-competition-filter'
 import { BookmakerBadge } from './bookmaker-badge'
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
-import {
-  MATCH_TYPE_OPTIONS,
-  ageClass,
-  ageLabel,
-  ageSeconds,
-  marketLabel,
-  formatKickoffLong,
-} from '@/lib/matcher/format'
+import { MATCH_TYPE_OPTIONS, marketLabel } from '@/lib/matcher/format'
 import type { MatchType, MatcherBookmaker, MatcherMeta } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
@@ -100,10 +93,7 @@ interface ScannerV2FilterBarProps {
   meta: MatcherMeta | null
   books: MatcherBookmaker[]
   exchanges: MatcherBookmaker[]
-  total: number
-  calculatedAt: string | null
   loading: boolean
-  now: number
   multiplaOpen: boolean
   onMultiplaOpenChange: (open: boolean) => void
   /** Chosen events and the target count, for the badge on the button. */
@@ -172,10 +162,7 @@ export function ScannerV2FilterBar({
   meta,
   books,
   exchanges,
-  total,
-  calculatedAt,
   loading,
-  now,
   multiplaOpen,
   onMultiplaOpenChange,
   multiplaSelected,
@@ -290,18 +277,9 @@ export function ScannerV2FilterBar({
           Reset
         </button>
 
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="ml-auto flex items-center text-xs text-muted-foreground">
           {loading && (
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Aggiornamento in corso" />
-          )}
-          <span className="tabular-nums">{total.toLocaleString('it-IT')} combinazioni</span>
-          {calculatedAt && (
-            <span title={`Deposito ricalcolato alle ${formatKickoffLong(calculatedAt)}`}>
-              · aggiornato{' '}
-              <span className={cn('tabular-nums', ageClass(ageSeconds(calculatedAt, now)))}>
-                {ageLabel(ageSeconds(calculatedAt, now))} fa
-              </span>
-            </span>
           )}
         </div>
       </div>

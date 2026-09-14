@@ -17,6 +17,7 @@ import type { MatcherResult } from '@/types/matcher'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
 import { BookmakerBadge } from './bookmaker-badge'
+import { BookmakerLink } from './leg-chip'
 import {
   DecimalField,
   ImbalanceSlider,
@@ -204,7 +205,9 @@ export function PuntaBancaCalculatorView({
                 {event.mercato} · {selezione}
               </span>
             </div>
-            <BookmakerBadge slug={backLeg.bookmakerSlug} name={backLeg.bookmakerName} size="md" />
+            <BookmakerLink leg={backLeg}>
+              <BookmakerBadge slug={backLeg.bookmakerSlug} name={backLeg.bookmakerName} size="md" />
+            </BookmakerLink>
           </div>
           <Input
             type="text"
@@ -226,7 +229,9 @@ export function PuntaBancaCalculatorView({
                 {event.mercato} · {selezione}
               </span>
             </div>
-            <BookmakerBadge slug={layLeg.bookmakerSlug} name={layLeg.bookmakerName} size="md" />
+            <BookmakerLink leg={layLeg}>
+              <BookmakerBadge slug={layLeg.bookmakerSlug} name={layLeg.bookmakerName} size="md" />
+            </BookmakerLink>
           </div>
           <Input
             type="text"

@@ -1,18 +1,6 @@
-import React from 'react'
+import { redirect } from 'next/navigation'
 
-import { Container } from '@/components/ui/container'
-import { ToolPageShell } from '@/components/strumenti/tool-page-shell'
-import { OddsScannerV2 } from '@/components/strumenti/scanner-v2/odds-scanner-v2'
-
+/** The scanner lives at /odds-scanner since the RobinOdds one was removed (§14.100); old links still work. */
 export default function OddsScannerV2Page() {
-  return (
-    <Container className="max-w-[108rem]">
-      <ToolPageShell
-        toolName="Odds Scanner v2"
-        description="Tutte le combinazioni dal motore interno, ricalcolate a ogni cambio di quota."
-      >
-        <OddsScannerV2 />
-      </ToolPageShell>
-    </Container>
-  )
+  redirect('/odds-scanner')
 }

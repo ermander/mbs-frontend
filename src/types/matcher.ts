@@ -7,7 +7,7 @@ export interface MatcherLeg {
   outcomeKey: string
   outcomeLabel: string
   odds: number
-  liquidity?: number | null
+  /** last_seen_at| null
   /** last_seen_at (ISO) of the price behind this leg; null for rows built before 2026-09 */
   lastSeenAt?: string | null
   /**
@@ -17,6 +17,11 @@ export interface MatcherLeg {
    * or cached before it: see `legIsExchange()` in `lib/bookmakers`.
    */
   isExchange?: boolean
+  /**
+   * The event's page on this bookmaker, from the adapters (§14.100); null when
+   * the bookmaker has no page format, absent on older backends.
+   */
+  eventUrl?: string | null
 }
 
 export interface MatcherResult {

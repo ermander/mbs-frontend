@@ -4,9 +4,8 @@ import type { SportType } from '@/types/profit-tracker'
 /**
  * Identity of the bookmakers of the internal engine (od_bookmakers slugs) on the
  * frontend: logos, short names, sport labels and the link to the Profit Tracker
- * books. The old Odds Scanner keys everything by RobinOdds numeric ids
- * (`lib/oddsmatcher-books.ts`); the logo files in `public/loghi_book` are named
- * after those ids, hence the map below.
+ * books. The logo files in `public/loghi_book` are still named after the numeric
+ * ids of the RobinOdds scanner removed in §14.100, hence the map below.
  */
 
 const LOGO_FILE_BY_SLUG: Record<string, string> = {

@@ -15,6 +15,7 @@ import type { MatcherMeta, MatcherResult } from '@/types/matcher'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
 import { BookmakerBadge } from './bookmaker-badge'
+import { BookmakerLink } from './leg-chip'
 import type { CalculatorDefaults } from './punta-banca-calculator-view'
 import {
   DecimalField,
@@ -199,7 +200,9 @@ export function DutchCalculatorView({
                     </p>
                   )}
                 </div>
-                <BookmakerBadge slug={leg.bookmakerSlug} name={leg.bookmakerName} size="md" />
+                <BookmakerLink leg={leg}>
+                  <BookmakerBadge slug={leg.bookmakerSlug} name={leg.bookmakerName} size="md" />
+                </BookmakerLink>
               </div>
               <Input
                 type="text"

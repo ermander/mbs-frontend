@@ -1,11 +1,9 @@
 /**
- * Nav items for authenticated header (RobinOdds-style).
- * Used by Header for dropdowns and mobile nav.
+ * Nav items for the authenticated sidebar and header.
  */
 
 import type { LucideIcon } from 'lucide-react'
 import {
-  Search,
   Radar,
   Calculator,
   BarChart3,
@@ -52,11 +50,6 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
     section: 'STRUMENTI',
     label: 'Odds Scanner',
     href: '/odds-scanner',
-    icon: Search,
-  },
-  {
-    label: 'Odds Scanner v2',
-    href: '/odds-scanner-v2',
     icon: Radar,
   },
   { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
@@ -162,6 +155,5 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
-  { label: 'ODDS SCANNER v2', href: '/odds-scanner-v2' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

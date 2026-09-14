@@ -265,11 +265,13 @@ export function ScannerV2Table({
             })}
       </div>
 
-      {/* Desktop: table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+      {/* Desktop: table. The results scroll inside this box, both ways, so the
+          page, the toolbar and the pagination stay put and the horizontal
+          scrollbar is always within reach; the header row sticks to the top. */}
+      <div className="hidden max-h-[calc(100dvh-17rem)] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[1100px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+          <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+            <tr className="bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
               {multipla && (
                 <th className="w-10 px-2 py-2 text-center font-medium" aria-label="Multipla" />
               )}

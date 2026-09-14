@@ -80,6 +80,20 @@ export function formatKickoff(iso: string): string {
   })
 }
 
+/** Kickoff date only, with the year: «20/09/2026». */
+export function formatKickoffDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+/** Kickoff time only: «20:45». */
+export function formatKickoffTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+}
+
 export function formatKickoffLong(iso: string): string {
   return new Date(iso).toLocaleString('it-IT', {
     day: '2-digit',

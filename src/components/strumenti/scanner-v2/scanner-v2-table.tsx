@@ -1,18 +1,27 @@
 'use client'
 
-import { Calculator, ChevronLeft, ChevronRight } from 'lucide-react'
+import React from 'react'
+import { Calculator, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { LegChip, type LegRole } from './leg-chip'
-import { legIsExchange, sportDisplay } from '@/lib/bookmakers'
+import { BookmakerBadge } from './bookmaker-badge'
+import { BookmakerLink, LegChip, type LegRole } from './leg-chip'
+import { legIsExchange, shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
+import { getCountryFlagUrl, getCountryFlagUrlFromIso } from '@/lib/country-flags'
 import {
   ageClass,
   ageLabel,
   ageSeconds,
+  ageTone,
+  formatClock,
   formatKickoff,
+  formatKickoffDate,
+  formatKickoffTime,
+  isLayLeg,
   marketLabel,
   matchTypeLabel,
   matcherRowKey,
+  outcomeName,
 } from '@/lib/matcher/format'
 import { legDisplayOdds, quickProfit, type SharedAmounts } from '@/lib/matcher/quick-profit'
 import type { MatchType, MatcherMeta, MatcherResult } from '@/types/matcher'
@@ -43,13 +52,83 @@ interface ScannerV2TableProps {
   onOpenCalculator: (row: MatcherResult) => void
 }
 
+/** Bold on plain background; the green tint marks only a rating from 100% up. */
 function ratingBadge(rating: number) {
   const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
-  if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-400`
-  if (rating >= 95) return `${base} bg-green-500/15 text-green-400`
-  if (rating >= 90) return `${base} bg-amber-500/15 text-amber-400`
-  if (rating >= 80) return `${base} bg-orange-500/15 text-orange-400`
-  return `${base} bg-red-500/15 text-red-400`
+  if (rating >= 100)
+    return `${base} bg-emerald-100 text-emerald-900`
+  return `${base} text-foreground`
+}
+
+/** Flag of the competition's nation, the nation name when no flag is available. */
+function NationFlag({ code, name }: { code: string | null; name: string | null }) {
+  const url = getCountryFlagUrlFromIso(code) ?? getCountryFlagUrl(name)
+  if (!url) return name ? <span>{name}</span> : null
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={name ?? ''}
+      title={name ?? undefined}
+      className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover align-[-1px]"
+    />
+  )
+}
+
+/** Sky for a back price, rose for a lay one. */
+function oddsCellClass(lay: boolean) {
+  return cn(
+    'inline-flex items-center gap-1.5 rounded-md px-2 py-1',
+    lay
+      ? 'bg-rose-100 text-rose-900'
+      : 'bg-sky-100 text-sky-900',
+  )
+}
+
+/**
+ * The clock of the row: the oldest price decides the state. Neutral by
+ * default, green only while every price is fresh; the tooltip explains
+ * itself and lists the age of each leg.
+ */
+function LastSeenClock({ row, now }: { row: MatcherResult; now: number }) {
+  const age = rowAge(row, now)
+  if (age == null) {
+    return (
+      <span
+        className="inline-flex text-muted-foreground"
+        title="Ultimo aggiornamento non disponibile per questa combinazione"
+      >
+        <Clock className="h-4 w-4" aria-hidden />
+      </span>
+    )
+  }
+  const oldest = row.legs
+    .filter((l) => l.lastSeenAt)
+    .map((l) => l.lastSeenAt as string)
+    .sort()[0]
+  const perLeg = row.legs
+    .filter((l) => l.lastSeenAt)
+    .map(
+      (l) =>
+        `${shortBookmakerName(l.bookmakerName)} ${ageLabel(ageSeconds(l.lastSeenAt as string, now))} fa`,
+    )
+    .join(' · ')
+  const title = `Ultimo aggiornamento della combinazione: ${ageLabel(age)} fa (alle ${formatClock(oldest)}), cioè la quota vista meno di recente fra quelle delle gambe. ${perLeg}.`
+  const fresh = ageTone(age, row.staleAfterSeconds) === 'fresh'
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center justify-center rounded-full p-1',
+        fresh
+          ? 'bg-emerald-100 text-emerald-900'
+          : 'text-foreground',
+      )}
+      title={title}
+      aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
+    >
+      <Clock className="h-4 w-4" aria-hidden />
+    </span>
+  )
 }
 
 function matchTypeBadge(type: MatchType) {
@@ -181,6 +260,8 @@ export function ScannerV2Table({
 }: ScannerV2TableProps) {
   const start = total === 0 ? 0 : page * pageSize + 1
   const end = Math.min((page + 1) * pageSize, total)
+  // «Book 3 / Quota 3» appear only when a row of the page has a third leg.
+  const legColumns = Math.max(2, ...results.map((r) => r.legs.length))
 
   const empty = (
     <div className="rounded-md border border-border bg-card p-8 text-center text-muted-foreground">
@@ -282,15 +363,16 @@ export function ScannerV2Table({
               <th className="px-3 py-2 font-medium">Evento</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mercato</th>
               <th className="px-3 py-2 font-medium">Tipo</th>
-              <th className="px-3 py-2 font-medium">Combinazione</th>
-              <th
-                className="whitespace-nowrap px-3 py-2 text-right font-medium"
-                title="Guadagno minimo con la puntata della barra"
-              >
-                Guadagno
-              </th>
+              {Array.from({ length: legColumns }, (_, i) => (
+                <React.Fragment key={i}>
+                  <th className="whitespace-nowrap px-3 py-2 font-medium">Book {i + 1}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-medium">Quota {i + 1}</th>
+                </React.Fragment>
+              ))}
               <th className="px-3 py-2 text-right font-medium">Rating</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Quote viste</th>
+              <th className="px-2 py-2 text-center font-medium" title="Ultimo aggiornamento">
+                <Clock className="inline h-3.5 w-3.5" aria-label="Ultimo aggiornamento" />
+              </th>
               <th className="px-2 py-2 text-center font-medium" aria-label="Calcolatore" />
             </tr>
           </thead>
@@ -298,7 +380,7 @@ export function ScannerV2Table({
             {results.length === 0 ? (
               <tr>
                 <td
-                  colSpan={multipla ? 11 : 10}
+                  colSpan={(multipla ? 1 : 0) + 8 + legColumns * 2}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
                   {loading && results.length === 0
@@ -309,7 +391,6 @@ export function ScannerV2Table({
             ) : (
               results.map((row) => {
                 const sport = sportDisplay(row.sportName)
-                const age = rowAge(row, now)
                 return (
                   <tr
                     key={matcherRowKey(row)}
@@ -324,8 +405,9 @@ export function ScannerV2Table({
                         <MultiplaCheckbox row={row} multipla={multipla} />
                       </td>
                     )}
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                      {formatKickoff(row.startTime)}
+                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
+                      <div className="text-foreground">{formatKickoffDate(row.startTime)}</div>
+                      <div className="text-muted-foreground">h. {formatKickoffTime(row.startTime)}</div>
                     </td>
                     <td className="px-2 py-2 text-center" title={sport.label}>
                       {sport.icon ? (
@@ -340,9 +422,9 @@ export function ScannerV2Table({
                       <div className="whitespace-nowrap font-medium">
                         {row.homeName} – {row.awayName}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {row.competitionName}
-                        {row.nationName ? ` · ${row.nationName}` : ''}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <NationFlag code={row.nationCode} name={row.nationName} />
+                        <span>{row.competitionName}</span>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
@@ -353,33 +435,50 @@ export function ScannerV2Table({
                         {matchTypeLabel(row.matchType)}
                       </span>
                     </td>
-                    <td className="min-w-[340px] px-3 py-2">
-                      <RowLegs
-                        row={row}
-                        meta={meta}
-                        now={now}
-                        commissionPercent={commissionPercent}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right">
-                      <ProfitCell
-                        row={row}
-                        shared={shared}
-                        commissionPercent={commissionPercent}
-                        meta={meta}
-                      />
-                    </td>
+                    {Array.from({ length: legColumns }, (_, i) => {
+                      const leg = row.legs[i]
+                      if (!leg) {
+                        return (
+                          <React.Fragment key={i}>
+                            <td className="px-3 py-2" />
+                            <td className="px-3 py-2" />
+                          </React.Fragment>
+                        )
+                      }
+                      const lay =
+                        isLayLeg(leg) || (row.matchType === 'back_lay' && i > 0)
+                      const exchangeDutch = row.matchType !== 'back_lay' && legIsExchange(leg, meta)
+                      const displayOdds = legDisplayOdds(leg, row, meta, commissionPercent)
+                      const priceTitle = exchangeDutch
+                        ? `Quota lorda ${displayOdds.toFixed(2)} · netta ${leg.odds.toFixed(3)} con commissione ${commissionPercent.toLocaleString('it-IT')}%`
+                        : undefined
+                      return (
+                        <React.Fragment key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            <BookmakerLink leg={leg}>
+                              <BookmakerBadge
+                                slug={leg.bookmakerSlug}
+                                name={leg.bookmakerName}
+                                size="md"
+                              />
+                            </BookmakerLink>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            <span className={oddsCellClass(lay)} title={priceTitle}>
+                              <span className="text-[11px] opacity-80">{outcomeName(leg)}</span>
+                              <span className="font-mono text-sm font-bold tabular-nums">
+                                {displayOdds.toFixed(2)}
+                              </span>
+                            </span>
+                          </td>
+                        </React.Fragment>
+                      )
+                    })}
                     <td className="px-3 py-2 text-right">
                       <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs">
-                      {age != null ? (
-                        <span className={cn('tabular-nums', ageClass(age, row.staleAfterSeconds))}>
-                          {ageLabel(age)} fa
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                    <td className="px-2 py-2 text-center">
+                      <LastSeenClock row={row} now={now} />
                     </td>
                     <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                       <Button

@@ -7,10 +7,7 @@ import { OddsScannerV2 } from '@/components/strumenti/scanner-v2/odds-scanner-v2
 export default function OddsScannerPage() {
   return (
     <Container className="max-w-[108rem]">
-      <ToolPageShell
-        toolName="Odds Scanner"
-        description="Tutte le combinazioni dal motore interno, ricalcolate a ogni cambio di quota."
-      >
+      <ToolPageShell toolName="Odds Scanner">
         <OddsScannerV2 />
       </ToolPageShell>
     </Container>

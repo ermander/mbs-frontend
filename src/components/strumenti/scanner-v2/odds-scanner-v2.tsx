@@ -33,12 +33,11 @@ import { ScannerV2Table, type MultiplaSelection } from './scanner-v2-table'
 const PAGE_SIZE = 50
 // One view: the store of every combination from the 80% floor up, all bookmakers
 // against all, recomputed by the backend when prices change (§14.77, §14.86).
-// Results follow ingestion by seconds on the backend, so the page polls every
-// 20 s (first page, visible tab only).
-const AUTO_REFRESH_MS = 20_000
+// No polling: the page loads on mount and on every filter change, and the user
+// reloads on demand with «Refresh quote».
 const SEARCH_DEBOUNCE_MS = 350
 
-/** A ticking clock so the ages on screen keep moving between polls. */
+/** A ticking clock so the ages on screen keep moving between reloads. */
 function useNow(intervalMs: number): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -261,7 +260,7 @@ export function OddsScannerV2() {
       setResults(res.results)
       setTotal(res.total)
     } catch {
-      /* ignore: the next poll retries */
+      /* ignore: the user can retry with «Refresh quote» */
     }
     setLoading(false)
   }, [query])
@@ -274,16 +273,11 @@ export function OddsScannerV2() {
     void loadResults()
   }, [loadResults])
 
-  // Auto-refresh first page only, when tab is visible.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (page > 0) return
-      if (typeof document !== 'undefined' && document.hidden) return
-      void loadResults()
-      void loadMeta()
-    }, AUTO_REFRESH_MS)
-    return () => clearInterval(interval)
-  }, [loadResults, loadMeta, page])
+  // «Refresh quote»: same query, filters as they are right now.
+  const refresh = useCallback(() => {
+    void loadResults()
+    void loadMeta()
+  }, [loadResults, loadMeta])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const commissionPercent = exchangeCommissionOf(meta) * 100
@@ -413,6 +407,7 @@ export function OddsScannerV2() {
         filters={filters}
         onChange={setFilters}
         onReset={resetFilters}
+        onRefresh={refresh}
         open={filtersOpen}
         onOpenChange={openFilters}
         meta={meta}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react'
+import { RefreshCw, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
@@ -88,6 +88,8 @@ interface ScannerV2FilterBarProps {
   filters: ScannerV2Filters
   onChange: (patch: Partial<ScannerV2Filters>) => void
   onReset: () => void
+  /** «Refresh quote»: reloads the results with the filters applied right now. */
+  onRefresh: () => void
   open: boolean
   onOpenChange: (open: boolean) => void
   meta: MatcherMeta | null
@@ -157,6 +159,7 @@ export function ScannerV2FilterBar({
   filters,
   onChange,
   onReset,
+  onRefresh,
   open,
   onOpenChange,
   meta,
@@ -277,11 +280,16 @@ export function ScannerV2FilterBar({
           Reset
         </button>
 
-        <div className="ml-auto flex items-center text-xs text-muted-foreground">
-          {loading && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Aggiornamento in corso" />
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          aria-busy={loading}
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-all hover:border-primary/20 hover:text-foreground disabled:cursor-wait disabled:opacity-70"
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+          Refresh quote
+        </button>
       </div>
 
       {/* Active filter chips */}
@@ -553,11 +561,6 @@ export function ScannerV2FilterBar({
               />
             </div>
           </div>
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            Book ed exchange: con una selezione vedi solo le combinazioni giocabili con quelli
-            scelti (ogni gamba su uno di loro); nessuna selezione vale «tutti». Quota min e max
-            valgono per la gamba su cui va la puntata.
-          </p>
         </div>
       )}
     </div>

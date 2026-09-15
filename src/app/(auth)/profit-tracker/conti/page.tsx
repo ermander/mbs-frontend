@@ -3,6 +3,8 @@
 import { useEffect, useCallback, useMemo, useState } from 'react'
 
 import { Scale, Lock, LockOpen } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
@@ -45,6 +47,25 @@ export default function ContiPage() {
   const userRole = useAuthStore((s) => s.user?.role)
   const isAdmin = userRole === 'ADMIN_ROLE'
 
+  // Stato e blocco dall'elenco: lo store salva sul backend, qui si avvisa se fallisce (§14.106).
+  const toggleStato = async (account: Account) => {
+    try {
+      await updateAccount(account.id, {
+        stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+      })
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile aggiornare lo stato del conto.')
+    }
+  }
+
+  const toggleBloccato = async (id: string, current: boolean) => {
+    try {
+      await updateAccount(id, { bloccato: !current })
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile aggiornare il blocco del conto.')
+    }
+  }
+
   const renderBloccatoToggle = (id: string, current: boolean) => {
     if (!isAdmin) return current ? <StatusBadge variant="blocked">Bloccato</StatusBadge> : null
     return (
@@ -54,7 +75,7 @@ export default function ContiPage() {
           current ? 'Conto bloccato — clicca per sbloccare' : 'Clicca per segnare come bloccato'
         }
         aria-label={current ? 'Sblocca conto' : 'Blocca conto'}
-        onClick={() => updateAccount(id, { bloccato: !current })}
+        onClick={() => void toggleBloccato(id, current)}
         className={
           'inline-flex h-6 items-center gap-1 rounded-pill border px-2 text-[11px] font-medium transition-colors ' +
           (current
@@ -257,14 +278,7 @@ export default function ContiPage() {
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Stato</span>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateAccount(account.id, {
-                          stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                        })
-                      }
-                    >
+                    <button type="button" onClick={() => void toggleStato(account)}>
                       <StatusBadge variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}>
                         {account.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
                       </StatusBadge>
@@ -359,14 +373,7 @@ export default function ContiPage() {
                   </td>
                   <td className="px-3 py-2 text-xs">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateAccount(account.id, {
-                            stato: account.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                          })
-                        }
-                      >
+                      <button type="button" onClick={() => void toggleStato(account)}>
                         <StatusBadge
                           variant={account.stato === 'abilitato' ? 'enabled' : 'disabled'}
                         >

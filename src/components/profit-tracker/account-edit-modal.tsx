@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { Account, EnabledStatus } from '@/types/profit-tracker'
 
@@ -54,8 +55,8 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
       })
       onOpenChange(false)
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Errore nel salvataggio del conto'
-      setError(message)
+      // Il messaggio del backend, non «Request failed with status code …».
+      setError(getErrorMessage(e) || 'Errore nel salvataggio del conto')
     } finally {
       setIsSaving(false)
     }

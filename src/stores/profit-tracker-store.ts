@@ -549,20 +549,18 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     },
 
     updateAccount: async (id, patch) => {
-      try {
-        const updated = await apiUpdateAccount(id, {
-          nome: patch.nome,
-          descrizione: patch.descrizione,
-          stato: patch.stato,
-          bloccato: patch.bloccato,
-        })
-        set((state) => ({
-          accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
-          allAccounts: state.allAccounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
-        }))
-      } catch {
-        // Keep local state unchanged on error; could set accountsError
-      }
+      // Salva sul backend e fonde la risposta; l'errore risale a chi chiama (§14.106):
+      // prima veniva ignorato e la modale si chiudeva come se avesse salvato.
+      const updated = await apiUpdateAccount(id, {
+        nome: patch.nome,
+        descrizione: patch.descrizione,
+        stato: patch.stato,
+        bloccato: patch.bloccato,
+      })
+      set((state) => ({
+        accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+        allAccounts: state.allAccounts.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+      }))
     },
 
     updateWallet: async (id, patch) => {

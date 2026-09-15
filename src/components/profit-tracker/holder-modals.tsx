@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { EnabledStatus, Holder } from '@/types/profit-tracker'
 
@@ -103,21 +104,39 @@ interface HolderEditModalProps {
 export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalProps) {
   const updateHolder = useProfitTrackerStore((s) => s.updateHolder)
 
+  // Lo stato parte dal collaboratore scelto: la pagina monta la modale con key = id.
   const [descrizione, setDescrizione] = useState(holder?.descrizione ?? '')
   const [stato, setStato] = useState<EnabledStatus>(holder?.stato ?? 'abilitato')
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!holder) return null
 
-  const handleSave = () => {
-    updateHolder(holder.id, {
-      descrizione: descrizione || undefined,
-      stato,
-    })
-    onOpenChange(false)
+  const hasChanges = stato !== holder.stato || descrizione.trim() !== (holder.descrizione ?? '')
+
+  const handleClose = (nextOpen: boolean) => {
+    if (!nextOpen && isSaving) return
+    onOpenChange(nextOpen)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    setError(null)
+    try {
+      await updateHolder(holder.id, {
+        descrizione: descrizione.trim() || null,
+        stato,
+      })
+      onOpenChange(false)
+    } catch (e) {
+      setError(getErrorMessage(e) || 'Errore nel salvataggio del collaboratore')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Modifica collaboratore</DialogTitle>
@@ -156,13 +175,23 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
               <option value="disabilitato">Non abilitato</option>
             </select>
           </div>
+          {error != null && (
+            <p className="text-xs text-destructive" role="alert">
+              {error}
+            </p>
+          )}
         </div>
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Annulla
           </Button>
-          <Button type="button" onClick={handleSave}>
-            Salva
+          <Button type="button" onClick={handleSave} disabled={isSaving || !hasChanges}>
+            {isSaving ? 'Salvataggio...' : 'Salva'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -70,6 +70,17 @@ export async function createHolder(payload: CreateHolderPayload): Promise<Holder
   }
 }
 
+export interface UpdateHolderPayload {
+  // null svuota la descrizione; un campo assente resta com'è.
+  descrizione?: string | null
+  stato?: EnabledStatus
+}
+
+export async function updateHolder(id: string, payload: UpdateHolderPayload): Promise<Holder> {
+  const response = await apiClient.patch<Holder>(`/profit-tracker/holders/${id}`, payload)
+  return response.data
+}
+
 export interface CreateBookPayload {
   nome: string
   descrizione?: string

@@ -313,7 +313,9 @@ export default function CollaboratoriPage() {
       )}
 
       <HolderCreateModal open={createOpen} onOpenChange={setCreateOpen} />
+      {/* key: la modale riparte dai valori del collaboratore scelto (useState li legge solo al montaggio) */}
       <HolderEditModal
+        key={editHolderId ?? 'nessuno'}
         open={editHolderId != null}
         onOpenChange={(open) => {
           if (!open) setEditHolderId(null)

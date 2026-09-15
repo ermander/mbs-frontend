@@ -21,6 +21,7 @@ import type {
   CreateBetPayload,
   GetAccountsParams,
   GetHoldersParams,
+  UpdateHolderPayload,
 } from '@/services/api/profit-tracker-client'
 import {
   createAccount as apiCreateAccount,
@@ -54,6 +55,7 @@ import {
   updateBet as apiUpdateBet,
   updateBetLeg as apiUpdateBetLeg,
   updateBook as apiUpdateBook,
+  updateHolder as apiUpdateHolder,
   updateQuickBet as apiUpdateQuickBet,
   getTags as apiGetTags,
   createTag as apiCreateTag,
@@ -114,7 +116,7 @@ interface ProfitTrackerState {
   fetchAllHolders: () => Promise<void>
   fetchQuickBets: () => Promise<void>
   addHolder: (holder: Omit<Holder, 'id'>) => Promise<void>
-  updateHolder: (id: string, patch: Partial<Holder>) => void
+  updateHolder: (id: string, patch: UpdateHolderPayload) => Promise<void>
   fetchAllBooks: () => Promise<void>
   fetchBooks: (params?: {
     page?: number
@@ -335,11 +337,14 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         }))
       }
     },
-    updateHolder: (id, patch) =>
+    updateHolder: async (id, patch) => {
+      // Salva sul backend e fonde la risposta; l'errore risale alla modale.
+      const updated = await apiUpdateHolder(id, patch)
       set((state) => ({
-        holders: state.holders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
-        allHolders: state.allHolders.map((h) => (h.id === id ? { ...h, ...patch } : h)),
-      })),
+        holders: state.holders.map((h) => (h.id === id ? { ...h, ...updated } : h)),
+        allHolders: state.allHolders.map((h) => (h.id === id ? { ...h, ...updated } : h)),
+      }))
+    },
 
     fetchAllBooks: async () => {
       try {

@@ -30,8 +30,11 @@ export interface ScannerV2Filters {
   nation: string
   competitionIds: string[]
   marketType: string
-  /** Bookmaker slugs: none selected = every one of that kind allowed. */
+  /** The books the stake goes on (slugs): at least one leg of the row on one of them; none = any. */
   books: string[]
+  /** The books the OTHER legs may sit on (§14.102); none = any book. */
+  coverBooks: string[]
+  /** The exchanges the other legs may sit on; none = any exchange. */
   exchanges: string[]
   minRating: string
   maxRating: string
@@ -52,6 +55,7 @@ export const EMPTY_FILTERS: ScannerV2Filters = {
   competitionIds: [],
   marketType: '',
   books: [],
+  coverBooks: [],
   exchanges: [],
   minRating: '',
   maxRating: '',
@@ -77,6 +81,7 @@ export function countActiveFilters(f: ScannerV2Filters): number {
     f.competitionIds.length > 0,
     f.marketType !== '',
     f.books.length > 0,
+    f.coverBooks.length > 0,
     f.exchanges.length > 0,
     f.minRating.trim() !== '' || f.maxRating.trim() !== '',
     f.minOdds.trim() !== '' || f.maxOdds.trim() !== '',
@@ -176,7 +181,7 @@ export function ScannerV2FilterBar({
     shortBookmakerName(list.find((b) => b.slug === slug)?.name ?? slug)
   const namesOf = (slugs: string[], list: MatcherBookmaker[]) =>
     slugs.map((s) => bookName(s, list)).join(', ')
-  const toggleIn = (key: 'books' | 'exchanges', slug: string) => {
+  const toggleIn = (key: 'books' | 'coverBooks' | 'exchanges', slug: string) => {
     const current = filters[key]
     onChange({
       [key]: current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug],
@@ -325,6 +330,11 @@ export function ScannerV2FilterBar({
               Book: {namesOf(filters.books, books)}
             </Chip>
           )}
+          {filters.coverBooks.length > 0 && (
+            <Chip onRemove={() => onChange({ coverBooks: [] })}>
+              Copertura: {namesOf(filters.coverBooks, books)}
+            </Chip>
+          )}
           {filters.exchanges.length > 0 && (
             <Chip onRemove={() => onChange({ exchanges: [] })}>
               Exchange: {namesOf(filters.exchanges, exchanges)}
@@ -465,6 +475,23 @@ export function ScannerV2FilterBar({
                 buttonLabel={multiLabel(filters.books, books, 'book', 'book')}
                 searchPlaceholder="Cerca book…"
                 searchInputAriaLabel="Filtra book"
+                emptyMessage="Nessun book"
+                size="sm"
+                className="w-full"
+                renderOption={(opt) => <BookmakerBadge slug={opt.id} name={opt.name} />}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <Label className={LABEL_CLASS} title="I book su cui possono stare le altre gambe della combinazione">
+                Book di copertura
+              </Label>
+              <SearchableMultiSelect
+                options={books.map((b) => ({ id: b.slug, name: shortBookmakerName(b.name) }))}
+                selectedIds={filters.coverBooks}
+                onToggle={(slug) => toggleIn('coverBooks', slug)}
+                buttonLabel={multiLabel(filters.coverBooks, books, 'book', 'book')}
+                searchPlaceholder="Cerca book…"
+                searchInputAriaLabel="Filtra book di copertura"
                 emptyMessage="Nessun book"
                 size="sm"
                 className="w-full"

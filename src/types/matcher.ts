@@ -97,8 +97,13 @@ export interface MatcherFilters {
   market_type?: string
   min_rating?: number
   max_rating?: number
-  /** Rows with at least one leg on this bookmaker (slug). */
+  /** Comma-separated slugs: rows with at least one leg on one of them. */
   bookmaker?: string
+  /**
+   * Comma-separated slugs (§14.102): with `bookmaker`, the legs other than the
+   * chosen book must sit on one of them; alone, every leg must.
+   */
+  cover_bookmakers?: string
   /** Comma-separated slugs: rows whose EVERY leg sits on one of them (§14.95). */
   allowed_bookmakers?: string
   /** Bounds on the price of the leg the stake goes on (§14.95). */

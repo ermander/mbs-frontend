@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { getMatcherMeta, getMatcherResults } from '@/services/api/matcher-client'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { exchangeCommissionOf, shortBookmakerName } from '@/lib/bookmakers'
+import { bookmakersParam, coverBookmakersParam } from '@/lib/matcher/bookmaker-params'
 import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildMultiplaBet } from '@/lib/calculators/bet-payloads'
 import { matcherRowKey } from '@/lib/matcher/format'
@@ -45,23 +46,6 @@ function useNow(intervalMs: number): number {
     return () => clearInterval(handle)
   }, [intervalMs])
   return now
-}
-
-/**
- * The `allowed_bookmakers` parameter (§14.95): with a selection in either list,
- * every leg must sit on a selected book or exchange; the list left empty means
- * «all of that kind». Sorted, so the same selection gives the same query key.
- */
-export function allowedBookmakersParam(
-  selectedBooks: string[],
-  selectedExchanges: string[],
-  allBooks: string[],
-  allExchanges: string[],
-): string | undefined {
-  if (selectedBooks.length === 0 && selectedExchanges.length === 0) return undefined
-  const books = selectedBooks.length > 0 ? selectedBooks : allBooks
-  const exchanges = selectedExchanges.length > 0 ? selectedExchanges : allExchanges
-  return [...new Set([...books, ...exchanges])].sort().join(',')
 }
 
 /** A date-only input as the ISO bounds of that local day. */
@@ -150,15 +134,18 @@ export function OddsScannerV2() {
     () => (meta?.bookmakers ?? []).filter((b) => b.isExchange === true),
     [meta],
   )
-  const allowedParam = useMemo(
+  // «Book» = the book the stake goes on (at least one leg on it); «Book di
+  // copertura» and «Exchange» = where the other legs may sit (§14.102).
+  const bookmakerParam = useMemo(() => bookmakersParam(filters.books), [filters.books])
+  const coverParam = useMemo(
     () =>
-      allowedBookmakersParam(
-        filters.books,
+      coverBookmakersParam(
+        filters.coverBooks,
         filters.exchanges,
         books.map((b) => b.slug),
         exchanges.map((b) => b.slug),
       ),
-    [filters.books, filters.exchanges, books, exchanges],
+    [filters.coverBooks, filters.exchanges, books, exchanges],
   )
 
   // The multipla is played on one book: exactly one selected in the Book filter.
@@ -184,8 +171,9 @@ export function OddsScannerV2() {
       // Every row involving the book: the punta side is checked in the browser,
       // the covers may sit on any bookmaker or exchange.
       q.bookmaker = activeBook
-    } else if (allowedParam) {
-      q.allowed_bookmakers = allowedParam
+    } else {
+      if (bookmakerParam) q.bookmaker = bookmakerParam
+      if (coverParam) q.cover_bookmakers = coverParam
     }
     const minRating = parseNum(filters.minRating)
     const maxRating = parseNum(filters.maxRating)
@@ -224,7 +212,8 @@ export function OddsScannerV2() {
     filters.maxOdds,
     filters.startFrom,
     filters.startTo,
-    allowedParam,
+    bookmakerParam,
+    coverParam,
     debouncedSearch,
     multiplaMode,
     activeBook,

@@ -155,8 +155,16 @@ export default function GiocateInCorsoPage() {
       }))
       const clonedBet = await saveBetFromCalculator(betPayload, legsPayload)
       await updateBet(clonedBet.id, { statoEvento: 'bozza' })
+      // §14.107: la conferma, con il collegamento al dettaglio della copia.
+      toast.success('Giocata clonata', {
+        description: `${original.eventoNome} · nuova giocata #${clonedBet.id} in bozza`,
+        action: {
+          label: 'Apri',
+          onClick: () => router.push(`/profit-tracker/giocate-in-corso/${clonedBet.id}`),
+        },
+      })
     } catch (err) {
-      window.alert(getErrorMessage(err) ?? 'Impossibile clonare la giocata.')
+      toast.error(getErrorMessage(err) ?? 'Impossibile clonare la giocata.')
     } finally {
       setCloningId(null)
     }

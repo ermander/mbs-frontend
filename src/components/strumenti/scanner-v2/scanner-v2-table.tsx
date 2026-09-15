@@ -362,7 +362,6 @@ export function ScannerV2Table({
               </th>
               <th className="px-3 py-2 font-medium">Evento</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Mercato</th>
-              <th className="px-3 py-2 font-medium">Tipo</th>
               {Array.from({ length: legColumns }, (_, i) => (
                 <React.Fragment key={i}>
                   <th className="whitespace-nowrap px-3 py-2 font-medium">Book {i + 1}</th>
@@ -380,7 +379,7 @@ export function ScannerV2Table({
             {results.length === 0 ? (
               <tr>
                 <td
-                  colSpan={(multipla ? 1 : 0) + 8 + legColumns * 2}
+                  colSpan={(multipla ? 1 : 0) + 7 + legColumns * 2}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
                   {loading && results.length === 0
@@ -429,11 +428,6 @@ export function ScannerV2Table({
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       {marketLabel(row.marketTypeKey, row.line, row)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={matchTypeBadge(row.matchType)}>
-                        {matchTypeLabel(row.matchType)}
-                      </span>
                     </td>
                     {Array.from({ length: legColumns }, (_, i) => {
                       const leg = row.legs[i]

@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import {
   Bar,
@@ -775,21 +774,6 @@ export default function ReportPage() {
           <p className="mt-3 text-xs text-muted-foreground">
             Fuori dal conto nel {year}: capitale versato {formatCurrency(report.capitaleVersato)} ·
             capitale ritirato {formatCurrency(report.capitaleRitirato)}
-            {report.daClassificare > 0 ? (
-              <>
-                {' · '}
-                <Link
-                  href="/profit-tracker/storico-movimenti"
-                  className="text-amber-400 underline-offset-2 hover:underline"
-                >
-                  {report.daClassificare}{' '}
-                  {report.daClassificare === 1
-                    ? 'movimento da classificare'
-                    : 'movimenti da classificare'}
-                </Link>
-                , esclusi finché non li classifichi
-              </>
-            ) : null}
           </p>
         ) : null}
       </div>

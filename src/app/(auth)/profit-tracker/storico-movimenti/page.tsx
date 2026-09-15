@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { getActivityFeed, getActivityFeedSummary } from '@/services/api/profit-tracker-client'
+import { getErrorMessage } from '@/lib/error-utils'
 import type {
+  AccountMovementStato,
   ActivityFeedEntry,
   ActivityFeedSource,
   ActivityFeedSummary,
@@ -49,6 +52,20 @@ const FILTER_OPTIONS: { value: ActivityFeedSource | ''; label: string }[] = [
   { value: 'trasferimento', label: 'Trasferimento' },
 ]
 
+// §14.109: stato dei prelievi (gli altri movimenti non ne hanno).
+function StatoBadge({ stato }: { stato: AccountMovementStato | null | undefined }) {
+  if (!stato) return null
+  return stato === 'in_attesa' ? (
+    <span className="inline-block rounded-md border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-400">
+      In attesa
+    </span>
+  ) : (
+    <span className="inline-block rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/50">
+      Pagato
+    </span>
+  )
+}
+
 function formatBetDescription(entry: ActivityFeedEntry): string {
   const parts: string[] = []
   if (entry.eventoNome) parts.push(entry.eventoNome)
@@ -64,8 +81,10 @@ export default function StoricoMovimentiPage() {
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
+  const markAccountMovementPaid = useProfitTrackerStore((s) => s.markAccountMovementPaid)
 
   const [items, setItems] = useState<ActivityFeedEntry[]>([])
+  const [payingId, setPayingId] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -74,6 +93,7 @@ export default function StoricoMovimentiPage() {
 
   // Filters
   const [sourceFilter, setSourceFilter] = useState<ActivityFeedSource | ''>('')
+  const [statoFilter, setStatoFilter] = useState<AccountMovementStato | ''>('')
   const [accountFilter, setAccountFilter] = useState('')
   const [walletFilter, setWalletFilter] = useState('')
   const [fromDate, setFromDate] = useState('')
@@ -99,6 +119,7 @@ export default function StoricoMovimentiPage() {
 
   const sharedFilters = {
     source: sourceFilter || undefined,
+    stato: statoFilter || undefined,
     accountId: accountFilter || undefined,
     walletId: walletFilter || undefined,
     fromDate: fromDate || undefined,
@@ -127,8 +148,22 @@ export default function StoricoMovimentiPage() {
         setLoading(false)
       }
     },
-    [sourceFilter, accountFilter, walletFilter, fromDate, toDate],
+    [sourceFilter, statoFilter, accountFilter, walletFilter, fromDate, toDate],
   )
+
+  // §14.109: un prelievo in attesa si segna pagato anche da qui; poi si ricarica la pagina corrente.
+  const handlePay = async (entry: ActivityFeedEntry) => {
+    setPayingId(entry.id)
+    try {
+      await markAccountMovementPaid(entry.id)
+      toast.success('Prelievo pagato: wallet accreditato')
+      await loadData(page)
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile segnare il prelievo come pagato.')
+    } finally {
+      setPayingId(null)
+    }
+  }
 
   useEffect(() => {
     void fetchAllAccounts()
@@ -177,6 +212,18 @@ export default function StoricoMovimentiPage() {
                 {opt.label}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium text-muted-foreground">Stato prelievo</label>
+          <select
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
+            value={statoFilter}
+            onChange={(e) => setStatoFilter(e.target.value as AccountMovementStato | '')}
+          >
+            <option value="">Tutti</option>
+            <option value="in_attesa">In attesa</option>
+            <option value="pagato">Pagato</option>
           </select>
         </div>
         <div className="flex w-full flex-col gap-1 sm:w-auto">
@@ -301,6 +348,21 @@ export default function StoricoMovimentiPage() {
             {getDescription(entry) !== '—' && (
               <p className="mt-1 text-xs text-muted-foreground">{getDescription(entry)}</p>
             )}
+            {entry.source === 'prelievo' && (
+              <div className="mt-2 flex items-center justify-between">
+                <StatoBadge stato={entry.stato} />
+                {entry.stato === 'in_attesa' && (
+                  <button
+                    type="button"
+                    className="rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-40"
+                    disabled={payingId === entry.id}
+                    onClick={() => void handlePay(entry)}
+                  >
+                    Segna pagato
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {!loading && items.length === 0 && (
@@ -320,6 +382,7 @@ export default function StoricoMovimentiPage() {
               <th className="px-3 py-2 text-left">Conto / Wallet</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-right">Importo</th>
+              <th className="px-3 py-2 text-left">Stato</th>
             </tr>
           </thead>
           <tbody>
@@ -357,11 +420,28 @@ export default function StoricoMovimentiPage() {
                     {formatCurrency(entry.importo)}
                   </span>
                 </td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  {entry.source === 'prelievo' && (
+                    <div className="flex items-center gap-2">
+                      <StatoBadge stato={entry.stato} />
+                      {entry.stato === 'in_attesa' && (
+                        <button
+                          type="button"
+                          className="rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-muted disabled:opacity-40"
+                          disabled={payingId === entry.id}
+                          onClick={() => void handlePay(entry)}
+                        >
+                          Segna pagato
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
             {!loading && items.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={5}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
                   Nessun movimento trovato.
                 </td>
               </tr>

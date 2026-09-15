@@ -10,6 +10,20 @@ export type EnabledStatus = 'abilitato' | 'disabilitato'
 
 export type AccountMovementType = 'deposito' | 'prelievo' | 'riconciliazione'
 
+/** Solo i prelievi possono essere in attesa: il wallet si accredita quando diventano pagati (§14.109). */
+export type AccountMovementStato = 'in_attesa' | 'pagato'
+
+/** Catalogo globale dei metodi di pagamento: un wallet è un collaboratore × un metodo. */
+export interface PaymentMethod {
+  id: string
+  slug: string
+  nome: string
+  descrizione?: string | null
+  attivo: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export type WalletMovementType = 'trasferimento' | 'ricarica' | 'spesa'
 
 export type QuickGameMethod =
@@ -63,9 +77,13 @@ export interface Account {
 export interface Wallet {
   id: string
   holderId: string
+  paymentMethodId: string
+  /** Il nome del metodo di pagamento. */
   nome: string
   descrizione?: string
   saldoAttuale: number
+  /** Somma dei prelievi in attesa diretti a questo wallet. */
+  inAttesa: number
   stato: EnabledStatus
   bloccato: boolean
   createdAt: string
@@ -256,6 +274,12 @@ export interface AccountMovement {
   valore: number
   dataRegistrazione: string
   descrizione?: string
+  stato: AccountMovementStato
+  dataPagamento: string | null
+  /** Nomi letti in join dal backend, per gli elenchi. */
+  accountNome?: string
+  holderId?: string
+  walletNome?: string | null
 }
 
 export interface WalletMovement {
@@ -321,6 +345,9 @@ export interface ActivityFeedEntry {
   competizione?: string | null
   mercato?: string | null
   metodo?: string | null
+  /** Solo per i movimenti conto (prelievi in attesa o pagati). */
+  stato?: AccountMovementStato | null
+  dataPagamento?: string | null
 }
 
 export interface ActivityFeedSummary {
@@ -335,6 +362,7 @@ export interface PuntateInCorsoTotale {
 
 export interface ActivityFeedFilters {
   source?: ActivityFeedSource
+  stato?: AccountMovementStato
   accountId?: string
   walletId?: string
   fromDate?: string

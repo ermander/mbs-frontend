@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Scale, Wallet, Loader2, Banknote, Lock } from 'lucide-react'
+import { Scale, Wallet, Loader2, Banknote, Lock, Hourglass } from 'lucide-react'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -70,7 +70,9 @@ export default function ProfitTrackerDashboardPage() {
   const bilancio = useMemo(() => {
     const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
     const saldoWallets = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
-    const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorsoValue
+    // §14.109: i prelievi in attesa sono soldi usciti dal conto e non ancora nel wallet.
+    const prelieviInAttesa = wallets.reduce((sum, w) => sum + (w.inAttesa ?? 0), 0)
+    const saldoTotale = saldoBookmakers + saldoWallets + puntateInCorsoValue + prelieviInAttesa
     const saldoBloccatoConti = allAccounts
       .filter((a) => a.bloccato)
       .reduce((sum, a) => sum + a.saldoAttuale, 0)
@@ -81,6 +83,7 @@ export default function ProfitTrackerDashboardPage() {
     return {
       saldoBookmakers,
       saldoWallets,
+      prelieviInAttesa,
       puntateInCorso: puntateInCorsoValue,
       saldoTotale,
       saldoBloccato,
@@ -135,7 +138,7 @@ export default function ProfitTrackerDashboardPage() {
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Bilancio
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -160,6 +163,22 @@ export default function ProfitTrackerDashboardPage() {
             </div>
             <div className={BALANCE_ICON_CLASS}>
               <Wallet className="size-full" />
+            </div>
+          </div>
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Prelievi in attesa
+              </p>
+              <p className="mt-2 font-mono text-2xl font-semibold text-amber-400">
+                {formatCurrency(bilancio.prelieviInAttesa)}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Usciti dai conti, non ancora nei wallet
+              </p>
+            </div>
+            <div className={BALANCE_ICON_CLASS}>
+              <Hourglass className="size-full" />
             </div>
           </div>
           <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">

@@ -54,6 +54,8 @@ export function AccountMovementModal({
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
+  // §14.109: un prelievo nasce in attesa; con la spunta nasce già pagato e accredita subito il wallet.
+  const [giaPagato, setGiaPagato] = useState(false)
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -100,6 +102,7 @@ export function AccountMovementModal({
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
       descrizione: descrizione || undefined,
+      stato: tipo === 'prelievo' && giaPagato ? 'pagato' : undefined,
     })
 
     // Lo store non lancia: segnala l'errore nello stato. Se c'è, la modale resta aperta
@@ -108,6 +111,7 @@ export function AccountMovementModal({
 
     setValore('')
     setDescrizione('')
+    setGiaPagato(false)
     onOpenChange(false)
   }
 
@@ -192,6 +196,24 @@ export function AccountMovementModal({
               searchPlaceholder="Cerca wallet..."
               portalContainer={dropdownPortalEl}
             />
+          )}
+          {tipo === 'prelievo' && (
+            <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
+              <p className="text-amber-200">
+                Il conto viene scalato subito; il wallet verrà accreditato quando segnerai il
+                prelievo come pagato (dalla pagina Wallets o dallo storico).
+              </p>
+              <label className="flex cursor-pointer items-center gap-2 text-foreground">
+                <input
+                  id="mov-gia-pagato"
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer"
+                  checked={giaPagato}
+                  onChange={(e) => setGiaPagato(e.target.checked)}
+                />
+                Già pagato: accredita subito il wallet
+              </label>
+            </div>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="mov-valore">Movimento (€)</Label>

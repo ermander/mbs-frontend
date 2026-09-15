@@ -88,6 +88,7 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
       { label: 'Dashboard', href: '/backoffice/dashboard' },
       { label: 'Salute', href: '/backoffice/salute' },
       { label: 'Bookmaker', href: '/backoffice/books' },
+      { label: 'Metodi di pagamento', href: '/backoffice/payment-methods' },
       { label: 'Scraper', href: '/backoffice/scrapers' },
       { label: 'Sport Mappings', href: '/backoffice/sport-mappings' },
       { label: 'Matchings', href: '/backoffice/matchings' },

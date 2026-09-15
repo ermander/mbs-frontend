@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -17,7 +17,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
 import { getResponseStatus } from '@/lib/error-utils'
-import type { EnabledStatus } from '@/types/profit-tracker'
+import type { EnabledStatus, PaymentMethod, Wallet } from '@/types/profit-tracker'
 
 interface WalletCreateModalProps {
   open: boolean
@@ -25,23 +25,31 @@ interface WalletCreateModalProps {
   defaultHolderId?: string
 }
 
+interface WalletCreatePayload {
+  holderId: string
+  paymentMethodId: string
+  descrizione: string
+  saldoIniziale: number
+  stato: EnabledStatus
+}
+
+// §14.109: niente più nome libero. Il wallet è un collaboratore × un metodo di
+// pagamento del catalogo, uno solo per coppia: la tendina esclude i metodi già aperti.
 function WalletCreateModalForm({
   defaultHolderId,
   holders,
+  paymentMethods,
+  wallets,
   onClose,
   onSave,
   portalContainer,
 }: {
   defaultHolderId?: string
   holders: { id: string; nome: string }[]
+  paymentMethods: PaymentMethod[]
+  wallets: Wallet[]
   onClose: () => void
-  onSave: (payload: {
-    holderId: string
-    nome: string
-    descrizione: string
-    saldoIniziale: number
-    stato: EnabledStatus
-  }) => Promise<void>
+  onSave: (payload: WalletCreatePayload) => Promise<void>
   portalContainer: HTMLDivElement | null
 }) {
   const holderOptions = useMemo(
@@ -49,33 +57,46 @@ function WalletCreateModalForm({
     [holders],
   )
   const [holderId, setHolderId] = useState(defaultHolderId || holders[0]?.id || '')
-  const [nome, setNome] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [saldoIniziale, setSaldoIniziale] = useState('')
   const [stato, setStato] = useState<EnabledStatus>('abilitato')
   const [saving, setSaving] = useState(false)
 
+  const availableMethods = useMemo(() => {
+    const used = new Set(
+      wallets.filter((w) => w.holderId === holderId).map((w) => w.paymentMethodId),
+    )
+    return paymentMethods.filter((m) => m.attivo && !used.has(m.id))
+  }, [paymentMethods, wallets, holderId])
+  const methodOptions = useMemo(
+    () => availableMethods.map((m) => ({ value: m.id, label: m.nome })),
+    [availableMethods],
+  )
+  const effectiveMethodId = availableMethods.some((m) => m.id === paymentMethodId)
+    ? paymentMethodId
+    : (availableMethods[0]?.id ?? '')
+
   const handleSaveAsync = async () => {
-    if (!holderId || !nome.trim()) return
+    if (!holderId || !effectiveMethodId) return
     setSaving(true)
     try {
       const iniziale = Number.parseFloat(saldoIniziale.replace(',', '.')) || 0
       await onSave({
         holderId,
-        nome: nome.trim(),
+        paymentMethodId: effectiveMethodId,
         descrizione,
         saldoIniziale: iniziale,
         stato,
       })
       toast.success('Wallet creato con successo')
-      setNome('')
       setDescrizione('')
       setSaldoIniziale('')
       onClose()
     } catch (err: unknown) {
       const status = getResponseStatus(err)
       if (status === 409) {
-        toast.error("Esiste già un wallet con questo nome per il collaboratore selezionato")
+        toast.error('Il collaboratore ha già un wallet per questo metodo di pagamento')
       } else {
         toast.error('Errore durante il salvataggio')
       }
@@ -84,7 +105,7 @@ function WalletCreateModalForm({
     }
   }
 
-  const canSave = holderId && nome.trim() !== '' && !saving
+  const canSave = holderId && effectiveMethodId !== '' && !saving
 
   return (
     <div className="space-y-4 p-4 pt-0 text-sm">
@@ -102,13 +123,24 @@ function WalletCreateModalForm({
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="wallet-nome">Nome</Label>
-        <Input
-          id="wallet-nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Es. Revolut, PayPal..."
+        <Label htmlFor="wallet-method">Metodo di pagamento</Label>
+        <SearchableSelect
+          id="wallet-method"
+          options={methodOptions}
+          value={effectiveMethodId}
+          onChange={setPaymentMethodId}
+          allowEmpty={false}
+          placeholder="Seleziona metodo"
+          searchPlaceholder="Cerca metodo..."
+          portalContainer={portalContainer}
         />
+        {availableMethods.length === 0 && (
+          <p className="text-[11px] text-muted-foreground">
+            {paymentMethods.length === 0
+              ? 'Nessun metodo di pagamento nel catalogo: un amministratore può aggiungerlo nel backoffice.'
+              : 'Il collaboratore ha già un wallet per ogni metodo del catalogo.'}
+          </p>
+        )}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="wallet-desc">Descrizione (opzionale)</Label>
@@ -155,23 +187,26 @@ function WalletCreateModalForm({
 
 export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: WalletCreateModalProps) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
+  const wallets = useProfitTrackerStore((s) => s.wallets)
+  const paymentMethods = useProfitTrackerStore((s) => s.paymentMethods)
+  const fetchPaymentMethods = useProfitTrackerStore((s) => s.fetchPaymentMethods)
+  const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const addWallet = useProfitTrackerStore((s) => s.addWallet)
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
-  const handleSave = async (payload: {
-    holderId: string
-    nome: string
-    descrizione: string
-    saldoIniziale: number
-    stato: EnabledStatus
-  }) => {
+  useEffect(() => {
+    if (!open) return
+    void fetchPaymentMethods()
+    void fetchWallets()
+  }, [open, fetchPaymentMethods, fetchWallets])
+
+  const handleSave = async (payload: WalletCreatePayload) => {
     await addWallet({
       holderId: payload.holderId,
-      nome: payload.nome,
+      paymentMethodId: payload.paymentMethodId,
       descrizione: payload.descrizione || undefined,
-      saldoAttuale: payload.saldoIniziale,
+      saldoIniziale: payload.saldoIniziale,
       stato: payload.stato,
-      bloccato: false,
     })
     onOpenChange(false)
   }
@@ -192,6 +227,8 @@ export function WalletCreateModal({ open, onOpenChange, defaultHolderId }: Walle
             key="open"
             defaultHolderId={defaultHolderId}
             holders={holders}
+            paymentMethods={paymentMethods}
+            wallets={wallets}
             onClose={() => onOpenChange(false)}
             onSave={handleSave}
             portalContainer={dropdownPortalEl}

@@ -3,6 +3,7 @@ import { apiClient } from './client'
 import type {
   Account,
   AccountMovement,
+  AccountMovementStato,
   AccountMovementType,
   ActivityFeedFilters,
   ActivityFeedResult,
@@ -17,6 +18,7 @@ import type {
   EnabledStatus,
   Holder,
   OngoingBet,
+  PaymentMethod,
   ProfitReportDetailResult,
   ProfitReportFilters,
   ProfitReportResult,
@@ -224,9 +226,16 @@ export async function updateAccount(id: string, payload: UpdateAccountPayload): 
   return response.data
 }
 
+/** I metodi di pagamento attivi del catalogo (§14.109). */
+export async function getPaymentMethods(): Promise<PaymentMethod[]> {
+  const response = await apiClient.get<PaymentMethod[]>('/profit-tracker/payment-methods')
+  return response.data
+}
+
+// Il nome non si sceglie più: è quello del metodo di pagamento (§14.109).
 export interface CreateWalletPayload {
   holderId: string
-  nome: string
+  paymentMethodId: string
   descrizione?: string
   saldoIniziale?: number
   stato: EnabledStatus
@@ -243,7 +252,6 @@ export async function createWallet(payload: CreateWalletPayload): Promise<Wallet
 }
 
 export interface UpdateWalletPayload {
-  nome?: string
   descrizione?: string | null
   stato?: EnabledStatus
   bloccato?: boolean
@@ -261,6 +269,9 @@ export interface CreateAccountMovementPayload {
   valore: number
   dataRegistrazione: string
   descrizione?: string
+  /** Solo per i prelievi: 'pagato' accredita subito il wallet, altrimenti resta in attesa. */
+  stato?: AccountMovementStato
+  dataPagamento?: string
 }
 
 export async function createAccountMovement(
@@ -271,6 +282,40 @@ export async function createAccountMovement(
     payload,
   )
   return response.data
+}
+
+export interface GetAccountMovementsParams {
+  accountId?: string
+  walletId?: string
+  stato?: AccountMovementStato
+  fromDate?: string
+  toDate?: string
+}
+
+export async function getAccountMovements(
+  params?: GetAccountMovementsParams,
+): Promise<AccountMovement[]> {
+  const response = await apiClient.get<AccountMovement[]>('/profit-tracker/account-movements', {
+    params: params ?? {},
+  })
+  return response.data
+}
+
+/** Segna pagato un prelievo in attesa: il wallet viene accreditato adesso. */
+export async function markAccountMovementPaid(
+  id: string,
+  payload: { dataPagamento?: string } = {},
+): Promise<AccountMovement> {
+  const response = await apiClient.patch<AccountMovement>(
+    `/profit-tracker/account-movements/${id}/pay`,
+    payload,
+  )
+  return response.data
+}
+
+/** Annulla un prelievo in attesa: il conto riprende l'importo. */
+export async function deleteAccountMovement(id: string): Promise<void> {
+  await apiClient.delete(`/profit-tracker/account-movements/${id}`)
 }
 
 export interface CreateWalletMovementPayload {

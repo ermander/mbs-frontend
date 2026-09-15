@@ -4,11 +4,13 @@ import { getErrorCode, getErrorMessage, getResponseDataCode } from '@/lib/error-
 import type {
   Account,
   AccountMovement,
+  AccountMovementStato,
   BetLeg,
   Book,
   EnabledStatus,
   Holder,
   OngoingBet,
+  PaymentMethod,
   QuickBet,
   Tag,
   Wallet,
@@ -34,14 +36,17 @@ import {
   createQuickBet as apiCreateQuickBet,
   createWallet as apiCreateWallet,
   createWalletMovement as apiCreateWalletMovement,
+  deleteAccountMovement as apiDeleteAccountMovement,
   deleteBet as apiDeleteBet,
   deleteBetLeg as apiDeleteBetLeg,
   deleteQuickBet as apiDeleteQuickBet,
+  getAccountMovements as apiGetAccountMovements,
   getAccounts as apiGetAccounts,
   getBetWithLegs as apiGetBetWithLegs,
   getBets as apiGetBets,
   getBooks as apiGetBooks,
   getHolders as apiGetHolders,
+  getPaymentMethods as apiGetPaymentMethods,
   getQuickBets as apiGetQuickBets,
   getWallets as apiGetWallets,
   getReminders as apiGetReminders,
@@ -52,6 +57,7 @@ import {
   getTelegramStatus as apiGetTelegramStatus,
   generateTelegramCode as apiGenerateTelegramCode,
   unlinkTelegram as apiUnlinkTelegram,
+  markAccountMovementPaid as apiMarkAccountMovementPaid,
   updateAccount as apiUpdateAccount,
   updateBet as apiUpdateBet,
   updateBetLeg as apiUpdateBetLeg,
@@ -83,6 +89,10 @@ interface ProfitTrackerState {
   accountsError?: string
   allAccounts: Account[]
   wallets: Wallet[]
+  /** Catalogo dei metodi di pagamento attivi (§14.109). */
+  paymentMethods: PaymentMethod[]
+  /** Prelievi in attesa di pagamento, i più recenti prima. */
+  pendingWithdrawals: AccountMovement[]
   ongoingBets: OngoingBet[]
   betLegs: BetLeg[]
   isLoadingOngoingBets: boolean
@@ -144,7 +154,15 @@ interface ProfitTrackerState {
     stato: EnabledStatus
   }) => Promise<void>
   fetchWallets: () => Promise<void>
-  addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'> & { holderId: string }) => Promise<void>
+  fetchPaymentMethods: () => Promise<void>
+  fetchPendingWithdrawals: () => Promise<void>
+  addWallet: (wallet: {
+    holderId: string
+    paymentMethodId: string
+    descrizione?: string
+    saldoIniziale?: number
+    stato: EnabledStatus
+  }) => Promise<void>
 
   // null svuota la descrizione: undefined sparisce dal JSON e il backend lascia il valore di prima.
   updateAccount: (
@@ -207,7 +225,13 @@ interface ProfitTrackerState {
     valore: number
     dataRegistrazione: string
     descrizione?: string
+    /** Solo per i prelievi: 'pagato' accredita subito il wallet. */
+    stato?: AccountMovementStato
   }) => Promise<void>
+  /** Segna pagato un prelievo in attesa; l'errore risale a chi chiama. */
+  markAccountMovementPaid: (id: string) => Promise<void>
+  /** Annulla un prelievo in attesa: il conto riprende l'importo; l'errore risale a chi chiama. */
+  cancelAccountMovement: (id: string) => Promise<void>
   addWalletMovement: (movement: Omit<WalletMovement, 'id'>) => Promise<boolean>
 
   fetchReminders: (params?: { stato?: Reminder['stato'] }) => Promise<void>
@@ -261,6 +285,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     accountsError: undefined,
     allAccounts: [],
     wallets: initialWallets,
+    paymentMethods: [],
+    pendingWithdrawals: [],
     ongoingBets: initialOngoingBets,
     betLegs: initialBetLegs,
     isLoadingOngoingBets: false,
@@ -538,14 +564,65 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     addWallet: async (wallet) => {
       const created = await apiCreateWallet({
         holderId: wallet.holderId,
-        nome: wallet.nome,
+        paymentMethodId: wallet.paymentMethodId,
         descrizione: wallet.descrizione,
-        saldoIniziale: wallet.saldoAttuale,
+        saldoIniziale: wallet.saldoIniziale,
         stato: wallet.stato,
       })
       set((state) => ({
         wallets: [...state.wallets, created],
       }))
+    },
+    fetchPaymentMethods: async () => {
+      try {
+        const methods = await apiGetPaymentMethods()
+        set(() => ({ paymentMethods: methods }))
+      } catch {
+        set(() => ({ paymentMethods: [] }))
+      }
+    },
+    fetchPendingWithdrawals: async () => {
+      try {
+        const list = await apiGetAccountMovements({ stato: 'in_attesa' })
+        set(() => ({ pendingWithdrawals: list }))
+      } catch {
+        set(() => ({ pendingWithdrawals: [] }))
+      }
+    },
+    markAccountMovementPaid: async (id) => {
+      const paid = await apiMarkAccountMovementPaid(id)
+      set((state) => ({
+        pendingWithdrawals: state.pendingWithdrawals.filter((m) => m.id !== id),
+        wallets: state.wallets.map((w) =>
+          w.id === paid.walletId
+            ? {
+                ...w,
+                saldoAttuale: w.saldoAttuale + paid.valore,
+                inAttesa: Math.max(0, w.inAttesa - paid.valore),
+              }
+            : w,
+        ),
+      }))
+    },
+    cancelAccountMovement: async (id) => {
+      const movement = _get().pendingWithdrawals.find((m) => m.id === id)
+      await apiDeleteAccountMovement(id)
+      set((state) => {
+        const pendingWithdrawals = state.pendingWithdrawals.filter((m) => m.id !== id)
+        if (!movement) return { pendingWithdrawals }
+        const restore = (a: Account) =>
+          a.id === movement.accountId ? { ...a, saldoAttuale: a.saldoAttuale + movement.valore } : a
+        return {
+          pendingWithdrawals,
+          accounts: state.accounts.map(restore),
+          allAccounts: state.allAccounts.map(restore),
+          wallets: state.wallets.map((w) =>
+            w.id === movement.walletId
+              ? { ...w, inAttesa: Math.max(0, w.inAttesa - movement.valore) }
+              : w,
+          ),
+        }
+      })
     },
 
     updateAccount: async (id, patch) => {
@@ -908,12 +985,18 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           const accounts = prev.accounts.map(applyAccountDelta)
           const allAccounts = prev.allAccounts.map(applyAccountDelta)
 
+          // §14.109: il prelievo accredita il wallet solo se nasce pagato; altrimenti
+          // resta in attesa (inAttesa) finché non viene segnato pagato.
+          const pending = created.tipo === 'prelievo' && created.stato === 'in_attesa'
           const wallets = prev.wallets.map((w) => {
             if (!created.walletId || w.id !== created.walletId) return w
-            let delta = 0
-            if (created.tipo === 'deposito') delta = -importo
-            if (created.tipo === 'prelievo') delta = importo
-            return { ...w, saldoAttuale: w.saldoAttuale + delta }
+            if (created.tipo === 'deposito') return { ...w, saldoAttuale: w.saldoAttuale - importo }
+            if (created.tipo === 'prelievo') {
+              return pending
+                ? { ...w, inAttesa: w.inAttesa + importo }
+                : { ...w, saldoAttuale: w.saldoAttuale + importo }
+            }
+            return w
           })
 
           return {
@@ -921,6 +1004,9 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
             isSavingAccountMovement: false,
             accountMovementsError: undefined,
             accountMovements: [...prev.accountMovements, created],
+            pendingWithdrawals: pending
+              ? [created, ...prev.pendingWithdrawals]
+              : prev.pendingWithdrawals,
             accounts,
             allAccounts,
             wallets,

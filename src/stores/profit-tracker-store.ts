@@ -828,7 +828,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         })
         set((state) => ({
           ...state,
-          quickBets: [...state.quickBets, created],
+          quickBets: [created, ...state.quickBets],
           accounts: state.accounts.map((a) =>
             a.id === created.accountId
               ? { ...a, saldoAttuale: a.saldoAttuale + created.movimento }

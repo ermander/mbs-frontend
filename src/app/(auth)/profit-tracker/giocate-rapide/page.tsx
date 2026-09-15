@@ -3,19 +3,35 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { QuickBetModal } from '@/components/profit-tracker/quick-bet-modal'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { QUICK_METHODS } from '@/lib/profit-tracker/categories'
+import type { QuickBet } from '@/types/profit-tracker'
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('it-IT')
 }
 
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const QUICK_METHOD_LABELS: Record<string, string> = Object.fromEntries(
   QUICK_METHODS.map((m) => [m.value, m.label]),
 )
+
+function methodLabel(method: string) {
+  return QUICK_METHOD_LABELS[method] ?? method.replace('_', ' ')
+}
 
 interface Filters {
   dateFrom: string
@@ -26,6 +42,120 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = { dateFrom: '', dateTo: '', accountId: '', quickMethod: '', tag: '' }
+
+type SortKey = 'data' | 'conto' | 'metodo' | 'tag' | 'movimento'
+type SortDir = 'asc' | 'desc'
+interface Sort {
+  key: SortKey
+  dir: SortDir
+}
+
+const SORT_LABELS: Record<SortKey, string> = {
+  data: 'Data',
+  conto: 'Conto',
+  metodo: 'Metodo',
+  tag: 'Tag',
+  movimento: 'Movimento',
+}
+const DEFAULT_DIR: Record<SortKey, SortDir> = {
+  data: 'desc',
+  conto: 'asc',
+  metodo: 'asc',
+  tag: 'asc',
+  movimento: 'desc',
+}
+const DEFAULT_SORT: Sort = { key: 'data', dir: DEFAULT_DIR.data }
+
+function timeOf(value?: string) {
+  const t = value ? new Date(value).getTime() : Number.NaN
+  return Number.isNaN(t) ? 0 : t
+}
+
+/**
+ * Più recente prima: data di registrazione, poi orario di inserimento, poi id.
+ * È lo stesso criterio dell'ORDER BY del backend, così l'elenco non cambia
+ * ordine tra una giocata appena salvata e il ricaricamento della pagina.
+ */
+function compareNewestFirst(a: QuickBet, b: QuickBet) {
+  return (
+    timeOf(b.dataRegistrazione) - timeOf(a.dataRegistrazione) ||
+    timeOf(b.createdAt) - timeOf(a.createdAt) ||
+    b.id.localeCompare(a.id)
+  )
+}
+
+function sortQuickBets(list: QuickBet[], sort: Sort, accountName: (id: string) => string) {
+  const sign = sort.dir === 'asc' ? 1 : -1
+  const byText = (get: (b: QuickBet) => string) => (a: QuickBet, b: QuickBet) =>
+    get(a).localeCompare(get(b), 'it', { sensitivity: 'base' }) * sign || compareNewestFirst(a, b)
+  let cmp: (a: QuickBet, b: QuickBet) => number
+  switch (sort.key) {
+    case 'conto':
+      cmp = byText((b) => accountName(b.accountId))
+      break
+    case 'metodo':
+      cmp = byText((b) => methodLabel(b.quickMethod))
+      break
+    case 'tag':
+      cmp = byText((b) => b.tag ?? '')
+      break
+    case 'movimento':
+      cmp = (a, b) => (a.movimento - b.movimento) * sign || compareNewestFirst(a, b)
+      break
+    default:
+      cmp = (a, b) => -sign * compareNewestFirst(a, b)
+  }
+  return [...list].sort(cmp)
+}
+
+function matchesSearch(bet: QuickBet, words: string[], accountName: (id: string) => string) {
+  if (words.length === 0) return true
+  const haystack = [
+    accountName(bet.accountId),
+    methodLabel(bet.quickMethod),
+    bet.tag,
+    bet.nota,
+    bet.id,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return words.every((w) => haystack.includes(w))
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSort,
+}: {
+  label: string
+  sortKey: SortKey
+  sort: Sort
+  onSort: (key: SortKey) => void
+}) {
+  const active = sort.key === sortKey
+  return (
+    <th
+      className="px-3 py-2 text-left"
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1 whitespace-nowrap uppercase tracking-wider hover:text-foreground ${
+          active ? 'text-foreground' : ''
+        }`}
+        title={`Ordina per ${label.toLowerCase()}`}
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        <span aria-hidden="true" className={active ? '' : 'opacity-40'}>
+          {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+        </span>
+      </button>
+    </th>
+  )
+}
 
 export { GiocateRapidePage as GiocateRapideContent }
 export default function GiocateRapidePage() {
@@ -42,6 +172,8 @@ export default function GiocateRapidePage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<Sort>(DEFAULT_SORT)
 
   useEffect(() => {
     void fetchAllAccounts()
@@ -49,10 +181,11 @@ export default function GiocateRapidePage() {
     void fetchTags()
   }, [fetchAllAccounts, fetchQuickBets, fetchTags])
 
-  const resolveAccountName = (accountId: string) =>
-    allAccounts.find((a) => a.id === accountId)?.nome ?? '—'
+  const accountNames = useMemo(() => new Map(allAccounts.map((a) => [a.id, a.nome])), [allAccounts])
+  const resolveAccountName = (accountId: string) => accountNames.get(accountId) ?? '—'
 
   const quickBets = useMemo(() => {
+    const nameOf = (id: string) => accountNames.get(id) ?? ''
     let list = [...allQuickBets]
 
     if (filters.dateFrom) {
@@ -72,8 +205,25 @@ export default function GiocateRapidePage() {
     if (filters.tag) {
       list = list.filter((b) => (b.tag ?? '') === filters.tag)
     }
-    return list
-  }, [allQuickBets, filters])
+    const words = search.toLowerCase().split(/\s+/).filter(Boolean)
+    if (words.length > 0) {
+      list = list.filter((b) => matchesSearch(b, words, nameOf))
+    }
+    return sortQuickBets(list, sort, nameOf)
+  }, [allQuickBets, filters, search, sort, accountNames])
+
+  const isFiltering = search.trim() !== '' || Object.values(filters).some((v) => v !== '')
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: DEFAULT_DIR[key] },
+    )
+
+  const emptyMessage = isFiltering
+    ? 'Nessuna giocata rapida corrisponde alla ricerca o ai filtri.'
+    : 'Nessuna giocata rapida registrata. Usa "Nuova giocata" per aggiungerne una.'
 
   return (
     <ProfitTrackerPageShell
@@ -91,15 +241,59 @@ export default function GiocateRapidePage() {
         </p>
       )}
 
-      {/* Filter bar */}
+      {/* Search, sort (mobile) and filter bar */}
       <div className="space-y-3">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          {showFilters ? 'Nascondi filtri' : 'Mostra filtri'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="search"
+            aria-label="Cerca giocate rapide"
+            placeholder="Cerca per conto, tag, nota o metodo..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 w-full text-sm sm:max-w-xs"
+          />
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            {showFilters ? 'Nascondi filtri' : 'Mostra filtri'}
+          </button>
+          <div className="flex items-center gap-1 sm:hidden">
+            <label className="sr-only" htmlFor="quick-bets-sort">
+              Ordina per
+            </label>
+            <select
+              id="quick-bets-sort"
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+              value={sort.key}
+              onChange={(e) => {
+                const key = e.target.value as SortKey
+                setSort({ key, dir: DEFAULT_DIR[key] })
+              }}
+            >
+              {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORT_LABELS[key]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="rounded-md border border-border px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/60"
+              title={sort.dir === 'asc' ? 'Ordine crescente' : 'Ordine decrescente'}
+              aria-label={sort.dir === 'asc' ? 'Ordine crescente' : 'Ordine decrescente'}
+              onClick={() => setSort((s) => ({ ...s, dir: s.dir === 'asc' ? 'desc' : 'asc' }))}
+            >
+              {sort.dir === 'asc' ? '▲' : '▼'}
+            </button>
+          </div>
+          {isFiltering && !isLoadingQuickBets && (
+            <span className="text-xs text-muted-foreground">
+              {quickBets.length} di {allQuickBets.length}
+            </span>
+          )}
+        </div>
         {showFilters && (
           <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card/50 p-3">
             <label className="space-y-1 text-xs text-muted-foreground">
@@ -180,7 +374,7 @@ export default function GiocateRapidePage() {
           </div>
         ) : quickBets.length === 0 ? (
           <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
-            Nessuna giocata rapida registrata. Usa &quot;Nuova giocata&quot; per aggiungerne una.
+            {emptyMessage}
           </div>
         ) : (
           quickBets.map((bet) => {
@@ -192,11 +386,16 @@ export default function GiocateRapidePage() {
               >
                 <div className="space-y-2">
                   <h2 className="text-base font-semibold leading-snug text-foreground">
-                    {bet.quickMethod.replace('_', ' ')}
+                    {methodLabel(bet.quickMethod)}
                   </h2>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
+                    <span
+                      className="rounded-md bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
+                      title={
+                        bet.createdAt ? `Inserita il ${formatDateTime(bet.createdAt)}` : undefined
+                      }
+                    >
                       {formatDate(bet.dataRegistrazione)}
                     </span>
                     <span className="rounded-md bg-muted/40 px-2 py-0.5 font-mono text-xs text-muted-foreground">
@@ -260,12 +459,22 @@ export default function GiocateRapidePage() {
           <thead>
             <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
-              <th className="px-3 py-2 text-left">Registrato il</th>
-              <th className="px-3 py-2 text-left">Conto</th>
-              <th className="px-3 py-2 text-left">Metodo</th>
-              <th className="px-3 py-2 text-left">Tag</th>
+              <SortableHeader
+                label="Registrato il"
+                sortKey="data"
+                sort={sort}
+                onSort={toggleSort}
+              />
+              <SortableHeader label="Conto" sortKey="conto" sort={sort} onSort={toggleSort} />
+              <SortableHeader label="Metodo" sortKey="metodo" sort={sort} onSort={toggleSort} />
+              <SortableHeader label="Tag" sortKey="tag" sort={sort} onSort={toggleSort} />
               <th className="px-3 py-2 text-left">Note</th>
-              <th className="px-3 py-2 text-left">Movimento</th>
+              <SortableHeader
+                label="Movimento"
+                sortKey="movimento"
+                sort={sort}
+                onSort={toggleSort}
+              />
               <th className="px-3 py-2 text-right">Azioni</th>
             </tr>
           </thead>
@@ -286,14 +495,19 @@ export default function GiocateRapidePage() {
                   <td className="px-3 py-2 align-top font-mono text-xs text-muted-foreground">
                     {bet.id}
                   </td>
-                  <td className="px-3 py-2 align-top text-xs text-muted-foreground">
+                  <td
+                    className="px-3 py-2 align-top text-xs text-muted-foreground"
+                    title={
+                      bet.createdAt ? `Inserita il ${formatDateTime(bet.createdAt)}` : undefined
+                    }
+                  >
                     {formatDate(bet.dataRegistrazione)}
                   </td>
                   <td className="px-3 py-2 align-top text-xs text-foreground">
                     {resolveAccountName(bet.accountId)}
                   </td>
-                  <td className="px-3 py-2 align-top text-xs capitalize text-muted-foreground">
-                    {bet.quickMethod.replace('_', ' ')}
+                  <td className="px-3 py-2 align-top text-xs text-muted-foreground">
+                    {methodLabel(bet.quickMethod)}
                   </td>
                   <td className="px-3 py-2 align-top text-xs text-muted-foreground">
                     {bet.tag ?? '—'}
@@ -335,8 +549,7 @@ export default function GiocateRapidePage() {
             {!isLoadingQuickBets && quickBets.length === 0 && (
               <tr>
                 <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={8}>
-                  Nessuna giocata rapida registrata. Usa &quot;Nuova giocata&quot; per aggiungerne
-                  una.
+                  {emptyMessage}
                 </td>
               </tr>
             )}

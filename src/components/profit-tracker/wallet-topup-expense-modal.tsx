@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { sanitizeDecimal } from '@/lib/utils'
+import { NATURA_HINTS, direzioneForTipo } from '@/lib/profit-tracker/movement-categories'
 import type { WalletMovementType } from '@/types/profit-tracker'
 
 interface WalletTopupExpenseModalProps {
@@ -23,20 +24,33 @@ interface WalletTopupExpenseModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+type TopupTipo = Exclude<WalletMovementType, 'trasferimento'>
+
+/** Lo slug della categoria che chiede a quale collaboratore va il compenso (§14.111). */
+const COMPENSO_SLUG = 'compenso-identita'
+
 export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpenseModalProps) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const wallets = useProfitTrackerStore((s) => s.wallets)
+  const movementCategories = useProfitTrackerStore((s) => s.movementCategories)
+  const fetchMovementCategories = useProfitTrackerStore((s) => s.fetchMovementCategories)
   const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
   const isSavingWalletMovement = useProfitTrackerStore((s) => s.isSavingWalletMovement)
   const walletMovementsError = useProfitTrackerStore((s) => s.walletMovementsError)
 
   const [holderId, setHolderId] = useState('')
   const [walletId, setWalletId] = useState('')
-  const [tipo, setTipo] = useState<WalletMovementType>('ricarica')
+  const [tipo, setTipo] = useState<TopupTipo>('ricarica')
+  const [categoryId, setCategoryId] = useState('')
+  const [beneficiaryId, setBeneficiaryId] = useState('')
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
   const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (open) void fetchMovementCategories()
+  }, [open, fetchMovementCategories])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -44,6 +58,8 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
         setHolderId('')
         setWalletId('')
         setTipo('ricarica')
+        setCategoryId('')
+        setBeneficiaryId('')
         setValore('')
         setDataRegistrazione(new Date().toISOString().slice(0, 10))
         setDescrizione('')
@@ -68,6 +84,21 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
         ? walletId
         : (holderWallets[0]?.id ?? '')
 
+  // §14.111: solo le categorie della direzione del tipo (entrata per le ricariche, uscita
+  // per le spese), nell'ordine del catalogo: il capitale proprio sta in fondo.
+  const categoryOptions = useMemo(() => {
+    const direzione = direzioneForTipo(tipo)
+    return movementCategories
+      .filter((c) => c.attivo && c.direzione === direzione)
+      .sort((a, b) => a.ordine - b.ordine || a.nome.localeCompare(b.nome, 'it'))
+  }, [movementCategories, tipo])
+
+  const effectiveCategoryId =
+    categoryId && categoryOptions.some((c) => c.id === categoryId) ? categoryId : ''
+  const selectedCategory = categoryOptions.find((c) => c.id === effectiveCategoryId) ?? null
+  const asksBeneficiary = selectedCategory?.slug === COMPENSO_SLUG
+  const effectiveBeneficiaryId = beneficiaryId || effectiveHolderId
+
   const holderOptions = useMemo(
     () => holders.map((h) => ({ value: h.id, label: h.nome })),
     [holders],
@@ -75,7 +106,7 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
 
   const handleSave = async () => {
     const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!effectiveWalletId || !Number.isFinite(importo)) return
+    if (!effectiveWalletId || !effectiveCategoryId || !Number.isFinite(importo)) return
 
     const success = await addWalletMovement({
       walletId: effectiveWalletId,
@@ -83,6 +114,12 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
       descrizione: descrizione || undefined,
+      categoryId: effectiveCategoryId,
+      // Il collaboratore di riferimento viaggia solo quando è diverso dal proprietario del wallet.
+      holderId:
+        asksBeneficiary && effectiveBeneficiaryId !== effectiveHolderId
+          ? effectiveBeneficiaryId
+          : undefined,
     })
 
     if (success) {
@@ -100,6 +137,7 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
   const canSave =
     effectiveHolderId &&
     effectiveWalletId &&
+    effectiveCategoryId &&
     valore.trim() !== '' &&
     Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
 
@@ -130,12 +168,15 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="topup-tipo">Metodo</Label>
+            <Label htmlFor="topup-tipo">Tipo</Label>
             <select
               id="topup-tipo"
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as WalletMovementType)}
+              onChange={(e) => {
+                setTipo(e.target.value as TopupTipo)
+                setCategoryId('')
+              }}
             >
               <option value="ricarica">Ricarica</option>
               <option value="spesa">Spesa</option>
@@ -156,6 +197,49 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
               ))}
             </select>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="topup-categoria">Categoria *</Label>
+            <select
+              id="topup-categoria"
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              value={effectiveCategoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Seleziona categoria</option>
+              {categoryOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+            {selectedCategory ? (
+              <p className="text-[11px] text-muted-foreground">
+                {NATURA_HINTS[selectedCategory.natura]}
+              </p>
+            ) : categoryOptions.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                Nessuna categoria attiva per questo tipo: aggiungila dal backoffice.
+              </p>
+            ) : null}
+          </div>
+          {asksBeneficiary && (
+            <div className="space-y-1.5">
+              <Label htmlFor="topup-beneficiario">Per il collaboratore</Label>
+              <SearchableSelect
+                id="topup-beneficiario"
+                options={holderOptions}
+                value={effectiveBeneficiaryId}
+                onChange={setBeneficiaryId}
+                allowEmpty={false}
+                placeholder="Seleziona collaboratore"
+                searchPlaceholder="Cerca collaboratore..."
+                portalContainer={dropdownPortalEl}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Il compenso pesa sul netto di questo collaboratore nel report.
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="topup-valore">Movimento (€)</Label>
             <Input

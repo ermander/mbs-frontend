@@ -5,13 +5,19 @@ import { toast } from 'sonner'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { getActivityFeed, getActivityFeedSummary } from '@/services/api/profit-tracker-client'
+import {
+  getActivityFeed,
+  getActivityFeedSummary,
+  updateWalletMovement,
+} from '@/services/api/profit-tracker-client'
 import { getErrorMessage } from '@/lib/error-utils'
+import { NATURA_BADGE_CLASS, direzioneForTipo } from '@/lib/profit-tracker/movement-categories'
 import type {
   AccountMovementStato,
   ActivityFeedEntry,
   ActivityFeedSource,
   ActivityFeedSummary,
+  MovementCategory,
 } from '@/types/profit-tracker'
 
 function formatCurrency(value: number): string {
@@ -66,6 +72,58 @@ function StatoBadge({ stato }: { stato: AccountMovementStato | null | undefined 
   )
 }
 
+// §14.111: la categoria di una ricarica/spesa; senza categoria si sceglie in riga e la
+// PATCH la salva (valore e saldi non cambiano).
+function CategoriaCell({
+  entry,
+  categories,
+  busy,
+  onClassify,
+}: {
+  entry: ActivityFeedEntry
+  categories: MovementCategory[]
+  busy: boolean
+  onClassify: (entry: ActivityFeedEntry, categoryId: string) => void
+}) {
+  if (entry.source !== 'ricarica' && entry.source !== 'spesa') return null
+  if (entry.categoriaNome && entry.natura) {
+    return (
+      <span
+        className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium ${NATURA_BADGE_CLASS[entry.natura]}`}
+      >
+        {entry.categoriaNome}
+      </span>
+    )
+  }
+  const direzione = direzioneForTipo(entry.source)
+  const options = categories
+    .filter((c) => c.attivo && c.direzione === direzione)
+    .sort((a, b) => a.ordine - b.ordine)
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className="inline-block rounded-md border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-400">
+        Da classificare
+      </span>
+      <select
+        aria-label="Classifica il movimento"
+        className="h-7 rounded-md border border-border bg-background px-1.5 text-[11px] text-foreground disabled:opacity-40"
+        value=""
+        disabled={busy}
+        onChange={(e) => {
+          if (e.target.value) onClassify(entry, e.target.value)
+        }}
+      >
+        <option value="">Scegli categoria…</option>
+        {options.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.nome}
+          </option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
 function formatBetDescription(entry: ActivityFeedEntry): string {
   const parts: string[] = []
   if (entry.eventoNome) parts.push(entry.eventoNome)
@@ -82,9 +140,12 @@ export default function StoricoMovimentiPage() {
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
   const markAccountMovementPaid = useProfitTrackerStore((s) => s.markAccountMovementPaid)
+  const movementCategories = useProfitTrackerStore((s) => s.movementCategories)
+  const fetchMovementCategories = useProfitTrackerStore((s) => s.fetchMovementCategories)
 
   const [items, setItems] = useState<ActivityFeedEntry[]>([])
   const [payingId, setPayingId] = useState<string | null>(null)
+  const [classifyingId, setClassifyingId] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -96,6 +157,8 @@ export default function StoricoMovimentiPage() {
   const [statoFilter, setStatoFilter] = useState<AccountMovementStato | ''>('')
   const [accountFilter, setAccountFilter] = useState('')
   const [walletFilter, setWalletFilter] = useState('')
+  const [categoriaFilter, setCategoriaFilter] = useState('')
+  const [daClassificareFilter, setDaClassificareFilter] = useState(false)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
@@ -122,6 +185,8 @@ export default function StoricoMovimentiPage() {
     stato: statoFilter || undefined,
     accountId: accountFilter || undefined,
     walletId: walletFilter || undefined,
+    categoria: categoriaFilter || undefined,
+    daClassificare: daClassificareFilter || undefined,
     fromDate: fromDate || undefined,
     toDate: toDate || undefined,
   }
@@ -148,8 +213,31 @@ export default function StoricoMovimentiPage() {
         setLoading(false)
       }
     },
-    [sourceFilter, statoFilter, accountFilter, walletFilter, fromDate, toDate],
+    [
+      sourceFilter,
+      statoFilter,
+      accountFilter,
+      walletFilter,
+      categoriaFilter,
+      daClassificareFilter,
+      fromDate,
+      toDate,
+    ],
   )
+
+  // §14.111: classificare in riga una ricarica/spesa senza categoria.
+  const handleClassify = async (entry: ActivityFeedEntry, categoryId: string) => {
+    setClassifyingId(entry.id)
+    try {
+      await updateWalletMovement(entry.id, { categoryId })
+      toast.success('Movimento classificato')
+      await loadData(page)
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile classificare il movimento.')
+    } finally {
+      setClassifyingId(null)
+    }
+  }
 
   // §14.109: un prelievo in attesa si segna pagato anche da qui; poi si ricarica la pagina corrente.
   const handlePay = async (entry: ActivityFeedEntry) => {
@@ -168,7 +256,8 @@ export default function StoricoMovimentiPage() {
   useEffect(() => {
     void fetchAllAccounts()
     void fetchWallets()
-  }, [fetchAllAccounts, fetchWallets])
+    void fetchMovementCategories()
+  }, [fetchAllAccounts, fetchWallets, fetchMovementCategories])
 
   useEffect(() => {
     void loadData(1)
@@ -256,6 +345,30 @@ export default function StoricoMovimentiPage() {
             ))}
           </select>
         </div>
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium text-muted-foreground">Categoria</label>
+          <select
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm sm:w-auto"
+            value={categoriaFilter}
+            onChange={(e) => setCategoriaFilter(e.target.value)}
+          >
+            <option value="">Tutte</option>
+            {movementCategories.map((c) => (
+              <option key={c.id} value={c.slug}>
+                {c.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <label className="flex h-9 items-center gap-2 text-xs font-medium text-muted-foreground sm:self-end">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-border"
+            checked={daClassificareFilter}
+            onChange={(e) => setDaClassificareFilter(e.target.checked)}
+          />
+          Solo da classificare
+        </label>
         <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Da</label>
           <input
@@ -348,6 +461,16 @@ export default function StoricoMovimentiPage() {
             {getDescription(entry) !== '—' && (
               <p className="mt-1 text-xs text-muted-foreground">{getDescription(entry)}</p>
             )}
+            {(entry.source === 'ricarica' || entry.source === 'spesa') && (
+              <div className="mt-2">
+                <CategoriaCell
+                  entry={entry}
+                  categories={movementCategories}
+                  busy={classifyingId === entry.id}
+                  onClassify={(e, id) => void handleClassify(e, id)}
+                />
+              </div>
+            )}
             {entry.source === 'prelievo' && (
               <div className="mt-2 flex items-center justify-between">
                 <StatoBadge stato={entry.stato} />
@@ -381,6 +504,7 @@ export default function StoricoMovimentiPage() {
               <th className="px-3 py-2 text-left">Tipo</th>
               <th className="px-3 py-2 text-left">Conto / Wallet</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
+              <th className="px-3 py-2 text-left">Categoria</th>
               <th className="px-3 py-2 text-right">Importo</th>
               <th className="px-3 py-2 text-left">Stato</th>
             </tr>
@@ -410,6 +534,14 @@ export default function StoricoMovimentiPage() {
                 <td className="px-3 py-2 text-xs text-foreground">{resolveReference(entry)}</td>
                 <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted-foreground">
                   {getDescription(entry)}
+                </td>
+                <td className="px-3 py-2">
+                  <CategoriaCell
+                    entry={entry}
+                    categories={movementCategories}
+                    busy={classifyingId === entry.id}
+                    onClassify={(e, id) => void handleClassify(e, id)}
+                  />
                 </td>
                 <td className="whitespace-nowrap px-3 py-2 text-right font-mono">
                   <span
@@ -441,7 +573,7 @@ export default function StoricoMovimentiPage() {
             ))}
             {!loading && items.length === 0 && (
               <tr>
-                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
+                <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={7}>
                   Nessun movimento trovato.
                 </td>
               </tr>

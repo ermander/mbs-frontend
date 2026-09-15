@@ -26,6 +26,30 @@ export interface PaymentMethod {
 
 export type WalletMovementType = 'trasferimento' | 'ricarica' | 'spesa'
 
+/**
+ * §14.111: categorie dei movimenti di wallet (catalogo globale). `direzione` vincola
+ * il tipo (entrata = ricariche, uscita = spese); `natura` decide la riga del report:
+ * reddito → altre entrate, costo_attivita → costi dell'attività, spesa_personale →
+ * spese personali, capitale → fuori dal conto economico.
+ */
+export type MovementCategoryDirezione = 'entrata' | 'uscita'
+export type MovementCategoryNatura = 'reddito' | 'costo_attivita' | 'spesa_personale' | 'capitale'
+
+export interface MovementCategory {
+  id: string
+  slug: string
+  nome: string
+  descrizione?: string | null
+  direzione: MovementCategoryDirezione
+  natura: MovementCategoryNatura
+  attivo: boolean
+  ordine: number
+  /** Movimenti che la usano (solo nel backoffice). */
+  inUso?: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type QuickGameMethod =
   | 'baccarat'
   | 'bingo'
@@ -188,37 +212,69 @@ export interface ProfitReportFilters {
   categoria?: string
 }
 
+export type ProfitReportSezione = 'giocate' | 'reddito' | 'costo_attivita' | 'spesa_personale'
+
 export interface ProfitReportRow {
   periodStart: string
+  /** §14.111: giocate (ledger e rapide) oppure la natura della categoria del movimento. */
+  sezione: ProfitReportSezione
   categoria: string
-  accountId: string
-  bookId: string
+  /** Nome dal catalogo per i movimenti di wallet; null per le giocate. */
+  categoriaNome: string | null
+  /** Null per i movimenti di wallet, che non hanno un conto. */
+  accountId: string | null
+  bookId: string | null
   holderId: string
   totale: number
   giocate: number
 }
 
-export interface ProfitReportBucket {
-  periodStart: string
-  totale: number
+/** §14.111: le voci del conto economico di un periodo. */
+export interface ProfitReportAmounts {
+  profittoGiocate: number
+  altreEntrate: number
+  costiAttivita: number
+  spesePersonali: number
+  /** profittoGiocate - costiAttivita */
+  nettoAttivita: number
+  /** nettoAttivita + altreEntrate - spesePersonali */
+  netto: number
+  /** Numero di giocate (bet e rapide) e di movimenti di wallet contati. */
   giocate: number
+  movimenti: number
 }
 
-export interface ProfitReportResult {
+export interface ProfitReportBucket extends ProfitReportAmounts {
+  periodStart: string
+  /** = profittoGiocate, il campo storico. */
+  totale: number
+}
+
+export interface ProfitReportResult extends ProfitReportAmounts {
   rows: ProfitReportRow[]
   buckets: ProfitReportBucket[]
+  /** = profittoGiocate, il campo storico. */
   totale: number
-  giocate: number
+  /** Fuori dal conto: capitale proprio del periodo, e ricariche/spese ancora senza categoria. */
+  capitaleVersato: number
+  capitaleRitirato: number
+  daClassificare: number
 }
 
+export type ProfitReportDetailKind = 'bet' | 'quick' | 'ricarica' | 'spesa'
+
 export interface ProfitReportDetailItem {
-  kind: 'bet' | 'quick'
+  kind: ProfitReportDetailKind
   id: string
   nome: string | null
   categoria: string
+  categoriaNome: string | null
+  sezione: ProfitReportSezione
   data: string
   importo: number
   accountIds: string[]
+  walletId: string | null
+  holderId: string | null
 }
 
 export interface ProfitReportDetailResult {
@@ -291,6 +347,13 @@ export interface WalletMovement {
   valore: number
   dataRegistrazione: string
   descrizione?: string | null
+  /** §14.111: solo su ricariche e spese; null = da classificare. */
+  categoryId?: string | null
+  categoriaSlug?: string | null
+  categoriaNome?: string | null
+  natura?: MovementCategoryNatura | null
+  /** Il collaboratore a cui il movimento si riferisce, se non è il proprietario del wallet. */
+  holderId?: string | null
 }
 
 export interface Tag {
@@ -348,6 +411,11 @@ export interface ActivityFeedEntry {
   /** Solo per i movimenti conto (prelievi in attesa o pagati). */
   stato?: AccountMovementStato | null
   dataPagamento?: string | null
+  /** §14.111: solo per ricariche e spese; slug/nome null = da classificare. */
+  categoriaSlug?: string | null
+  categoriaNome?: string | null
+  natura?: MovementCategoryNatura | null
+  holderId?: string | null
 }
 
 export interface ActivityFeedSummary {
@@ -363,6 +431,10 @@ export interface PuntateInCorsoTotale {
 export interface ActivityFeedFilters {
   source?: ActivityFeedSource
   stato?: AccountMovementStato
+  /** §14.111: slug della categoria (ricariche e spese). */
+  categoria?: string
+  /** §14.111: solo le ricariche e spese senza categoria. */
+  daClassificare?: boolean
   accountId?: string
   walletId?: string
   fromDate?: string

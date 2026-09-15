@@ -9,6 +9,7 @@ import type {
   Book,
   EnabledStatus,
   Holder,
+  MovementCategory,
   OngoingBet,
   PaymentMethod,
   QuickBet,
@@ -47,6 +48,7 @@ import {
   getBooks as apiGetBooks,
   getHolders as apiGetHolders,
   getPaymentMethods as apiGetPaymentMethods,
+  getMovementCategories as apiGetMovementCategories,
   getQuickBets as apiGetQuickBets,
   getWallets as apiGetWallets,
   getReminders as apiGetReminders,
@@ -91,6 +93,8 @@ interface ProfitTrackerState {
   wallets: Wallet[]
   /** Catalogo dei metodi di pagamento attivi (§14.109). */
   paymentMethods: PaymentMethod[]
+  /** §14.111: categorie attive dei movimenti di wallet. */
+  movementCategories: MovementCategory[]
   /** Prelievi in attesa di pagamento, i più recenti prima. */
   pendingWithdrawals: AccountMovement[]
   ongoingBets: OngoingBet[]
@@ -155,6 +159,7 @@ interface ProfitTrackerState {
   }) => Promise<void>
   fetchWallets: () => Promise<void>
   fetchPaymentMethods: () => Promise<void>
+  fetchMovementCategories: () => Promise<void>
   fetchPendingWithdrawals: () => Promise<void>
   addWallet: (wallet: {
     holderId: string
@@ -286,6 +291,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     allAccounts: [],
     wallets: initialWallets,
     paymentMethods: [],
+    movementCategories: [],
     pendingWithdrawals: [],
     ongoingBets: initialOngoingBets,
     betLegs: initialBetLegs,
@@ -579,6 +585,14 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         set(() => ({ paymentMethods: methods }))
       } catch {
         set(() => ({ paymentMethods: [] }))
+      }
+    },
+    fetchMovementCategories: async () => {
+      try {
+        const categories = await apiGetMovementCategories()
+        set(() => ({ movementCategories: categories }))
+      } catch {
+        set(() => ({ movementCategories: [] }))
       }
     },
     fetchPendingWithdrawals: async () => {

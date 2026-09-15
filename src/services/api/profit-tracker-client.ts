@@ -23,6 +23,7 @@ import type {
   ProfitReportFilters,
   ProfitReportResult,
   PuntateInCorsoTotale,
+  MovementCategory,
   QuickBet,
   Wallet,
   WalletMovement,
@@ -232,6 +233,12 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
   return response.data
 }
 
+/** §14.111: le categorie attive dei movimenti di wallet (ricariche e spese). */
+export async function getMovementCategories(): Promise<MovementCategory[]> {
+  const response = await apiClient.get<MovementCategory[]>('/profit-tracker/movement-categories')
+  return response.data
+}
+
 // Il nome non si sceglie più: è quello del metodo di pagamento (§14.109).
 export interface CreateWalletPayload {
   holderId: string
@@ -326,12 +333,33 @@ export interface CreateWalletMovementPayload {
   valore: number
   dataRegistrazione: string
   descrizione?: string | null
+  /** §14.111: obbligatoria su ricarica e spesa, vietata sul trasferimento. */
+  categoryId?: string | null
+  holderId?: string | null
 }
 
 export async function createWalletMovement(
   payload: CreateWalletMovementPayload,
 ): Promise<WalletMovement> {
   const response = await apiClient.post<WalletMovement>('/profit-tracker/wallet-movements', payload)
+  return response.data
+}
+
+/** §14.111: riclassificazione di una ricarica/spesa; valore, tipo e saldi non cambiano. */
+export interface UpdateWalletMovementPayload {
+  categoryId?: string
+  holderId?: string | null
+  descrizione?: string | null
+}
+
+export async function updateWalletMovement(
+  id: string,
+  payload: UpdateWalletMovementPayload,
+): Promise<WalletMovement> {
+  const response = await apiClient.patch<WalletMovement>(
+    `/profit-tracker/wallet-movements/${id}`,
+    payload,
+  )
   return response.data
 }
 
@@ -583,9 +611,7 @@ export async function getUnifiedProfitSummary(
 
 // Profit report (sezione "Report")
 
-export async function getProfitReport(
-  params?: ProfitReportFilters,
-): Promise<ProfitReportResult> {
+export async function getProfitReport(params?: ProfitReportFilters): Promise<ProfitReportResult> {
   const response = await apiClient.get<ProfitReportResult>('/profit-tracker/report', {
     params: params ?? {},
   })
@@ -595,10 +621,9 @@ export async function getProfitReport(
 export async function getProfitReportDetail(
   params?: ProfitReportFilters & { page?: number; limit?: number },
 ): Promise<ProfitReportDetailResult> {
-  const response = await apiClient.get<ProfitReportDetailResult>(
-    '/profit-tracker/report/detail',
-    { params: params ?? {} },
-  )
+  const response = await apiClient.get<ProfitReportDetailResult>('/profit-tracker/report/detail', {
+    params: params ?? {},
+  })
   return response.data
 }
 

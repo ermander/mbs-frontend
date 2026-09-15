@@ -42,6 +42,8 @@ export type MarketType =
   | 'TOTAL_FOULS'
   | 'TEAM_FOULS'
   | 'TOTAL_CARDS'
+  | 'FIRST_HALF_CARDS'
+  | 'SECOND_HALF_CARDS'
   | 'TEAM_CARDS'
   | 'CARDS_1X2'
   | 'RED_CARD'
@@ -229,6 +231,22 @@ const MARKET_CONFIGS: MarketConfig[] = [
     sport: 'calcio',
     minLine: 0.5,
     maxLine: 8.5,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'FIRST_HALF_CARDS',
+    baseLabel: 'CARTELLINI 1° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 4.5,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'SECOND_HALF_CARDS',
+    baseLabel: 'CARTELLINI 2° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 4.5,
   },
   {
     kind: 'over_under',

@@ -12,7 +12,6 @@ import {
   ageClass,
   ageLabel,
   ageSeconds,
-  ageTone,
   formatClock,
   formatKickoff,
   formatKickoffDate,
@@ -75,10 +74,10 @@ function NationFlag({ code, name }: { code: string | null; name: string | null }
   )
 }
 
-/** Sky for a back price, rose for a lay one. */
+/** Sky for a back price, rose for a lay one; the outcome sits in its own «Esito» cell. */
 function oddsCellClass(lay: boolean) {
   return cn(
-    'inline-flex items-center gap-1.5 rounded-md px-2 py-1',
+    'inline-flex items-center rounded-md px-2 py-1',
     lay
       ? 'bg-rose-100 text-rose-900'
       : 'bg-sky-100 text-sky-900',
@@ -86,19 +85,20 @@ function oddsCellClass(lay: boolean) {
 }
 
 /**
- * The clock of the row: the oldest price decides the state. Neutral by
- * default, green only while every price is fresh; the tooltip explains
- * itself and lists the age of each leg.
+ * Last update of the row, as text: the age of the oldest price on the
+ * first line (coloured like the leg dots: green fresh, amber aging, red
+ * old) and the clock time it was seen on the second; the tooltip lists
+ * the age of each leg. The clock icon lives only in the table header.
  */
-function LastSeenClock({ row, now }: { row: MatcherResult; now: number }) {
+function LastSeenCell({ row, now }: { row: MatcherResult; now: number }) {
   const age = rowAge(row, now)
   if (age == null) {
     return (
       <span
-        className="inline-flex text-muted-foreground"
+        className="text-xs text-muted-foreground"
         title="Ultimo aggiornamento non disponibile per questa combinazione"
       >
-        <Clock className="h-4 w-4" aria-hidden />
+        n.d.
       </span>
     )
   }
@@ -114,19 +114,16 @@ function LastSeenClock({ row, now }: { row: MatcherResult; now: number }) {
     )
     .join(' · ')
   const title = `Ultimo aggiornamento della combinazione: ${ageLabel(age)} fa (alle ${formatClock(oldest)}), cioè la quota vista meno di recente fra quelle delle gambe. ${perLeg}.`
-  const fresh = ageTone(age, row.staleAfterSeconds) === 'fresh'
   return (
     <span
-      className={cn(
-        'inline-flex items-center justify-center rounded-full p-1',
-        fresh
-          ? 'bg-emerald-100 text-emerald-900'
-          : 'text-foreground',
-      )}
+      className="inline-block whitespace-nowrap text-xs tabular-nums"
       title={title}
       aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
     >
-      <Clock className="h-4 w-4" aria-hidden />
+      <span className={cn('block font-medium', ageClass(age, row.staleAfterSeconds))}>
+        {ageLabel(age)} fa
+      </span>
+      <span className="block text-muted-foreground">{formatClock(oldest)}</span>
     </span>
   )
 }
@@ -260,7 +257,7 @@ export function ScannerV2Table({
 }: ScannerV2TableProps) {
   const start = total === 0 ? 0 : page * pageSize + 1
   const end = Math.min((page + 1) * pageSize, total)
-  // «Book 3 / Quota 3» appear only when a row of the page has a third leg.
+  // «Book 3 / Esito 3 / Quota 3» appear only when a row of the page has a third leg.
   const legColumns = Math.max(2, ...results.map((r) => r.legs.length))
 
   const empty = (
@@ -365,6 +362,7 @@ export function ScannerV2Table({
               {Array.from({ length: legColumns }, (_, i) => (
                 <React.Fragment key={i}>
                   <th className="whitespace-nowrap px-3 py-2 font-medium">Book {i + 1}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-medium">Esito {i + 1}</th>
                   <th className="whitespace-nowrap px-3 py-2 font-medium">Quota {i + 1}</th>
                 </React.Fragment>
               ))}
@@ -379,7 +377,7 @@ export function ScannerV2Table({
             {results.length === 0 ? (
               <tr>
                 <td
-                  colSpan={(multipla ? 1 : 0) + 7 + legColumns * 2}
+                  colSpan={(multipla ? 1 : 0) + 7 + legColumns * 3}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
                   {loading && results.length === 0
@@ -436,6 +434,7 @@ export function ScannerV2Table({
                           <React.Fragment key={i}>
                             <td className="px-3 py-2" />
                             <td className="px-3 py-2" />
+                            <td className="px-3 py-2" />
                           </React.Fragment>
                         )
                       }
@@ -457,9 +456,11 @@ export function ScannerV2Table({
                               />
                             </BookmakerLink>
                           </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
+                            {outcomeName(leg)}
+                          </td>
                           <td className="whitespace-nowrap px-3 py-2">
                             <span className={oddsCellClass(lay)} title={priceTitle}>
-                              <span className="text-[11px] opacity-80">{outcomeName(leg)}</span>
                               <span className="font-mono text-sm font-bold tabular-nums">
                                 {displayOdds.toFixed(2)}
                               </span>
@@ -472,7 +473,7 @@ export function ScannerV2Table({
                       <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
                     </td>
                     <td className="px-2 py-2 text-center">
-                      <LastSeenClock row={row} now={now} />
+                      <LastSeenCell row={row} now={now} />
                     </td>
                     <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                       <Button

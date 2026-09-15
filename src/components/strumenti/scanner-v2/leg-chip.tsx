@@ -1,6 +1,5 @@
 'use client'
 
-import { ExternalLink } from 'lucide-react'
 import { BookmakerBadge } from './bookmaker-badge'
 import { shortBookmakerName } from '@/lib/bookmakers'
 import { ageClass, ageLabel, ageSeconds, formatClock, outcomeName } from '@/lib/matcher/format'
@@ -43,7 +42,7 @@ const TONES: Record<LegRole, { box: string; odds: string; tag: string | null; ta
   },
 }
 
-/** The bookmaker's event page, opened in a new tab; the click must not reach the row (which opens the calculator). */
+/** The bookmaker's event page, opened in a new tab by clicking the logo itself (no extra icon); the click must not reach the row (which opens the calculator). */
 export function BookmakerLink({
   leg,
   children,
@@ -65,7 +64,6 @@ export function BookmakerLink({
       aria-label={`Apri l'evento su ${shortBookmakerName(leg.bookmakerName)}`}
     >
       {children}
-      <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
     </a>
   )
 }

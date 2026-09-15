@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Wallet as WalletIcon, Lock, LockOpen } from 'lucide-react'
-import { updateWallet as apiUpdateWallet } from '@/services/api/profit-tracker-client'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,12 +38,22 @@ export default function WalletsPage() {
   const userRole = useAuthStore((s) => s.user?.role)
   const isAdmin = userRole === 'ADMIN_ROLE'
 
+  // Stato e blocco dall'elenco passano dallo store, che salva sul backend (§14.105).
+  const toggleStato = async (wallet: Wallet) => {
+    try {
+      await updateWallet(wallet.id, {
+        stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
+      })
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile aggiornare lo stato del wallet.')
+    }
+  }
+
   const toggleBloccato = async (id: string, current: boolean) => {
     try {
-      const updated = await apiUpdateWallet(id, { bloccato: !current })
-      updateWallet(id, { bloccato: updated.bloccato })
-    } catch {
-      // silently ignore — toggle non riuscito
+      await updateWallet(id, { bloccato: !current })
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile aggiornare il blocco del wallet.')
     }
   }
 
@@ -294,14 +305,7 @@ export default function WalletsPage() {
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Stato</span>
                 <div className="flex flex-wrap items-center justify-end gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateWallet(wallet.id, {
-                        stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                      })
-                    }
-                  >
+                  <button type="button" onClick={() => void toggleStato(wallet)}>
                     <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
                       {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
                     </StatusBadge>
@@ -382,14 +386,7 @@ export default function WalletsPage() {
                 </td>
                 <td className="px-3 py-2 text-xs">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateWallet(wallet.id, {
-                          stato: wallet.stato === 'abilitato' ? 'disabilitato' : 'abilitato',
-                        })
-                      }
-                    >
+                    <button type="button" onClick={() => void toggleStato(wallet)}>
                       <StatusBadge variant={wallet.stato === 'abilitato' ? 'enabled' : 'disabled'}>
                         {wallet.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
                       </StatusBadge>

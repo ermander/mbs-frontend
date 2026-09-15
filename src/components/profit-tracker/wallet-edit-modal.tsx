@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getErrorMessage } from '@/lib/error-utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { updateWallet as apiUpdateWallet } from '@/services/api/profit-tracker-client'
 import type { EnabledStatus, Wallet } from '@/types/profit-tracker'
 
 interface WalletEditModalProps {
@@ -50,15 +49,10 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
     setSaving(true)
     setError(null)
     try {
-      const updated = await apiUpdateWallet(wallet.id, {
+      await updateWallet(wallet.id, {
         descrizione: descrizione.trim() || null,
         stato,
         bloccato,
-      })
-      updateWallet(wallet.id, {
-        descrizione: updated.descrizione ?? undefined,
-        stato: updated.stato,
-        bloccato: updated.bloccato,
       })
       onOpenChange(false)
     } catch (err: unknown) {

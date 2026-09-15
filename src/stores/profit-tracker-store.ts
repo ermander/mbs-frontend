@@ -22,6 +22,7 @@ import type {
   GetAccountsParams,
   GetHoldersParams,
   UpdateHolderPayload,
+  UpdateWalletPayload,
 } from '@/services/api/profit-tracker-client'
 import {
   createAccount as apiCreateAccount,
@@ -60,6 +61,7 @@ import {
   getTags as apiGetTags,
   createTag as apiCreateTag,
   updateTag as apiUpdateTag,
+  updateWallet as apiUpdateWallet,
   deleteTag as apiDeleteTag,
 } from '@/services/api/profit-tracker-client'
 
@@ -150,7 +152,7 @@ interface ProfitTrackerState {
     patch: Partial<Pick<Account, 'nome' | 'stato' | 'bloccato'>> & { descrizione?: string | null },
   ) => Promise<void>
 
-  updateWallet: (id: string, patch: Partial<Wallet>) => void
+  updateWallet: (id: string, patch: UpdateWalletPayload) => Promise<void>
 
   fetchOngoingBets: () => Promise<void>
   fetchBetWithLegs: (betId: string) => Promise<{ bet: OngoingBet; legs: BetLeg[] }>
@@ -563,10 +565,13 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       }
     },
 
-    updateWallet: (id, patch) =>
+    updateWallet: async (id, patch) => {
+      // Salva sul backend e fonde la risposta; l'errore risale a chi chiama.
+      const updated = await apiUpdateWallet(id, patch)
       set((state) => ({
-        wallets: state.wallets.map((w) => (w.id === id ? { ...w, ...patch } : w)),
-      })),
+        wallets: state.wallets.map((w) => (w.id === id ? { ...w, ...updated } : w)),
+      }))
+    },
 
     fetchOngoingBets: async () => {
       set(() => ({ isLoadingOngoingBets: true, ongoingBetsError: undefined }))

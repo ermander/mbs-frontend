@@ -114,7 +114,7 @@ export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) 
   const handleSave = async () => {
     setIsSaving(true)
     await updateBook(book.id, {
-      descrizione: descrizione || undefined,
+      descrizione: descrizione.trim() || null,
       isExchange,
     })
     setIsSaving(false)

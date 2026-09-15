@@ -3,7 +3,7 @@ import type { Book } from '@/types/profit-tracker'
 
 export interface CreateGlobalBookPayload {
   nome: string
-  descrizione?: string
+  descrizione?: string | null
   isExchange: boolean
   genericUrl?: string | null
   externalId?: string | null
@@ -11,7 +11,7 @@ export interface CreateGlobalBookPayload {
 
 export interface UpdateGlobalBookPayload {
   nome?: string
-  descrizione?: string
+  descrizione?: string | null
   isExchange?: boolean
   genericUrl?: string | null
   externalId?: string | null

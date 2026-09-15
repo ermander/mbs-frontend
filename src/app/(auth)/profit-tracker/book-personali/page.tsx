@@ -297,7 +297,9 @@ function BooksSection() {
           setCreateOpen(open)
         }}
       />
+      {/* key: la modale riparte dai valori del book scelto (useState li legge solo al montaggio) */}
       <BookEditModal
+        key={editBookId ?? 'nessuno'}
         open={editBookId != null}
         onOpenChange={(open) => {
           if (!open) {

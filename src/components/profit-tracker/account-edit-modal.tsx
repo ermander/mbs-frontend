@@ -49,7 +49,7 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
     try {
       await updateAccount(account.id, {
         stato,
-        descrizione: descrizione.trim() === '' ? undefined : descrizione.trim(),
+        descrizione: descrizione.trim() || null,
         bloccato,
       })
       onOpenChange(false)

@@ -79,7 +79,7 @@ export interface CreateBookPayload {
 }
 
 export interface UpdateBookPayload {
-  descrizione?: string
+  descrizione?: string | null
   isExchange?: boolean
   genericUrl?: string | null
   externalId?: string | null

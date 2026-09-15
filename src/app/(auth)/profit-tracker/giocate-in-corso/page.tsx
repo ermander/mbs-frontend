@@ -173,10 +173,9 @@ export default function GiocateInCorsoPage() {
 
   const handleCellBlur = (bet: OngoingBet) => {
     if (!editingCell || editingCell.betId !== bet.id) return
-    const newValue = editingCell.value.trim() || undefined
-    const current = bet.nota
-    if (newValue !== (current ?? '')) {
-      void updateBet(bet.id, { [editingCell.field]: newValue })
+    const newValue = editingCell.value.trim()
+    if (newValue !== (bet.nota ?? '')) {
+      void updateBet(bet.id, { [editingCell.field]: newValue || null })
     }
     setEditingCell(null)
   }

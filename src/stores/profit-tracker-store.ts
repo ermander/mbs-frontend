@@ -123,7 +123,10 @@ interface ProfitTrackerState {
     descrizione?: string
   }) => Promise<void>
   addBook: (book: Omit<Book, 'id'>) => Promise<void>
-  updateBook: (id: string, patch: Partial<Book>) => Promise<void>
+  updateBook: (
+    id: string,
+    patch: Partial<Omit<Book, 'descrizione'>> & { descrizione?: string | null },
+  ) => Promise<void>
   fetchTags: () => Promise<void>
   addTag: (data: { nome: string; colore?: string }) => Promise<void>
   updateTag: (id: string, patch: Partial<{ nome: string; colore: string }>) => Promise<void>
@@ -139,9 +142,10 @@ interface ProfitTrackerState {
   fetchWallets: () => Promise<void>
   addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'> & { holderId: string }) => Promise<void>
 
+  // null svuota la descrizione: undefined sparisce dal JSON e il backend lascia il valore di prima.
   updateAccount: (
     id: string,
-    patch: Partial<Pick<Account, 'nome' | 'descrizione' | 'stato' | 'bloccato'>>,
+    patch: Partial<Pick<Account, 'nome' | 'stato' | 'bloccato'>> & { descrizione?: string | null },
   ) => Promise<void>
 
   updateWallet: (id: string, patch: Partial<Wallet>) => void
@@ -153,7 +157,11 @@ interface ProfitTrackerState {
     legs: CreateBetLegPayload[],
   ) => Promise<OngoingBet>
   addOngoingBet: (bet: Omit<OngoingBet, 'id'>) => void
-  updateOngoingBet: (id: string, patch: Partial<OngoingBet>) => Promise<void>
+  // null svuota la nota (vedi updateAccount).
+  updateOngoingBet: (
+    id: string,
+    patch: Partial<Omit<OngoingBet, 'nota'>> & { nota?: string | null },
+  ) => Promise<void>
   removeOngoingBet: (id: string) => Promise<void>
   updateBetLeg: (
     betId: string,

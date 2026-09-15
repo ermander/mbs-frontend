@@ -94,7 +94,7 @@ export default function BackofficeBooksPage() {
     try {
       const payload = {
         nome: form.nome.trim(),
-        descrizione: form.descrizione.trim() || undefined,
+        descrizione: form.descrizione.trim() || null,
         isExchange: form.isExchange,
         genericUrl: form.genericUrl.trim() || null,
         externalId: form.externalId.trim() || null,

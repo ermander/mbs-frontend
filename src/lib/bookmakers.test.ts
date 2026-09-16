@@ -33,6 +33,7 @@ describe('logos and names', () => {
   it('maps the engine slug to the RobinOdds logo file, null when there is none', () => {
     expect(bookmakerLogoSrc('sisal')).toBe('/loghi_book/24.png')
     expect(bookmakerLogoSrc('BETFAIR')).toBe('/loghi_book/36.png')
+    expect(bookmakerLogoSrc('perlaplay')).toBe('/loghi_book/49.png')
     expect(bookmakerLogoSrc('xsport')).toBeNull()
   })
 

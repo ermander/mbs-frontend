@@ -268,3 +268,39 @@ export function getItalianCountryName(iso2: string | null | undefined): string |
     return null
   }
 }
+
+/**
+ * UEFA competitions that api-sports files under the synthetic «World»
+ * bucket, which has no country code and no flag. Production 2026-09-16:
+ * UEFA Champions League, Europa League, Europa Conference League, Nations
+ * League, Super Cup, Youth League, Euro Championship (and its
+ * Qualification) and World Cup - Qualification Europe. The plain
+ * «Champions League» is not enough: AFC, CAF and CONCACAF have one too.
+ */
+const UEFA_COMPETITION_PATTERN =
+  /\bUEFA\b|\bEuro Championship\b|\bEuropa League\b|\bConference League\b|Qualification Europe/i
+
+export interface CompetitionFlag {
+  url: string
+  /** Text for alt/title: the nation name, or «Europa» for the UEFA fallback. */
+  label: string
+}
+
+/**
+ * Flag for a competition row: the nation's ISO code first, then its name,
+ * and, when neither yields a flag (synthetic buckets like «World»), the
+ * European flag for a UEFA competition recognised by name. `null` when no
+ * flag applies; the caller shows the nation name instead.
+ */
+export function resolveCompetitionFlag(
+  nationCode: string | null | undefined,
+  nationName: string | null | undefined,
+  competitionName: string | null | undefined,
+): CompetitionFlag | null {
+  const url = getCountryFlagUrlFromIso(nationCode) ?? getCountryFlagUrl(nationName)
+  if (url) return { url, label: nationName ?? '' }
+  if (competitionName && UEFA_COMPETITION_PATTERN.test(competitionName)) {
+    return { url: 'https://flagcdn.com/eu.svg', label: 'Europa' }
+  }
+  return null
+}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { BookmakerBadge } from '@/components/strumenti/scanner-v2/bookmaker-badge'
 import { BookmakerLink } from '@/components/strumenti/scanner-v2/leg-chip'
 import { sportDisplay } from '@/lib/bookmakers'
-import { getCountryFlagUrl, getCountryFlagUrlFromIso } from '@/lib/country-flags'
+import { resolveCompetitionFlag } from '@/lib/country-flags'
 import { computeDutch } from '@/lib/calculators/engines/dutch-engine'
 import {
   ageClass,
@@ -47,15 +47,16 @@ function ratingBadge(rating: number) {
   return rating >= 100 ? `${base} bg-emerald-100 text-emerald-900` : `${base} text-foreground`
 }
 
-function NationFlag({ code, name }: { code: string | null; name: string | null }) {
-  const url = getCountryFlagUrlFromIso(code) ?? getCountryFlagUrl(name)
-  if (!url) return name ? <span>{name}</span> : null
+/** Flag of the competition's nation (the European one for UEFA competitions filed under «World»), the nation name when no flag is available. */
+function NationFlag({ code, name, competition }: { code: string | null; name: string | null; competition: string }) {
+  const flag = resolveCompetitionFlag(code, name, competition)
+  if (!flag) return name ? <span>{name}</span> : null
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={url}
-      alt={name ?? ''}
-      title={name ?? undefined}
+      src={flag.url}
+      alt={flag.label}
+      title={flag.label || undefined}
       className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover align-[-1px]"
     />
   )
@@ -330,7 +331,7 @@ export function ResultBttsTable({
                         {row.homeName} – {row.awayName}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <NationFlag code={row.nationCode} name={row.nationName} />
+                        <NationFlag code={row.nationCode} name={row.nationName} competition={row.competitionName} />
                         <span>{row.competitionName}</span>
                       </div>
                     </td>

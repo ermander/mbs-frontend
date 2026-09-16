@@ -36,6 +36,7 @@ const MARKET_LABELS: Record<string, string> = {
   handicap_european: 'Handicap EU',
   handicap_asian: 'Handicap AS',
   double_chance: 'Doppia Chance',
+  result_btts: '1X2 + GG/NG',
 }
 
 const PERIOD_LABELS: Record<string, string> = {

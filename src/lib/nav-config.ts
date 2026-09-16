@@ -17,13 +17,17 @@ import {
   MessageSquare,
   User,
   ShieldCheck,
+  Goal,
 } from 'lucide-react'
 
 import type { UserRole } from '@/services/api/auth-client'
+import type { ToolKey } from '@/lib/tools'
 
 export interface NavLinkItem {
   label: string
   href: string
+  /** Se presente, il link è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
+  requiresTool?: ToolKey
 }
 
 export interface NavDropdownItem {
@@ -43,6 +47,8 @@ export interface AuthSidebarNavItem {
   requiresRole?: UserRole
   /** Se presente, la voce è un gruppo espandibile con sotto-voci */
   children?: NavLinkItem[]
+  /** Se presente, la voce è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
+  requiresTool?: ToolKey
 }
 
 export const authSidebarNav: AuthSidebarNavItem[] = [
@@ -52,6 +58,8 @@ export const authSidebarNav: AuthSidebarNavItem[] = [
     href: '/odds-scanner',
     icon: Radar,
   },
+  // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
+  { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal, requiresTool: 'result_btts' },
   { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
 
   { section: 'DASHBOARD', label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
@@ -159,5 +167,6 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
+  { label: 'RISULTATO + GOAL', href: '/risultato-goal', requiresTool: 'result_btts' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

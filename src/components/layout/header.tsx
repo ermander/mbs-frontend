@@ -25,6 +25,7 @@ import {
   authenticatedNavLinksBeforeDropdowns,
   authenticatedNavLinksAfterDropdowns,
 } from '@/lib/nav-config'
+import { canUseTool } from '@/lib/tools'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 
@@ -81,6 +82,13 @@ export function Header() {
         return true
       }),
     [userRole],
+  )
+  const visibleLinksBefore = React.useMemo(
+    () =>
+      authenticatedNavLinksBeforeDropdowns.filter(
+        (link) => !link.requiresTool || canUseTool(user, link.requiresTool),
+      ),
+    [user],
   )
 
   // Track scroll for pill border effect
@@ -145,7 +153,7 @@ export function Header() {
             <nav className="hidden items-center gap-0.5 md:flex" aria-label="Menu principale">
               {isAuthenticated ? (
                 <>
-                  {authenticatedNavLinksBeforeDropdowns.map(({ href, label }) => (
+                  {visibleLinksBefore.map(({ href, label }) => (
                     <Link
                       key={href}
                       href={href}
@@ -349,7 +357,7 @@ export function Header() {
             <nav className="mx-auto flex max-w-sm flex-col gap-1 px-6" aria-label="Menu mobile">
               {isAuthenticated ? (
                 <>
-                  {authenticatedNavLinksBeforeDropdowns.map(({ href, label }) => (
+                  {visibleLinksBefore.map(({ href, label }) => (
                     <Link
                       key={href}
                       href={href}

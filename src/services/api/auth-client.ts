@@ -13,6 +13,8 @@ export interface AuthUser {
   settings: UserSettings
   /** ISO 8601, data di iscrizione */
   createdAt?: string
+  /** Strumenti abilitati dal backoffice (§14.122); assente sui backend più vecchi. Un admin li ha tutti. */
+  tools?: string[]
 }
 
 export interface AuthResponse {

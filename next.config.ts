@@ -3,6 +3,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // A second `next dev` in this folder (a browser check while another one runs) needs its own
+  // build folder: Next 16 keeps one dev lock per distDir. Unset = the usual .next.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   async headers() {
     return [
       {
@@ -26,8 +29,12 @@ const nextConfig: NextConfig = {
     ]
   },
   async rewrites() {
+    // In development the API is the mock of smoke/mock-api (port 4000); MOCK_API_URL points
+    // a second dev server at a mock on another port when 4000 is taken.
     const apiBaseUrl =
-      process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'http://mbs-backend:3000'
+      process.env.NODE_ENV === 'development'
+        ? (process.env.MOCK_API_URL ?? 'http://localhost:4000')
+        : 'http://mbs-backend:3000'
 
     return [
       {

@@ -3,6 +3,7 @@
 import * as React from 'react'
 
 import { authSidebarNav } from '@/lib/nav-config'
+import { canUseTool } from '@/lib/tools'
 import { useAuthStore } from '@/stores/auth-store'
 import { SidebarNavItem } from './sidebar-nav-item'
 import { SidebarNavGroup } from './sidebar-nav-group'
@@ -13,15 +14,16 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
-  const userRole = useAuthStore((s) => s.user?.role)
+  const user = useAuthStore((s) => s.user)
 
   const items = React.useMemo(
     () =>
       authSidebarNav.filter((item) => {
-        if (item.requiresRole && item.requiresRole !== userRole) return false
+        if (item.requiresRole && item.requiresRole !== user?.role) return false
+        if (item.requiresTool && !canUseTool(user, item.requiresTool)) return false
         return true
       }),
-    [userRole],
+    [user],
   )
 
   return (

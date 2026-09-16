@@ -5,17 +5,16 @@ import Link from 'next/link'
 import { Loader2, Send, X } from 'lucide-react'
 
 import {
-  BACCARAT_BANCO_COMMISSION_PERCENT,
-  BACCARAT_BANCO_ODDS,
-  BACCARAT_PLAYER_ODDS,
-  BACCARAT_SIDES,
-  BACCARAT_SIDE_LABELS,
-  computeBaccarat,
-  type BaccaratSide,
-} from '@/lib/calculators/engines/baccarat-engine'
+  ROULETTE_MODE_LABELS,
+  computeRoulette,
+  partageApplies,
+  puntaOptions,
+  type RouletteLegKey,
+  type RouletteMode,
+} from '@/lib/calculators/engines/roulette-engine'
 import { DEFAULT_CHIP } from '@/lib/calculators/engines/casino-common'
 import { parseNum } from '@/lib/calculators/engines/odds'
-import { buildBaccaratBet } from '@/lib/calculators/bet-payloads'
+import { buildRouletteBet } from '@/lib/calculators/bet-payloads'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import {
   AmountField,
@@ -31,47 +30,55 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 /**
- * Calcolatore offline Baccarat: la puntata (reale + bonus) su Player o su
- * Banco, la copertura sull'altro lato su un altro conto. Player paga 1:1,
- * Banco 1:1 meno il 5% di commissione; il pareggio è una mano nulla. La
- * copertura è arrotondata alla fiche minima del tavolo, oppure bloccata e
- * scritta a mano; il rating è sul risultato reale. Il salvataggio nel Profit
- * Tracker assegna un collaboratore e un conto a Player e a Banco.
+ * Calcolatore offline Roulette europea: la puntata (reale + bonus) su Rosso,
+ * Nero o una dozzina, le coperture sugli altri esiti e sullo 0 su conti
+ * diversi, con o senza la regola «la partage» (sul Rosso/Nero lo 0 restituisce
+ * metà puntata). Le coperture sono arrotondate alla fiche minima del tavolo,
+ * oppure bloccate e scritte a mano; il rating è sul risultato reale. Il
+ * salvataggio assegna un collaboratore e un conto a ogni gamba (tre sul
+ * Rosso/Nero, quattro sulle dozzine).
  */
 
-const SIDE_OPTIONS = BACCARAT_SIDES.map((s) => ({ value: s, label: BACCARAT_SIDE_LABELS[s] }))
-const QUOTA_PLAYER_LABEL = BACCARAT_PLAYER_ODDS.toFixed(2)
-const QUOTA_BANCO_LABEL = BACCARAT_BANCO_ODDS.toFixed(2)
+const MODE_OPTIONS = (['rosso_nero', 'dozzine'] as RouletteMode[]).map((m) => ({
+  value: m,
+  label: ROULETTE_MODE_LABELS[m],
+}))
 
-export function BaccaratCalculator() {
+interface LegAccountState {
+  holderId: string
+  accounts: Account[]
+  accountId: string
+}
+
+const emptyLegAccount = (): LegAccountState => ({ holderId: '', accounts: [], accountId: '' })
+
+export function RouletteCalculator() {
   const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
+  const [mode, setMode] = useState<RouletteMode>('rosso_nero')
+  const [partage, setPartage] = useState(false)
+  const [puntaKey, setPuntaKey] = useState<RouletteLegKey | undefined>(undefined)
+  const [chip, setChip] = useState<number>(DEFAULT_CHIP)
+  /** Locked covers: key → the text typed by the user. */
+  const [coverEdits, setCoverEdits] = useState<Partial<Record<RouletteLegKey, string>>>({})
   const [puntata, setPuntata] = useState('')
   const [bonus, setBonus] = useState('')
   const [rimborso, setRimborso] = useState('')
-  const [puntaSide, setPuntaSide] = useState<BaccaratSide>('player')
-  const [chip, setChip] = useState<number>(DEFAULT_CHIP)
-  const [coverLocked, setCoverLocked] = useState(false)
-  const [coverEdit, setCoverEdit] = useState('')
 
   const [modalOpen, setModalOpen] = useState(false)
   const [isLoadingBasics, setIsLoadingBasics] = useState(false)
-  const [holderIdPlayer, setHolderIdPlayer] = useState('')
-  const [holderIdBanco, setHolderIdBanco] = useState('')
-  const [accountsPlayer, setAccountsPlayer] = useState<Account[]>([])
-  const [accountsBanco, setAccountsBanco] = useState<Account[]>([])
-  const [accountIdPlayer, setAccountIdPlayer] = useState('')
-  const [accountIdBanco, setAccountIdBanco] = useState('')
+  const [legAccounts, setLegAccounts] = useState<LegAccountState[]>([])
   const [eventoData, setEventoData] = useState(() => defaultEventoData())
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [isSaving, setIsSaving] = useState(false)
@@ -82,27 +89,33 @@ export function BaccaratCalculator() {
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
   const rimborsoNum = parseNum(rimborso) ?? 0
-  const coverOverride = parseNum(coverEdit)
+  const coverEditsKey = JSON.stringify(coverEdits)
 
-  const result = useMemo(
-    () =>
-      computeBaccarat({
-        puntata: puntataNum,
-        bonus: bonusNum,
-        rimborso: rimborsoNum,
-        puntaSide,
-        chip,
-        coverLocked,
-        coverOverride,
-      }),
-    [puntataNum, bonusNum, rimborsoNum, puntaSide, chip, coverLocked, coverOverride],
-  )
+  const result = useMemo(() => {
+    const edits = JSON.parse(coverEditsKey) as Partial<Record<RouletteLegKey, string>>
+    const coverOverrides: Partial<Record<RouletteLegKey, number | null>> = {}
+    for (const [key, text] of Object.entries(edits)) {
+      coverOverrides[key as RouletteLegKey] = parseNum(text ?? '')
+    }
+    return computeRoulette({
+      mode,
+      partage,
+      puntata: puntataNum,
+      bonus: bonusNum,
+      rimborso: rimborsoNum,
+      puntaKey,
+      chip,
+      coverOverrides,
+    })
+  }, [mode, partage, puntataNum, bonusNum, rimborsoNum, puntaKey, chip, coverEditsKey])
+
   const puntataReale = puntataNum ?? 0
-  const puntaLabel = BACCARAT_SIDE_LABELS[result.puntaSide]
-  const coverLabel = BACCARAT_SIDE_LABELS[result.coverSide]
-  const quotaPunta = result.puntaSide === 'player' ? QUOTA_PLAYER_LABEL : QUOTA_BANCO_LABEL
-  const quotaCover = result.coverSide === 'player' ? QUOTA_PLAYER_LABEL : QUOTA_BANCO_LABEL
+  const partageAvailable = partageApplies(mode)
+  const puntaSpec = result.puntaSpec
+  const covers = result.legs.filter((l) => !l.isPunta)
+  const sideOptions = puntaOptions(mode).map((l) => ({ value: l.key, label: l.label }))
   const showRimborsoColumn = rimborsoNum > 0
+  const anyLockedEmpty = covers.some((l) => l.locked && l.stake == null)
   const modeLabel =
     bonusNum > 0 && rimborsoNum > 0
       ? 'BONUS + RIMBORSO • '
@@ -112,43 +125,47 @@ export function BaccaratCalculator() {
           ? 'RIMBORSO • '
           : ''
 
-  const handleChangeSide = (side: BaccaratSide) => {
-    setPuntaSide(side)
-    setCoverLocked(false)
+  const handleChangeMode = (m: RouletteMode) => {
+    setMode(m)
+    setPuntaKey(undefined)
+    setCoverEdits({})
   }
 
-  const toggleCoverLock = () => {
-    if (coverLocked) {
-      setCoverLocked(false)
-      return
-    }
-    setCoverEdit(result.stakeCoverRounded != null ? result.stakeCoverRounded.toFixed(2) : '')
-    setCoverLocked(true)
+  const handleChangePunta = (key: string) => {
+    setPuntaKey(key as RouletteLegKey)
+    setCoverEdits({})
   }
 
-  const handleChangeHolderPlayer = useCallback(async (holderId: string) => {
-    setHolderIdPlayer(holderId)
-    setAccountsPlayer([])
-    setAccountIdPlayer('')
-    if (!holderId) return
-    try {
-      setAccountsPlayer(await loadHolderAccounts(holderId))
-    } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Errore nel caricamento dei conti')
-    }
+  const toggleCoverLock = (key: RouletteLegKey, rounded: number | null) => {
+    setCoverEdits((prev) => {
+      const next = { ...prev }
+      if (key in next) delete next[key]
+      else next[key] = rounded != null ? rounded.toFixed(2) : ''
+      return next
+    })
+  }
+
+  const editCover = (key: RouletteLegKey, text: string) => {
+    setCoverEdits((prev) => ({ ...prev, [key]: text }))
+  }
+
+  const updateLegAccount = useCallback((index: number, patch: Partial<LegAccountState>) => {
+    setLegAccounts((prev) => prev.map((la, i) => (i === index ? { ...la, ...patch } : la)))
   }, [])
 
-  const handleChangeHolderBanco = useCallback(async (holderId: string) => {
-    setHolderIdBanco(holderId)
-    setAccountsBanco([])
-    setAccountIdBanco('')
-    if (!holderId) return
-    try {
-      setAccountsBanco(await loadHolderAccounts(holderId))
-    } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Errore nel caricamento dei conti')
-    }
-  }, [])
+  const handleChangeHolder = useCallback(
+    async (index: number, holderId: string) => {
+      updateLegAccount(index, { holderId, accounts: [], accountId: '' })
+      if (!holderId) return
+      try {
+        const accounts = await loadHolderAccounts(holderId)
+        updateLegAccount(index, { accounts })
+      } catch (err) {
+        setModalError(err instanceof Error ? err.message : 'Errore nel caricamento dei conti')
+      }
+    },
+    [updateLegAccount],
+  )
 
   useEffect(() => {
     if (!modalOpen || savedBetId) return
@@ -165,12 +182,7 @@ export function BaccaratCalculator() {
   }, [modalOpen, savedBetId, holders.length, books.length, fetchHolders, fetchAllBooks])
 
   const resetModalState = useCallback(() => {
-    setHolderIdPlayer('')
-    setHolderIdBanco('')
-    setAccountsPlayer([])
-    setAccountsBanco([])
-    setAccountIdPlayer('')
-    setAccountIdBanco('')
+    setLegAccounts([])
     setModalError(null)
     setSavedBetId(null)
     setCategoria('matched_betting')
@@ -178,34 +190,38 @@ export function BaccaratCalculator() {
 
   const handleOpenModal = () => {
     resetModalState()
+    setLegAccounts(result.legs.map(() => emptyLegAccount()))
     setEventoData(defaultEventoData())
     setModalOpen(true)
   }
 
   const canSave =
     result.showSummary &&
-    result.stakeCover != null &&
-    accountIdPlayer !== '' &&
-    accountIdBanco !== '' &&
+    legAccounts.length === result.legs.length &&
+    legAccounts.every((la) => la.accountId !== '') &&
+    result.legs.every((l) => l.stake != null) &&
     eventoData !== ''
 
   const handleSendToProfitTracker = async () => {
-    if (!canSave || result.stakeCover == null) return
+    if (!canSave) return
     setIsSaving(true)
     setModalError(null)
     try {
-      const { betPayload, legsPayload } = buildBaccaratBet({
+      const { betPayload, legsPayload } = buildRouletteBet({
         eventoDataIso: new Date(eventoData).toISOString(),
         categoria,
-        puntaSide: result.puntaSide,
-        accountIdPlayer,
-        accountIdBanco,
+        mode,
+        partage: result.partageEffective,
         puntata: puntataReale,
         bonus: bonusNum,
         rimborso: rimborsoNum,
-        stakeCover: result.stakeCover,
-        quotaPlayer: BACCARAT_PLAYER_ODDS,
-        quotaBanco: BACCARAT_BANCO_ODDS,
+        puntaIndex: result.puntaIndex,
+        legs: result.legs.map((leg, i) => ({
+          selezione: leg.spec.label,
+          quota: leg.spec.odds,
+          stake: leg.stake ?? 0,
+          accountId: legAccounts[i].accountId,
+        })),
       })
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       setSavedBetId(bet.id)
@@ -216,48 +232,97 @@ export function BaccaratCalculator() {
     }
   }
 
-  const coverDiffers =
-    result.coverLocked &&
-    result.stakeCover != null &&
-    result.stakeCoverRounded != null &&
-    Math.abs(result.stakeCover - result.stakeCoverRounded) >= 0.005
+  const coverLine = (leg: (typeof covers)[number]) => {
+    const differs =
+      leg.locked &&
+      leg.stake != null &&
+      leg.stakeRounded != null &&
+      Math.abs(leg.stake - leg.stakeRounded) >= 0.005
+    return (
+      <p key={leg.spec.key}>
+        Copri con{' '}
+        <LockableAmount
+          id={`roulette-cover-${leg.spec.key}`}
+          amount={leg.stake ?? leg.stakeRounded}
+          locked={leg.locked}
+          editValue={coverEdits[leg.spec.key] ?? ''}
+          onToggle={() => toggleCoverLock(leg.spec.key, leg.stakeRounded)}
+          onEdit={(v) => editCover(leg.spec.key, v)}
+        />{' '}
+        su <span className="font-medium">{leg.spec.label}</span> a quota{' '}
+        <span className="font-mono">{leg.spec.odds.toFixed(2)}</span> su un altro conto.
+        {differs && (
+          <span className="text-muted-foreground">
+            {' '}
+            (calcolata: {formatNum(leg.stakeRounded)} €)
+          </span>
+        )}
+      </p>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Regole del tavolo */}
-      <div className="border-b border-border px-4 py-3 text-xs text-muted-foreground">
-        Player paga 1:1 (quota <span className="font-mono">{QUOTA_PLAYER_LABEL}</span>), Banco 1:1
-        meno la commissione del {BACCARAT_BANCO_COMMISSION_PERCENT}% (quota{' '}
-        <span className="font-mono">{QUOTA_BANCO_LABEL}</span>). La puntata va su un conto, la
-        copertura sull&apos;altro. Pareggio: mano nulla, le puntate tornano indietro e si rigioca.
+      {/* Tavolo e regola */}
+      <div className="space-y-3 border-b border-border p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SegmentedControl
+            label="Tavolo"
+            options={MODE_OPTIONS}
+            value={mode}
+            onChange={handleChangeMode}
+          />
+          <SegmentedControl
+            label="Puntata su"
+            options={sideOptions}
+            value={puntaSpec.key}
+            onChange={handleChangePunta}
+          />
+        </div>
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="roulette-partage"
+            checked={partage}
+            disabled={!partageAvailable}
+            onChange={(e) => setPartage(e.target.checked)}
+            className="mt-0.5"
+          />
+          <div>
+            <Label htmlFor="roulette-partage" className="cursor-pointer">
+              Regola «la partage»
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              {partageAvailable
+                ? 'Quando esce lo 0, Rosso e Nero perdono solo metà della puntata.'
+                : 'Vale solo sulle puntate a pari chance: sulle dozzine lo 0 fa perdere tutto.'}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {mode === 'rosso_nero'
+            ? 'Rosso e Nero pagano 1:1 (quota 2.00), lo 0 paga 35:1 (quota 36.00). Tre conti: Rosso, Nero e 0.'
+            : 'Ogni dozzina paga 2:1 (quota 3.00), lo 0 paga 35:1 (quota 36.00). Quattro conti: le tre dozzine e lo 0.'}
+        </p>
       </div>
 
       {/* Sezione input */}
       <div className="space-y-4 border-b border-border bg-primary/5 p-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <AmountField
-            id="baccarat-puntata"
+            id="roulette-puntata"
             label="Stake reale"
             value={puntata}
             onChange={setPuntata}
           />
-          <AmountField id="baccarat-bonus" label="Stake bonus" value={bonus} onChange={setBonus} />
+          <AmountField id="roulette-bonus" label="Stake bonus" value={bonus} onChange={setBonus} />
           <AmountField
-            id="baccarat-rimborso"
+            id="roulette-rimborso"
             label="Valore rimborso"
             value={rimborso}
             onChange={setRimborso}
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-          <SegmentedControl
-            label="Puntata su"
-            options={SIDE_OPTIONS}
-            value={puntaSide}
-            onChange={handleChangeSide}
-          />
-          <ChipSelector value={chip} onChange={setChip} />
-        </div>
+        <ChipSelector value={chip} onChange={setChip} />
       </div>
 
       {/* Riepilogo */}
@@ -271,7 +336,10 @@ export function BaccaratCalculator() {
               {result.isRimborso && result.crPercent != null
                 ? `CR%: ${result.crPercent.toFixed(2)}%`
                 : `Rating: ${result.rating != null ? result.rating.toFixed(2) : '—'}%`}
-              <span className="text-muted-foreground"> (sul risultato reale)</span>
+              <span className="text-muted-foreground">
+                {' '}
+                (sul risultato reale{result.partageEffective ? ', con la partage' : ''})
+              </span>
             </p>
             <p>
               Punta{' '}
@@ -284,28 +352,10 @@ export function BaccaratCalculator() {
                   (di cui {formatNum(bonusNum)} € bonus)
                 </span>
               )}{' '}
-              su <span className="font-medium">{puntaLabel}</span> a quota{' '}
-              <span className="font-mono">{quotaPunta}</span>.
+              su <span className="font-medium">{puntaSpec.label}</span> a quota{' '}
+              <span className="font-mono">{puntaSpec.odds.toFixed(2)}</span>.
             </p>
-            <p>
-              Copri con{' '}
-              <LockableAmount
-                id="baccarat-cover"
-                amount={result.stakeCover}
-                locked={coverLocked}
-                editValue={coverEdit}
-                onToggle={toggleCoverLock}
-                onEdit={setCoverEdit}
-              />{' '}
-              su <span className="font-medium">{coverLabel}</span> a quota{' '}
-              <span className="font-mono">{quotaCover}</span> sull&apos;altro conto.
-              {coverDiffers && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (calcolata: {formatNum(result.stakeCoverRounded)} €)
-                </span>
-              )}
-            </p>
+            {covers.map(coverLine)}
             <p>
               Il guadagno minimo sarà{' '}
               <span
@@ -319,21 +369,13 @@ export function BaccaratCalculator() {
             </p>
           </div>
         </div>
-      ) : coverLocked && result.stakeCoverRounded != null ? (
-        <div className="border-b border-border bg-card p-4 text-sm">
-          Copertura bloccata: scrivi l&apos;importo giocato su {coverLabel}{' '}
-          <LockableAmount
-            id="baccarat-cover"
-            amount={result.stakeCoverRounded}
-            locked={coverLocked}
-            editValue={coverEdit}
-            onToggle={toggleCoverLock}
-            onEdit={setCoverEdit}
-          />
-          <span className="text-muted-foreground">
-            {' '}
-            (calcolata: {formatNum(result.stakeCoverRounded)} €)
-          </span>
+      ) : anyLockedEmpty ? (
+        <div className="space-y-2 border-b border-border bg-card p-4 text-sm">
+          <p className="text-muted-foreground">
+            Copertura bloccata: scrivi l&apos;importo giocato o sblocca per tornare al valore
+            calcolato.
+          </p>
+          {covers.map(coverLine)}
         </div>
       ) : null}
 
@@ -347,11 +389,11 @@ export function BaccaratCalculator() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted-foreground">
-                  <th className="p-2 text-left font-normal">Esito</th>
+                  <th className="p-2 text-left font-normal">Esce</th>
                   {result.legs.map((leg) => (
-                    <th key={leg.side} className="whitespace-nowrap p-2 text-right font-normal">
-                      Conto {leg.label}
-                      {leg.isPunta ? '' : ' (copertura)'}
+                    <th key={leg.spec.key} className="whitespace-nowrap p-2 text-right font-normal">
+                      Conto {leg.spec.label}
+                      {leg.isPunta ? '' : ' (cop.)'}
                     </th>
                   ))}
                   {showRimborsoColumn && <th className="p-2 text-right font-normal">Rimborso</th>}
@@ -359,14 +401,22 @@ export function BaccaratCalculator() {
                 </tr>
               </thead>
               <tbody>
-                {result.outcomes.map((outcome) => (
-                  <tr key={outcome.winner} className="border-b border-border">
+                {result.outcomes.map((outcome, k) => (
+                  <tr
+                    key={outcome.spec.key}
+                    className={cn(k < result.outcomes.length - 1 && 'border-b border-border')}
+                  >
                     <td className="whitespace-nowrap p-2 font-medium text-foreground">
-                      {outcome.label}
+                      {outcome.spec.label}
+                      {outcome.spec.isZero && result.partageEffective && (
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          (la partage)
+                        </span>
+                      )}
                     </td>
                     {outcome.byLeg.map((v, i) => (
                       <td
-                        key={result.legs[i].side}
+                        key={result.legs[i].spec.key}
                         className={cn(
                           'whitespace-nowrap p-2 text-right font-mono',
                           v != null && v > 0
@@ -401,27 +451,6 @@ export function BaccaratCalculator() {
                     </td>
                   </tr>
                 ))}
-                <tr>
-                  <td className="p-2 text-muted-foreground">
-                    Pareggio <span className="text-xs">(mano nulla, si rigioca)</span>
-                  </td>
-                  {result.legs.map((leg) => (
-                    <td
-                      key={leg.side}
-                      className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground"
-                    >
-                      {formatSigned(0)}
-                    </td>
-                  ))}
-                  {showRimborsoColumn && (
-                    <td className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground">
-                      {formatSigned(0)}
-                    </td>
-                  )}
-                  <td className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground">
-                    = {formatSigned(0)}
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
@@ -435,7 +464,7 @@ export function BaccaratCalculator() {
         </Button>
       </div>
 
-      {/* Modale: collaboratori e conti di Player e Banco */}
+      {/* Modale: un collaboratore e un conto per gamba */}
       <Dialog
         open={modalOpen}
         onOpenChange={(open) => {
@@ -490,19 +519,19 @@ export function BaccaratCalculator() {
             <>
               <div className="px-6 pb-1 pt-6">
                 <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
-                  Salva giocata Baccarat
+                  Salva giocata Roulette
                 </DialogTitle>
                 <p className="mt-1.5 text-sm text-muted-foreground">
-                  Assegna collaboratore e conto alla puntata su {puntaLabel} e alla copertura su{' '}
-                  {coverLabel}.
+                  Assegna collaboratore e conto alla puntata su {puntaSpec.label} e a ogni
+                  copertura.
                 </p>
               </div>
 
               <div className="grid gap-4 px-6 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor="baccarat-modal-data">Data e ora</Label>
+                  <Label htmlFor="roulette-modal-data">Data e ora</Label>
                   <Input
-                    id="baccarat-modal-data"
+                    id="roulette-modal-data"
                     type="datetime-local"
                     value={eventoData}
                     onChange={(e) => setEventoData(e.target.value)}
@@ -512,58 +541,48 @@ export function BaccaratCalculator() {
 
                 <BetCategorySelect value={categoria} onChange={setCategoria} />
 
-                <LegAccounts
-                  idPrefix="baccarat-player"
-                  title="Collaboratore Player"
-                  accountLabel={
-                    result.puntaSide === 'player'
-                      ? 'Conto Player (puntata)'
-                      : 'Conto Player (copertura)'
-                  }
-                  holders={holders}
-                  books={books}
-                  holderId={holderIdPlayer}
-                  accounts={accountsPlayer}
-                  accountId={accountIdPlayer}
-                  onChangeHolder={(v) => void handleChangeHolderPlayer(v)}
-                  onChangeAccount={setAccountIdPlayer}
-                  portalContainer={dropdownPortalEl}
-                />
-
-                <LegAccounts
-                  idPrefix="baccarat-banco"
-                  title="Collaboratore Banco"
-                  accountLabel={
-                    result.puntaSide === 'banco'
-                      ? 'Conto Banco (puntata)'
-                      : 'Conto Banco (copertura)'
-                  }
-                  holders={holders}
-                  books={books}
-                  holderId={holderIdBanco}
-                  accounts={accountsBanco}
-                  accountId={accountIdBanco}
-                  onChangeHolder={(v) => void handleChangeHolderBanco(v)}
-                  onChangeAccount={setAccountIdBanco}
-                  portalContainer={dropdownPortalEl}
-                />
+                {result.legs.map((leg, i) => {
+                  const la = legAccounts[i] ?? emptyLegAccount()
+                  return (
+                    <LegAccounts
+                      key={leg.spec.key}
+                      idPrefix={`roulette-${leg.spec.key}`}
+                      title={`Collaboratore ${leg.spec.label}`}
+                      accountLabel={
+                        leg.isPunta
+                          ? `Conto ${leg.spec.label} (puntata)`
+                          : `Conto ${leg.spec.label} (copertura)`
+                      }
+                      holders={holders}
+                      books={books}
+                      holderId={la.holderId}
+                      accounts={la.accounts}
+                      accountId={la.accountId}
+                      onChangeHolder={(v) => void handleChangeHolder(i, v)}
+                      onChangeAccount={(v) => updateLegAccount(i, { accountId: v })}
+                      portalContainer={dropdownPortalEl}
+                    />
+                  )
+                })}
 
                 {result.showSummary && (
                   <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
                     <p className="font-medium text-foreground">Riepilogo importi</p>
                     <p className="mt-1">
-                      {puntaLabel}:{' '}
+                      {puntaSpec.label}:{' '}
                       <span className="font-mono">{result.puntataEffettiva.toFixed(2)} €</span> a
-                      quota <span className="font-mono">{quotaPunta}</span>
+                      quota <span className="font-mono">{puntaSpec.odds.toFixed(2)}</span>
                       {bonusNum > 0 && <> (di cui {bonusNum.toFixed(2)} € bonus)</>}
                       {rimborsoNum > 0 && <>, rimborso {rimborsoNum.toFixed(2)} €</>}
                     </p>
-                    <p>
-                      {coverLabel} (copertura):{' '}
-                      <span className="font-mono">{formatNum(result.stakeCover)} €</span> a quota{' '}
-                      <span className="font-mono">{quotaCover}</span>
-                      {result.coverLocked && <> (importo bloccato)</>}
-                    </p>
+                    {covers.map((leg) => (
+                      <p key={leg.spec.key}>
+                        {leg.spec.label} (copertura):{' '}
+                        <span className="font-mono">{formatNum(leg.stake)} €</span> a quota{' '}
+                        <span className="font-mono">{leg.spec.odds.toFixed(2)}</span>
+                        {leg.locked && <> (importo bloccato)</>}
+                      </p>
+                    ))}
                     {result.guadagnoMinimo != null && (
                       <p>
                         Guadagno minimo:{' '}

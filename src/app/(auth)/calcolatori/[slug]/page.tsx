@@ -1,7 +1,7 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 
-const KNOWN_SLUGS = new Set(['punta-banca', 'punta-punta', 'tri-punta', 'baccarat'])
+const KNOWN_SLUGS = new Set(['punta-banca', 'punta-punta', 'tri-punta', 'baccarat', 'roulette'])
 
 export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params)

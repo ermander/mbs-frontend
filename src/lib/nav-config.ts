@@ -122,6 +122,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
       // { label: 'Converter', href: '/calcolatori/converter' },
       { label: 'Baccarat', href: '/calcolatori/baccarat' },
+      { label: 'Roulette', href: '/calcolatori/roulette' },
     ],
   },
   {

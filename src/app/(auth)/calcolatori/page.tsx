@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Scale, ArrowLeftRight, Triangle, Layers, Dices } from 'lucide-react'
+import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot } from 'lucide-react'
 
 import { CalculatorCard } from '@/components/calculators/calculator-card'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
@@ -11,8 +11,9 @@ import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalcula
 import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
 import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOfflineCalculator'
 import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
+import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
 
-type Slug = 'punta-banca' | 'punta-punta' | 'tri-punta' | 'multipla' | 'baccarat'
+type Slug = 'punta-banca' | 'punta-punta' | 'tri-punta' | 'multipla' | 'baccarat' | 'roulette'
 
 const CALCS: Array<{
   slug: Slug
@@ -57,6 +58,14 @@ const CALCS: Array<{
       "Player su un conto, Banco (commissione 5%) sull'altro. Calcola la copertura e il guadagno minimo, anche con bonus o rimborso.",
     icon: Dices,
     render: () => <BaccaratCalculator />,
+  },
+  {
+    slug: 'roulette',
+    title: 'Roulette europea',
+    description:
+      'Rosso/Nero o dozzine più lo 0 su conti diversi, con o senza la partage. Calcola le coperture e il guadagno minimo, anche con bonus o rimborso.',
+    icon: CircleDot,
+    render: () => <RouletteCalculator />,
   },
 ]
 

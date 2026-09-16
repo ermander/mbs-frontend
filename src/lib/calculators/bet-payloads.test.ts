@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildBaccaratBet,
   buildDutchBet,
+  buildRouletteBet,
+  rouletteMercato,
   buildMultiplaBet,
   buildPuntaBancaBet,
   modalitaSaldoFor,
@@ -290,12 +292,13 @@ describe('buildBaccaratBet', () => {
   const base = {
     eventoDataIso: '2026-09-16T20:00:00.000Z',
     categoria: 'matched_betting' as const,
+    puntaSide: 'player' as const,
     accountIdPlayer: 'acc-player',
     accountIdBanco: 'acc-banco',
     puntata: 100,
     bonus: 0,
     rimborso: 0,
-    stakeBanco: 102.56,
+    stakeCover: 102.56,
     quotaPlayer: 2,
     quotaBanco: 1.95,
   }
@@ -340,24 +343,48 @@ describe('buildBaccaratBet', () => {
     })
   })
 
+  it('punta on Banco: the Banco leg comes first on the Banco account, Player is the cover', () => {
+    const { betPayload, legsPayload } = buildBaccaratBet({
+      ...base,
+      puntaSide: 'banco',
+      stakeCover: 97.5,
+    })
+    expect(betPayload.accountId).toBe('acc-banco')
+    expect(legsPayload[0]).toMatchObject({
+      selezione: 'Banco',
+      accountId: 'acc-banco',
+      stake: 100,
+      quota: 1.95,
+      posizione: 0,
+    })
+    expect(legsPayload[1]).toMatchObject({
+      selezione: 'Player',
+      accountId: 'acc-player',
+      stake: 97.5,
+      quota: 2,
+      quotaRiferimento: 1.95,
+      posizione: 1,
+    })
+  })
+
   it('bonus: the real stake stays in stake and the bonus in bonusValore (0 stake for a bonus-only play)', () => {
     const { betPayload, legsPayload } = buildBaccaratBet({
       ...base,
       puntata: 0,
       bonus: 100,
-      stakeBanco: 102.56,
+      stakeCover: 102.56,
     })
     expect(betPayload.modalitaSaldo).toBe('bonus')
     expect(legsPayload[0]).toMatchObject({ tipoBonus: 'bonus', stake: 0, bonusValore: 100 })
     expect(legsPayload[1].bonusValore).toBeUndefined()
   })
 
-  it('rimborso wins over bonus on the Player leg only', () => {
+  it('rimborso wins over bonus on the punta leg only', () => {
     const { betPayload, legsPayload } = buildBaccaratBet({
       ...base,
       bonus: 20,
       rimborso: 100,
-      stakeBanco: 71.79,
+      stakeCover: 71.79,
     })
     expect(betPayload.modalitaSaldo).toBe('rimborso')
     expect(legsPayload[0]).toMatchObject({
@@ -376,5 +403,124 @@ describe('modalitaSaldoFor', () => {
     expect(modalitaSaldoFor(0, 0)).toBe('reale')
     expect(modalitaSaldoFor(10, 0)).toBe('bonus')
     expect(modalitaSaldoFor(10, 5)).toBe('rimborso')
+  })
+})
+
+describe('buildRouletteBet', () => {
+  const base = {
+    eventoDataIso: '2026-09-16T21:00:00.000Z',
+    categoria: 'matched_betting' as const,
+    mode: 'rosso_nero' as const,
+    partage: true,
+    puntata: 100,
+    bonus: 0,
+    rimborso: 0,
+    puntaIndex: 0,
+    legs: [
+      { selezione: 'Rosso', quota: 2, stake: 100, accountId: 'acc-rosso' },
+      { selezione: 'Nero', quota: 2, stake: 100, accountId: 'acc-nero' },
+      { selezione: '0', quota: 36, stake: 2.78, accountId: 'acc-zero' },
+    ],
+  }
+
+  it('three back legs on the Roulette event of the punta account, la partage in the market', () => {
+    const { betPayload, legsPayload } = buildRouletteBet(base)
+    expect(betPayload).toMatchObject({
+      sport: 'altro',
+      eventoNome: 'Roulette europea',
+      modalitaSaldo: 'reale',
+      accountId: 'acc-rosso',
+    })
+    expect(legsPayload).toHaveLength(3)
+    expect(legsPayload[0]).toMatchObject({
+      selezione: 'Rosso',
+      metodo: 'punta',
+      tipoBonus: 'none',
+      accountId: 'acc-rosso',
+      stake: 100,
+      quota: 2,
+      competizione: 'Casinò',
+      mercato: 'ROULETTE ROSSO/NERO (la partage)',
+      commissionePercentuale: 0,
+      statoEvento: 'bozza',
+      posizione: 0,
+    })
+    expect(legsPayload[1]).toMatchObject({
+      selezione: 'Nero',
+      tipoBonus: 'none',
+      accountId: 'acc-nero',
+      stake: 100,
+      quota: 2,
+      quotaRiferimento: 2,
+      posizione: 1,
+    })
+    expect(legsPayload[2]).toMatchObject({
+      selezione: '0',
+      accountId: 'acc-zero',
+      stake: 2.78,
+      quota: 36,
+      quotaRiferimento: 2,
+      posizione: 2,
+    })
+  })
+
+  it('punta on Nero: Nero is saved first, Rosso and the zero follow in table order', () => {
+    const { betPayload, legsPayload } = buildRouletteBet({ ...base, puntaIndex: 1 })
+    expect(betPayload.accountId).toBe('acc-nero')
+    expect(legsPayload.map((l) => l.selezione)).toEqual(['Nero', 'Rosso', '0'])
+    expect(legsPayload.map((l) => l.posizione)).toEqual([0, 1, 2])
+    expect(legsPayload[0]).toMatchObject({ stake: 100, quota: 2, accountId: 'acc-nero' })
+    expect(legsPayload[1]).toMatchObject({ stake: 100, quota: 2, quotaRiferimento: 2 })
+  })
+
+  it('bonus and rimborso stay on the punta leg; the punta stake is the real stake only', () => {
+    const { betPayload, legsPayload } = buildRouletteBet({
+      ...base,
+      partage: false,
+      bonus: 50,
+      rimborso: 20,
+      legs: [{ ...base.legs[0], stake: 150 }, base.legs[1], base.legs[2]],
+    })
+    expect(betPayload.modalitaSaldo).toBe('rimborso')
+    expect(legsPayload[0]).toMatchObject({
+      tipoBonus: 'rimborso',
+      stake: 100,
+      bonusValore: 50,
+      rimborsoValore: 20,
+      mercato: 'ROULETTE ROSSO/NERO',
+    })
+    expect(legsPayload[1].bonusValore).toBeUndefined()
+    expect(legsPayload[2].rimborsoValore).toBeUndefined()
+  })
+
+  it('dozens: four legs, the zero last, the market never mentions la partage', () => {
+    const { legsPayload } = buildRouletteBet({
+      ...base,
+      mode: 'dozzine',
+      partage: true,
+      puntaIndex: 2,
+      legs: [
+        { selezione: '1ª dozzina', quota: 3, stake: 100, accountId: 'acc-1' },
+        { selezione: '2ª dozzina', quota: 3, stake: 100, accountId: 'acc-2' },
+        { selezione: '3ª dozzina', quota: 3, stake: 100, accountId: 'acc-3' },
+        { selezione: '0', quota: 36, stake: 8.33, accountId: 'acc-0' },
+      ],
+    })
+    expect(legsPayload).toHaveLength(4)
+    expect(legsPayload.map((l) => l.selezione)).toEqual([
+      '3ª dozzina',
+      '1ª dozzina',
+      '2ª dozzina',
+      '0',
+    ])
+    expect(legsPayload.map((l) => l.posizione)).toEqual([0, 1, 2, 3])
+    expect(legsPayload[3]).toMatchObject({ stake: 8.33, quota: 36, quotaRiferimento: 3 })
+    expect(legsPayload.every((l) => l.mercato === 'ROULETTE DOZZINE')).toBe(true)
+  })
+
+  it('rouletteMercato', () => {
+    expect(rouletteMercato('rosso_nero', false)).toBe('ROULETTE ROSSO/NERO')
+    expect(rouletteMercato('rosso_nero', true)).toBe('ROULETTE ROSSO/NERO (la partage)')
+    expect(rouletteMercato('dozzine', true)).toBe('ROULETTE DOZZINE')
   })
 })

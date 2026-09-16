@@ -363,25 +363,35 @@ export function buildMultiplaBet(args: MultiplaBetArgs): BetPayloads {
 }
 
 // ---------------------------------------------------------------------
-// Baccarat (offline calculator, §14.114): Player on one account, Banco on
-// the other, both back legs at the table's fixed prices.
+// Baccarat (offline calculator, §14.114, §14.117): the punta on Player or
+// on Banco, the cover on the other side, each on its own account, both back
+// legs at the table's fixed prices.
 // ---------------------------------------------------------------------
 
 export const BACCARAT_EVENTO_NOME = 'Baccarat'
 export const BACCARAT_COMPETIZIONE = 'Casinò'
 export const BACCARAT_MERCATO = 'BACCARAT'
 
+export type BaccaratBetSide = 'player' | 'banco'
+
+const BACCARAT_BET_SIDE_LABELS: Record<BaccaratBetSide, string> = {
+  player: 'Player',
+  banco: 'Banco',
+}
+
 export interface BaccaratBetArgs {
   eventoDataIso: string
   categoria: BetCategory
+  /** Where the punta goes; the other side is the cover. */
+  puntaSide: BaccaratBetSide
   accountIdPlayer: string
   accountIdBanco: string
-  /** Real stake on Player: the bonus travels in `bonusValore`. */
+  /** Real stake on the punta: the bonus travels in `bonusValore`. */
   puntata: number
   bonus: number
   rimborso: number
-  /** Banco stake as played (rounded to the cent). */
-  stakeBanco: number
+  /** The cover as played (rounded to the chip, or locked by the user). */
+  stakeCover: number
   quotaPlayer: number
   quotaBanco: number
 }
@@ -394,13 +404,18 @@ export function modalitaSaldoFor(bonus: number, rimborso: number): ModalitaSaldo
 }
 
 /**
- * Player leg first (posizione 0) with bonus/rimborso, Banco leg after. The
- * Player stake is the real stake only: the backend settles a bonus leg as
+ * Punta leg first (posizione 0) with bonus/rimborso, cover leg after. The
+ * punta stake is the real stake only: the backend settles a bonus leg as
  * stake·(q − 1) + bonus·q and the bet detail reads stake + bonusValore as the
  * back stake, so a bonus-only play is saved with stake 0 and bonusValore > 0.
  */
 export function buildBaccaratBet(args: BaccaratBetArgs): BetPayloads {
   const tipoBonus = tipoBonusFor(args.bonus, args.rimborso)
+  const coverSide: BaccaratBetSide = args.puntaSide === 'player' ? 'banco' : 'player'
+  const accountOf = (side: BaccaratBetSide) =>
+    side === 'player' ? args.accountIdPlayer : args.accountIdBanco
+  const quotaOf = (side: BaccaratBetSide) =>
+    side === 'player' ? args.quotaPlayer : args.quotaBanco
 
   const betPayload: CreateBetPayload = {
     eventoData: args.eventoDataIso,
@@ -408,7 +423,7 @@ export function buildBaccaratBet(args: BaccaratBetArgs): BetPayloads {
     sport: 'altro',
     eventoNome: BACCARAT_EVENTO_NOME,
     modalitaSaldo: modalitaSaldoFor(args.bonus, args.rimborso),
-    accountId: args.accountIdPlayer,
+    accountId: accountOf(args.puntaSide),
     tag: undefined,
     nota: undefined,
   }
@@ -427,30 +442,134 @@ export function buildBaccaratBet(args: BaccaratBetArgs): BetPayloads {
     tag: undefined,
   }
 
-  const playerLeg: CreateBetLegPayload = {
+  const puntaLeg: CreateBetLegPayload = {
     ...base,
-    selezione: 'Player',
+    selezione: BACCARAT_BET_SIDE_LABELS[args.puntaSide],
     tipoBonus,
-    accountId: args.accountIdPlayer,
+    accountId: accountOf(args.puntaSide),
     stake: args.puntata,
-    quota: args.quotaPlayer,
+    quota: quotaOf(args.puntaSide),
     bonusValore: args.bonus > 0 ? args.bonus : undefined,
     rimborsoValore: args.rimborso > 0 ? args.rimborso : undefined,
     posizione: 0,
   }
 
-  const bancoLeg: CreateBetLegPayload = {
+  const coverLeg: CreateBetLegPayload = {
     ...base,
-    selezione: 'Banco',
+    selezione: BACCARAT_BET_SIDE_LABELS[coverSide],
     tipoBonus: 'none',
-    accountId: args.accountIdBanco,
-    stake: args.stakeBanco,
-    quota: args.quotaBanco,
-    quotaRiferimento: args.quotaPlayer,
+    accountId: accountOf(coverSide),
+    stake: args.stakeCover,
+    quota: quotaOf(coverSide),
+    quotaRiferimento: quotaOf(args.puntaSide),
     bonusValore: undefined,
     rimborsoValore: undefined,
     posizione: 1,
   }
 
-  return { betPayload, legsPayload: [playerLeg, bancoLeg] }
+  return { betPayload, legsPayload: [puntaLeg, coverLeg] }
+}
+
+// ---------------------------------------------------------------------
+// Roulette europea (offline calculator, §14.116, §14.117): the punta on one
+// bet of the table, the other outcomes and the zero covered on other
+// accounts, all back legs at the table's fixed prices.
+// ---------------------------------------------------------------------
+
+export const ROULETTE_EVENTO_NOME = 'Roulette europea'
+
+export type RouletteBetMode = 'rosso_nero' | 'dozzine'
+
+/** The market string saved on every leg: the table, plus la partage when it counts. */
+export function rouletteMercato(mode: RouletteBetMode, partage: boolean): string {
+  if (mode === 'dozzine') return 'ROULETTE DOZZINE'
+  return partage ? 'ROULETTE ROSSO/NERO (la partage)' : 'ROULETTE ROSSO/NERO'
+}
+
+export interface RouletteBetLegArgs {
+  selezione: string
+  quota: number
+  /** Punta: ignored (the stake is `puntata`). Covers: the amount played. */
+  stake: number
+  accountId: string
+}
+
+export interface RouletteBetArgs {
+  eventoDataIso: string
+  categoria: BetCategory
+  mode: RouletteBetMode
+  partage: boolean
+  /** Real stake on the punta: the bonus travels in `bonusValore`. */
+  puntata: number
+  bonus: number
+  rimborso: number
+  /** The legs in table order (the zero last). */
+  legs: RouletteBetLegArgs[]
+  /** Which of `legs` is the punta. */
+  puntaIndex: number
+}
+
+/** The punta leg first (posizione 0), the covers in table order after it. */
+export function buildRouletteBet(args: RouletteBetArgs): BetPayloads {
+  const tipoBonus = tipoBonusFor(args.bonus, args.rimborso)
+  const mercato = rouletteMercato(args.mode, args.partage)
+  const punta = args.legs[args.puntaIndex]
+
+  const betPayload: CreateBetPayload = {
+    eventoData: args.eventoDataIso,
+    categoria: args.categoria,
+    sport: 'altro',
+    eventoNome: ROULETTE_EVENTO_NOME,
+    modalitaSaldo: modalitaSaldoFor(args.bonus, args.rimborso),
+    accountId: punta.accountId,
+    tag: undefined,
+    nota: undefined,
+  }
+
+  const base = {
+    eventoData: args.eventoDataIso,
+    sport: 'altro' as const,
+    eventoNome: ROULETTE_EVENTO_NOME,
+    competizione: BACCARAT_COMPETIZIONE,
+    mercato,
+    metodo: 'punta' as const,
+    rischio: 0,
+    commissionePercentuale: 0,
+    movimento: 0,
+    statoEvento: 'bozza',
+    tag: undefined,
+  }
+
+  const legsPayload: CreateBetLegPayload[] = [
+    {
+      ...base,
+      selezione: punta.selezione,
+      tipoBonus,
+      accountId: punta.accountId,
+      stake: args.puntata,
+      quota: punta.quota,
+      bonusValore: args.bonus > 0 ? args.bonus : undefined,
+      rimborsoValore: args.rimborso > 0 ? args.rimborso : undefined,
+      posizione: 0,
+    },
+  ]
+  let posizione = 1
+  args.legs.forEach((leg, i) => {
+    if (i === args.puntaIndex) return
+    legsPayload.push({
+      ...base,
+      selezione: leg.selezione,
+      tipoBonus: 'none',
+      accountId: leg.accountId,
+      stake: leg.stake,
+      quota: leg.quota,
+      quotaRiferimento: punta.quota,
+      bonusValore: undefined,
+      rimborsoValore: undefined,
+      posizione,
+    })
+    posizione += 1
+  })
+
+  return { betPayload, legsPayload }
 }

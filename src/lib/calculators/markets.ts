@@ -27,6 +27,11 @@ export const MARKET_SPORT_ICONS: Record<MarketSport, string> = {
 export type MarketType =
   | 'MATCH_1X2'
   | 'MATCH_OVER_UNDER'
+  | 'FIRST_HALF_GOALS'
+  | 'SECOND_HALF_GOALS'
+  | 'TEAM_TOTAL_GOALS'
+  | 'TEAM_FIRST_HALF_GOALS'
+  | 'TEAM_SECOND_HALF_GOALS'
   | 'GG_NG'
   | 'DOPPIA_CHANCE'
   | 'HANDICAP'
@@ -123,7 +128,13 @@ const OUTCOMES_1X2: { code: MarketOutcome; label: string }[] = [
 
 const MARKET_CONFIGS: MarketConfig[] = [
   // ── Esiti principali ──
-  { kind: 'outcomes', marketType: 'MATCH_1X2', baseLabel: '1X2', sport: 'calcio', outcomes: OUTCOMES_1X2 },
+  {
+    kind: 'outcomes',
+    marketType: 'MATCH_1X2',
+    baseLabel: '1X2',
+    sport: 'calcio',
+    outcomes: OUTCOMES_1X2,
+  },
   {
     kind: 'over_under',
     marketType: 'MATCH_OVER_UNDER',
@@ -131,6 +142,49 @@ const MARKET_CONFIGS: MarketConfig[] = [
     sport: 'calcio',
     minLine: 0.5,
     maxLine: 3.5,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'FIRST_HALF_GOALS',
+    baseLabel: 'GOL 1° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 3.5,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'SECOND_HALF_GOALS',
+    baseLabel: 'GOL 2° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 3.5,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'TEAM_TOTAL_GOALS',
+    baseLabel: 'GOL SQUADRA',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 4.5,
+    teamScoped: true,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'TEAM_FIRST_HALF_GOALS',
+    baseLabel: 'GOL SQUADRA 1° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 2.5,
+    teamScoped: true,
+  },
+  {
+    kind: 'over_under',
+    marketType: 'TEAM_SECOND_HALF_GOALS',
+    baseLabel: 'GOL SQUADRA 2° TEMPO',
+    sport: 'calcio',
+    minLine: 0.5,
+    maxLine: 2.5,
+    teamScoped: true,
   },
   {
     kind: 'outcomes',

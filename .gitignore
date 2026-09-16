@@ -39,5 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-# second dev server for browser checks (NEXT_DIST_DIR, .claude/launch.json frontend-dev-alt)
-/.next-alt/
+# extra dev servers for browser checks (NEXT_DIST_DIR, .claude/launch.json frontend-dev-alt*)
+/.next-alt*/

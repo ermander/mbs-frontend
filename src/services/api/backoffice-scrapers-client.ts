@@ -10,6 +10,10 @@ export interface BackofficeScraper {
   scrape_interval_seconds: number
   enabled_sports: string[] | null
   mapped_sports: string[]
+  /** Free text an admin keeps on the bookmaker (§14.124); null when empty. */
+  note: string | null
+  /** §14.125: the exception to the Palinsesto: every competition of the feed is read, switched off or not. Absent on older backends. */
+  scrape_all_competitions?: boolean
   created_at: string
   updated_at: string
 }
@@ -57,6 +61,30 @@ export async function updateEnabledSports(
   const { data } = await apiClient.patch<{ scraper: BackofficeScraper }>(
     `/backoffice/scrapers/${id}/sports`,
     { enabled_sports: enabledSports },
+  )
+  return data.scraper
+}
+
+/** §14.124: null clears the note; the backend trims and caps at 2000 characters. */
+export async function updateScraperNote(
+  id: string,
+  note: string | null,
+): Promise<BackofficeScraper> {
+  const { data } = await apiClient.patch<{ scraper: BackofficeScraper }>(
+    `/backoffice/scrapers/${id}/note`,
+    { note },
+  )
+  return data.scraper
+}
+
+/** §14.125: the per-bookmaker exception to the Palinsesto (every competition of the feed). */
+export async function updateScrapeAllCompetitions(
+  id: string,
+  scrapeAllCompetitions: boolean,
+): Promise<BackofficeScraper> {
+  const { data } = await apiClient.patch<{ scraper: BackofficeScraper }>(
+    `/backoffice/scrapers/${id}/all-competitions`,
+    { scrape_all_competitions: scrapeAllCompetitions },
   )
   return data.scraper
 }

@@ -7,6 +7,8 @@ import {
   getScrapers,
   toggleScraper,
   updateEnabledSports,
+  updateScraperNote,
+  updateScrapeAllCompetitions,
   getGlobalScrapingStatus,
   setGlobalScrapingStatus,
   type BackofficeScraper,
@@ -35,9 +37,15 @@ export default function BackofficeScrapersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [togglingAllId, setTogglingAllId] = useState<string | null>(null)
   const [togglingGlobal, setTogglingGlobal] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [savingSportsId, setSavingSportsId] = useState<string | null>(null)
+  // §14.124: the note editor is open on one bookmaker at a time; the draft
+  // starts from the saved note and lives only until Salva or Annulla.
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -111,6 +119,51 @@ export default function BackofficeScrapersPage() {
     }
   }
 
+  // §14.125: the exception to the Palinsesto for one bookmaker (every competition of its feed).
+  const handleAllCompetitionsToggle = async (scraper: BackofficeScraper) => {
+    setTogglingAllId(scraper.id)
+    setError(null)
+    try {
+      const updated = await updateScrapeAllCompetitions(
+        scraper.id,
+        !scraper.scrape_all_competitions,
+      )
+      setScrapers((prev) =>
+        prev.map((s) =>
+          s.id === updated.id ? { ...updated, mapped_sports: scraper.mapped_sports } : s,
+        ),
+      )
+    } catch {
+      setError(`Errore nell'aggiornamento delle competizioni di ${scraper.name}.`)
+    } finally {
+      setTogglingAllId(null)
+    }
+  }
+
+  const openNoteEditor = (scraper: BackofficeScraper) => {
+    setEditingNoteId(scraper.id)
+    setNoteDraft(scraper.note ?? '')
+  }
+
+  const handleNoteSave = async (scraper: BackofficeScraper) => {
+    setSavingNoteId(scraper.id)
+    setError(null)
+    try {
+      const trimmed = noteDraft.trim()
+      const updated = await updateScraperNote(scraper.id, trimmed.length === 0 ? null : trimmed)
+      setScrapers((prev) =>
+        prev.map((s) =>
+          s.id === updated.id ? { ...updated, mapped_sports: scraper.mapped_sports } : s,
+        ),
+      )
+      setEditingNoteId(null)
+    } catch {
+      setError(`Errore nel salvataggio della nota di ${scraper.name}.`)
+    } finally {
+      setSavingNoteId(null)
+    }
+  }
+
   const getActiveSports = (scraper: BackofficeScraper): string[] => {
     return scraper.enabled_sports ?? scraper.mapped_sports
   }
@@ -122,7 +175,8 @@ export default function BackofficeScrapersPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Gestione scraper</h2>
         <p className="text-sm text-muted-foreground">
-          Attiva o disattiva lo scraping per ogni bookmaker e seleziona gli sport da scrapare.
+          Attiva o disattiva lo scraping per ogni bookmaker, seleziona gli sport da scrapare e
+          annota lo stato di ogni integrazione.
         </p>
       </div>
 
@@ -190,6 +244,7 @@ export default function BackofficeScrapersPage() {
         ) : (
           scrapers.map((scraper) => {
             const isExpanded = expandedId === scraper.id
+            const isEditingNote = editingNoteId === scraper.id
             const activeSports = getActiveSports(scraper)
             const mappedSports = scraper.mapped_sports
             // When scraping is globally paused, an enabled scraper shows amber
@@ -229,7 +284,44 @@ export default function BackofficeScrapersPage() {
                       {' · '}
                       {scraper.scrape_interval_seconds}s
                     </p>
+                    {scraper.note && !isEditingNote && (
+                      <p
+                        data-testid={`scraper-note-${scraper.slug}`}
+                        className="mt-1 whitespace-pre-line text-xs text-foreground/80"
+                      >
+                        {scraper.note}
+                      </p>
+                    )}
                   </div>
+
+                  <button
+                    type="button"
+                    disabled={togglingAllId === scraper.id}
+                    onClick={() => handleAllCompetitionsToggle(scraper)}
+                    title={
+                      scraper.scrape_all_competitions
+                        ? 'Legge tutte le competizioni del feed, anche quelle spente nel Palinsesto. Clicca per tornare al Palinsesto.'
+                        : 'Legge solo le competizioni accese nel Palinsesto. Clicca per leggere tutto il feed (§14.125).'
+                    }
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                      scraper.scrape_all_competitions
+                        ? 'bg-amber-500/15 text-amber-500'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {scraper.scrape_all_competitions ? 'Tutto il feed' : 'Palinsesto'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isEditingNote ? setEditingNoteId(null) : openNoteEditor(scraper)
+                    }
+                    title={scraper.note ? 'Modifica la nota' : 'Aggiungi una nota'}
+                    className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    {isEditingNote ? 'Chiudi nota' : 'Nota'}
+                  </button>
 
                   <button
                     type="button"
@@ -260,6 +352,49 @@ export default function BackofficeScrapersPage() {
                     />
                   </button>
                 </div>
+
+                {isEditingNote && (
+                  <div className="border-t border-border px-4 py-3">
+                    <label
+                      htmlFor={`note-${scraper.id}`}
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
+                    >
+                      Nota su {scraper.name}
+                    </label>
+                    <textarea
+                      id={`note-${scraper.id}`}
+                      value={noteDraft}
+                      maxLength={2000}
+                      disabled={savingNoteId === scraper.id}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      placeholder="Perché è spento, cosa lo blocca, cosa è stato provato…"
+                      className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                    />
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        Lascia vuoto e salva per rimuovere la nota. {noteDraft.length}/2000
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={savingNoteId === scraper.id}
+                          onClick={() => setEditingNoteId(null)}
+                          className="rounded px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                        >
+                          Annulla
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingNoteId === scraper.id}
+                          onClick={() => handleNoteSave(scraper)}
+                          className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {savingNoteId === scraper.id ? 'Salvataggio…' : 'Salva nota'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {isExpanded && (
                   <div className="border-t border-border px-4 py-3">

@@ -28,6 +28,7 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   leovegas: '18',
   marathonbet: '1',
   netwin: '45',
+  perlaplay: '49',
   planetwin365: '21',
   pokerstars: '8',
   quigioco: '39',

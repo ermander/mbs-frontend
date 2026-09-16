@@ -11,6 +11,8 @@ export interface AuthUser {
   username: string
   role: UserRole
   settings: UserSettings
+  /** ISO 8601, data di iscrizione */
+  createdAt?: string
 }
 
 export interface AuthResponse {
@@ -63,6 +65,18 @@ export const authClient = {
 
   async resetPassword(payload: { token: string; password: string }) {
     const { data } = await apiClient.post<AuthResponse>('/auth/reset-password', payload)
+    return data
+  },
+
+  /** Profilo: nome e/o username. */
+  async updateMe(payload: { name?: string; username?: string }) {
+    const { data } = await apiClient.patch<AuthResponse>('/auth/me', payload)
+    return data
+  },
+
+  /** Profilo: cambio password con verifica di quella attuale. */
+  async changePassword(payload: { currentPassword: string; newPassword: string }) {
+    const { data } = await apiClient.post<{ message: string }>('/auth/change-password', payload)
     return data
   },
 }

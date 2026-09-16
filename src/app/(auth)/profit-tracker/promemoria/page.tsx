@@ -7,10 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { ReminderModal } from '@/components/profit-tracker/reminder-modal'
-import { TelegramLinkWidget } from '@/components/profit-tracker/telegram-link-widget'
+import Link from 'next/link'
 import type { ReminderStatus } from '@/types/profit-tracker'
-
-const BOT_USERNAME = 'MBS_Matchet_Betting_Sistem_bot' // opzionale: imposta qui lo username del bot es. 'MBSProfitTrackerBot'
 
 export default function PromemoriaPage() {
   const reminders = useProfitTrackerStore((s) => s.reminders)
@@ -92,7 +90,13 @@ export default function PromemoriaPage() {
         </Button>
       }
     >
-      <TelegramLinkWidget botUsername={BOT_USERNAME} />
+      <p className="text-xs text-muted-foreground">
+        I promemoria arrivano su Telegram: il collegamento si gestisce dal{' '}
+        <Link href="/account/profilo" className="text-primary underline-offset-2 hover:underline">
+          Profilo
+        </Link>
+        .
+      </p>
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-muted-foreground">Stato:</span>

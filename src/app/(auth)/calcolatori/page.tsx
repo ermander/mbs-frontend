@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot } from 'lucide-react'
+import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot, Gift } from 'lucide-react'
 
 import { CalculatorCard } from '@/components/calculators/calculator-card'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
@@ -12,8 +12,16 @@ import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
 import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOfflineCalculator'
 import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
 import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
+import { FunBonusCalculator } from '@/components/calculators/FunBonusCalculator'
 
-type Slug = 'punta-banca' | 'punta-punta' | 'tri-punta' | 'multipla' | 'baccarat' | 'roulette'
+type Slug =
+  | 'punta-banca'
+  | 'punta-punta'
+  | 'tri-punta'
+  | 'multipla'
+  | 'baccarat'
+  | 'roulette'
+  | 'fun-bonus'
 
 const CALCS: Array<{
   slug: Slug
@@ -66,6 +74,14 @@ const CALCS: Array<{
       'Rosso/Nero o dozzine più lo 0 su conti diversi, con o senza la partage. Calcola le coperture e il guadagno minimo, anche con bonus o rimborso.',
     icon: CircleDot,
     render: () => <RouletteCalculator />,
+  },
+  {
+    slug: 'fun-bonus',
+    title: 'Target fun bonus',
+    description:
+      'Bonus, rollover, contribuzione del gioco, RTP e già giocato: il saldo minimo con cui passare a spin bassi per finire il rollover.',
+    icon: Gift,
+    render: () => <FunBonusCalculator />,
   },
 ]
 

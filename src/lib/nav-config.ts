@@ -123,6 +123,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       // { label: 'Converter', href: '/calcolatori/converter' },
       { label: 'Baccarat', href: '/calcolatori/baccarat' },
       { label: 'Roulette', href: '/calcolatori/roulette' },
+      { label: 'Target fun bonus', href: '/calcolatori/fun-bonus' },
     ],
   },
   {

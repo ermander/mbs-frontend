@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildBaccaratBet,
   buildDutchBet,
   buildMultiplaBet,
   buildPuntaBancaBet,
+  modalitaSaldoFor,
   multiplaSport,
   tipoBonusFor,
   type BetEventInfo,
@@ -79,16 +81,21 @@ describe('buildPuntaBancaBet', () => {
     })
   })
 
-  it('bonus and rimborso travel on the punta leg only; the stake is stake + bonus', () => {
+  it('bonus and rimborso travel on the punta leg only; the stake stays the real stake', () => {
     const { legsPayload } = buildPuntaBancaBet({ ...base, bonus: 20, rimborso: 10 })
     expect(legsPayload[0]).toMatchObject({
       tipoBonus: 'rimborso',
-      stake: 120,
+      stake: 100,
       bonusValore: 20,
       rimborsoValore: 10,
     })
     expect(legsPayload[1].bonusValore).toBeUndefined()
     expect(legsPayload[1].rimborsoValore).toBeUndefined()
+  })
+
+  it('a bonus-only punta is saved with stake 0 and the bonus in bonusValore', () => {
+    const { legsPayload } = buildPuntaBancaBet({ ...base, puntata: 0, bonus: 50 })
+    expect(legsPayload[0]).toMatchObject({ tipoBonus: 'bonus', stake: 0, bonusValore: 50 })
   })
 
   it('partial lays: one banca leg per amount already laid, plus the computed rest', () => {
@@ -147,12 +154,13 @@ describe('buildDutchBet', () => {
       accountId: 'acc-x',
     })
     expect(legsPayload).toHaveLength(3)
+    // The engine's punta leg carries puntata + bonus (120); the payload keeps the real stake.
     expect(legsPayload[0]).toMatchObject({
       selezione: 'X',
       metodo: 'punta',
       tipoBonus: 'bonus',
       bonusValore: 20,
-      stake: 120,
+      stake: 100,
       quota: 3.4,
       accountId: 'acc-x',
       posizione: 0,
@@ -275,5 +283,98 @@ describe('buildMultiplaBet', () => {
     expect(multiplaSport('2')).toBe('basket')
     expect(multiplaSport('0')).toBe('calcio')
     expect(multiplaSport('basket')).toBe('basket')
+  })
+})
+
+describe('buildBaccaratBet', () => {
+  const base = {
+    eventoDataIso: '2026-09-16T20:00:00.000Z',
+    categoria: 'matched_betting' as const,
+    accountIdPlayer: 'acc-player',
+    accountIdBanco: 'acc-banco',
+    puntata: 100,
+    bonus: 0,
+    rimborso: 0,
+    stakeBanco: 102.56,
+    quotaPlayer: 2,
+    quotaBanco: 1.95,
+  }
+
+  it('Player leg then Banco leg, both back, on the Baccarat event of the Player account', () => {
+    const { betPayload, legsPayload } = buildBaccaratBet(base)
+    expect(betPayload).toMatchObject({
+      sport: 'altro',
+      eventoNome: 'Baccarat',
+      modalitaSaldo: 'reale',
+      accountId: 'acc-player',
+      categoria: 'matched_betting',
+    })
+    expect(betPayload.source).toBeUndefined()
+    expect(legsPayload).toHaveLength(2)
+    expect(legsPayload[0]).toMatchObject({
+      metodo: 'punta',
+      selezione: 'Player',
+      tipoBonus: 'none',
+      accountId: 'acc-player',
+      stake: 100,
+      quota: 2,
+      rischio: 0,
+      commissionePercentuale: 0,
+      competizione: 'Casinò',
+      mercato: 'BACCARAT',
+      statoEvento: 'bozza',
+      posizione: 0,
+    })
+    expect(legsPayload[0].bonusValore).toBeUndefined()
+    expect(legsPayload[0].rimborsoValore).toBeUndefined()
+    expect(legsPayload[1]).toMatchObject({
+      metodo: 'punta',
+      selezione: 'Banco',
+      tipoBonus: 'none',
+      accountId: 'acc-banco',
+      stake: 102.56,
+      quota: 1.95,
+      quotaRiferimento: 2,
+      commissionePercentuale: 0,
+      posizione: 1,
+    })
+  })
+
+  it('bonus: the real stake stays in stake and the bonus in bonusValore (0 stake for a bonus-only play)', () => {
+    const { betPayload, legsPayload } = buildBaccaratBet({
+      ...base,
+      puntata: 0,
+      bonus: 100,
+      stakeBanco: 102.56,
+    })
+    expect(betPayload.modalitaSaldo).toBe('bonus')
+    expect(legsPayload[0]).toMatchObject({ tipoBonus: 'bonus', stake: 0, bonusValore: 100 })
+    expect(legsPayload[1].bonusValore).toBeUndefined()
+  })
+
+  it('rimborso wins over bonus on the Player leg only', () => {
+    const { betPayload, legsPayload } = buildBaccaratBet({
+      ...base,
+      bonus: 20,
+      rimborso: 100,
+      stakeBanco: 71.79,
+    })
+    expect(betPayload.modalitaSaldo).toBe('rimborso')
+    expect(legsPayload[0]).toMatchObject({
+      tipoBonus: 'rimborso',
+      stake: 100,
+      bonusValore: 20,
+      rimborsoValore: 100,
+    })
+    expect(legsPayload[1]).toMatchObject({ tipoBonus: 'none', stake: 71.79 })
+    expect(legsPayload[1].rimborsoValore).toBeUndefined()
+  })
+})
+
+describe('modalitaSaldoFor', () => {
+  it('rimborso, then bonus, then reale', () => {
+    expect(modalitaSaldoFor(0, 0)).toBe('reale')
+    expect(modalitaSaldoFor(10, 0)).toBe('bonus')
+    expect(modalitaSaldoFor(10, 5)).toBe('rimborso')
   })
 })

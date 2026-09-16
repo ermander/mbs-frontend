@@ -1,5 +1,5 @@
 import type { CreateBetLegPayload, CreateBetPayload } from '@/services/api/profit-tracker-client'
-import type { BetBonusType, BetCategory, SportType } from '@/types/profit-tracker'
+import type { BetBonusType, BetCategory, ModalitaSaldo, SportType } from '@/types/profit-tracker'
 import type { MultiplaEvent } from '@/types/multipla-event'
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
 
@@ -8,6 +8,12 @@ import { multiplaLayStakes } from '@/lib/calculators/multipla'
  * Oddsmatcher modal (punta-banca) and the offline Punta-Punta / Tri-Punta
  * calculators build theirs: one bet on the punta account, one leg per stake,
  * every leg saved as a draft ("bozza"). Pure, so the shapes are unit-tested.
+ *
+ * Stake convention (§14.115): the punta leg carries the REAL stake only, the
+ * bonus travels in `bonusValore` and the refund in `rimborsoValore`. The
+ * backend settles a bonus leg as stake·(q − 1) + bonus·q and a lost leg as
+ * −stake, and the bet detail reads stake + bonusValore as the back stake, so
+ * a bonus-only play is saved with stake 0 and bonusValore > 0.
  */
 
 export interface BetEventInfo {
@@ -52,7 +58,6 @@ export interface PuntaBancaBetArgs {
 
 export function buildPuntaBancaBet(args: PuntaBancaBetArgs): BetPayloads {
   const { event } = args
-  const puntataEffettiva = args.puntata + args.bonus
   const tipoBonus = tipoBonusFor(args.bonus, args.rimborso)
 
   const betPayload: CreateBetPayload = {
@@ -77,7 +82,7 @@ export function buildPuntaBancaBet(args: PuntaBancaBetArgs): BetPayloads {
     metodo: 'punta',
     tipoBonus,
     accountId: args.accountIdPunta,
-    stake: puntataEffettiva,
+    stake: args.puntata,
     quota: args.quotaPunta,
     rischio: 0,
     bonusValore: args.bonus > 0 ? args.bonus : undefined,
@@ -158,7 +163,7 @@ export interface DutchBetLegArgs {
   quotaGross: number
   commissionePercent: number
   accountId: string
-  /** puntata + bonus on the punta leg, the rounded cover on the others. */
+  /** The rounded cover on the cover legs; ignored on the punta leg, whose stake is `puntata` (real only). */
   stake: number
 }
 
@@ -204,7 +209,7 @@ export function buildDutchBet(args: DutchBetArgs): BetPayloads {
     metodo: 'punta',
     tipoBonus: isPunta ? tipoBonus : 'none',
     accountId: leg.accountId,
-    stake: leg.stake,
+    stake: isPunta ? args.puntata : leg.stake,
     quota: leg.quotaGross,
     rischio: 0,
     bonusValore: isPunta && args.bonus > 0 ? args.bonus : undefined,
@@ -355,4 +360,97 @@ export function buildMultiplaBet(args: MultiplaBetArgs): BetPayloads {
   })
 
   return { betPayload, legsPayload: [legPunta, ...legsHedge] }
+}
+
+// ---------------------------------------------------------------------
+// Baccarat (offline calculator, §14.114): Player on one account, Banco on
+// the other, both back legs at the table's fixed prices.
+// ---------------------------------------------------------------------
+
+export const BACCARAT_EVENTO_NOME = 'Baccarat'
+export const BACCARAT_COMPETIZIONE = 'Casinò'
+export const BACCARAT_MERCATO = 'BACCARAT'
+
+export interface BaccaratBetArgs {
+  eventoDataIso: string
+  categoria: BetCategory
+  accountIdPlayer: string
+  accountIdBanco: string
+  /** Real stake on Player: the bonus travels in `bonusValore`. */
+  puntata: number
+  bonus: number
+  rimborso: number
+  /** Banco stake as played (rounded to the cent). */
+  stakeBanco: number
+  quotaPlayer: number
+  quotaBanco: number
+}
+
+/** The balance the bet plays on, as the bet detail keeps it in sync with the punta leg's tipoBonus. */
+export function modalitaSaldoFor(bonus: number, rimborso: number): ModalitaSaldo {
+  if (rimborso > 0) return 'rimborso'
+  if (bonus > 0) return 'bonus'
+  return 'reale'
+}
+
+/**
+ * Player leg first (posizione 0) with bonus/rimborso, Banco leg after. The
+ * Player stake is the real stake only: the backend settles a bonus leg as
+ * stake·(q − 1) + bonus·q and the bet detail reads stake + bonusValore as the
+ * back stake, so a bonus-only play is saved with stake 0 and bonusValore > 0.
+ */
+export function buildBaccaratBet(args: BaccaratBetArgs): BetPayloads {
+  const tipoBonus = tipoBonusFor(args.bonus, args.rimborso)
+
+  const betPayload: CreateBetPayload = {
+    eventoData: args.eventoDataIso,
+    categoria: args.categoria,
+    sport: 'altro',
+    eventoNome: BACCARAT_EVENTO_NOME,
+    modalitaSaldo: modalitaSaldoFor(args.bonus, args.rimborso),
+    accountId: args.accountIdPlayer,
+    tag: undefined,
+    nota: undefined,
+  }
+
+  const base = {
+    eventoData: args.eventoDataIso,
+    sport: 'altro' as const,
+    eventoNome: BACCARAT_EVENTO_NOME,
+    competizione: BACCARAT_COMPETIZIONE,
+    mercato: BACCARAT_MERCATO,
+    metodo: 'punta' as const,
+    rischio: 0,
+    commissionePercentuale: 0,
+    movimento: 0,
+    statoEvento: 'bozza',
+    tag: undefined,
+  }
+
+  const playerLeg: CreateBetLegPayload = {
+    ...base,
+    selezione: 'Player',
+    tipoBonus,
+    accountId: args.accountIdPlayer,
+    stake: args.puntata,
+    quota: args.quotaPlayer,
+    bonusValore: args.bonus > 0 ? args.bonus : undefined,
+    rimborsoValore: args.rimborso > 0 ? args.rimborso : undefined,
+    posizione: 0,
+  }
+
+  const bancoLeg: CreateBetLegPayload = {
+    ...base,
+    selezione: 'Banco',
+    tipoBonus: 'none',
+    accountId: args.accountIdBanco,
+    stake: args.stakeBanco,
+    quota: args.quotaBanco,
+    quotaRiferimento: args.quotaPlayer,
+    bonusValore: undefined,
+    rimborsoValore: undefined,
+    posizione: 1,
+  }
+
+  return { betPayload, legsPayload: [playerLeg, bancoLeg] }
 }

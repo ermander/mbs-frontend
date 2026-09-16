@@ -3,15 +3,16 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Scale, ArrowLeftRight, Triangle, Layers } from 'lucide-react'
+import { Scale, ArrowLeftRight, Triangle, Layers, Dices } from 'lucide-react'
 
 import { CalculatorCard } from '@/components/calculators/calculator-card'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
 import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
 import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
 import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOfflineCalculator'
+import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
 
-type Slug = 'punta-banca' | 'punta-punta' | 'tri-punta' | 'multipla'
+type Slug = 'punta-banca' | 'punta-punta' | 'tri-punta' | 'multipla' | 'baccarat'
 
 const CALCS: Array<{
   slug: Slug
@@ -48,6 +49,14 @@ const CALCS: Array<{
     description: 'Calcolatore per scommesse multiple offline.',
     icon: Layers,
     render: () => <MultiplaOfflineCalculator />,
+  },
+  {
+    slug: 'baccarat',
+    title: 'Baccarat',
+    description:
+      "Player su un conto, Banco (commissione 5%) sull'altro. Calcola la copertura e il guadagno minimo, anche con bonus o rimborso.",
+    icon: Dices,
+    render: () => <BaccaratCalculator />,
   },
 ]
 

@@ -358,7 +358,8 @@ export function PuntaPuntaCalculator() {
         metodo: 'punta' as const,
         tipoBonus: tipoBonusA as 'none' | 'bonus' | 'rimborso' | 'freebet',
         accountId: accountIdPuntaA,
-        stake: puntataEffettivaA,
+        // Real stake only: the bonus travels in bonusValore (backend convention, §14.115).
+        stake: puntataANum ?? 0,
         quota: quotaANum,
         rischio: 0,
         bonusValore: bonusNum > 0 ? bonusNum : undefined,

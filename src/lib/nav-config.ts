@@ -121,7 +121,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       // { label: 'Condizionato', href: '/calcolatori/condizionato' },
       // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
       // { label: 'Converter', href: '/calcolatori/converter' },
-      // { label: 'Casino', href: '/calcolatori/casino' },
+      { label: 'Baccarat', href: '/calcolatori/baccarat' },
     ],
   },
   {

@@ -34,6 +34,7 @@ describe('logos and names', () => {
     expect(bookmakerLogoSrc('sisal')).toBe('/loghi_book/24.png')
     expect(bookmakerLogoSrc('BETFAIR')).toBe('/loghi_book/36.png')
     expect(bookmakerLogoSrc('perlaplay')).toBe('/loghi_book/49.png')
+    expect(bookmakerLogoSrc('mylotteriesplay')).toBe('/loghi_book/mylotteriesplay.png')
     expect(bookmakerLogoSrc('xsport')).toBeNull()
   })
 

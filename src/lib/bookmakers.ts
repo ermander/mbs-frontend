@@ -27,6 +27,8 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   goldbet: '16',
   leovegas: '18',
   marathonbet: '1',
+  // MyLotteriesPlay: a brand the RobinOdds list never had, its file is named after the slug.
+  mylotteriesplay: 'mylotteriesplay',
   netwin: '45',
   perlaplay: '49',
   planetwin365: '21',

@@ -59,6 +59,7 @@ export type MarketType =
   | 'TEAM_FIRST_HALF_CORNERS'
   | 'TEAM_SECOND_HALF_CORNERS'
   | 'CORNERS_1X2'
+  | 'FIRST_TO_CORNERS'
 
 export type MarketOutcome =
   | 'OVER'
@@ -73,6 +74,7 @@ export type MarketOutcome =
   | '1X'
   | 'X2'
   | '12'
+  | 'NONE'
 
 interface BaseMarketConfig {
   marketType: MarketType
@@ -100,7 +102,24 @@ interface PlainMarketConfig extends BaseMarketConfig {
   kind: 'plain'
 }
 
-export type MarketConfig = OverUnderMarketConfig | OutcomesMarketConfig | PlainMarketConfig
+/**
+ * Esiti fissi ripetuti per ogni linea (es. "Prima squadra a 5 corner: 1 / Nessuno / 2").
+ * `baseLabel` contiene il segnaposto `{n}` sostituito con la linea.
+ */
+interface LineOutcomesMarketConfig extends BaseMarketConfig {
+  kind: 'line_outcomes'
+  minLine: number
+  maxLine: number
+  /** Passo tra le linee (default 1) */
+  step?: number
+  outcomes: { code: MarketOutcome; label: string }[]
+}
+
+export type MarketConfig =
+  | OverUnderMarketConfig
+  | OutcomesMarketConfig
+  | PlainMarketConfig
+  | LineOutcomesMarketConfig
 
 export interface MarketOption {
   /** Id stabile, es. 'TOTAL_CORNERS:OVER:8.5' | 'CARDS_1X2:HOME' | 'HANDICAP' */
@@ -123,6 +142,13 @@ export interface MarketOption {
 const OUTCOMES_1X2: { code: MarketOutcome; label: string }[] = [
   { code: 'HOME', label: '1' },
   { code: 'DRAW', label: 'X' },
+  { code: 'AWAY', label: '2' },
+]
+
+/** Esiti "1 / Nessuno / 2" dei mercati a corsa (chi arriva prima a N) */
+const OUTCOMES_1_NONE_2: { code: MarketOutcome; label: string }[] = [
+  { code: 'HOME', label: '1' },
+  { code: 'NONE', label: 'Nessuno' },
   { code: 'AWAY', label: '2' },
 ]
 
@@ -387,6 +413,15 @@ const MARKET_CONFIGS: MarketConfig[] = [
     sport: 'calcio',
     outcomes: OUTCOMES_1X2,
   },
+  {
+    kind: 'line_outcomes',
+    marketType: 'FIRST_TO_CORNERS',
+    baseLabel: 'PRIMA SQUADRA A {n} CORNER',
+    sport: 'calcio',
+    minLine: 1,
+    maxLine: 10,
+    outcomes: OUTCOMES_1_NONE_2,
+  },
 ]
 
 // Aritmetica intera sui mezzi passi: i .5 sono esatti in IEEE 754, niente 16.499999
@@ -446,6 +481,20 @@ function buildOptions(config: MarketConfig): MarketOption[] {
           }
         }),
       )
+    case 'line_outcomes':
+      return buildLines(config.minLine, config.maxLine, config.step).flatMap((line) => {
+        const baseLabel = config.baseLabel.replace('{n}', String(line))
+        return config.outcomes.map((o) => ({
+          ...common,
+          baseLabel,
+          value: `${config.marketType}:${o.code}:${line}`,
+          label: `${iconPrefix}${baseLabel} ${o.label}`,
+          outcome: o.code,
+          line,
+          teamScoped: false,
+          suffix: ` ${o.label}`,
+        }))
+      })
   }
 }
 

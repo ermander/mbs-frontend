@@ -41,24 +41,35 @@ const RANGES = [
   { label: '14 g', hours: 336 },
 ]
 
+type Unit = 'count' | 'ms' | 's'
+
 interface ChartDef {
   title: string
   metric: string
   perBookmaker?: boolean
-  unit?: 'count' | 'ms'
+  unit?: Unit
   hint?: string
 }
 
 const CHARTS: ChartDef[] = [
   { title: 'Quote scritte', metric: 'ingest_odds_written', perBookmaker: true, hint: 'create + aggiornate per intervallo' },
   { title: 'Quote attive', metric: 'odds_active', perBookmaker: true },
+  // §14.145: età delle quote attive (adesso − last_seen_at) sugli eventi entro 24 h dal kickoff,
+  // per bookmaker: la freschezza che il refresh consegna davvero.
+  { title: 'Età quote p50 (≤24 h)', metric: 'odds_age_p50_s', perBookmaker: true, unit: 's', hint: 'mediana di adesso − visto' },
+  { title: 'Età quote p90 (≤24 h)', metric: 'odds_age_p90_s', perBookmaker: true, unit: 's', hint: '90º percentile di adesso − visto' },
   { title: 'Coda di revisione', metric: 'review_queue_pending', hint: 'orfani in attesa' },
   { title: 'Righe del matcher', metric: 'matcher_rows' },
   { title: 'Durata rebuild', metric: 'rebuild_duration_ms', unit: 'ms' },
   { title: 'Durata refresh', metric: 'refresh_duration_ms', unit: 'ms' },
 ]
 
-function formatValue(v: number, unit?: 'count' | 'ms'): string {
+function formatValue(v: number, unit?: Unit): string {
+  if (unit === 's') {
+    if (v >= 3600) return `${(v / 3600).toFixed(1)} h`
+    if (v >= 60) return `${(v / 60).toFixed(1)} min`
+    return `${Math.round(v)} s`
+  }
   if (unit === 'ms') {
     if (v >= 60_000) return `${(v / 60_000).toFixed(1)} min`
     if (v >= 1000) return `${(v / 1000).toFixed(1)} s`
@@ -110,7 +121,7 @@ function TrendTooltip({
   active?: boolean
   payload?: Array<{ dataKey?: string | number; value?: number | string; stroke?: string }>
   label?: number
-  unit?: 'count' | 'ms'
+  unit?: Unit
   perBookmaker?: boolean
 }) {
   if (!active || !payload || payload.length === 0) return null

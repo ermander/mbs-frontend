@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // A second `next dev` in this folder (a browser check while another one runs) needs its own
   // build folder: Next 16 keeps one dev lock per distDir. Unset = the usual .next.
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Worktree gemelli (CLAUDE.md): node_modules è un symlink al checkout principale, fuori dalla
+  // cartella del progetto, e Turbopack rifiuta un link che esce dalla sua radice. Con
+  // NEXT_TURBOPACK_ROOT=/percorso/di/mbs la radice contiene entrambi. Unset = comportamento solito.
+  ...(process.env.NEXT_TURBOPACK_ROOT
+    ? { turbopack: { root: process.env.NEXT_TURBOPACK_ROOT } }
+    : {}),
   async headers() {
     return [
       {

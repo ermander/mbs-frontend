@@ -168,7 +168,7 @@ export function ResultBttsFilterBar({
           </Label>
           <Input
             id="rb-from"
-            type="date"
+            type="datetime-local"
             value={filters.startFrom}
             onChange={(e) => onChange({ startFrom: e.target.value })}
             className="h-8"
@@ -180,7 +180,7 @@ export function ResultBttsFilterBar({
           </Label>
           <Input
             id="rb-to"
-            type="date"
+            type="datetime-local"
             value={filters.startTo}
             onChange={(e) => onChange({ startTo: e.target.value })}
             className="h-8"

@@ -28,14 +28,6 @@ function useNow(intervalMs: number): number {
   return now
 }
 
-/** A date-only input as the ISO bounds of that local day. */
-function dayStartIso(date: string): string {
-  return new Date(`${date}T00:00:00`).toISOString()
-}
-function dayEndIso(date: string): string {
-  return new Date(`${date}T23:59:59`).toISOString()
-}
-
 interface Snapshot {
   /** The query (and refresh tick) this answer belongs to. */
   key: string
@@ -104,8 +96,8 @@ export function ResultBttsTool() {
     if (filters.bookmakers.length > 0) q.bookmaker = filters.bookmakers.join(',')
     const minRating = parseNum(filters.minRating)
     if (minRating != null) q.min_rating = minRating
-    if (filters.startFrom) q.start_time_from = dayStartIso(filters.startFrom)
-    if (filters.startTo) q.start_time_to = dayEndIso(filters.startTo)
+    if (filters.startFrom) q.start_time_from = new Date(filters.startFrom).toISOString()
+    if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
     return q
   }, [
     page,

@@ -16,11 +16,13 @@ import {
 import { useNavSections } from './use-nav-sections'
 import { useHoverMenu } from './use-hover-menu'
 
+/** Voce della barra: 13px grigia, si accende in bianco/nero con un fondo leggero quando è attiva. */
 const entryClass = cn(
-  'flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors',
+  'flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] transition-colors',
   'text-muted-foreground hover:bg-accent hover:text-foreground',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
 )
+const activeClass = 'bg-accent font-medium text-foreground'
 
 interface TopnavDesktopNavProps {
   className?: string
@@ -53,7 +55,7 @@ function TopnavLink({ item, active }: { item: AuthNavItem; active: boolean }) {
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
-      className={cn(entryClass, active && 'bg-accent text-foreground')}
+      className={cn(entryClass, active && activeClass)}
     >
       {item.label}
     </Link>
@@ -72,7 +74,7 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
           className={cn(
             entryClass,
             'group data-[state=open]:bg-accent data-[state=open]:text-foreground',
-            active && 'bg-accent text-foreground',
+            active && activeClass,
           )}
         >
           {section.label}
@@ -91,7 +93,10 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
               <DropdownMenuItem
                 key={item.href}
                 asChild
-                className={cn('rounded-lg', itemActive && 'bg-accent/60 text-foreground')}
+                className={cn(
+                  'rounded-lg text-[13px]',
+                  itemActive && 'bg-accent/60 text-foreground',
+                )}
               >
                 <Link
                   href={item.href}
@@ -101,7 +106,7 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
                   <Icon
                     className={cn(
                       'h-4 w-4 shrink-0 text-muted-foreground',
-                      itemActive && 'text-primary',
+                      itemActive && 'text-foreground',
                     )}
                   />
                   <span>{item.label}</span>

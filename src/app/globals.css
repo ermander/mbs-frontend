@@ -101,9 +101,6 @@
   .glow-primary-strong {
     box-shadow: var(--glow-primary-strong);
   }
-  .text-gradient-primary {
-    @apply bg-gradient-to-r from-primary to-[hsl(var(--chart-2))] bg-clip-text text-transparent;
-  }
 }
 
 @keyframes fade-in {

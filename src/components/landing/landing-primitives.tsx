@@ -144,22 +144,21 @@ export function TextLink({
   )
 }
 
-/** Marchio OddWise: anello e punto monocromi, nome in Bricolage Grotesque 800 (l'unico extrabold). */
+/**
+ * Marchio OddWise: anello e punto monocromi, nome in Bricolage Grotesque 800 (l'unico extrabold).
+ * Eredita il colore dal contenitore: `text-ow-text` nelle pagine pubbliche, `text-foreground`
+ * nella barra dell'area autenticata (dove i token ow-* sono quelli del tema dark).
+ */
 export function Wordmark({ size = 'nav' }: { size?: 'nav' | 'footer' }) {
   const mark = size === 'nav' ? 'h-6 w-6' : 'h-5 w-5'
   const text = size === 'nav' ? 'text-[20px]' : 'text-lg'
   return (
     <>
-      <svg
-        viewBox="0 0 34 34"
-        fill="none"
-        aria-hidden="true"
-        className={cn('shrink-0 text-ow-text', mark)}
-      >
+      <svg viewBox="0 0 34 34" fill="none" aria-hidden="true" className={cn('shrink-0', mark)}>
         <circle cx="17" cy="17" r="14" stroke="currentColor" strokeWidth="4" />
         <circle cx="17" cy="17" r="5" fill="currentColor" />
       </svg>
-      <span className={cn('font-ow-display font-extrabold tracking-[-0.03em] text-ow-text', text)}>
+      <span className={cn('font-ow-display font-extrabold tracking-[-0.03em]', text)}>
         {BRAND.name}
       </span>
     </>

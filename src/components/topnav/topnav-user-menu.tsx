@@ -50,18 +50,18 @@ export function TopnavUserMenu() {
           {...triggerProps}
           aria-label="Menu account"
           className={cn(
-            'flex h-9 items-center gap-2 rounded-md px-1.5 text-left transition-colors',
+            'flex h-8 items-center gap-2 rounded-md px-1.5 text-left transition-colors',
             'hover:bg-accent data-[state=open]:bg-accent',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           )}
         >
           <span
             aria-hidden
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-accent text-[11px] font-semibold text-foreground"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-accent text-[10px] font-medium text-foreground"
           >
             {initials}
           </span>
-          <span className="hidden max-w-[10rem] truncate text-sm font-medium text-foreground lg:block">
+          <span className="hidden max-w-[10rem] truncate text-[13px] text-foreground lg:block">
             {displayName}
           </span>
           <ChevronDown className="hidden h-3.5 w-3.5 shrink-0 text-muted-foreground lg:block" />
@@ -73,11 +73,11 @@ export function TopnavUserMenu() {
           className="min-w-[14rem] rounded-xl"
         >
           <div className="px-2 py-1.5">
-            <div className="truncate text-sm font-medium text-foreground">{displayName}</div>
+            <div className="truncate text-[13px] font-medium text-foreground">{displayName}</div>
             {email && <div className="truncate text-xs text-muted-foreground">{email}</div>}
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild className="rounded-lg">
+          <DropdownMenuItem asChild className="rounded-lg text-[13px]">
             <Link href={accountNavItem.href} className="flex items-center gap-2">
               <AccountIcon className="h-4 w-4" />
               <span>{accountNavItem.label}</span>
@@ -89,7 +89,7 @@ export function TopnavUserMenu() {
               e.preventDefault()
               void handleLogout()
             }}
-            className="rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive"
+            className="rounded-lg text-[13px] text-destructive focus:bg-destructive/10 focus:text-destructive"
           >
             <LogOut className="mr-2 h-4 w-4" />
             <span>Logout</span>

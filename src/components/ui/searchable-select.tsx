@@ -147,7 +147,7 @@ export function SearchableSelect({
             role="listbox"
             data-searchable-select
             className={cn(
-              'pointer-events-auto z-[9999] overflow-hidden rounded-md border border-border bg-popover shadow-lg',
+              'pointer-events-auto z-[9999] overflow-hidden rounded-lg border border-border bg-popover shadow-lg',
               dropdownPos.useAbsolute ? 'absolute' : 'fixed',
             )}
             style={{

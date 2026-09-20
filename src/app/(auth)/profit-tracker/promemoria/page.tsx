@@ -71,10 +71,7 @@ export default function PromemoriaPage() {
       )
     }
     return (
-      <Badge
-        variant="outline"
-        className="border-destructive/20 bg-destructive/10 text-xs text-destructive"
-      >
+      <Badge variant="outline" className="border-border bg-destructive/10 text-xs text-destructive">
         Scaduto
       </Badge>
     )
@@ -236,7 +233,7 @@ export default function PromemoriaPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Scadenza</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Descrizione</th>

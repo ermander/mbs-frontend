@@ -150,10 +150,10 @@ export default function CollaboratoriPage() {
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Stato</span>
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
                       holder.stato === 'abilitato'
                         ? 'border border-emerald-500/20 bg-emerald-500/15 text-emerald-400'
-                        : 'border border-white/10 bg-white/5 text-white/40'
+                        : 'border border-border bg-muted text-muted-foreground'
                     }`}
                   >
                     {holder.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
@@ -187,11 +187,12 @@ export default function CollaboratoriPage() {
           ))}
         {!isLoadingHolders && holders.length === 0 && (
           <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
-            Nessun collaboratore registrato. Usa &quot;Nuovo collaboratore&quot; per aggiungerne uno.
+            Nessun collaboratore registrato. Usa &quot;Nuovo collaboratore&quot; per aggiungerne
+            uno.
           </div>
         )}
         {holdersError && !isLoadingHolders && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-center text-xs text-destructive">
+          <div className="rounded-xl border border-border bg-destructive/10 p-3 text-center text-xs text-destructive">
             {holdersError}
           </div>
         )}
@@ -201,7 +202,7 @@ export default function CollaboratoriPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Stato</th>
@@ -228,10 +229,10 @@ export default function CollaboratoriPage() {
                   </td>
                   <td className="px-3 py-2 text-xs">
                     <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      className={`inline-flex rounded px-2 py-0.5 text-[11px] font-medium ${
                         holder.stato === 'abilitato'
                           ? 'border border-emerald-500/20 bg-emerald-500/15 text-emerald-400'
-                          : 'border border-white/10 bg-white/5 text-white/40'
+                          : 'border border-border bg-muted text-muted-foreground'
                       }`}
                     >
                       {holder.stato === 'abilitato' ? 'Abilitato' : 'Non abilitato'}
@@ -267,8 +268,8 @@ export default function CollaboratoriPage() {
             {!isLoadingHolders && holders.length === 0 && (
               <tr>
                 <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={4}>
-                  Nessun collaboratore registrato. Usa &quot;Nuovo collaboratore&quot; per aggiungerne
-                  uno.
+                  Nessun collaboratore registrato. Usa &quot;Nuovo collaboratore&quot; per
+                  aggiungerne uno.
                 </td>
               </tr>
             )}

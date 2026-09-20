@@ -21,26 +21,28 @@ interface LegChipProps {
   className?: string
 }
 
-const TONES: Record<LegRole, { box: string; odds: string; tag: string | null; tagClass: string }> = {
-  punta: {
-    box: 'border-primary/30 bg-primary/10',
-    odds: 'text-primary',
-    tag: 'PUNTA',
-    tagClass: 'bg-primary/20 text-primary',
-  },
-  banca: {
-    box: 'border-destructive/30 bg-destructive/10',
-    odds: 'text-destructive',
-    tag: 'BANCA',
-    tagClass: 'bg-destructive/20 text-destructive',
-  },
-  dutch: {
-    box: 'border-sky-500/30 bg-sky-500/10',
-    odds: 'text-sky-300',
-    tag: null,
-    tagClass: '',
-  },
-}
+const TONES: Record<LegRole, { box: string; odds: string; tag: string | null; tagClass: string }> =
+  {
+    // Hairline boxes for every role; the role lives in the tag and in the colour of the price only.
+    punta: {
+      box: 'border-border bg-card',
+      odds: 'text-foreground',
+      tag: 'PUNTA',
+      tagClass: 'text-muted-foreground',
+    },
+    banca: {
+      box: 'border-border bg-card',
+      odds: 'text-rose-400',
+      tag: 'BANCA',
+      tagClass: 'text-rose-400',
+    },
+    dutch: {
+      box: 'border-border bg-card',
+      odds: 'text-foreground',
+      tag: null,
+      tagClass: '',
+    },
+  }
 
 /** The bookmaker's event page, opened in a new tab by clicking the logo itself (no extra icon); the click must not reach the row (which opens the calculator). */
 export function BookmakerLink({
@@ -59,7 +61,10 @@ export function BookmakerLink({
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
-      className={cn('inline-flex items-center gap-1 rounded hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring', className)}
+      className={cn(
+        'inline-flex items-center gap-1 rounded hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        className,
+      )}
       title={`Apri l'evento su ${shortBookmakerName(leg.bookmakerName)}`}
       aria-label={`Apri l'evento su ${shortBookmakerName(leg.bookmakerName)}`}
     >
@@ -88,7 +93,7 @@ export function LegChip({
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 align-middle',
+        'inline-flex max-w-full items-center gap-1.5 rounded-ow-btn border px-2 py-1 align-middle',
         tone.box,
         className,
       )}
@@ -97,17 +102,23 @@ export function LegChip({
         <BookmakerBadge slug={leg.bookmakerSlug} name={leg.bookmakerName} />
       </BookmakerLink>
       <span className="truncate text-xs text-foreground">{outcomeName(leg)}</span>
-      <span className={cn('font-mono text-sm font-bold tabular-nums', tone.odds)} title={priceTitle}>
+      <span
+        className={cn('font-mono text-[13px] font-medium tabular-nums', tone.odds)}
+        title={priceTitle}
+      >
         {displayOdds.toFixed(2)}
       </span>
       {tone.tag && (
-        <span className={cn('rounded px-1 py-0 text-[9px] font-bold tracking-wide', tone.tagClass)}>
+        <span className={cn('font-mono text-[9px] uppercase tracking-[0.02em]', tone.tagClass)}>
           {tone.tag}
         </span>
       )}
       {age != null && leg.lastSeenAt && (
         <span
-          className={cn('inline-block h-2 w-2 shrink-0 rounded-full bg-current', ageClass(age, staleAfterSeconds))}
+          className={cn(
+            'inline-block h-2 w-2 shrink-0 rounded-full bg-current',
+            ageClass(age, staleAfterSeconds),
+          )}
           title={`Quota vista ${ageLabel(age)} fa (alle ${formatClock(leg.lastSeenAt)})`}
           aria-label={`Quota vista ${ageLabel(age)} fa`}
         />

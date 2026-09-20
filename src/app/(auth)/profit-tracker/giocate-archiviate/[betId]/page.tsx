@@ -32,13 +32,13 @@ function statoEventoBadgeClass(stato: BetLeg['statoEvento']): string {
     case 'vinto':
       return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
     case 'perso':
-      return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-destructive/15 text-destructive border-destructive/20'
+      return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-destructive/15 text-destructive border-border'
     case 'in_corso':
       return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-amber-500/15 text-amber-400 border-amber-500/20'
     case 'annullato':
-      return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20'
+      return 'rounded-md border px-2 py-0.5 text-xs font-medium bg-violet-500/10 text-violet-400 border-violet-500/20'
     default:
-      return 'rounded-md border border-border px-2 py-0.5 text-xs font-medium bg-white/5 text-white/40'
+      return 'rounded-md border border-border px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground'
   }
 }
 
@@ -139,7 +139,7 @@ export default function ArchivedBetDetailPage() {
 
       <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
             <span className="text-muted-foreground">ID GIOCATA </span>
             <span className="font-mono text-foreground">{bet.id}</span>
           </p>
@@ -306,7 +306,7 @@ export default function ArchivedBetDetailPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>

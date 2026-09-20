@@ -22,12 +22,10 @@ export function ToolPageShell({
   return (
     <section className={cn('space-y-4', className)}>
       <header className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+        <h1 className="text-lg font-medium tracking-[-0.012em] text-foreground sm:text-xl">
           Strumenti: {toolName}
         </h1>
-        {description ? (
-          <p className="text-xs text-muted-foreground sm:text-sm">{description}</p>
-        ) : null}
+        {description ? <p className="text-[13px] text-muted-foreground">{description}</p> : null}
       </header>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
       <div className="space-y-4">{children}</div>

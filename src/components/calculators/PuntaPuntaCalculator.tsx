@@ -460,7 +460,7 @@ export function PuntaPuntaCalculator() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Sezione input */}
-      <div className="border-b border-border bg-primary/5 p-4">
+      <div className="border-b border-border bg-muted/40 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata-a">Puntata A</Label>
@@ -656,7 +656,7 @@ export function PuntaPuntaCalculator() {
 
             {/* Layout a card solo su mobile (< sm) */}
             <div className="block space-y-3 p-4 sm:hidden">
-              <div className="rounded-xl border border-border bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-accent p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book A:</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -688,7 +688,7 @@ export function PuntaPuntaCalculator() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-border bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-accent p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book B:</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -756,7 +756,7 @@ export function PuntaPuntaCalculator() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
+                  <tr className="border-b border-border bg-accent transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci sul Book A:</td>
                     <td className="p-3 text-right text-primary">
                       {formatSigned(
@@ -777,7 +777,7 @@ export function PuntaPuntaCalculator() {
                       </span>
                     </td>
                   </tr>
-                  <tr className="bg-primary/10 transition-colors hover:bg-accent">
+                  <tr className="bg-accent transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci sul Book B:</td>
                     <td className="p-3 text-right text-destructive">
                       {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
@@ -811,7 +811,7 @@ export function PuntaPuntaCalculator() {
               return (
                 <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
                       Contropuntata parziale {partialPuntas.length > 1 ? `#${i + 1}` : ''}
                     </p>
                     <button
@@ -854,7 +854,7 @@ export function PuntaPuntaCalculator() {
                   </div>
                   {result != null && (
                     <div className="mt-3 rounded-lg bg-background/60 p-2.5">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                         Nuova puntata B
                       </p>
                       <p className="font-mono text-sm font-semibold text-primary">
@@ -869,7 +869,7 @@ export function PuntaPuntaCalculator() {
               <button
                 type="button"
                 onClick={addPartialPunta}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
               >
                 <span className="text-base leading-none">+</span>
                 Contropuntata parziale
@@ -1016,9 +1016,9 @@ export function PuntaPuntaCalculator() {
 
                 <BetCategorySelect value={categoria} onChange={setCategoria} />
 
-                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                    <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
                       Collaboratore Punta 1
                     </Label>
                   </div>
@@ -1064,7 +1064,7 @@ export function PuntaPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaA && accountsPuntaA.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                         Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                         Profit Tracker → Conti.
                       </p>
@@ -1072,8 +1072,8 @@ export function PuntaPuntaCalculator() {
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+                <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+                  <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
                     Collaboratore Punta 2
                   </Label>
                   <div className="space-y-2">
@@ -1120,7 +1120,7 @@ export function PuntaPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaB && accountsPuntaB.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                         Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                         Profit Tracker → Conti.
                       </p>
@@ -1177,7 +1177,7 @@ export function PuntaPuntaCalculator() {
                 )}
 
                 {holderModalError && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <div className="rounded-lg border border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {holderModalError}
                   </div>
                 )}

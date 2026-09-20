@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,9 +15,7 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "plugins": [
       {
@@ -37,9 +31,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-alt/types/**/*.ts",
-    ".next-alt/dev/types/**/*.ts"
+    ".next-alt/dev/types/**/*.ts",
+    ".next-oddwise/types/**/*.ts",
+    ".next-oddwise/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

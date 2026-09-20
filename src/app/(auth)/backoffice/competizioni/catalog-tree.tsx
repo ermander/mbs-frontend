@@ -40,7 +40,8 @@ export function CatalogTree({
       return next
     })
   }
-  const isSportOpen = (s: CompetitionCatalogSportDto) => autoExpand || (overrides.get(s.sportId) ?? true)
+  const isSportOpen = (s: CompetitionCatalogSportDto) =>
+    autoExpand || (overrides.get(s.sportId) ?? true)
   const isCategoryOpen = (c: CompetitionCatalogCategoryDto) =>
     autoExpand || (overrides.get(c.categoryId) ?? false)
 
@@ -259,7 +260,7 @@ function OnCount({ enabled, total }: { enabled: number; total: number }) {
         : 'bg-amber-500/15 text-amber-500'
   return (
     <span
-      className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-normal tabular-nums ${tone}`}
+      className={`rounded px-2 py-0.5 font-mono text-[11px] font-normal tabular-nums ${tone}`}
       title="Competizioni lette / totali"
     >
       {num(enabled)}/{num(total)}
@@ -282,7 +283,8 @@ function Caret({ open }: { open: boolean }) {
 
 function Flag({ countryCode, name }: { countryCode: string | null; name: string }) {
   const url = getCountryFlagUrlFromIso(countryCode) ?? getCountryFlagUrl(name)
-  if (!url) return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
+  if (!url)
+    return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover" />
 }

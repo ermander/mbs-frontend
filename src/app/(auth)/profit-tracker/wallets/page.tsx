@@ -111,7 +111,7 @@ export default function WalletsPage() {
           'inline-flex h-6 items-center gap-1 rounded-pill border px-2 text-[11px] font-medium transition-colors ' +
           (current
             ? 'border-amber-500/30 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-            : 'border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/60')
+            : 'border-border bg-muted text-muted-foreground hover:border-border hover:text-foreground')
         }
       >
         {current ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
@@ -455,7 +455,7 @@ export default function WalletsPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Collaboratore</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Descrizione</th>

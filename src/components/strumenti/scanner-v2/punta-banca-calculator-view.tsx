@@ -197,10 +197,12 @@ export function PuntaBancaCalculatorView({
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
       {/* PUNTA e BANCA */}
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 sm:p-4">
+        <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-primary">Punta</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-primary">
+                Punta
+              </p>
               <span className="text-[10px] text-muted-foreground">
                 {event.mercato} · {selezione}
               </span>
@@ -215,14 +217,14 @@ export function PuntaBancaCalculatorView({
             placeholder="0"
             value={quotaPunta}
             onChange={(e) => setQuotaPunta(sanitizeDecimal(e.target.value))}
-            className="mt-2 h-9 text-base font-semibold sm:h-10 sm:text-lg"
+            className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
             aria-label={`Quota punta su ${bookName}`}
           />
         </div>
-        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 sm:p-4">
+        <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-destructive">
+              <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-destructive">
                 Banca
               </p>
               <span className="text-[10px] text-muted-foreground">
@@ -239,15 +241,15 @@ export function PuntaBancaCalculatorView({
             placeholder="0"
             value={quotaBanca}
             onChange={(e) => setQuotaBanca(sanitizeDecimal(e.target.value))}
-            className="mt-2 h-9 text-base font-semibold sm:h-10 sm:text-lg"
+            className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
             aria-label={`Quota banca su ${exchangeName}`}
           />
         </div>
       </div>
 
       {/* Importi e risultati */}
-      <div className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
           Importi e risultati
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -275,7 +277,7 @@ export function PuntaBancaCalculatorView({
           step={0.5}
           label="Sbilanciamento bancata"
         />
-        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5 sm:grid-cols-4">
           <ResultStat label="Bancata" value={formatNum(result.layStake)} />
           <ResultStat label="Rischio" value={formatNum(result.responsabilita)} />
           <ResultStat
@@ -296,9 +298,9 @@ export function PuntaBancaCalculatorView({
           {partialLays.map((pl, i) => {
             const step = result.partialLayResults[i] ?? null
             return (
-              <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
+              <div key={i} className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
                     Bancata parziale {partialLays.length > 1 ? `#${i + 1}` : ''}
                   </p>
                   <button
@@ -325,7 +327,7 @@ export function PuntaBancaCalculatorView({
                   />
                 </div>
                 {step != null && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5">
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5">
                     <ResultStat
                       label="Nuova bancata"
                       value={`€${formatNum(step.newLayStake)}`}
@@ -341,7 +343,7 @@ export function PuntaBancaCalculatorView({
             <button
               type="button"
               onClick={() => setPartialLays((prev) => [...prev, { amount: '', newOdds: '' }])}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              className="flex w-full items-center justify-center gap-1.5 rounded-ow-btn border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
             >
               <span className="text-base leading-none">+</span>
               Bancata parziale
@@ -352,14 +354,14 @@ export function PuntaBancaCalculatorView({
 
       {/* Profitti */}
       {result.showSummary && result.guadagnoMinimo != null && (
-        <div className="rounded-xl border border-border">
+        <div className="rounded-ow-card border border-border">
           <div className="bg-muted/30 px-4 py-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
               Profitti
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-sm">
+            <table className="w-full whitespace-nowrap text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-muted/20 text-xs font-medium text-muted-foreground">
                   <th className="px-4 py-2.5 text-left" />
@@ -371,7 +373,7 @@ export function PuntaBancaCalculatorView({
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-border/50 bg-primary/5">
+                <tr className="border-b border-border/50">
                   <td className="px-4 py-2.5 text-muted-foreground">
                     se vinci la puntata su {bookName}
                   </td>
@@ -386,7 +388,7 @@ export function PuntaBancaCalculatorView({
                   )}
                   <td
                     className={cn(
-                      'px-4 py-2.5 text-right font-semibold',
+                      'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
                       profitClass(result.totalSeVinciPuntata),
                     )}
                   >
@@ -398,7 +400,7 @@ export function PuntaBancaCalculatorView({
                       : '—'}
                   </td>
                 </tr>
-                <tr className="bg-destructive/5">
+                <tr>
                   <td className="px-4 py-2.5 text-muted-foreground">
                     se vinci la bancata su {exchangeName}
                   </td>
@@ -415,7 +417,7 @@ export function PuntaBancaCalculatorView({
                   )}
                   <td
                     className={cn(
-                      'px-4 py-2.5 text-right font-semibold',
+                      'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
                       profitClass(result.totalSeVinciBancata),
                     )}
                   >
@@ -437,8 +439,7 @@ export function PuntaBancaCalculatorView({
       <div className="space-y-3 border-t border-border pt-4">
         <BetCategorySelect value={categoria} onChange={setCategoria} />
         <Button
-          variant="success"
-          className="w-full"
+          className="w-full rounded-ow-btn"
           onClick={() => setAssignOpen(true)}
           disabled={!canSend}
         >

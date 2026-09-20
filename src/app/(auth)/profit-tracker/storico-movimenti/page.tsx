@@ -31,14 +31,14 @@ const SOURCE_LABELS: Record<ActivityFeedSource, string> = {
 }
 
 const SOURCE_COLORS: Record<ActivityFeedSource, string> = {
-  bet_settlement: 'bg-neon-blue/15 text-neon-blue border border-neon-blue/20',
-  quick_bet: 'bg-neon-lavender/15 text-neon-lavender border border-neon-lavender/20',
+  bet_settlement: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+  quick_bet: 'bg-violet-500/10 text-violet-400 border border-violet-500/20',
   deposito: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
-  prelievo: 'bg-destructive/15 text-destructive border border-destructive/20',
+  prelievo: 'bg-destructive/15 text-destructive border border-border',
   riconciliazione: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
   ricarica: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
-  spesa: 'bg-destructive/15 text-destructive border border-destructive/20',
-  trasferimento: 'bg-white/5 text-white/40 border border-white/10',
+  spesa: 'bg-destructive/15 text-destructive border border-border',
+  trasferimento: 'bg-muted text-muted-foreground border border-border',
 }
 
 const FILTER_OPTIONS: { value: ActivityFeedSource | ''; label: string }[] = [
@@ -61,7 +61,7 @@ function StatoBadge({ stato }: { stato: AccountMovementStato | null | undefined 
       In attesa
     </span>
   ) : (
-    <span className="inline-block rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-white/50">
+    <span className="inline-block rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
       Pagato
     </span>
   )
@@ -322,7 +322,7 @@ export default function StoricoMovimentiPage() {
       {summary && (
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               Totale entrate
             </p>
             <p className="mt-2 font-mono text-xl font-semibold text-emerald-400">
@@ -330,7 +330,7 @@ export default function StoricoMovimentiPage() {
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               Totale uscite
             </p>
             <p className="mt-2 font-mono text-xl font-semibold text-destructive">
@@ -338,7 +338,7 @@ export default function StoricoMovimentiPage() {
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               Saldo netto
             </p>
             <p
@@ -416,7 +416,7 @@ export default function StoricoMovimentiPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Data</th>
               <th className="px-3 py-2 text-left">Tipo</th>
               <th className="px-3 py-2 text-left">Conto / Wallet</th>

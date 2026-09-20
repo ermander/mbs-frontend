@@ -225,14 +225,14 @@ export function ResultBttsCalculatorView({
               key={leg.key}
               className={cn(
                 'rounded-xl border p-3 sm:p-4',
-                isPunta ? 'border-primary/20 bg-primary/5' : 'border-sky-500/20 bg-sky-500/5',
+                isPunta ? 'border-border bg-muted/40' : 'border-sky-500/20 bg-sky-500/5',
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <p
                   className={cn(
-                    'text-[11px] font-medium uppercase tracking-wide',
-                    isPunta ? 'text-primary' : 'text-sky-300',
+                    'font-mono text-[11px] font-medium uppercase tracking-[0.02em]',
+                    isPunta ? 'text-primary' : 'text-sky-400',
                   )}
                 >
                   {isPunta ? 'Puntata' : 'Copertura'} · {leg.label}
@@ -255,7 +255,7 @@ export function ResultBttsCalculatorView({
               />
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                     {isPunta ? 'Puntata' : 'Puntata copertura'}
                   </p>
                   <p className="font-mono text-sm font-semibold tabular-nums">
@@ -266,7 +266,7 @@ export function ResultBttsCalculatorView({
                   <button
                     type="button"
                     onClick={() => setPuntaIndex(i)}
-                    className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-primary"
                   >
                     Puntata qui
                   </button>
@@ -278,7 +278,7 @@ export function ResultBttsCalculatorView({
       </div>
 
       <div className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
           Importi e risultati
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -335,7 +335,7 @@ export function ResultBttsCalculatorView({
       {result.showSummary && (
         <div className="rounded-xl border border-border">
           <div className="bg-muted/30 px-4 py-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               Profitti
             </p>
           </div>
@@ -358,7 +358,7 @@ export function ResultBttsCalculatorView({
                       key={`profit-${leg.key}`}
                       className={cn(
                         'border-b border-border/50',
-                        legResult.isPunta ? 'bg-primary/5' : 'bg-sky-500/5',
+                        legResult.isPunta ? 'bg-muted/40' : 'bg-sky-500/5',
                       )}
                     >
                       <td className="px-4 py-2.5 text-muted-foreground">

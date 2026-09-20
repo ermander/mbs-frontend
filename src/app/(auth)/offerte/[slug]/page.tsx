@@ -14,7 +14,7 @@ export default function OfferteSlugPage({ params }: { params: Promise<{ slug: st
 
   return (
     <Container className="max-w-3xl space-y-4 text-center">
-      <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
       <p className="text-muted-foreground">In costruzione.</p>
     </Container>
   )

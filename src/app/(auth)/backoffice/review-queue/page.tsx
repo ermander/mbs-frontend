@@ -53,7 +53,7 @@ function formatDate(iso: string | null) {
 }
 
 function statusBadge(status: ReviewQueueStatus) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium'
+  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
   switch (status) {
     case 'pending':
       return `${base} bg-amber-500/15 text-amber-400`
@@ -238,7 +238,7 @@ export default function ReviewQueuePage() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+        <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -250,7 +250,7 @@ export default function ReviewQueuePage() {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="min-w-full text-sm">
-            <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted text-left font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
               <tr>
                 <th className="p-2">Status</th>
                 <th className="p-2">Bookmaker</th>

@@ -113,7 +113,7 @@ export function ScheduleTree({
                         <li key={c.categoryId}>
                           <div
                             className={`flex items-center gap-1 rounded-md pr-2 ${
-                              selected ? 'bg-primary/15 text-primary' : 'text-foreground'
+                              selected ? 'bg-accent text-primary' : 'text-foreground'
                             }`}
                           >
                             <button
@@ -162,7 +162,7 @@ export function ScheduleTree({
                                         )
                                       }
                                       className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent ${
-                                        sel ? 'bg-primary/15 text-primary' : 'text-foreground'
+                                        sel ? 'bg-accent text-primary' : 'text-foreground'
                                       } ${comp.scrapeEnabled ? '' : 'opacity-60'}`}
                                       title={
                                         comp.apisportsLeagueId !== null
@@ -234,7 +234,7 @@ function ScrapeDot({ enabled }: { enabled: boolean }) {
 
 function Count({ n }: { n: number }) {
   return (
-    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+    <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
       {num(n)}
     </span>
   )
@@ -242,7 +242,8 @@ function Count({ n }: { n: number }) {
 
 export function Flag({ countryCode, name }: { countryCode: string | null; name: string }) {
   const url = getCountryFlagUrlFromIso(countryCode) ?? getCountryFlagUrl(name)
-  if (!url) return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
+  if (!url)
+    return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover" />
 }

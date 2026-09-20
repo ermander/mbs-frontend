@@ -197,7 +197,7 @@ export default function BackofficeScrapersPage() {
               <div>
                 <p className="font-medium text-foreground">
                   Scraping globale:{' '}
-                  <span className={globalEnabled ? 'text-green-600' : 'text-red-500'}>
+                  <span className={globalEnabled ? 'text-green-400' : 'text-red-500'}>
                     {globalEnabled ? 'ATTIVO' : 'IN PAUSA'}
                   </span>
                 </p>
@@ -230,7 +230,7 @@ export default function BackofficeScrapersPage() {
 
       {/* Warning banner when globally paused */}
       {!globalEnabled && (
-        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
+        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
           Lo scraping è globalmente in pausa. I toggle dei singoli bookmaker restano modificabili ma
           non avranno effetto finché il globale non viene riattivato.
         </div>
@@ -269,7 +269,7 @@ export default function BackofficeScrapersPage() {
                       <span className="font-mono text-xs text-muted-foreground">
                         {scraper.slug}
                       </span>
-                      <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      <span className="inline-block rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {ADAPTER_TYPE_LABELS[scraper.adapter_type] ?? scraper.adapter_type}
                       </span>
                     </div>
@@ -303,7 +303,7 @@ export default function BackofficeScrapersPage() {
                         ? 'Legge tutte le competizioni del feed, anche quelle spente nel Palinsesto. Clicca per tornare al Palinsesto.'
                         : 'Legge solo le competizioni accese nel Palinsesto. Clicca per leggere tutto il feed (§14.125).'
                     }
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                       scraper.scrape_all_competitions
                         ? 'bg-amber-500/15 text-amber-500'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -416,7 +416,7 @@ export default function BackofficeScrapersPage() {
                               type="button"
                               disabled={savingSportsId === scraper.id}
                               onClick={() => handleSportToggle(scraper, sport)}
-                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                                 isActive
                                   ? 'bg-primary text-primary-foreground'
                                   : 'bg-muted text-muted-foreground hover:bg-muted/80'

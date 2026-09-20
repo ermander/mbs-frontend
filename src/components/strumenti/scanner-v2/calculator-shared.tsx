@@ -39,7 +39,7 @@ export function DecimalField({
 }) {
   return (
     <div className={cn('space-y-1', className)}>
-      <Label htmlFor={id} className="text-xs sm:text-sm">
+      <Label htmlFor={id} className="text-xs font-normal text-muted-foreground">
         {label}
       </Label>
       <Input
@@ -49,7 +49,7 @@ export function DecimalField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(sanitizeDecimal(e.target.value))}
-        className="h-8 sm:h-9"
+        className="h-8 rounded-ow-btn text-[13px] sm:h-9"
       />
     </div>
   )
@@ -73,7 +73,9 @@ export function ImbalanceSlider({
   return (
     <div className="mt-3">
       <div className="mb-1.5 flex items-center justify-between">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
+          {label}
+        </p>
         <span className="font-mono text-xs font-medium text-foreground">
           {value > 0 ? '+' : ''}
           {value.toFixed(1)}%
@@ -109,8 +111,10 @@ export function ResultStat({
 }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={cn('font-mono text-sm font-semibold tabular-nums', className)}>{value}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
+        {label}
+      </p>
+      <p className={cn('font-mono text-sm font-medium tabular-nums', className)}>{value}</p>
     </div>
   )
 }

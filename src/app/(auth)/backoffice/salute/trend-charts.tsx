@@ -52,12 +52,29 @@ interface ChartDef {
 }
 
 const CHARTS: ChartDef[] = [
-  { title: 'Quote scritte', metric: 'ingest_odds_written', perBookmaker: true, hint: 'create + aggiornate per intervallo' },
+  {
+    title: 'Quote scritte',
+    metric: 'ingest_odds_written',
+    perBookmaker: true,
+    hint: 'create + aggiornate per intervallo',
+  },
   { title: 'Quote attive', metric: 'odds_active', perBookmaker: true },
   // §14.145: età delle quote attive (adesso − last_seen_at) sugli eventi entro 24 h dal kickoff,
   // per bookmaker: la freschezza che il refresh consegna davvero.
-  { title: 'Età quote p50 (≤24 h)', metric: 'odds_age_p50_s', perBookmaker: true, unit: 's', hint: 'mediana di adesso − visto' },
-  { title: 'Età quote p90 (≤24 h)', metric: 'odds_age_p90_s', perBookmaker: true, unit: 's', hint: '90º percentile di adesso − visto' },
+  {
+    title: 'Età quote p50 (≤24 h)',
+    metric: 'odds_age_p50_s',
+    perBookmaker: true,
+    unit: 's',
+    hint: 'mediana di adesso − visto',
+  },
+  {
+    title: 'Età quote p90 (≤24 h)',
+    metric: 'odds_age_p90_s',
+    perBookmaker: true,
+    unit: 's',
+    hint: '90º percentile di adesso − visto',
+  },
   { title: 'Coda di revisione', metric: 'review_queue_pending', hint: 'orfani in attesa' },
   { title: 'Righe del matcher', metric: 'matcher_rows' },
   { title: 'Durata rebuild', metric: 'rebuild_duration_ms', unit: 'ms' },
@@ -92,7 +109,11 @@ function bookmakerLabel(slug: string): string {
 type Row = { t: number } & Record<string, number>
 
 /** Una riga per bucket temporale; le chiavi sono gli slug (o 'v' per la serie globale). */
-function pivot(history: MetricsHistory, metric: string, perBookmaker: boolean): { rows: Row[]; keys: string[] } {
+function pivot(
+  history: MetricsHistory,
+  metric: string,
+  perBookmaker: boolean,
+): { rows: Row[]; keys: string[] } {
   const series = history.series.filter((s) => s.metric === metric)
   const keys = perBookmaker ? series.map((s) => s.bookmaker).sort() : ['v']
   const byTime = new Map<number, Row>()
@@ -129,12 +150,20 @@ function TrendTooltip({
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
       <p className="mb-1 font-medium text-foreground">
         {label
-          ? new Date(label).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          ? new Date(label).toLocaleString('it-IT', {
+              day: '2-digit',
+              month: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : ''}
       </p>
       {payload.map((entry) => (
         <div key={String(entry.dataKey)} className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: entry.stroke }} />
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ background: entry.stroke }}
+          />
           <span className="text-muted-foreground">
             {perBookmaker ? bookmakerLabel(String(entry.dataKey)) : 'Valore'}
           </span>
@@ -181,7 +210,9 @@ function TrendChart({ def, history }: { def: ChartDef; history: MetricsHistory }
                 tickFormatter={(t: number) =>
                   new Date(t).toLocaleString(
                     'it-IT',
-                    shortRange ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit' },
+                    shortRange
+                      ? { hour: '2-digit', minute: '2-digit' }
+                      : { day: '2-digit', month: '2-digit' },
                   )
                 }
               />
@@ -214,7 +245,10 @@ function TrendChart({ def, history }: { def: ChartDef; history: MetricsHistory }
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
           {keys.map((key) => (
             <span key={key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: bookmakerColor(key) }} />
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: bookmakerColor(key) }}
+              />
               {bookmakerLabel(key)}
             </span>
           ))}
@@ -270,8 +304,14 @@ export function TrendCharts() {
         </div>
       </div>
       <div className="px-4 py-3">
-        {error && <p className="mb-2 text-xs text-destructive">Errore nel caricamento della storia delle metriche.</p>}
-        {!history && !error && <p className="py-6 text-center text-xs text-muted-foreground">Caricamento...</p>}
+        {error && (
+          <p className="mb-2 text-xs text-destructive">
+            Errore nel caricamento della storia delle metriche.
+          </p>
+        )}
+        {!history && !error && (
+          <p className="py-6 text-center text-xs text-muted-foreground">Caricamento...</p>
+        )}
         {history && (
           <>
             <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
@@ -280,7 +320,8 @@ export function TrendCharts() {
               ))}
             </div>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Campioni ogni {history.sampleMinutes} min, aggregati a {history.stepMinutes} min · retention {history.retentionDays} giorni
+              Campioni ogni {history.sampleMinutes} min, aggregati a {history.stepMinutes} min ·
+              retention {history.retentionDays} giorni
             </p>
           </>
         )}

@@ -176,19 +176,14 @@ export function DutchCalculatorView({
           return (
             <div
               key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
-              className={cn(
-                'rounded-xl border p-3 sm:p-4',
-                tone === 'primary'
-                  ? 'border-primary/20 bg-primary/5'
-                  : 'border-sky-500/20 bg-sky-500/5',
-              )}
+              className="rounded-ow-card border border-border bg-card p-3 sm:p-4"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p
                     className={cn(
-                      'text-[11px] font-medium uppercase tracking-wide',
-                      tone === 'primary' ? 'text-primary' : 'text-sky-300',
+                      'font-mono text-[11px] uppercase tracking-[0.02em]',
+                      tone === 'primary' ? 'text-primary' : 'text-sky-400',
                     )}
                   >
                     {isPunta ? 'Puntata' : 'Copertura'} · {outcomeName(leg)}
@@ -213,15 +208,15 @@ export function DutchCalculatorView({
                   const value = sanitizeDecimal(e.target.value)
                   setQuotes((prev) => prev.map((q, j) => (j === i ? value : q)))
                 }}
-                className="mt-2 h-9 text-base font-semibold sm:h-10 sm:text-lg"
+                className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
                 aria-label={`Quota ${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`}
               />
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                     {isPunta ? 'Puntata' : 'Puntata copertura'}
                   </p>
-                  <p className="font-mono text-sm font-semibold tabular-nums">
+                  <p className="font-mono text-sm font-medium tabular-nums">
                     {formatNum(legResult?.stake ?? null)} €
                   </p>
                 </div>
@@ -229,7 +224,7 @@ export function DutchCalculatorView({
                   <button
                     type="button"
                     onClick={() => setPuntaIndex(i)}
-                    className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                    className="rounded-ow-btn border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
                     Puntata qui
                   </button>
@@ -241,8 +236,8 @@ export function DutchCalculatorView({
       </div>
 
       {/* Importi e risultati */}
-      <div className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
           Importi e risultati
         </p>
         <div
@@ -282,7 +277,7 @@ export function DutchCalculatorView({
           step={1}
           label="Sbilanciamento coperture"
         />
-        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5 sm:grid-cols-4">
           <ResultStat
             label="Esborso totale"
             value={result.totalOutlay != null ? `€${formatNum(result.totalOutlay)}` : '—'}
@@ -307,14 +302,14 @@ export function DutchCalculatorView({
 
       {/* Profitti per esito */}
       {result.showSummary && (
-        <div className="rounded-xl border border-border">
+        <div className="rounded-ow-card border border-border">
           <div className="bg-muted/30 px-4 py-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
               Profitti
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-sm">
+            <table className="w-full whitespace-nowrap text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-muted/20 text-xs font-medium text-muted-foreground">
                   <th className="px-4 py-2.5 text-left">Esito</th>
@@ -328,13 +323,7 @@ export function DutchCalculatorView({
                 {row.legs.map((leg, i) => {
                   const legResult = result.legs[i]
                   return (
-                    <tr
-                      key={`profit-${i}`}
-                      className={cn(
-                        'border-b border-border/50',
-                        legResult.isPunta ? 'bg-primary/5' : 'bg-sky-500/5',
-                      )}
-                    >
+                    <tr key={`profit-${i}`} className="border-b border-border/50">
                       <td className="px-4 py-2.5 text-muted-foreground">
                         vince{' '}
                         <span className="font-medium text-foreground">{outcomeName(leg)}</span> su{' '}
@@ -353,7 +342,7 @@ export function DutchCalculatorView({
                       )}
                       <td
                         className={cn(
-                          'px-4 py-2.5 text-right font-semibold',
+                          'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
                           profitClass(legResult.profit),
                         )}
                       >
@@ -372,8 +361,7 @@ export function DutchCalculatorView({
       <div className="space-y-3 border-t border-border pt-4">
         <BetCategorySelect value={categoria} onChange={setCategoria} />
         <Button
-          variant="success"
-          className="w-full"
+          className="w-full rounded-ow-btn"
           onClick={() => setAssignOpen(true)}
           disabled={!result.showSummary}
         >

@@ -108,15 +108,15 @@ interface ScannerV2FilterBarProps {
   multiplaTarget: number
 }
 
-const LABEL_CLASS = 'text-[11px] uppercase tracking-wider text-muted-foreground'
+const LABEL_CLASS = 'font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground'
 const SELECT_CLASS =
-  'h-8 w-full min-w-0 rounded-lg border border-border bg-surface-1 px-2 text-sm text-foreground'
+  'h-8 w-full min-w-0 rounded-ow-btn border border-border bg-surface-1 px-2 text-[13px] text-foreground'
 const noExponent = (e: React.KeyboardEvent<HTMLInputElement>) =>
   ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()
 
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-1 px-2 py-0.5 text-[11px] text-muted-foreground">
+    <span className="inline-flex items-center gap-1 rounded border border-border bg-surface-1 px-1.5 py-0.5 text-[11px] text-muted-foreground">
       {children}
       <button
         type="button"
@@ -153,7 +153,7 @@ function AmountField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={noExponent}
-        className="h-8 w-20 text-sm"
+        className="h-8 w-20 rounded-ow-btn text-[13px]"
         aria-label={ariaLabel}
       />
     </div>
@@ -202,7 +202,7 @@ export function ScannerV2FilterBar({
   return (
     <div className="space-y-0">
       {/* Main bar */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-1 px-3 py-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-ow-card border border-border bg-surface-1 px-3 py-2">
         <div className="relative min-w-[180px] flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -210,7 +210,7 @@ export function ScannerV2FilterBar({
             placeholder="Cerca evento o competizione…"
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
-            className="h-8 border-0 bg-transparent pl-8 text-sm focus-visible:ring-0"
+            className="h-8 border-0 bg-transparent pl-8 text-[13px] focus-visible:ring-0"
             aria-label="Cerca per evento o competizione"
           />
         </div>
@@ -243,16 +243,16 @@ export function ScannerV2FilterBar({
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
           className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all',
+            'inline-flex h-8 items-center gap-1.5 rounded-ow-btn border px-3 text-[13px] transition-colors',
             open
-              ? 'border-primary/30 bg-primary/10 text-primary'
-              : 'border-border text-muted-foreground hover:border-primary/20 hover:text-foreground',
+              ? 'border-border bg-accent font-medium text-foreground'
+              : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filtri
           {activeCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded bg-foreground px-1 font-mono text-[10px] font-medium text-background">
               {activeCount}
             </span>
           )}
@@ -262,15 +262,15 @@ export function ScannerV2FilterBar({
           onClick={() => onMultiplaOpenChange(!multiplaOpen)}
           aria-expanded={multiplaOpen}
           className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-all',
+            'inline-flex h-8 items-center gap-1.5 rounded-ow-btn border px-3 text-[13px] transition-colors',
             multiplaOpen
-              ? 'border-neon-lavender/30 bg-neon-lavender/10 text-neon-lavender'
-              : 'border-border text-muted-foreground hover:border-neon-lavender/20 hover:text-foreground',
+              ? 'border-border bg-accent font-medium text-foreground'
+              : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >
           Multipla
           {multiplaSelected > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-neon-lavender px-1 text-[10px] font-bold text-background">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded bg-foreground px-1 font-mono text-[10px] font-medium text-background">
               {multiplaSelected}/{multiplaTarget}
             </span>
           )}
@@ -278,7 +278,7 @@ export function ScannerV2FilterBar({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex h-8 items-center gap-1 rounded-ow-btn px-2 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
           aria-label="Reset filtri"
         >
           <RotateCcw className="h-3 w-3" />
@@ -290,7 +290,7 @@ export function ScannerV2FilterBar({
           onClick={onRefresh}
           disabled={loading}
           aria-busy={loading}
-          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-all hover:border-primary/20 hover:text-foreground disabled:cursor-wait disabled:opacity-70"
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-ow-btn border border-border px-3 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-wait disabled:opacity-70"
         >
           <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
           Refresh quote
@@ -361,7 +361,7 @@ export function ScannerV2FilterBar({
 
       {/* Advanced filters panel */}
       {open && (
-        <div className="mt-2 animate-fade-in rounded-xl border border-border bg-surface-1 p-4">
+        <div className="mt-2 animate-fade-in rounded-ow-card border border-border bg-surface-1 p-4">
           <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             <div className="flex min-w-0 flex-col gap-1">
               <Label className={LABEL_CLASS}>Tipo</Label>
@@ -482,7 +482,10 @@ export function ScannerV2FilterBar({
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS} title="I book su cui possono stare le altre gambe della combinazione">
+              <Label
+                className={LABEL_CLASS}
+                title="I book su cui possono stare le altre gambe della combinazione"
+              >
                 Book di copertura
               </Label>
               <SearchableMultiSelect
@@ -521,7 +524,7 @@ export function ScannerV2FilterBar({
                 value={filters.minRating}
                 onChange={(e) => onChange({ minRating: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={0}
                 step={0.5}
               />
@@ -534,7 +537,7 @@ export function ScannerV2FilterBar({
                 value={filters.maxRating}
                 onChange={(e) => onChange({ maxRating: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={0}
                 step={0.5}
               />
@@ -549,7 +552,7 @@ export function ScannerV2FilterBar({
                 value={filters.minOdds}
                 onChange={(e) => onChange({ minOdds: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={1}
                 step={0.01}
               />
@@ -564,7 +567,7 @@ export function ScannerV2FilterBar({
                 value={filters.maxOdds}
                 onChange={(e) => onChange({ maxOdds: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={1}
                 step={0.01}
               />
@@ -575,7 +578,7 @@ export function ScannerV2FilterBar({
                 type="datetime-local"
                 value={filters.startFrom}
                 onChange={(e) => onChange({ startFrom: e.target.value })}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
@@ -584,7 +587,7 @@ export function ScannerV2FilterBar({
                 type="datetime-local"
                 value={filters.startTo}
                 onChange={(e) => onChange({ startTo: e.target.value })}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
               />
             </div>
           </div>

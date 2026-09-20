@@ -5,10 +5,15 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { contactSchema, type ContactFormData } from '@/lib/validations/contact'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+import {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthLabel,
+  AuthMessage,
+  AuthTextarea,
+  FieldError,
+} from '@/components/auth/auth-primitives'
 
 export function ContactForm() {
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
@@ -47,33 +52,27 @@ export function ContactForm() {
   }, [])
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {submitStatus === 'success' && (
-        <p className="text-sm text-primary" role="status">
-          {submitMessage}
-        </p>
-      )}
-      {submitStatus === 'error' && (
-        <p className="text-sm text-destructive" role="alert">
-          {submitMessage}
-        </p>
-      )}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
+      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
-      <div className="space-y-2">
-        <Label htmlFor="contact-name">Nome</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="contact-name">Nome</AuthLabel>
+        <AuthInput
           id="contact-name"
           type="text"
           autoComplete="name"
           placeholder="Il tuo nome"
           aria-invalid={Boolean(errors.name)}
+          aria-describedby={errors.name ? 'contact-name-error' : undefined}
           {...register('name')}
         />
-      </div>
+        {errors.name && <FieldError id="contact-name-error">{errors.name.message}</FieldError>}
+      </AuthField>
 
-      <div className="space-y-2">
-        <Label htmlFor="contact-email">Email</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="contact-email">Email</AuthLabel>
+        <AuthInput
           id="contact-email"
           type="email"
           autoComplete="email"
@@ -82,38 +81,27 @@ export function ContactForm() {
           aria-describedby={errors.email ? 'contact-email-error' : undefined}
           {...register('email')}
         />
-        {errors.email && (
-          <p id="contact-email-error" className="text-sm text-destructive">
-            {errors.email.message}
-          </p>
-        )}
-      </div>
+        {errors.email && <FieldError id="contact-email-error">{errors.email.message}</FieldError>}
+      </AuthField>
 
-      <div className="space-y-2">
-        <Label htmlFor="contact-message">Messaggio</Label>
-        <textarea
+      <AuthField>
+        <AuthLabel htmlFor="contact-message">Messaggio</AuthLabel>
+        <AuthTextarea
           id="contact-message"
-          rows={4}
+          rows={5}
           placeholder="Scrivi il tuo messaggio..."
           aria-invalid={Boolean(errors.message)}
           aria-describedby={errors.message ? 'contact-message-error' : undefined}
-          className={cn(
-            'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-          )}
           {...register('message')}
         />
         {errors.message && (
-          <p id="contact-message-error" className="text-sm text-destructive">
-            {errors.message.message}
-          </p>
+          <FieldError id="contact-message-error">{errors.message.message}</FieldError>
         )}
-      </div>
+      </AuthField>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <AuthButton type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Invio in corso...' : 'Invia messaggio'}
-      </Button>
+      </AuthButton>
     </form>
   )
 }

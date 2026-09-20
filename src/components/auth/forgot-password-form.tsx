@@ -1,15 +1,20 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth'
 import { authClient } from '@/services/api/auth-client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthLabel,
+  AuthLink,
+  AuthMessage,
+  FieldError,
+} from '@/components/auth/auth-primitives'
 
 const SUCCESS_MESSAGE =
   "Se l'email è associata a un account, riceverai a breve un link per reimpostare la password. Controlla anche la cartella spam."
@@ -48,21 +53,13 @@ export function ForgotPasswordForm() {
   }, [])
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {submitStatus === 'success' && (
-        <p className="text-sm text-primary" role="status">
-          {submitMessage}
-        </p>
-      )}
-      {submitStatus === 'error' && (
-        <p className="text-sm text-destructive" role="alert">
-          {submitMessage}
-        </p>
-      )}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
+      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
-      <div className="space-y-2">
-        <Label htmlFor="forgot-email">Email</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="forgot-email">Email</AuthLabel>
+        <AuthInput
           id="forgot-email"
           type="email"
           autoComplete="email"
@@ -71,24 +68,15 @@ export function ForgotPasswordForm() {
           aria-describedby={errors.email ? 'forgot-email-error' : undefined}
           {...register('email')}
         />
-        {errors.email && (
-          <p id="forgot-email-error" className="text-sm text-destructive">
-            {errors.email.message}
-          </p>
-        )}
-      </div>
+        {errors.email && <FieldError id="forgot-email-error">{errors.email.message}</FieldError>}
+      </AuthField>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <AuthButton type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Invio in corso...' : 'Invia link'}
-      </Button>
+      </AuthButton>
 
-      <p className="text-center text-sm text-muted-foreground">
-        <Link
-          href="/login"
-          className="rounded text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Torna al login
-        </Link>
+      <p className="text-center text-sm text-ow-text-3">
+        <AuthLink href="/login">Torna al login</AuthLink>
       </p>
     </form>
   )

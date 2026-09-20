@@ -209,7 +209,7 @@ export default function GiocateInCorsoPage() {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-accent px-3 py-1.5 text-xs font-medium text-primary hover:bg-accent"
             onClick={() => setSingolaModalOpen(true)}
           >
             Nuova giocata singola
@@ -307,11 +307,11 @@ export default function GiocateInCorsoPage() {
                   {bet.eventoNome}
                 </h2>
                 {multipla ? (
-                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
+                  <span className="mt-0.5 shrink-0 rounded border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.02em] text-violet-400">
                     Multipla
                   </span>
                 ) : (
-                  <span className="mt-0.5 shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
+                  <span className="mt-0.5 shrink-0 rounded border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.02em] text-sky-400">
                     Singola
                   </span>
                 )}
@@ -429,7 +429,7 @@ export default function GiocateInCorsoPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
                     onClick={() => handleDelete(bet.id)}
                   >
                     Elimina
@@ -449,7 +449,7 @@ export default function GiocateInCorsoPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Data creazione</th>
               <th className="px-3 py-2 text-left">Data evento</th>
@@ -508,11 +508,11 @@ export default function GiocateInCorsoPage() {
                   <td className="whitespace-nowrap px-3 py-2 align-top text-sm text-foreground">
                     <span className="inline-flex items-center gap-2">
                       {multipla ? (
-                        <span className="inline-flex shrink-0 rounded-full border border-neon-lavender/20 bg-neon-lavender/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-lavender">
+                        <span className="inline-flex shrink-0 rounded border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.02em] text-violet-400">
                           Multipla
                         </span>
                       ) : (
-                        <span className="inline-flex shrink-0 rounded-full border border-neon-blue/20 bg-neon-blue/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neon-blue">
+                        <span className="inline-flex shrink-0 rounded border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.02em] text-sky-400">
                           Singola
                         </span>
                       )}
@@ -599,7 +599,7 @@ export default function GiocateInCorsoPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-md border border-destructive/40 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                        className="rounded-md border border-border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                         onClick={() => handleDelete(bet.id)}
                       >
                         Elimina

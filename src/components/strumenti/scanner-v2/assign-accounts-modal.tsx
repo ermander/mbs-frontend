@@ -39,20 +39,21 @@ interface AssignAccountsModalProps {
 }
 
 const TONES: Record<AssignTone, { box: string; label: string; badge: string }> = {
+  // Hairline boxes; the role colours only the label.
   primary: {
-    box: 'border-primary/20 bg-primary/5',
+    box: 'border-border bg-card',
     label: 'text-primary',
-    badge: 'bg-primary/15 text-primary',
+    badge: 'bg-muted text-foreground',
   },
   destructive: {
-    box: 'border-destructive/20 bg-destructive/5',
+    box: 'border-border bg-card',
     label: 'text-destructive',
-    badge: 'bg-destructive/15 text-destructive',
+    badge: 'bg-muted text-foreground',
   },
   sky: {
-    box: 'border-sky-500/20 bg-sky-500/5',
-    label: 'text-sky-300',
-    badge: 'bg-sky-500/15 text-sky-300',
+    box: 'border-border bg-card',
+    label: 'text-sky-400',
+    badge: 'bg-muted text-foreground',
   },
 }
 
@@ -141,13 +142,13 @@ export function AssignAccountsModal({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="max-w-md gap-0 p-0" showClose={true}>
+      <DialogContent className="max-w-md gap-0 rounded-ow-card p-0" showClose={true}>
         {/* Portal container per dropdown SearchableSelect dentro la modale */}
         <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-[9998]" aria-hidden />
         {savedBetId ? (
           <>
             <div className="px-6 pb-4 pt-6">
-              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+              <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Giocata salvata
               </DialogTitle>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -163,7 +164,7 @@ export function AssignAccountsModal({
               </p>
             </div>
             <div className="flex justify-end border-t border-border bg-muted/20 px-6 py-4">
-              <Button variant="outline" onClick={onDone}>
+              <Button variant="outline" className="rounded-ow-btn" onClick={onDone}>
                 Chiudi
               </Button>
             </div>
@@ -178,7 +179,7 @@ export function AssignAccountsModal({
         ) : (
           <>
             <div className="px-6 pb-1 pt-6">
-              <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+              <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Assegna collaboratori
               </DialogTitle>
               <p className="mt-1.5 text-sm text-muted-foreground">
@@ -193,19 +194,23 @@ export function AssignAccountsModal({
                 const info = byLeg[leg.key]
                 const bookmakerName = shortBookmakerName(leg.bookmaker.name)
                 return (
-                  <div key={leg.key} className={cn('space-y-2 rounded-xl border p-4', tone.box)}>
+                  <div
+                    key={leg.key}
+                    className={cn('space-y-2 rounded-ow-card border p-4', tone.box)}
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <Label
-                          className={cn('text-xs font-medium uppercase tracking-wide', tone.label)}
+                          className={cn(
+                            'font-mono text-[11px] uppercase tracking-[0.02em]',
+                            tone.label,
+                          )}
                         >
                           {leg.title}
                         </Label>
                         <p className="text-[11px] text-muted-foreground">{leg.detail}</p>
                       </div>
-                      <span
-                        className={cn('rounded-md px-2 py-0.5 text-xs font-medium', tone.badge)}
-                      >
+                      <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', tone.badge)}>
                         {bookmakerName}
                       </span>
                     </div>
@@ -222,14 +227,14 @@ export function AssignAccountsModal({
                       portalContainer={portalEl}
                     />
                     {info && info.bookId == null && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                      <p className="rounded-ow-btn border border-border px-3 py-2 text-xs text-amber-400">
                         Nessun libro del Profit Tracker corrisponde a {bookmakerName}. Collegalo dal
                         backoffice (External ID «{leg.bookmaker.slug}») o chiama il libro come il
                         bookmaker.
                       </p>
                     )}
                     {info && info.bookId != null && info.accounts.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                      <p className="rounded-ow-btn border border-border px-3 py-2 text-xs text-amber-400">
                         Nessun conto su {info.bookName}. Aggiungine uno in Profit Tracker → Conti.
                       </p>
                     )}
@@ -239,7 +244,7 @@ export function AssignAccountsModal({
             </div>
 
             {(error || loadError) && (
-              <div className="mx-6 mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+              <div className="mx-6 mb-2 rounded-ow-btn border border-border px-3 py-2">
                 <p className="text-sm text-destructive">{error ?? loadError}</p>
               </div>
             )}
@@ -247,7 +252,7 @@ export function AssignAccountsModal({
             <div className="flex flex-col-reverse justify-end gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:flex-row">
               <Button
                 variant="outline"
-                className="sm:min-w-[100px]"
+                className="rounded-ow-btn sm:min-w-[100px]"
                 onClick={() => onOpenChange(false)}
                 disabled={saving}
               >
@@ -255,8 +260,7 @@ export function AssignAccountsModal({
                 Annulla
               </Button>
               <Button
-                variant="success"
-                className="sm:min-w-[120px]"
+                className="rounded-ow-btn sm:min-w-[120px]"
                 onClick={() => onConfirm(selected)}
                 disabled={saving || !allChosen}
               >

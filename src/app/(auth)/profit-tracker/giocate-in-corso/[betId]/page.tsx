@@ -36,11 +36,11 @@ function statoEventoClasses(stato: BetLeg['statoEvento']): string {
     case 'vinto':
       return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20'
     case 'perso':
-      return 'bg-destructive/15 text-destructive border-destructive/20'
+      return 'bg-destructive/15 text-destructive border-border'
     case 'in_corso':
       return 'bg-amber-500/15 text-amber-400 border-amber-500/20'
     case 'annullato':
-      return 'bg-neon-lavender/15 text-neon-lavender border-neon-lavender/20'
+      return 'bg-violet-500/10 text-violet-400 border-violet-500/20'
     default:
       return 'bg-muted/50 text-muted-foreground border-border'
   }
@@ -625,7 +625,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
+        className="rounded bg-sky-500/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-600 hover:bg-sky-500/10"
         onClick={() => handleStartEdit(leg.id, field, displayValue)}
       >
         {format(displayValue)}
@@ -701,7 +701,7 @@ export default function BetDetailPage() {
     return (
       <button
         type="button"
-        className="whitespace-nowrap rounded bg-neon-blue/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
+        className="whitespace-nowrap rounded bg-sky-500/10 px-1.5 py-0.5 text-left text-xs text-foreground ring-1 ring-sky-600 hover:bg-sky-500/10"
         onClick={() => handleStartTextEdit(leg.id, field, displayValue)}
       >
         {displayValue}
@@ -762,7 +762,7 @@ export default function BetDetailPage() {
 
       <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
             <span className="text-muted-foreground">ID GIOCATA </span>
             <span className="font-mono text-foreground">{bet.id}</span>
           </p>
@@ -783,7 +783,7 @@ export default function BetDetailPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-primary hover:bg-primary/10"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-primary hover:bg-accent"
                   onClick={handleNotaSave}
                   title="Salva nota"
                 >
@@ -847,7 +847,7 @@ export default function BetDetailPage() {
           </button>
           <button
             type="button"
-            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-destructive/60 bg-transparent px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed text-destructive/50 opacity-50' : 'text-destructive hover:bg-destructive/10'}`}
+            className={`inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-transparent px-3 py-1.5 text-sm font-medium sm:w-auto ${hasLegsInCorso ? 'cursor-not-allowed text-destructive/50 opacity-50' : 'text-destructive hover:bg-destructive/10'}`}
             onClick={handleDeleteBet}
             disabled={hasLegsInCorso}
             title={
@@ -924,7 +924,7 @@ export default function BetDetailPage() {
                   ) : canEditLegEventDate(leg) ? (
                     <button
                       type="button"
-                      className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
+                      className="rounded bg-sky-500/10 px-1.5 py-0.5 text-xs text-foreground ring-1 ring-sky-600 hover:bg-sky-500/10"
                       onClick={() => handleStartDateEdit(leg)}
                     >
                       {renderEventDateCell(leg.eventoData)}
@@ -1094,7 +1094,7 @@ export default function BetDetailPage() {
                   </button>
                   <button
                     type="button"
-                    className="flex-1 rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
+                    className="flex-1 rounded-md border border-border bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
                     onClick={() => handleDeleteLeg(leg.id)}
                   >
                     Elimina
@@ -1115,7 +1115,7 @@ export default function BetDetailPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
@@ -1195,7 +1195,7 @@ export default function BetDetailPage() {
                     ) : canEditLegEventDate(leg) ? (
                       <button
                         type="button"
-                        className="rounded bg-neon-blue/10 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-neon-blue/20 hover:bg-neon-blue/20"
+                        className="rounded bg-sky-500/10 px-1.5 py-0.5 text-center text-xs text-foreground ring-1 ring-sky-600 hover:bg-sky-500/10"
                         onClick={() => handleStartDateEdit(leg)}
                         title="Modifica data evento"
                       >
@@ -1340,7 +1340,7 @@ export default function BetDetailPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20"
+                        className="rounded-md border border-border bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/20"
                         onClick={() => handleDeleteLeg(leg.id)}
                       >
                         Elimina

@@ -71,10 +71,10 @@ const KIND_LABELS: Record<ProfitReportDetailKind, string> = {
 }
 
 const KIND_CLASS: Record<ProfitReportDetailKind, string> = {
-  bet: 'border-neon-blue/20 bg-neon-blue/15 text-neon-blue',
-  quick: 'border-neon-lavender/20 bg-neon-lavender/15 text-neon-lavender',
+  bet: 'border-sky-500/20 bg-sky-500/10 text-sky-400',
+  quick: 'border-violet-500/20 bg-violet-500/10 text-violet-400',
   ricarica: 'border-emerald-500/20 bg-emerald-500/15 text-emerald-400',
-  spesa: 'border-destructive/20 bg-destructive/15 text-destructive',
+  spesa: 'border-border bg-destructive/15 text-destructive',
 }
 
 function formatCurrency(value: number): string {

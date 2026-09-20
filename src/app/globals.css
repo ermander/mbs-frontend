@@ -29,6 +29,9 @@
     --chart-4: 268 80% 60%;
     --chart-5: 348 80% 50%;
     --radius: 0.75rem;
+    /* Altezza della barra di navigazione dell'area autenticata (components/topnav): le pagine
+       che dimensionano le tabelle sull'altezza della finestra la sottraggono. */
+    --topnav-h: 3.5rem;
 
     --glass-bg: rgba(0, 0, 0, 0.03);
     --glass-border: rgba(0, 0, 0, 0.06);

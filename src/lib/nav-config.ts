@@ -1,5 +1,6 @@
 /**
- * Nav items for the authenticated sidebar and header.
+ * Nav items of the authenticated area (top bar + mobile drawer, §14.146) and of the
+ * public header's authenticated mode (`authenticatedNav*`, further down).
  */
 
 import type { LucideIcon } from 'lucide-react'
@@ -16,12 +17,24 @@ import {
   Gift,
   MessageSquare,
   User,
-  ShieldCheck,
   Goal,
+  LayoutDashboard,
+  Activity,
+  BookMarked,
+  CreditCard,
+  Tags,
+  Bot,
+  Trophy,
+  Link2,
+  GitMerge,
+  CalendarDays,
+  ListFilter,
+  Radio,
+  Users,
 } from 'lucide-react'
 
-import type { UserRole } from '@/services/api/auth-client'
-import type { ToolKey } from '@/lib/tools'
+import type { AuthUser, UserRole } from '@/services/api/auth-client'
+import { canUseTool, type ToolKey } from '@/lib/tools'
 
 export interface NavLinkItem {
   label: string
@@ -37,85 +50,121 @@ export interface NavDropdownItem {
   requiresRole?: UserRole
 }
 
-export interface AuthSidebarNavItem {
+/** Una pagina dell'area autenticata, con la sua icona. */
+export interface AuthNavItem {
   label: string
-  /** Omesso per voci-gruppo (solo figli navigabili) */
-  href?: string
+  href: string
   icon: LucideIcon
-  section?: string
   /** Se presente, la voce viene mostrata solo agli utenti con quel ruolo */
   requiresRole?: UserRole
-  /** Se presente, la voce è un gruppo espandibile con sotto-voci */
-  children?: NavLinkItem[]
   /** Se presente, la voce è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
   requiresTool?: ToolKey
 }
 
-export const authSidebarNav: AuthSidebarNavItem[] = [
-  {
-    section: 'STRUMENTI',
-    label: 'Odds Scanner',
-    href: '/odds-scanner',
-    icon: Radar,
-  },
-  // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
-  { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal, requiresTool: 'result_btts' },
-  { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
+/**
+ * Un gruppo di pagine. Nella barra in alto `display: 'links'` mette ogni voce direttamente
+ * nella barra, `'menu'` le raccoglie in una tendina con l'etichetta del gruppo; nel cassetto
+ * mobile ogni gruppo è un'intestazione seguita dalle sue voci.
+ */
+export interface AuthNavSection {
+  label: string
+  display: 'links' | 'menu'
+  items: AuthNavItem[]
+  /** Se presente, il gruppo intero è visibile solo agli utenti con quel ruolo */
+  requiresRole?: UserRole
+}
 
-  { section: 'DASHBOARD', label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
-  { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
-  { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
-  { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
-  { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti', icon: Wallet },
+export const authNavSections: AuthNavSection[] = [
   {
-    label: 'Impostazioni',
-    href: '/profit-tracker/book-personali',
-    icon: BookOpen,
-  },
-  {
-    label: 'Promemoria',
-    href: '/profit-tracker/promemoria',
-    icon: Bell,
-  },
-
-  {
-    section: 'ALTRO',
-    label: 'Offerte',
-    href: '/offerte',
-    icon: Gift,
-  },
-  { label: 'Guide', href: '/guide', icon: BookOpen },
-  { label: 'Forum', href: '/forum', icon: MessageSquare },
-
-  {
-    section: 'AMMINISTRAZIONE',
-    label: 'Backoffice',
-    icon: ShieldCheck,
-    requiresRole: 'ADMIN_ROLE',
-    children: [
-      { label: 'Dashboard', href: '/backoffice/dashboard' },
-      { label: 'Salute', href: '/backoffice/salute' },
-      { label: 'Bookmaker', href: '/backoffice/books' },
-      { label: 'Metodi di pagamento', href: '/backoffice/payment-methods' },
-      { label: 'Categorie movimenti', href: '/backoffice/movement-categories' },
-      { label: 'Scraper', href: '/backoffice/scrapers' },
-      { label: 'Sport Mappings', href: '/backoffice/sport-mappings' },
-      { label: 'Matchings', href: '/backoffice/matchings' },
-      { label: 'Matcher', href: '/backoffice/matcher' },
-      { label: 'Palinsesto API-Football', href: '/backoffice/palinsesto' },
-      { label: 'Competizioni da leggere', href: '/backoffice/competizioni' },
-      { label: 'Eventi SR', href: '/backoffice/eventi-sportradar' },
-      { label: 'Utenti', href: '/backoffice/users' },
+    label: 'Strumenti',
+    display: 'links',
+    items: [
+      { label: 'Odds Scanner', href: '/odds-scanner', icon: Radar },
+      // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
+      {
+        label: 'Risultato + Goal',
+        href: '/risultato-goal',
+        icon: Goal,
+        requiresTool: 'result_btts',
+      },
+      { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
     ],
   },
-
   {
-    section: 'ACCOUNT',
-    label: 'Profilo',
-    href: '/account/profilo',
-    icon: User,
+    label: 'Profit Tracker',
+    display: 'menu',
+    items: [
+      { label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
+      { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
+      { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
+      { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
+      { label: 'Gestione Conti', href: '/profit-tracker/gestione-conti', icon: Wallet },
+      { label: 'Impostazioni', href: '/profit-tracker/book-personali', icon: BookOpen },
+      { label: 'Promemoria', href: '/profit-tracker/promemoria', icon: Bell },
+    ],
+  },
+  {
+    label: 'Altro',
+    display: 'menu',
+    items: [
+      { label: 'Offerte', href: '/offerte', icon: Gift },
+      { label: 'Guide', href: '/guide', icon: BookOpen },
+      { label: 'Forum', href: '/forum', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Backoffice',
+    display: 'menu',
+    requiresRole: 'ADMIN_ROLE',
+    items: [
+      { label: 'Dashboard', href: '/backoffice/dashboard', icon: LayoutDashboard },
+      { label: 'Salute', href: '/backoffice/salute', icon: Activity },
+      { label: 'Bookmaker', href: '/backoffice/books', icon: BookMarked },
+      { label: 'Metodi di pagamento', href: '/backoffice/payment-methods', icon: CreditCard },
+      { label: 'Categorie movimenti', href: '/backoffice/movement-categories', icon: Tags },
+      { label: 'Scraper', href: '/backoffice/scrapers', icon: Bot },
+      { label: 'Sport Mappings', href: '/backoffice/sport-mappings', icon: Trophy },
+      { label: 'Matchings', href: '/backoffice/matchings', icon: Link2 },
+      { label: 'Matcher', href: '/backoffice/matcher', icon: GitMerge },
+      { label: 'Palinsesto API-Football', href: '/backoffice/palinsesto', icon: CalendarDays },
+      { label: 'Competizioni da leggere', href: '/backoffice/competizioni', icon: ListFilter },
+      { label: 'Eventi SR', href: '/backoffice/eventi-sportradar', icon: Radio },
+      { label: 'Utenti', href: '/backoffice/users', icon: Users },
+    ],
   },
 ]
+
+/** La pagina del profilo vive nel menu dell'account (avatar a destra nella barra), con il logout. */
+export const accountNavItem: AuthNavItem = {
+  label: 'Profilo',
+  href: '/account/profilo',
+  icon: User,
+}
+
+/**
+ * I gruppi che l'utente può vedere: via i gruppi e le voci riservati a un altro ruolo o a uno
+ * strumento non abilitato; un gruppo rimasto senza voci sparisce.
+ */
+export function visibleNavSections(
+  user: Pick<AuthUser, 'role' | 'tools'> | null | undefined,
+): AuthNavSection[] {
+  return authNavSections.flatMap((section) => {
+    if (section.requiresRole && section.requiresRole !== user?.role) return []
+    const items = section.items.filter((item) => {
+      if (item.requiresRole && item.requiresRole !== user?.role) return false
+      if (item.requiresTool && !canUseTool(user, item.requiresTool)) return false
+      return true
+    })
+    return items.length > 0 ? [{ ...section, items }] : []
+  })
+}
+
+/** Attiva sulla pagina stessa e sulle sue sotto-pagine; `/` solo su se stessa. */
+export function isActiveHref(pathname: string | null | undefined, href: string): boolean {
+  if (!pathname) return false
+  if (href === '/') return pathname === '/'
+  return pathname === href || pathname.startsWith(href + '/')
+}
 
 export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {

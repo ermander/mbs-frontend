@@ -54,13 +54,20 @@ interface ScannerV2TableProps {
 /** Bold on plain background; the green tint marks only a rating from 100% up. */
 function ratingBadge(rating: number) {
   const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
-  if (rating >= 100)
-    return `${base} bg-emerald-100 text-emerald-900`
+  if (rating >= 100) return `${base} bg-emerald-100 text-emerald-900`
   return `${base} text-foreground`
 }
 
 /** Flag of the competition's nation (the European one for UEFA competitions filed under «World»), the nation name when no flag is available. */
-function NationFlag({ code, name, competition }: { code: string | null; name: string | null; competition: string }) {
+function NationFlag({
+  code,
+  name,
+  competition,
+}: {
+  code: string | null
+  name: string | null
+  competition: string
+}) {
   const flag = resolveCompetitionFlag(code, name, competition)
   if (!flag) return name ? <span>{name}</span> : null
   return (
@@ -78,9 +85,7 @@ function NationFlag({ code, name, competition }: { code: string | null; name: st
 function oddsCellClass(lay: boolean) {
   return cn(
     'inline-flex items-center rounded-md px-2 py-1',
-    lay
-      ? 'bg-rose-100 text-rose-900'
-      : 'bg-sky-100 text-sky-900',
+    lay ? 'bg-rose-100 text-rose-900' : 'bg-sky-100 text-sky-900',
   )
 }
 
@@ -346,7 +351,7 @@ export function ScannerV2Table({
       {/* Desktop: table. The results scroll inside this box, both ways, so the
           page, the toolbar and the pagination stay put and the horizontal
           scrollbar is always within reach; the header row sticks to the top. */}
-      <div className="hidden max-h-[calc(100dvh-17rem)] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
+      <div className="hidden max-h-[calc(100dvh-17rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[1100px] text-sm">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
             <tr className="bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -404,7 +409,9 @@ export function ScannerV2Table({
                     )}
                     <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
                       <div className="text-foreground">{formatKickoffDate(row.startTime)}</div>
-                      <div className="text-muted-foreground">h. {formatKickoffTime(row.startTime)}</div>
+                      <div className="text-muted-foreground">
+                        h. {formatKickoffTime(row.startTime)}
+                      </div>
                     </td>
                     <td className="px-2 py-2 text-center" title={sport.label}>
                       {sport.icon ? (
@@ -420,7 +427,11 @@ export function ScannerV2Table({
                         {row.homeName} – {row.awayName}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <NationFlag code={row.nationCode} name={row.nationName} competition={row.competitionName} />
+                        <NationFlag
+                          code={row.nationCode}
+                          name={row.nationName}
+                          competition={row.competitionName}
+                        />
                         <span>{row.competitionName}</span>
                       </div>
                     </td>
@@ -438,8 +449,7 @@ export function ScannerV2Table({
                           </React.Fragment>
                         )
                       }
-                      const lay =
-                        isLayLeg(leg) || (row.matchType === 'back_lay' && i > 0)
+                      const lay = isLayLeg(leg) || (row.matchType === 'back_lay' && i > 0)
                       const exchangeDutch = row.matchType !== 'back_lay' && legIsExchange(leg, meta)
                       const displayOdds = legDisplayOdds(leg, row, meta, commissionPercent)
                       const priceTitle = exchangeDutch

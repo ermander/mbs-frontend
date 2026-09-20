@@ -108,7 +108,7 @@ export default function EventiSportradarPage() {
         </p>
       ) : (
         /* Master-detail layout */
-        <div className="flex gap-6" style={{ height: 'calc(100vh - 280px)' }}>
+        <div className="flex gap-6" style={{ height: 'calc(100vh - 280px - var(--topnav-h))' }}>
           {/* Left panel: tree */}
           <div
             className={`overflow-y-auto transition-all duration-300 ${

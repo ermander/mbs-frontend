@@ -48,7 +48,15 @@ function ratingBadge(rating: number) {
 }
 
 /** Flag of the competition's nation (the European one for UEFA competitions filed under «World»), the nation name when no flag is available. */
-function NationFlag({ code, name, competition }: { code: string | null; name: string | null; competition: string }) {
+function NationFlag({
+  code,
+  name,
+  competition,
+}: {
+  code: string | null
+  name: string | null
+  competition: string
+}) {
   const flag = resolveCompetitionFlag(code, name, competition)
   if (!flag) return name ? <span>{name}</span> : null
   return (
@@ -261,7 +269,7 @@ export function ResultBttsTable({
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden max-h-[calc(100dvh-19rem)] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
+      <div className="hidden max-h-[calc(100dvh-19rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[1100px] text-sm">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
             <tr className="bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -331,7 +339,11 @@ export function ResultBttsTable({
                         {row.homeName} – {row.awayName}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <NationFlag code={row.nationCode} name={row.nationName} competition={row.competitionName} />
+                        <NationFlag
+                          code={row.nationCode}
+                          name={row.nationName}
+                          competition={row.competitionName}
+                        />
                         <span>{row.competitionName}</span>
                       </div>
                     </td>

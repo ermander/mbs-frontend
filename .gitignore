@@ -40,4 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 # extra dev servers for browser checks (NEXT_DIST_DIR, .claude/launch.json frontend-dev-alt*)
-/.next-alt*/
+/.next-*/

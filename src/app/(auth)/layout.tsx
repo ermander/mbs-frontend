@@ -1,24 +1,15 @@
 import * as React from 'react'
 
 import { DashboardAuthGuard } from './dashboard/dashboard-auth-guard'
-import { SidebarProvider } from '@/components/sidebar/sidebar-provider'
-import { Sidebar } from '@/components/sidebar/sidebar'
-import { SidebarMobileSheet } from '@/components/sidebar/sidebar-mobile-sheet'
-import { SidebarMobileTopbar } from '@/components/sidebar/sidebar-mobile-topbar'
+import { Topnav } from '@/components/topnav/topnav'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardAuthGuard>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar variant="desktop" />
-          <SidebarMobileSheet />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <SidebarMobileTopbar />
-            <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
-          </div>
-        </div>
-      </SidebarProvider>
+      <div className="flex min-h-screen flex-col bg-background">
+        <Topnav />
+        <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
+      </div>
     </DashboardAuthGuard>
   )
 }

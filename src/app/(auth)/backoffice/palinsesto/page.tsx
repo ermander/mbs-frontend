@@ -274,7 +274,6 @@ export default function PalinsestoPage() {
     loadSummary()
   }
 
-
   const handleSportChange = (value: string) => {
     setSport(value)
     setScope(null)
@@ -291,9 +290,9 @@ export default function PalinsestoPage() {
             Palinsesto API-Football
           </h2>
           <p className="text-sm text-muted-foreground">
-            Tutte le partite scaricate da api-sports.io così come stanno nel catalogo canonico, con i
-            bookmaker che il matcher ha collegato a ciascuna. Le competizioni che gli scraper leggono
-            si scelgono in{' '}
+            Tutte le partite scaricate da api-sports.io così come stanno nel catalogo canonico, con
+            i bookmaker che il matcher ha collegato a ciascuna. Le competizioni che gli scraper
+            leggono si scelgono in{' '}
             <Link href="/backoffice/competizioni" className="underline hover:text-foreground">
               Competizioni da leggere
             </Link>
@@ -427,7 +426,10 @@ export default function PalinsestoPage() {
       </div>
 
       {/* Master-detail */}
-      <div className="flex gap-4" style={{ height: 'calc(100vh - 220px)', minHeight: '32rem' }}>
+      <div
+        className="flex gap-4"
+        style={{ height: 'calc(100vh - 220px - var(--topnav-h))', minHeight: '32rem' }}
+      >
         <div className="w-[22rem] shrink-0">
           <ScheduleTree
             tree={tree}

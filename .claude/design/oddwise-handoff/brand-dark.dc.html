@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&amp;family=DM+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<style>
+body { margin: 0; background: #0A0B0F; font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif; color: #FFFFFF; -webkit-font-smoothing: antialiased; }
+a { color: #FFFFFF; text-decoration: none; } a:hover { color: #22D48B; }
+h1, h2, h3 { font-family: "Bricolage Grotesque", "DM Sans", sans-serif; letter-spacing: -0.02em; margin: 0; }
+p { margin: 0; }
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #0A0B0F; color: #FFFFFF; padding: 64px 80px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px;">
+
+  <!-- Left: logo + palette -->
+  <div style="display: flex; flex-direction: column; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: rgba(255,255,255,0.5);">WORDMARK · DARK</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div style="height: 160px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; background: #121715; display: flex; align-items: center; justify-content: center; gap: 12px;">
+          <svg width="48" height="48" viewBox="0 0 34 34" fill="none" aria-hidden="true"><circle cx="17" cy="17" r="14" stroke="{{accent}}" stroke-width="4"></circle><circle cx="17" cy="17" r="5" fill="{{accent}}"></circle></svg>
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; letter-spacing: -0.03em; color: #FFFFFF;">OddWise</span>
+        </div>
+        <div style="height: 160px; border-radius: 20px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 12px;">
+          <svg width="48" height="48" viewBox="0 0 34 34" fill="none" aria-hidden="true"><circle cx="17" cy="17" r="14" stroke="#0E7C5B" stroke-width="4"></circle><circle cx="17" cy="17" r="5" fill="#0E7C5B"></circle></svg>
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; letter-spacing: -0.03em; color: #0A0B0F;">OddWise</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 16px;">
+        <div style="width: 88px; height: 88px; border-radius: 22px; background: {{accent}}; display: flex; align-items: center; justify-content: center;">
+          <svg width="52" height="52" viewBox="0 0 34 34" fill="none" aria-hidden="true"><circle cx="17" cy="17" r="14" stroke="#0A0B0F" stroke-width="4"></circle><circle cx="17" cy="17" r="5" fill="#0A0B0F"></circle></svg>
+        </div>
+        <div style="width: 88px; height: 88px; border-radius: 22px; background: #121715; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;">
+          <svg width="52" height="52" viewBox="0 0 34 34" fill="none" aria-hidden="true"><circle cx="17" cy="17" r="14" stroke="{{accent}}" stroke-width="4"></circle><circle cx="17" cy="17" r="5" fill="{{accent}}"></circle></svg>
+        </div>
+        <p style="align-self: center; font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.72); max-width: 380px;">Stesso marchio della versione chiara. Sul nero il verde si accende in menta: è il colore dei numeri, delle CTA e di nient'altro.</p>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: rgba(255,255,255,0.5);">PALETTE · DARK</span>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 88px; border-radius: 14px; background: #0A0B0F; border: 1px solid rgba(255,255,255,0.1);"></div>
+          <span style="font-size: 13px; font-weight: 600;">Fondo</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#0A0B0F</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 88px; border-radius: 14px; background: #121715; border: 1px solid rgba(255,255,255,0.1);"></div>
+          <span style="font-size: 13px; font-weight: 600;">Superficie</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#121715</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 88px; border-radius: 14px; background: #1B211E; border: 1px solid rgba(255,255,255,0.1);"></div>
+          <span style="font-size: 13px; font-weight: 600;">Rilievo</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#1B211E</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 88px; border-radius: 14px; background: #0D2019; border: 1px solid rgba(34,212,139,0.35);"></div>
+          <span style="font-size: 13px; font-weight: 600;">Verde profondo</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#0D2019</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 56px; border-radius: 14px; background: {{accent}};"></div>
+          <span style="font-size: 13px; font-weight: 600;">Menta · profitto</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#22D48B</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 56px; border-radius: 14px; background: #E0A526;"></div>
+          <span style="font-size: 13px; font-weight: 600;">Ambra · badge</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#E0A526</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 56px; border-radius: 14px; background: #FFFFFF;"></div>
+          <span style="font-size: 13px; font-weight: 600;">Testo · 100 / 72 / 50 %</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#FFFFFF α</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="height: 56px; border-radius: 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);"></div>
+          <span style="font-size: 13px; font-weight: 600;">Linee · 8 / 14 %</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(255,255,255,0.5);">#FFFFFF α</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: type + components -->
+  <div style="display: flex; flex-direction: column; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: rgba(255,255,255,0.5);">TIPOGRAFIA</span>
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; background: #121715;">
+        <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05;">Bricolage Grotesque 800 — titoli</span>
+        <span style="font-size: 18px; line-height: 1.5; color: rgba(255,255,255,0.72);">DM Sans 400/600 — testo, pulsanti e didascalie. Sul nero il testo secondario è bianco al 72%, mai grigio pieno.</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: {{accent}};">JetBrains Mono 700 — +25,10 € · 2,10 · 35</span>
+        <span style="font-size: 13px; color: rgba(255,255,255,0.5);">Il monospazio è riservato ai numeri: quote, importi, contatori. Mai per il testo.</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: rgba(255,255,255,0.5);">COMPONENTI</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        <a href="#a" style="display: inline-flex; align-items: center; height: 52px; padding: 0 24px; background: {{accent}}; color: #0A0B0F; border-radius: 14px; font-size: 16px; font-weight: 700;">Fai i primi 25€ gratis</a>
+        <a href="#b" style="display: inline-flex; align-items: center; height: 52px; padding: 0 24px; background: #FFFFFF; color: #0A0B0F; border-radius: 14px; font-size: 16px; font-weight: 700;">Scegli Base</a>
+        <a href="#c" style="display: inline-flex; align-items: center; height: 52px; padding: 0 24px; background: #121715; border: 1px solid rgba(255,255,255,0.14); color: #FFFFFF; border-radius: 14px; font-size: 16px; font-weight: 600;">Come funziona</a>
+        <span style="display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: #121715; border: 1px solid rgba(255,255,255,0.1); font-size: 14px; font-weight: 600;">Snai</span>
+        <span style="display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 999px; background: #E0A526; color: #0A0B0F; font-size: 12px; font-weight: 700;">Il più scelto</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div style="padding: 20px; border-radius: 16px; background: #121715; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; color: rgba(255,255,255,0.5);">Card · superficie</span>
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">Titolo card</span>
+          <span style="font-size: 14px; color: rgba(255,255,255,0.72);">Bordo bianco 10%, mai ombre: la profondità la fa il colore.</span>
+        </div>
+        <div style="padding: 20px; border-radius: 16px; background: #0D2019; border: 1px solid rgba(34,212,139,0.35); display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; color: rgba(255,255,255,0.5);">Card · verde profondo (Premium, CTA)</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: {{accent}};">+25,10 €</span>
+          <span style="font-size: 14px; color: rgba(255,255,255,0.72);">Riservata a ciò che porta al profitto.</span>
+        </div>
+      </div>
+      <p style="font-size: 14px; line-height: 1.55; color: rgba(255,255,255,0.72);">Regole: nero quasi puro con superfici a scalini (#0A0B0F → #121715 → #1B211E), niente gradienti e niente glow. La versione chiara resta per stampa, email e social.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#22D48B","options":["#22D48B","#5EA8FF","#F5A524","#D87CFF"]},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#22D48B' };
+  }
+}
+</script>
+</body>
+</html>

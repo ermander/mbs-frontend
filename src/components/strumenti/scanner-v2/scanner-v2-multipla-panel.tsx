@@ -40,7 +40,7 @@ interface ScannerV2MultiplaPanelProps {
   bookName: string | null
 }
 
-const LABEL_CLASS = 'text-[11px] uppercase tracking-wider text-muted-foreground'
+const LABEL_CLASS = 'font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground'
 const noExponent = (e: React.KeyboardEvent<HTMLInputElement>) =>
   ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()
 
@@ -70,7 +70,7 @@ export function ScannerV2MultiplaPanel({
   const canSave = complete && hasStake && !belowMinTotale && summary.guadagno != null
 
   return (
-    <div className="mt-2 animate-fade-in rounded-xl border border-neon-lavender/20 bg-surface-1 p-4">
+    <div className="mt-2 animate-fade-in rounded-ow-card border border-border bg-surface-1 p-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
@@ -93,7 +93,7 @@ export function ScannerV2MultiplaPanel({
               <select
                 value={params.numEventi}
                 onChange={(e) => onParamsChange({ numEventi: Number(e.target.value) })}
-                className="h-8 w-full min-w-0 rounded-lg border border-border bg-surface-1 px-3 text-sm text-foreground"
+                className="h-8 w-full min-w-0 rounded-ow-btn border border-border bg-surface-1 px-3 text-[13px] text-foreground"
               >
                 {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                   <option key={n} value={n}>
@@ -110,7 +110,7 @@ export function ScannerV2MultiplaPanel({
                 value={params.quotaMinEvento}
                 onChange={(e) => onParamsChange({ quotaMinEvento: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={1}
                 step={0.01}
               />
@@ -123,7 +123,7 @@ export function ScannerV2MultiplaPanel({
                 value={params.quotaMaxEvento}
                 onChange={(e) => onParamsChange({ quotaMaxEvento: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={1}
                 step={0.01}
               />
@@ -135,7 +135,7 @@ export function ScannerV2MultiplaPanel({
                 value={params.quotaMinTotale}
                 onChange={(e) => onParamsChange({ quotaMinTotale: e.target.value })}
                 onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
                 min={1}
                 step={0.01}
               />
@@ -148,7 +148,7 @@ export function ScannerV2MultiplaPanel({
                 type="date"
                 value={params.dataInizio}
                 onChange={(e) => onParamsChange({ dataInizio: e.target.value })}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
@@ -157,7 +157,7 @@ export function ScannerV2MultiplaPanel({
                 type="date"
                 value={params.dataFine}
                 onChange={(e) => onParamsChange({ dataFine: e.target.value })}
-                className="h-8 w-full min-w-0 text-sm"
+                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
               />
             </div>
           </div>
@@ -166,10 +166,10 @@ export function ScannerV2MultiplaPanel({
         {/* Eventi selezionati */}
         <div className="flex flex-col gap-2 border-t border-border pt-3 lg:min-w-[280px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
               Eventi selezionati {selected.length}/{params.numEventi}
             </p>
-            <p className="font-mono text-sm font-semibold text-emerald-400">
+            <p className="font-mono text-sm font-medium tabular-nums text-foreground">
               {summary.rating != null ? `${summary.rating.toFixed(2)}%` : '—'}
               {summary.quotaTotale != null && (
                 <span className="ml-1.5 text-muted-foreground">
@@ -200,16 +200,11 @@ export function ScannerV2MultiplaPanel({
                 return (
                   <li
                     key={multiplaEventKey(ev)}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-2 py-1 text-xs"
+                    className="flex items-center justify-between gap-2 rounded-ow-btn border border-border bg-background px-2 py-1 text-xs"
                   >
                     <span className="min-w-0 truncate">
                       <span
-                        className={cn(
-                          'mr-1 rounded px-1 py-0.5 text-[10px] font-bold',
-                          ev.type === 'punta-banca'
-                            ? 'bg-primary/20 text-primary'
-                            : 'bg-sky-500/15 text-sky-300',
-                        )}
+                        className="mr-1 rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground"
                         title={ev.type === 'punta-banca' ? 'Punta-Banca' : 'Punta-Punta'}
                       >
                         {ev.type === 'punta-banca' ? 'PB' : 'PP'}
@@ -250,12 +245,17 @@ export function ScannerV2MultiplaPanel({
             >
               <X className="inline h-3 w-3" /> Elimina
             </button>
-            <Button size="sm" className="ml-auto h-7 text-xs" disabled={!canSave} onClick={onSave}>
+            <Button
+              size="sm"
+              className="ml-auto h-7 rounded-ow-btn text-xs"
+              disabled={!canSave}
+              onClick={onSave}
+            >
               Salva nel Profit Tracker
             </Button>
           </div>
           {complete && !hasStake && (
-            <p className="text-[11px] text-amber-500">
+            <p className="text-[11px] text-amber-400">
               Inserisci la puntata (o il bonus) nella barra per salvare.
             </p>
           )}

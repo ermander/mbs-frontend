@@ -297,7 +297,7 @@ export default function SportMappingsPage() {
                               type="button"
                               disabled={saving}
                               onClick={handleUpdate}
-                              className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+                              className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-accent disabled:opacity-50"
                             >
                               Salva
                             </button>

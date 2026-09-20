@@ -69,8 +69,10 @@ export function LegAccounts({
   portalContainer,
 }: LegAccountsProps) {
   return (
-    <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-      <Label className="text-xs font-medium uppercase tracking-wide text-primary">{title}</Label>
+    <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+      <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
+        {title}
+      </Label>
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Seleziona collaboratore</Label>
         <SearchableSelect
@@ -108,7 +110,7 @@ export function LegAccounts({
           portalContainer={portalContainer}
         />
         {holderId && accounts.length === 0 && (
-          <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+          <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
             Nessun conto disponibile per questo collaboratore. Aggiungine uno in Profit Tracker →
             Conti.
           </p>
@@ -272,7 +274,7 @@ export function LockableAmount({
         className={cn(
           'inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors',
           locked
-            ? 'border-primary bg-primary/10 text-primary'
+            ? 'border-primary bg-accent text-primary'
             : 'border-input text-muted-foreground hover:bg-muted hover:text-foreground',
         )}
       >

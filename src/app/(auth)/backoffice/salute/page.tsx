@@ -91,7 +91,15 @@ function Dot({ tone }: { tone: 'ok' | 'warn' | 'bad' | 'off' }) {
   return <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${color}`} />
 }
 
-function Card({ title, children, aside }: { title: string; children: React.ReactNode; aside?: React.ReactNode }) {
+function Card({
+  title,
+  children,
+  aside,
+}: {
+  title: string
+  children: React.ReactNode
+  aside?: React.ReactNode
+}) {
   return (
     <section className="rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
@@ -113,9 +121,17 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   )
 }
 
-function cronTone(c: HealthCron | null, now: number, staleMinutes: number): 'ok' | 'warn' | 'bad' | 'off' {
+function cronTone(
+  c: HealthCron | null,
+  now: number,
+  staleMinutes: number,
+): 'ok' | 'warn' | 'bad' | 'off' {
   if (!c || !c.scheduledAt) return 'off'
-  if (c.lastFailureAt && (!c.lastSuccessAt || new Date(c.lastFailureAt) > new Date(c.lastSuccessAt))) return 'bad'
+  if (
+    c.lastFailureAt &&
+    (!c.lastSuccessAt || new Date(c.lastFailureAt) > new Date(c.lastSuccessAt))
+  )
+    return 'bad'
   if (!c.lastSuccessAt) return 'warn'
   return now - new Date(c.lastSuccessAt).getTime() > staleMinutes * 60_000 ? 'warn' : 'ok'
 }
@@ -156,13 +172,20 @@ export default function BackofficeSalutePage() {
     <Container>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Salute della raccolta quote</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Salute della raccolta quote
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Adapter, cron, matcher, catalogo api-sports e coda di revisione: la stessa lettura degli alert Telegram, aggiornata ogni 30 secondi.
+            Adapter, cron, matcher, catalogo api-sports e coda di revisione: la stessa lettura degli
+            alert Telegram, aggiornata ogni 30 secondi.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {report && <span>Letto {ago(report.now, now)} · backend avviato {ago(report.bootedAt, now)}</span>}
+          {report && (
+            <span>
+              Letto {ago(report.now, now)} · backend avviato {ago(report.bootedAt, now)}
+            </span>
+          )}
           <button
             type="button"
             onClick={() => void load()}
@@ -174,14 +197,18 @@ export default function BackofficeSalutePage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-      {loading && !report && <p className="py-6 text-center text-muted-foreground">Caricamento...</p>}
+      {loading && !report && (
+        <p className="py-6 text-center text-muted-foreground">Caricamento...</p>
+      )}
 
       {report && (
         <div className="space-y-4">
           {/* Global state + alerts */}
           <div
             className={`rounded-lg border px-5 py-4 ${
-              report.scrapingGloballyEnabled ? 'border-border bg-card' : 'border-amber-500/40 bg-amber-500/5'
+              report.scrapingGloballyEnabled
+                ? 'border-border bg-card'
+                : 'border-amber-500/40 bg-amber-500/5'
             }`}
           >
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -192,13 +219,25 @@ export default function BackofficeSalutePage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Dot tone={report.alerts.length === 0 ? 'ok' : report.alerts.some((a) => a.severity === 'critical') ? 'bad' : 'warn'} />
+                <Dot
+                  tone={
+                    report.alerts.length === 0
+                      ? 'ok'
+                      : report.alerts.some((a) => a.severity === 'critical')
+                        ? 'bad'
+                        : 'warn'
+                  }
+                />
                 <span className="text-sm text-foreground">
-                  {report.alerts.length === 0 ? 'Nessun alert attivo' : `${report.alerts.length} alert attivi`}
+                  {report.alerts.length === 0
+                    ? 'Nessun alert attivo'
+                    : `${report.alerts.length} alert attivi`}
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">
-                Soglie: silenzio {report.thresholds.adapterSilenceMinutes} min · finestra ingestione {report.thresholds.ingestionWindowMinutes} min · matcher stantio {report.thresholds.matcherStaleMinutes} min
+                Soglie: silenzio {report.thresholds.adapterSilenceMinutes} min · finestra ingestione{' '}
+                {report.thresholds.ingestionWindowMinutes} min · matcher stantio{' '}
+                {report.thresholds.matcherStaleMinutes} min
               </span>
             </div>
             {report.alerts.length > 0 && (
@@ -206,8 +245,10 @@ export default function BackofficeSalutePage() {
                 {report.alerts.map((a) => (
                   <li key={a.key} className="flex flex-wrap items-baseline gap-2 text-sm">
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        a.severity === 'critical' ? 'bg-red-500/15 text-red-500' : 'bg-amber-500/15 text-amber-500'
+                      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+                        a.severity === 'critical'
+                          ? 'bg-red-500/15 text-red-500'
+                          : 'bg-amber-500/15 text-amber-500'
                       }`}
                     >
                       {a.severity === 'critical' ? 'critico' : 'avviso'}
@@ -222,7 +263,10 @@ export default function BackofficeSalutePage() {
           </div>
 
           {/* Adapters */}
-          <Card title="Adapter" aside={`finestra ${report.thresholds.ingestionWindowMinutes} min · run ultime ${report.hoursBack} h`}>
+          <Card
+            title="Adapter"
+            aside={`finestra ${report.thresholds.ingestionWindowMinutes} min · run ultime ${report.hoursBack} h`}
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
@@ -244,38 +288,78 @@ export default function BackofficeSalutePage() {
                   {report.adapters.map((a) => {
                     const runs = report.runs.find((r) => r.bookmakerSlug === a.slug)
                     const silent = a.silentForMinutes >= report.thresholds.adapterSilenceMinutes
-                    const tone = !a.schedulable ? 'off' : a.circuitPhase ? 'warn' : silent ? 'bad' : a.lastRunStatus === 'failed' ? 'warn' : 'ok'
+                    const tone = !a.schedulable
+                      ? 'off'
+                      : a.circuitPhase
+                        ? 'warn'
+                        : silent
+                          ? 'bad'
+                          : a.lastRunStatus === 'failed'
+                            ? 'warn'
+                            : 'ok'
                     return (
                       <tr key={a.slug} className="border-t border-border">
                         <td className="py-2 pr-3">
                           <div className="flex items-center gap-2">
                             <Dot tone={tone} />
                             <span className="font-medium text-foreground">{a.name}</span>
-                            <span className="font-mono text-xs text-muted-foreground">{a.slug}</span>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {a.slug}
+                            </span>
                           </div>
                         </td>
                         <td className="py-2 pr-3 text-xs text-muted-foreground">
-                          {a.schedulable ? (a.initialized ? 'schedulato' : 'schedulato, non inizializzato') : `non schedulato: ${a.skipReason}`}
+                          {a.schedulable
+                            ? a.initialized
+                              ? 'schedulato'
+                              : 'schedulato, non inizializzato'
+                            : `non schedulato: ${a.skipReason}`}
                         </td>
                         <td className="py-2 pr-3 text-xs">
-                          <span className={a.lastRunStatus === 'failed' ? 'text-red-500' : 'text-foreground'}>{a.lastRunStatus ?? '—'}</span>
+                          <span
+                            className={
+                              a.lastRunStatus === 'failed' ? 'text-red-500' : 'text-foreground'
+                            }
+                          >
+                            {a.lastRunStatus ?? '—'}
+                          </span>
                           <span className="text-muted-foreground"> · {ago(a.lastRunAt, now)}</span>
-                          {a.lastError && <div className="max-w-xs truncate text-red-500" title={a.lastError}>{a.lastError}</div>}
+                          {a.lastError && (
+                            <div className="max-w-xs truncate text-red-500" title={a.lastError}>
+                              {a.lastError}
+                            </div>
+                          )}
                         </td>
-                        <td className={`py-2 pr-3 text-right tabular-nums ${silent ? 'text-red-500' : 'text-foreground'}`}>{a.silentForMinutes} min</td>
+                        <td
+                          className={`py-2 pr-3 text-right tabular-nums ${silent ? 'text-red-500' : 'text-foreground'}`}
+                        >
+                          {a.silentForMinutes} min
+                        </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{num(a.windowRuns)}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{num(a.windowEvents)}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums">{num(a.windowMatched)}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums">{num(a.windowOrphaned)}</td>
-                        <td className={`py-2 pr-3 text-right tabular-nums ${a.windowRuns > 0 && a.windowEvents > 0 && a.windowOdds === 0 ? 'text-amber-500' : ''}`}>{num(a.windowOdds)}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums text-xs text-muted-foreground">
+                        <td className="py-2 pr-3 text-right tabular-nums">
+                          {num(a.windowMatched)}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">
+                          {num(a.windowOrphaned)}
+                        </td>
+                        <td
+                          className={`py-2 pr-3 text-right tabular-nums ${a.windowRuns > 0 && a.windowEvents > 0 && a.windowOdds === 0 ? 'text-amber-500' : ''}`}
+                        >
+                          {num(a.windowOdds)}
+                        </td>
+                        <td className="py-2 pr-3 text-right text-xs tabular-nums text-muted-foreground">
                           {runs ? `${num(runs.successRuns)} ok / ${num(runs.failedRuns)} ko` : '—'}
                         </td>
                         <td className="py-2 text-xs">
                           {a.circuitPhase === 'open' ? (
-                            <span className="text-amber-500">aperto, riprova tra {until(a.circuitOpenUntil, now)}</span>
+                            <span className="text-amber-500">
+                              aperto, riprova tra {until(a.circuitOpenUntil, now)}
+                            </span>
                           ) : a.circuitPhase === 'probing' ? (
-                            <span className="text-amber-500">in prova, cooldown finito {ago(a.circuitOpenUntil, now)}</span>
+                            <span className="text-amber-500">
+                              in prova, cooldown finito {ago(a.circuitOpenUntil, now)}
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">chiuso</span>
                           )}
@@ -285,7 +369,9 @@ export default function BackofficeSalutePage() {
                   })}
                   {report.adapters.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-4 text-center text-muted-foreground">Nessun adapter abilitato.</td>
+                      <td colSpan={11} className="py-4 text-center text-muted-foreground">
+                        Nessun adapter abilitato.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -294,13 +380,14 @@ export default function BackofficeSalutePage() {
           </Card>
 
           {/* Browser sidecar (ADAPTER_STATUS §14.54) */}
-          <Card
-            title="Browser"
-            aside={report.browser.endpoint ?? 'nessun sidecar configurato'}
-          >
+          <Card title="Browser" aside={report.browser.endpoint ?? 'nessun sidecar configurato'}>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <div className="flex items-center gap-2">
-                <Dot tone={!report.browser.configured ? 'off' : report.browser.connected ? 'ok' : 'bad'} />
+                <Dot
+                  tone={
+                    !report.browser.configured ? 'off' : report.browser.connected ? 'ok' : 'bad'
+                  }
+                />
                 <span className="text-sm text-foreground">
                   {!report.browser.configured
                     ? 'Nessun sidecar Chromium: gli adapter browser non vengono schedulati'
@@ -322,8 +409,12 @@ export default function BackofficeSalutePage() {
                 {report.browser.pages.map((p) => (
                   <li key={p.slug} className="flex flex-wrap items-baseline gap-2">
                     <span className="font-mono text-foreground">{p.slug}</span>
-                    <span className="max-w-md truncate text-muted-foreground" title={p.url}>{p.url || '—'}</span>
-                    <span className="tabular-nums text-muted-foreground">aperta da {p.ageMinutes} min</span>
+                    <span className="max-w-md truncate text-muted-foreground" title={p.url}>
+                      {p.url || '—'}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      aperta da {p.ageMinutes} min
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -355,12 +446,22 @@ export default function BackofficeSalutePage() {
                           <span className="text-foreground">{CRON_LABELS[c.name] ?? c.name}</span>
                         </div>
                       </td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">{ago(c.lastSuccessAt, now)}</td>
-                      <td className="py-2 pr-3 text-right text-xs tabular-nums">{duration(c.lastDurationMs)}</td>
-                      <td className="py-2 pr-3 text-right text-xs tabular-nums">
-                        {num(c.runs)} / <span className={c.failures > 0 ? 'text-red-500' : ''}>{num(c.failures)}</span>
+                      <td className="py-2 pr-3 text-xs text-muted-foreground">
+                        {ago(c.lastSuccessAt, now)}
                       </td>
-                      <td className="max-w-xs truncate py-2 text-xs text-red-500" title={c.lastError ?? undefined}>
+                      <td className="py-2 pr-3 text-right text-xs tabular-nums">
+                        {duration(c.lastDurationMs)}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-xs tabular-nums">
+                        {num(c.runs)} /{' '}
+                        <span className={c.failures > 0 ? 'text-red-500' : ''}>
+                          {num(c.failures)}
+                        </span>
+                      </td>
+                      <td
+                        className="max-w-xs truncate py-2 text-xs text-red-500"
+                        title={c.lastError ?? undefined}
+                      >
                         {c.lastError ? `${ago(c.lastFailureAt, now)}: ${c.lastError}` : ''}
                       </td>
                     </tr>
@@ -373,7 +474,11 @@ export default function BackofficeSalutePage() {
             <Card title="Matcher e refresh">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <Stat label="Righe nel matcher" value={num(report.matcher.rows)} />
-                <Stat label="Ultimo calcolo" value={ago(report.matcher.calculatedAt, now)} hint={formatDateTime(report.matcher.calculatedAt)} />
+                <Stat
+                  label="Ultimo calcolo"
+                  value={ago(report.matcher.calculatedAt, now)}
+                  hint={formatDateTime(report.matcher.calculatedAt)}
+                />
                 <Stat
                   label="Mercati in coda incrementale"
                   value={num(report.matcher.pendingMarkets ?? report.matcher.pendingEvents)}
@@ -402,21 +507,35 @@ export default function BackofficeSalutePage() {
                 <div className="mb-3">
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="text-foreground">
-                      Budget del giorno: <span className="font-semibold tabular-nums">{num(report.provider.budget.callsUsed)}</span> / {num(report.provider.budget.planDailyLimit)} chiamate
+                      Budget del giorno:{' '}
+                      <span className="font-semibold tabular-nums">
+                        {num(report.provider.budget.callsUsed)}
+                      </span>{' '}
+                      / {num(report.provider.budget.planDailyLimit)} chiamate
                     </span>
-                    <span className="text-xs text-muted-foreground">ultima {ago(report.provider.budget.lastCallAt, now)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ultima {ago(report.provider.budget.lastCallAt, now)}
+                    </span>
                   </div>
                   <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className={`h-2 rounded-full ${
-                        report.provider.budget.callsUsed / Math.max(1, report.provider.budget.planDailyLimit) > 0.9 ? 'bg-red-500' : 'bg-primary'
+                        report.provider.budget.callsUsed /
+                          Math.max(1, report.provider.budget.planDailyLimit) >
+                        0.9
+                          ? 'bg-red-500'
+                          : 'bg-primary'
                       }`}
-                      style={{ width: `${Math.min(100, (100 * report.provider.budget.callsUsed) / Math.max(1, report.provider.budget.planDailyLimit))}%` }}
+                      style={{
+                        width: `${Math.min(100, (100 * report.provider.budget.callsUsed) / Math.max(1, report.provider.budget.planDailyLimit))}%`,
+                      }}
                     />
                   </div>
                 </div>
               ) : (
-                <p className="mb-3 text-sm text-muted-foreground">Nessuna chiamata registrata oggi.</p>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Nessuna chiamata registrata oggi.
+                </p>
               )}
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
@@ -431,24 +550,40 @@ export default function BackofficeSalutePage() {
                 <tbody>
                   {report.provider.lastRuns.map((r) => (
                     <tr key={r.runType} className="border-t border-border">
-                      <td className="py-2 pr-3 text-foreground">{RUN_TYPE_LABELS[r.runType] ?? r.runType}</td>
+                      <td className="py-2 pr-3 text-foreground">
+                        {RUN_TYPE_LABELS[r.runType] ?? r.runType}
+                      </td>
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2">
                           <Dot tone={r.status === 'success' ? 'ok' : 'bad'} />
                           <span className="text-xs">{r.status}</span>
                         </div>
-                        {r.error && <div className="max-w-xs truncate text-xs text-red-500" title={r.error}>{r.error}</div>}
+                        {r.error && (
+                          <div className="max-w-xs truncate text-xs text-red-500" title={r.error}>
+                            {r.error}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">{ago(r.startedAt, now)}</td>
+                      <td className="py-2 pr-3 text-xs text-muted-foreground">
+                        {ago(r.startedAt, now)}
+                      </td>
                       <td className="py-2 pr-3 text-right text-xs tabular-nums">
-                        {r.runType === 'catalog' ? `${num(r.leaguesSynced)} leghe` : r.runType === 'fixtures' ? `${num(r.fixturesUpserted)} fixture` : `${num(r.fixturesUpdated)} aggiornate`}
+                        {r.runType === 'catalog'
+                          ? `${num(r.leaguesSynced)} leghe`
+                          : r.runType === 'fixtures'
+                            ? `${num(r.fixturesUpserted)} fixture`
+                            : `${num(r.fixturesUpdated)} aggiornate`}
                       </td>
-                      <td className="py-2 text-right text-xs tabular-nums">{num(r.apiCallsUsed)}</td>
+                      <td className="py-2 text-right text-xs tabular-nums">
+                        {num(r.apiCallsUsed)}
+                      </td>
                     </tr>
                   ))}
                   {report.provider.lastRuns.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-3 text-center text-muted-foreground">Nessun sync eseguito.</td>
+                      <td colSpan={5} className="py-3 text-center text-muted-foreground">
+                        Nessun sync eseguito.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -488,14 +623,20 @@ export default function BackofficeSalutePage() {
                   {report.odds.map((o) => (
                     <tr key={`${o.slug}-${o.status}`} className="border-t border-border">
                       <td className="py-2 pr-3 font-mono text-xs text-foreground">{o.slug}</td>
-                      <td className={`py-2 pr-3 text-xs ${o.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}`}>{o.status}</td>
+                      <td
+                        className={`py-2 pr-3 text-xs ${o.status === 'active' ? 'text-green-400' : 'text-muted-foreground'}`}
+                      >
+                        {o.status}
+                      </td>
                       <td className="py-2 pr-3 text-right tabular-nums">{num(o.rows)}</td>
                       <td className="py-2 text-right tabular-nums">{num(o.events)}</td>
                     </tr>
                   ))}
                   {report.odds.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-3 text-center text-muted-foreground">Nessuna quota in tabella.</td>
+                      <td colSpan={4} className="py-3 text-center text-muted-foreground">
+                        Nessuna quota in tabella.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -503,10 +644,16 @@ export default function BackofficeSalutePage() {
             </Card>
 
             {/* Storage */}
-            <Card title="Spazio nel database" aside={`totale ${bytes(report.storage.databaseBytes)}`}>
+            <Card
+              title="Spazio nel database"
+              aside={`totale ${bytes(report.storage.databaseBytes)}`}
+            >
               <ul className="space-y-1.5">
                 {report.storage.tables.map((t) => {
-                  const share = report.storage.databaseBytes > 0 ? (100 * t.bytes) / report.storage.databaseBytes : 0
+                  const share =
+                    report.storage.databaseBytes > 0
+                      ? (100 * t.bytes) / report.storage.databaseBytes
+                      : 0
                   return (
                     <li key={t.name} className="text-xs">
                       <div className="flex items-baseline justify-between">
@@ -516,7 +663,10 @@ export default function BackofficeSalutePage() {
                         </span>
                       </div>
                       <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div className={`h-1.5 rounded-full ${share > 50 ? 'bg-amber-500' : 'bg-primary/60'}`} style={{ width: `${Math.min(100, share)}%` }} />
+                        <div
+                          className={`h-1.5 rounded-full ${share > 50 ? 'bg-amber-500' : 'bg-primary/60'}`}
+                          style={{ width: `${Math.min(100, share)}%` }}
+                        />
                       </div>
                     </li>
                   )

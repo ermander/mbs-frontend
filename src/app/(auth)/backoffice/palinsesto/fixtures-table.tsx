@@ -34,7 +34,10 @@ const STATUS_LABEL: Record<OdEventStatus, string> = {
   rescheduled: 'riprogrammata',
 }
 
-const MATCH_STATUS_VARIANT: Record<string, 'success' | 'info' | 'warning' | 'destructive' | 'outline'> = {
+const MATCH_STATUS_VARIANT: Record<
+  string,
+  'success' | 'info' | 'warning' | 'destructive' | 'outline'
+> = {
   auto_confirmed: 'success',
   high_confidence: 'info',
   manual_confirmed: 'success',
@@ -139,7 +142,7 @@ export function FixturesTable({
                   <tr className="sticky top-[33px] z-[5] bg-surface-1">
                     <td
                       colSpan={COLUMNS}
-                      className="border-y border-border px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
+                      className="border-y border-border px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.02em] text-foreground"
                     >
                       {g.heading}
                       <span className="ml-2 font-normal normal-case text-muted-foreground">
@@ -240,9 +243,12 @@ function Th({ children, title }: { children: ReactNode; title?: string }) {
 
 function BookCount({ mapped, withOdds }: { mapped: number; withOdds: number }) {
   const cls =
-    withOdds > 0 ? 'text-emerald-400' : mapped > 0 ? 'text-neon-orange' : 'text-muted-foreground'
+    withOdds > 0 ? 'text-emerald-400' : mapped > 0 ? 'text-amber-400' : 'text-muted-foreground'
   return (
-    <span className={`font-mono ${cls}`} title={`${mapped} con mapping · ${withOdds} con quote attive`}>
+    <span
+      className={`font-mono ${cls}`}
+      title={`${mapped} con mapping · ${withOdds} con quote attive`}
+    >
       {mapped} · {withOdds}
     </span>
   )
@@ -309,7 +315,11 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
       })
       .catch(() => {
         if (!cancelled)
-          setResult({ eventId, rows: null, error: 'Errore nel caricamento dei bookmaker collegati.' })
+          setResult({
+            eventId,
+            rows: null,
+            error: 'Errore nel caricamento dei bookmaker collegati.',
+          })
       })
     return () => {
       cancelled = true
@@ -347,7 +357,7 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
       </dl>
       <div className="lg:col-span-2">
         <div className="mb-1 flex items-center gap-2">
-          <span className="uppercase tracking-wide text-muted-foreground">
+          <span className="font-mono uppercase tracking-[0.02em] text-muted-foreground">
             Bookmaker collegati dal matcher
           </span>
           {bookmakers && <span className="text-muted-foreground">({num(bookmakers.length)})</span>}

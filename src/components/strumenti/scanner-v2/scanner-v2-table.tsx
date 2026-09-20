@@ -23,7 +23,7 @@ import {
   outcomeName,
 } from '@/lib/matcher/format'
 import { legDisplayOdds, quickProfit, type SharedAmounts } from '@/lib/matcher/quick-profit'
-import type { MatchType, MatcherMeta, MatcherResult } from '@/types/matcher'
+import type { MatcherMeta, MatcherResult } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
 /** Selection of the Multipla (§14.99): shown as a checkbox column while the panel is open. */
@@ -51,10 +51,11 @@ interface ScannerV2TableProps {
   onOpenCalculator: (row: MatcherResult) => void
 }
 
-/** Bold on plain background; the green tint marks only a rating from 100% up. */
+/** Mono on plain background; the green tint marks only a rating from 100% up. */
 function ratingBadge(rating: number) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
-  if (rating >= 100) return `${base} bg-emerald-100 text-emerald-900`
+  const base =
+    'inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums'
+  if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-300`
   return `${base} text-foreground`
 }
 
@@ -81,11 +82,11 @@ function NationFlag({
   )
 }
 
-/** Sky for a back price, rose for a lay one; the outcome sits in its own «Esito» cell. */
+/** Neutral for a back price, a light rose for a lay one; the outcome sits in its own «Esito» cell. */
 function oddsCellClass(lay: boolean) {
   return cn(
-    'inline-flex items-center rounded-md px-2 py-1',
-    lay ? 'bg-rose-100 text-rose-900' : 'bg-sky-100 text-sky-900',
+    'inline-flex items-center rounded px-1.5 py-0.5',
+    lay ? 'bg-rose-500/15 text-rose-300' : 'bg-muted text-foreground',
   )
 }
 
@@ -133,17 +134,9 @@ function LastSeenCell({ row, now }: { row: MatcherResult; now: number }) {
   )
 }
 
-function matchTypeBadge(type: MatchType) {
-  const base =
-    'inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium'
-  switch (type) {
-    case 'dutch_2way':
-      return `${base} bg-blue-500/15 text-blue-400`
-    case 'dutch_3way':
-      return `${base} bg-purple-500/15 text-purple-400`
-    case 'back_lay':
-      return `${base} bg-teal-500/15 text-teal-400`
-  }
+/** The type as a quiet tag: the label tells it, no colour code. */
+function matchTypeBadge() {
+  return 'inline-flex items-center whitespace-nowrap rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground'
 }
 
 function formatEuro(n: number): string {
@@ -234,7 +227,7 @@ function ProfitCell({
   return (
     <span
       className={cn(
-        'font-mono text-sm font-semibold tabular-nums',
+        'font-mono text-[13px] font-medium tabular-nums',
         q.profit >= 0 ? 'text-emerald-400' : 'text-red-400',
         className,
       )}
@@ -266,7 +259,7 @@ export function ScannerV2Table({
   const legColumns = Math.max(2, ...results.map((r) => r.legs.length))
 
   const empty = (
-    <div className="rounded-md border border-border bg-card p-8 text-center text-muted-foreground">
+    <div className="rounded-ow-card border border-border bg-card p-8 text-center text-[13px] text-muted-foreground">
       {loading && results.length === 0 ? 'Caricamento…' : 'Nessuna combinazione con questi filtri.'}
     </div>
   )
@@ -283,7 +276,7 @@ export function ScannerV2Table({
               return (
                 <div
                   key={matcherRowKey(row)}
-                  className="rounded-xl border border-border bg-card p-3 transition-colors"
+                  className="rounded-ow-card border border-border bg-card p-3 transition-colors"
                   onClick={() => onOpenCalculator(row)}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -310,9 +303,7 @@ export function ScannerV2Table({
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className={matchTypeBadge(row.matchType)}>
-                        {matchTypeLabel(row.matchType)}
-                      </span>
+                      <span className={matchTypeBadge()}>{matchTypeLabel(row.matchType)}</span>
                       {age != null && (
                         <span
                           className={cn(
@@ -351,31 +342,31 @@ export function ScannerV2Table({
       {/* Desktop: table. The results scroll inside this box, both ways, so the
           page, the toolbar and the pagination stay put and the horizontal
           scrollbar is always within reach; the header row sticks to the top. */}
-      <div className="hidden max-h-[calc(100dvh-17rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
-        <table className="w-full min-w-[1100px] text-sm">
+      <div className="hidden max-h-[calc(100dvh-17rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-ow-card border border-border md:block">
+        <table className="w-full min-w-[1100px] text-[13px]">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-            <tr className="bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+            <tr className="bg-muted/50 text-left font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
               {multipla && (
-                <th className="w-10 px-2 py-2 text-center font-medium" aria-label="Multipla" />
+                <th className="w-10 px-2 py-2 text-center font-normal" aria-label="Multipla" />
               )}
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Data</th>
-              <th className="px-2 py-2 text-center font-medium" aria-label="Sport">
+              <th className="whitespace-nowrap px-3 py-2 font-normal">Data</th>
+              <th className="px-2 py-2 text-center font-normal" aria-label="Sport">
                 Sport
               </th>
-              <th className="px-3 py-2 font-medium">Evento</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Mercato</th>
+              <th className="px-3 py-2 font-normal">Evento</th>
+              <th className="whitespace-nowrap px-3 py-2 font-normal">Mercato</th>
               {Array.from({ length: legColumns }, (_, i) => (
                 <React.Fragment key={i}>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">Book {i + 1}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">Esito {i + 1}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-medium">Quota {i + 1}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-normal">Book {i + 1}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-normal">Esito {i + 1}</th>
+                  <th className="whitespace-nowrap px-3 py-2 font-normal">Quota {i + 1}</th>
                 </React.Fragment>
               ))}
-              <th className="px-3 py-2 text-right font-medium">Rating</th>
-              <th className="px-2 py-2 text-center font-medium" title="Ultimo aggiornamento">
+              <th className="px-3 py-2 text-right font-normal">Rating</th>
+              <th className="px-2 py-2 text-center font-normal" title="Ultimo aggiornamento">
                 <Clock className="inline h-3.5 w-3.5" aria-label="Ultimo aggiornamento" />
               </th>
-              <th className="px-2 py-2 text-center font-medium" aria-label="Calcolatore" />
+              <th className="px-2 py-2 text-center font-normal" aria-label="Calcolatore" />
             </tr>
           </thead>
           <tbody>
@@ -398,7 +389,7 @@ export function ScannerV2Table({
                     key={matcherRowKey(row)}
                     className={cn(
                       'cursor-pointer border-b border-border transition-colors hover:bg-accent/60',
-                      multipla?.isSelected(row) && 'bg-primary/5',
+                      multipla?.isSelected(row) && 'bg-accent',
                     )}
                     onClick={() => onOpenCalculator(row)}
                   >
@@ -471,7 +462,7 @@ export function ScannerV2Table({
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
                             <span className={oddsCellClass(lay)} title={priceTitle}>
-                              <span className="font-mono text-sm font-bold tabular-nums">
+                              <span className="font-mono text-[13px] font-medium tabular-nums">
                                 {displayOdds.toFixed(2)}
                               </span>
                             </span>
@@ -506,14 +497,15 @@ export function ScannerV2Table({
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-border bg-muted/30 px-4 py-2.5">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-ow-card border border-border bg-surface-1 px-4 py-2">
+          <p className="text-[13px] tabular-nums text-muted-foreground">
             {start}–{end} di {total.toLocaleString('it-IT')} combinazioni
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="rounded-ow-btn"
               onClick={() => onPageChange(Math.max(0, page - 1))}
               disabled={page <= 0}
               aria-label="Pagina precedente"
@@ -527,6 +519,7 @@ export function ScannerV2Table({
             <Button
               variant="outline"
               size="sm"
+              className="rounded-ow-btn"
               onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
               disabled={page >= totalPages - 1}
               aria-label="Pagina successiva"

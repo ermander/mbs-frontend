@@ -180,7 +180,7 @@ export function SearchableMultiSelect({
         role="listbox"
         aria-multiselectable="true"
         className={cn(
-          'pointer-events-auto flex flex-col overflow-hidden rounded-md border border-border bg-popover text-foreground shadow-lg',
+          'pointer-events-auto flex flex-col overflow-hidden rounded-lg border border-border bg-popover text-foreground shadow-lg',
           position.useAbsolute ? 'absolute' : 'fixed',
         )}
         style={{
@@ -290,7 +290,7 @@ export function SearchableMultiSelect({
             <span
               key={opt.id}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 font-medium text-foreground',
+                'inline-flex items-center gap-1 rounded border border-border bg-muted/60 font-medium text-foreground',
                 isSmall ? 'px-1.5 py-0 text-[10px]' : 'px-2 py-0.5 text-xs',
               )}
             >

@@ -35,7 +35,7 @@ export function TelegramLinkWidget({ botUsername }: TelegramLinkWidgetProps) {
     botUsername && botUsername.trim().length > 0 ? `https://t.me/${botUsername}` : undefined
 
   return (
-    <section className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm">
+    <section className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <p className="font-medium">Notifiche Telegram</p>

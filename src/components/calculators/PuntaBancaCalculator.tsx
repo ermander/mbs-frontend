@@ -258,7 +258,7 @@ export function PuntaBancaCalculator() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Sezione Puntata */}
-      <div className="border-b border-border bg-primary/5 p-4">
+      <div className="border-b border-border bg-muted/40 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="puntata">Puntata (saldo reale)</Label>
@@ -350,7 +350,7 @@ export function PuntaBancaCalculator() {
       </div>
 
       {/* Sezione Banca */}
-      <div className="border-b border-border bg-destructive/5 p-4">
+      <div className="border-b border-border bg-muted/40 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="commissione">Commissione</Label>
@@ -507,7 +507,7 @@ export function PuntaBancaCalculator() {
               return (
                 <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
                       Bancata parziale {partialLays.length > 1 ? `#${i + 1}` : ''}
                     </p>
                     <button
@@ -551,7 +551,7 @@ export function PuntaBancaCalculator() {
                   {result != null && (
                     <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5">
                       <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                           Nuova bancata
                         </p>
                         <p className="font-mono text-sm font-semibold text-destructive">
@@ -559,7 +559,7 @@ export function PuntaBancaCalculator() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                           Nuova resp.
                         </p>
                         <p className="font-mono text-sm font-semibold">
@@ -575,7 +575,7 @@ export function PuntaBancaCalculator() {
               <button
                 type="button"
                 onClick={addPartialLay}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
               >
                 <span className="text-base leading-none">+</span>
                 Bancata parziale
@@ -604,7 +604,7 @@ export function PuntaBancaCalculator() {
             </div>
             {/* Layout a card solo su mobile (< sm) */}
             <div className="block space-y-3 p-4 sm:hidden">
-              <div className="rounded-xl border border-border bg-primary/10 p-4">
+              <div className="rounded-xl border border-border bg-accent p-4">
                 <p className="mb-3 text-sm font-medium text-foreground">
                   Se vinci la puntata sul Book:
                 </p>
@@ -718,7 +718,7 @@ export function PuntaBancaCalculator() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-border bg-primary/10 transition-colors hover:bg-accent">
+                  <tr className="border-b border-border bg-accent transition-colors hover:bg-accent">
                     <td className="p-3">Se vinci la puntata sul Book:</td>
                     <td className="p-3 text-right text-primary">
                       {formatSigned(totalPuntataEffettiva * quotaPuntaNum - totalPuntataNum)}

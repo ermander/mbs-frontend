@@ -410,7 +410,7 @@ export default function PalinsestoPage() {
         {effectiveScope && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             Filtro attivo:
-            <span className="rounded-md bg-primary/15 px-2 py-0.5 text-primary">
+            <span className="rounded-md bg-accent px-2 py-0.5 text-primary">
               {effectiveScope.type === 'category' ? 'nazione' : 'competizione'} ·{' '}
               {effectiveScope.label}
             </span>

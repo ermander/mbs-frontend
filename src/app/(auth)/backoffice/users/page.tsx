@@ -118,9 +118,9 @@ export default function BackofficeUsersPage() {
                   <td className="px-4 py-2 text-foreground">{user.email}</td>
                   <td className="px-4 py-2">
                     <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
                         user.role === 'ADMIN_ROLE'
-                          ? 'bg-primary/15 text-primary'
+                          ? 'bg-accent text-primary'
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >

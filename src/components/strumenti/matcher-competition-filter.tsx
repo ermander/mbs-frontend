@@ -93,7 +93,7 @@ export function MatcherCompetitionFilter({
       renderOption={(opt) => (
         <span className="flex w-full min-w-0 items-center justify-between gap-2">
           <span className="truncate">{opt.name}</span>
-          <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
             {resultsById.get(opt.id) ?? ''}
           </span>
         </span>

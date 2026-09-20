@@ -233,7 +233,7 @@ export function BaccaratCalculator() {
       </div>
 
       {/* Sezione input */}
-      <div className="space-y-4 border-b border-border bg-primary/5 p-4">
+      <div className="space-y-4 border-b border-border bg-muted/40 p-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <AmountField
             id="baccarat-puntata"
@@ -574,7 +574,7 @@ export function BaccaratCalculator() {
                 )}
 
                 {modalError && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <div className="rounded-lg border border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {modalError}
                   </div>
                 )}

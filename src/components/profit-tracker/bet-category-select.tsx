@@ -30,7 +30,7 @@ export function BetCategorySelect({ value, onChange, className }: BetCategorySel
             className={cn(
               'rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
               value === cat.value
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >

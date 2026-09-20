@@ -108,7 +108,7 @@ function CalcolatoriDashboard() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 py-2">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Calcolatori</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Calcolatori</h1>
         <p className="mt-1 text-muted-foreground">
           Tutti i calcolatori in un unico posto. Espandi una card per vedere tutte le opzioni.
         </p>

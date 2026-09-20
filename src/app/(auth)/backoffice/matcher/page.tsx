@@ -27,14 +27,14 @@ const MATCH_TYPES: Array<{ value: string; label: string }> = [
 ]
 
 function ratingBadge(rating: number) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
+  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold tabular-nums'
   if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-400`
   if (rating >= 98) return `${base} bg-amber-500/15 text-amber-400`
   return `${base} bg-red-500/15 text-red-400`
 }
 
 function matchTypeBadge(type: string) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium'
+  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
   switch (type) {
     case 'dutch_2way':
       return `${base} bg-blue-500/15 text-blue-400`
@@ -86,14 +86,14 @@ function LegCell({ leg }: { leg: MatcherLeg }) {
       <div className="flex items-center gap-1.5">
         <span className="font-medium">{leg.bookmakerName}</span>
         <span
-          className={`inline-flex items-center rounded-full border px-1.5 py-0 text-[10px] font-bold ${tagClass}`}
+          className={`inline-flex items-center rounded border px-1.5 py-0 text-[10px] font-semibold ${tagClass}`}
         >
           {tagLabel}
         </span>
       </div>
       <div className="text-xs">
         {leg.outcomeLabel.replace(/^(BACK|LAY)\s+/, '')}{' '}
-        <span className={`font-bold ${oddsColor}`}>{leg.odds.toFixed(2)}</span>
+        <span className={`font-semibold ${oddsColor}`}>{leg.odds.toFixed(2)}</span>
       </div>
     </>
   )
@@ -209,7 +209,16 @@ export default function MatcherPage() {
       /* ignore */
     }
     setLoading(false)
-  }, [page, sport, matchType, marketTypeFilter, minRating, bookmaker, competitionIds, debouncedSearch])
+  }, [
+    page,
+    sport,
+    matchType,
+    marketTypeFilter,
+    minRating,
+    bookmaker,
+    competitionIds,
+    debouncedSearch,
+  ])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens asynchronously after await, not synchronously
@@ -239,7 +248,7 @@ export default function MatcherPage() {
     <Container>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Matcher</h1>
+          <h1 className="text-2xl font-semibold">Matcher</h1>
           <p className="text-sm text-muted-foreground">
             {total.toLocaleString()} risultati
             {calculatedAt && ` — aggiornato ${formatDate(calculatedAt)}`}

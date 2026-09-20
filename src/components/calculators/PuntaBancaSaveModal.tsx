@@ -550,8 +550,8 @@ export function PuntaBancaSaveModal({
 
               <BetCategorySelect value={categoria} onChange={setCategoria} />
 
-              <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                <Label className="text-xs font-medium uppercase tracking-wide text-primary">
+              <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
                   Collaboratore Punta
                 </Label>
                 {isMultiConto ? (
@@ -578,7 +578,7 @@ export function PuntaBancaSaveModal({
                         'text-xs',
                         selectedPuntaAccountIds.length === numConti
                           ? 'text-muted-foreground'
-                          : 'text-amber-600',
+                          : 'text-amber-400',
                       )}
                     >
                       {selectedPuntaAccountIds.length}/{numConti} conti selezionati.
@@ -631,7 +631,7 @@ export function PuntaBancaSaveModal({
                         portalContainer={dropdownPortalEl}
                       />
                       {holderIdPunta && accountsPunta.length === 0 && (
-                        <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                        <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                           Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                           Profit Tracker → Conti.
                         </p>
@@ -641,8 +641,8 @@ export function PuntaBancaSaveModal({
                 )}
               </div>
 
-              <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                <Label className="text-xs font-medium uppercase tracking-wide text-destructive">
+              <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-destructive">
                   Collaboratore Banca
                 </Label>
                 <div className="space-y-2">
@@ -672,7 +672,9 @@ export function PuntaBancaSaveModal({
                   <SearchableSelect
                     id="account-banca"
                     placeholder={
-                      holderIdBanca ? 'Seleziona conto exchange' : 'Seleziona prima un collaboratore'
+                      holderIdBanca
+                        ? 'Seleziona conto exchange'
+                        : 'Seleziona prima un collaboratore'
                     }
                     searchPlaceholder="Cerca conto exchange..."
                     options={accountsBanca.map((acc) => {
@@ -692,7 +694,7 @@ export function PuntaBancaSaveModal({
                     portalContainer={dropdownPortalEl}
                   />
                   {holderIdBanca && accountsBanca.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-600">
+                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
                       Nessun conto exchange disponibile per questo collaboratore. Aggiungine uno in
                       Profit Tracker → Conti.
                     </p>
@@ -768,7 +770,7 @@ export function PuntaBancaSaveModal({
               </div>
 
               {error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <div className="rounded-lg border border-border bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {error}
                 </div>
               )}

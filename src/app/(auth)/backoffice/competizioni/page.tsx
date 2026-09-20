@@ -37,7 +37,11 @@ interface Keyed {
  * the bulk actions and the «n/tot» chips speak of the whole node even when
  * only some of its competitions are listed.
  */
-function filterCatalog(catalog: CompetitionCatalogDto, q: string, mode: Mode): CompetitionCatalogDto {
+function filterCatalog(
+  catalog: CompetitionCatalogDto,
+  q: string,
+  mode: Mode,
+): CompetitionCatalogDto {
   const needle = q.trim().toLowerCase()
   const keep = (name: string, categoryName: string, enabled: boolean, future: number): boolean => {
     if (mode === 'on' && !enabled) return false
@@ -235,7 +239,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3" title={hint}>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-foreground">{value}</div>
+      <div className="mt-1 text-2xl font-semibold text-foreground">{value}</div>
     </div>
   )
 }

@@ -64,7 +64,7 @@ export function ScheduleSummary({
 
   if (error) {
     return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-destructive/10 px-4 py-3 text-sm text-destructive">
         <span>{error}</span>
         <Button size="sm" variant="outline" onClick={onRefresh}>
           Riprova
@@ -91,10 +91,14 @@ export function ScheduleSummary({
           <div key={s.sportId} className="rounded-lg border border-border bg-card px-4 py-3">
             <div className="flex items-baseline justify-between gap-2">
               <div className="text-sm font-semibold text-foreground">{s.sportName}</div>
-              <span className="font-mono text-[11px] text-muted-foreground">{s.sportKey ?? '—'}</span>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {s.sportKey ?? '—'}
+              </span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-foreground">{num(s.fixturesFuture)}</span>
+              <span className="text-2xl font-semibold text-foreground">
+                {num(s.fixturesFuture)}
+              </span>
               <span className="text-xs text-muted-foreground">partite future</span>
             </div>
             <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -107,7 +111,10 @@ export function ScheduleSummary({
                 {num(s.competitionsWithFutureFixtures)}
                 <span className="text-muted-foreground"> / {num(s.competitions)}</span>
               </dd>
-              <dt className="text-muted-foreground" title="Competizioni per cui gli scraper leggono le quote dei bookmaker">
+              <dt
+                className="text-muted-foreground"
+                title="Competizioni per cui gli scraper leggono le quote dei bookmaker"
+              >
                 Lette dagli scraper
               </dt>
               <dd className="text-right text-foreground">
@@ -127,7 +134,8 @@ export function ScheduleSummary({
         ))}
         {summary.sports.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Nessuno sport con chiave api-sports nel catalogo: il sync del catalogo non è ancora girato.
+            Nessuno sport con chiave api-sports nel catalogo: il sync del catalogo non è ancora
+            girato.
           </p>
         )}
       </div>
@@ -156,7 +164,11 @@ export function ScheduleSummary({
               ? `${num(summary.budget.callsUsed)} / ${num(summary.budget.planDailyLimit)}`
               : '—'
           }
-          hint={summary.budget ? `ultima ${ago(summary.budget.lastCallAt, now)}` : 'budget non leggibile'}
+          hint={
+            summary.budget
+              ? `ultima ${ago(summary.budget.lastCallAt, now)}`
+              : 'budget non leggibile'
+          }
         />
       </div>
 
@@ -182,7 +194,7 @@ export function ScheduleSummary({
         </summary>
         <div className="grid grid-cols-1 gap-4 border-t border-border px-4 py-3 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="mb-1 font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
               Ultimo run per tipo
             </div>
             {runs.length === 0 ? (
@@ -202,7 +214,9 @@ export function ScheduleSummary({
                 <tbody>
                   {runs.map((r) => (
                     <tr key={`${r.sportKey}-${r.runType}`} className="border-t border-border">
-                      <td className="py-1.5 pr-3 font-mono text-xs text-foreground">{r.sportKey}</td>
+                      <td className="py-1.5 pr-3 font-mono text-xs text-foreground">
+                        {r.sportKey}
+                      </td>
                       <td className="py-1.5 pr-3 text-foreground">
                         {RUN_TYPE_LABELS[r.runType] ?? r.runType}
                       </td>
@@ -230,7 +244,7 @@ export function ScheduleSummary({
             )}
           </div>
           <div className="lg:col-span-2">
-            <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="mb-1 font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
               Partite future per stato (canonico / codice api-sports)
             </div>
             {summary.futureByStatus.length === 0 ? (
@@ -261,7 +275,7 @@ export function ScheduleSummary({
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <div className="text-lg font-bold text-foreground">{value}</div>
+      <div className="text-lg font-semibold text-foreground">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
       {hint && <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>}
     </div>

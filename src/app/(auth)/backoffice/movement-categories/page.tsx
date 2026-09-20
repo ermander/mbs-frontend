@@ -343,7 +343,7 @@ export default function BackofficeMovementCategoriesPage() {
                         'rounded-pill border px-2 py-0.5 text-[11px] font-medium ' +
                         (category.attivo
                           ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                          : 'border-white/10 bg-white/5 text-white/40')
+                          : 'border-border bg-muted text-muted-foreground')
                       }
                       title={category.attivo ? 'Clicca per disattivare' : 'Clicca per riattivare'}
                     >

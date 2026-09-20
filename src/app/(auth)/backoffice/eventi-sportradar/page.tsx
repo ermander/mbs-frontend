@@ -121,7 +121,7 @@ export default function EventiSportradarPage() {
                   <AccordionTrigger className="text-base font-semibold">
                     <span className="flex items-center gap-2">
                       {sport.name}
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                      <span className="rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
                         {sport.categories.length} nazioni
                       </span>
                     </span>
@@ -138,7 +138,7 @@ export default function EventiSportradarPage() {
                                 </span>
                               )}
                               {cat.name}
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                              <span className="rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
                                 {cat.competitions.length}
                               </span>
                             </span>
@@ -152,7 +152,7 @@ export default function EventiSportradarPage() {
                                   onClick={() => selectCompetition(comp.id, comp.name)}
                                   className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${
                                     selectedCompId === comp.id
-                                      ? 'bg-primary/15 text-primary'
+                                      ? 'bg-accent text-primary'
                                       : 'text-foreground'
                                   }`}
                                 >
@@ -169,7 +169,7 @@ export default function EventiSportradarPage() {
                                       </span>
                                     )}
                                   </span>
-                                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                  <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                     {comp.eventCount} eventi
                                   </span>
                                 </button>
@@ -317,7 +317,7 @@ export default function EventiSportradarPage() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <div className="text-2xl font-bold text-foreground">{value.toLocaleString('it-IT')}</div>
+      <div className="text-2xl font-semibold text-foreground">{value.toLocaleString('it-IT')}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   )
@@ -335,7 +335,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+      className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
         colors[status] ?? 'bg-muted text-muted-foreground'
       }`}
     >
@@ -354,7 +354,7 @@ function ConfirmationBadge({ status, count }: { status: string; count: number })
 
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+      className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
         colors[status] ?? 'bg-muted text-muted-foreground'
       }`}
     >

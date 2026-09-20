@@ -83,7 +83,7 @@ export function FunBonusCalculator() {
         sotto il 100% il rollover effettivo aumenta; quanto hai già giocato riduce il residuo.
       </div>
 
-      <div className="space-y-4 border-b border-border bg-primary/5 p-4">
+      <div className="space-y-4 border-b border-border bg-muted/40 p-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <AmountField id="fb-bonus" label="Bonus erogato" value={bonus} onChange={setBonus} />
           <UnitField

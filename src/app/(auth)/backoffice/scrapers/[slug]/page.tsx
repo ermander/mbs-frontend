@@ -186,7 +186,9 @@ function ConfigurationTab({
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col">
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dt className="font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
+        {label}
+      </dt>
       <dd className="text-sm text-foreground">{value}</dd>
     </div>
   )

@@ -43,8 +43,8 @@ interface ResultBttsTableProps {
 
 /** Bold on plain background; the green tint marks only a rating from 100% up. */
 function ratingBadge(rating: number) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums'
-  return rating >= 100 ? `${base} bg-emerald-100 text-emerald-900` : `${base} text-foreground`
+  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold tabular-nums'
+  return rating >= 100 ? `${base} bg-emerald-500/15 text-emerald-300` : `${base} text-foreground`
 }
 
 /** Flag of the competition's nation (the European one for UEFA competitions filed under «World»), the nation name when no flag is available. */
@@ -156,10 +156,10 @@ function PriceCell({ odds, excluded }: { odds: number | undefined; excluded?: bo
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md px-2 py-1 font-mono text-sm font-bold tabular-nums',
+        'inline-flex items-center rounded-md px-2 py-1 font-mono text-sm font-semibold tabular-nums',
         excluded
           ? 'bg-muted text-muted-foreground line-through decoration-muted-foreground/60'
-          : 'bg-sky-100 text-sky-900',
+          : 'bg-sky-500/15 text-sky-300',
       )}
       title={excluded ? 'X & NG (0-0): escluso dal confronto' : undefined}
     >
@@ -227,7 +227,7 @@ export function ResultBttsTable({
                         className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1"
                       >
                         <span className="text-xs">{RESULT_BTTS_OUTCOME_LABELS[key]}</span>
-                        <span className="font-mono text-sm font-bold tabular-nums text-sky-300">
+                        <span className="font-mono text-sm font-semibold tabular-nums text-sky-400">
                           {row.prices[key]?.odds.toFixed(2) ?? '—'}
                         </span>
                       </span>
@@ -272,7 +272,7 @@ export function ResultBttsTable({
       <div className="hidden max-h-[calc(100dvh-19rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[1100px] text-sm">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-            <tr className="bg-muted/50 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+            <tr className="bg-muted/50 text-left font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
               <th className="whitespace-nowrap px-3 py-2 font-medium">Data</th>
               <th className="px-2 py-2 text-center font-medium">Sport</th>
               <th className="px-3 py-2 font-medium">Evento</th>

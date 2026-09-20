@@ -160,7 +160,7 @@ export default function GiocateArchiviatePage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                    className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
                     onClick={() => void handleDelete(bet.id)}
                   >
                     Elimina
@@ -180,7 +180,7 @@ export default function GiocateArchiviatePage() {
       <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2 text-left">ID</th>
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Sport</th>
@@ -247,7 +247,7 @@ export default function GiocateArchiviatePage() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-md border border-destructive/40 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                      className="rounded-md border border-border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                       onClick={() => handleDelete(bet.id)}
                     >
                       Elimina

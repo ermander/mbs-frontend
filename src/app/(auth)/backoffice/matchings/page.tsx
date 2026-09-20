@@ -34,7 +34,7 @@ const MATCH_METHODS = [
 const PAGE_SIZE = 50
 
 function statusBadge(status: string) {
-  const base = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium'
+  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
   switch (status) {
     case 'auto_confirmed':
     case 'manual_confirmed':
@@ -213,7 +213,7 @@ export default function MatchingsPage() {
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border bg-muted/40 text-left font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
               <th className="px-3 py-2">Evento Canonico</th>
               <th className="px-3 py-2">Bookmaker</th>
               <th className="px-3 py-2">Nomi Bookmaker</th>
@@ -337,7 +337,7 @@ function MatchingRow({
       {isExpanded && (
         <tr>
           <td colSpan={10} className="border-t border-border bg-muted/10 px-4 py-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="mb-2 font-mono text-xs font-semibold uppercase tracking-[0.02em] text-muted-foreground">
               Bookmaker associati a: {m.canonicalHome ?? '?'} - {m.canonicalAway ?? '?'}
             </div>
             {loadingDetail ? (
@@ -348,7 +348,7 @@ function MatchingRow({
               <div className="overflow-x-auto rounded border border-border">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left font-medium uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b border-border bg-muted/30 text-left font-mono font-medium uppercase tracking-[0.02em] text-muted-foreground">
                       <th className="px-3 py-1.5">Bookmaker</th>
                       <th className="px-3 py-1.5">Nome Home</th>
                       <th className="px-3 py-1.5">Nome Away</th>

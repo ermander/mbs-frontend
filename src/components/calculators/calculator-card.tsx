@@ -30,7 +30,7 @@ export function CalculatorCard({
       <Card className="flex flex-col">
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-primary">
               <Icon className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -59,7 +59,7 @@ export function CalculatorCard({
       >
         <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-y-auto p-0">
           <div className="flex items-center gap-3 border-b border-border px-6 py-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-primary">
               <Icon className="h-4.5 w-4.5" />
             </div>
             <div className="min-w-0">

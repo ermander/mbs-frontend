@@ -159,8 +159,8 @@ export function MultiplaOfflineCalculator() {
   return (
     <div className="mx-auto max-w-3xl">
       {/* Sezione Stake */}
-      <div className="border-b border-border bg-primary/5 p-4">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-primary">
+      <div className="border-b border-border bg-muted/40 p-4">
+        <p className="mb-3 font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
           Stake Multipla
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -220,7 +220,7 @@ export function MultiplaOfflineCalculator() {
 
       {/* Sezione Eventi */}
       <div className="border-b border-border p-4">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="mb-3 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
           Selezioni Multipla
         </p>
         <div className="space-y-4">
@@ -250,7 +250,7 @@ export function MultiplaOfflineCalculator() {
                     ) : (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-semibold text-primary">
                       {index + 1}
                     </span>
                     <div
@@ -510,7 +510,7 @@ export function MultiplaOfflineCalculator() {
                     {hr != null && hr.hedgeStake > 0 && backStakeTotale > 0 && (
                       <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5">
                         <div>
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                             {ev.type === 'punta-banca' ? 'Stake Banca' : 'Stake Punta 2'}
                           </p>
                           <p className="font-mono text-sm font-semibold text-destructive">
@@ -518,7 +518,7 @@ export function MultiplaOfflineCalculator() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
                             {ev.type === 'punta-banca' ? 'Responsabilità' : 'Costo'}
                           </p>
                           <p className="font-mono text-sm font-semibold">
@@ -537,7 +537,7 @@ export function MultiplaOfflineCalculator() {
           <button
             type="button"
             onClick={addEvent}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
           >
             <Plus className="h-3.5 w-3.5" />
             Aggiungi evento
@@ -573,8 +573,8 @@ export function MultiplaOfflineCalculator() {
                       className={cn(
                         'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                         ev.type === 'punta-banca'
-                          ? 'bg-primary/15 text-primary'
-                          : 'bg-amber-500/15 text-amber-600',
+                          ? 'bg-accent text-primary'
+                          : 'bg-amber-500/15 text-amber-400',
                       )}
                     >
                       {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
@@ -638,8 +638,8 @@ export function MultiplaOfflineCalculator() {
                           className={cn(
                             'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                             ev.type === 'punta-banca'
-                              ? 'bg-primary/15 text-primary'
-                              : 'bg-amber-500/15 text-amber-600',
+                              ? 'bg-accent text-primary'
+                              : 'bg-amber-500/15 text-amber-400',
                           )}
                         >
                           {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}

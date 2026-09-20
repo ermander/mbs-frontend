@@ -1,12 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+
 import { authClient } from '@/services/api/auth-client'
 import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { AuthHeader } from '@/components/auth/auth-header'
+import { AuthMessage } from '@/components/auth/auth-primitives'
+import { LandingButton } from '@/components/landing/landing-primitives'
 
 type Status = 'idle' | 'loading' | 'success' | 'invalid' | 'error'
 
@@ -42,72 +43,50 @@ export function VerificaEmailClient() {
 
   if (!token) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-6 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Link non valido</h1>
-            <p className="text-muted-foreground">
-              Il link di verifica non è valido o è stato utilizzato in modo errato. Richiedi una
-              nuova verifica effettuando di nuovo la registrazione o contatta il supporto.
-            </p>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/login">Torna al login</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-8">
+        <AuthHeader
+          title="Link non valido"
+          subtitle="Il link di verifica non è valido o è stato utilizzato in modo errato. Richiedi una nuova verifica effettuando di nuovo la registrazione o contatta il supporto."
+        />
+        <LandingButton href="/login" variant="ghost" className="self-start">
+          Torna al login
+        </LandingButton>
+      </div>
     )
   }
 
   if (status === 'loading') {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-6 text-center">
-            <p className="text-muted-foreground">Verifica in corso...</p>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-[15px] text-ow-text-3" role="status">
+        Verifica in corso...
+      </p>
     )
   }
 
   if (status === 'success' && userEmail) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-6 text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Email verificata</h1>
-            <p className="font-medium text-primary">
-              Email verificata con successo per {userEmail}.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Il tuo account è attivo. Verrai reindirizzato alla tua dashboard.
-            </p>
-            <Button asChild className="w-full sm:w-auto">
-              <Link href={POST_AUTH_REDIRECT}>Vai alla dashboard</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-8">
+        <AuthHeader
+          title="Email verificata"
+          subtitle="Il tuo account è attivo. Verrai reindirizzato alla tua dashboard."
+        />
+        <AuthMessage tone="success">Email verificata con successo per {userEmail}.</AuthMessage>
+        <LandingButton href={POST_AUTH_REDIRECT} variant="accent" className="self-start">
+          Vai alla dashboard
+        </LandingButton>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-6 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Link non valido o scaduto
-          </h1>
-          <p className="text-muted-foreground">
-            Il link di verifica non è più valido. Registrati nuovamente o effettua il login per
-            richiedere una nuova email di verifica.
-          </p>
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/login">Torna al login</Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-8">
+      <AuthHeader
+        title="Link non valido o scaduto"
+        subtitle="Il link di verifica non è più valido. Registrati nuovamente o effettua il login per richiedere una nuova email di verifica."
+      />
+      <LandingButton href="/login" variant="ghost" className="self-start">
+        Torna al login
+      </LandingButton>
+    </div>
   )
 }

@@ -1,17 +1,21 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
 import { registrationSchema, type RegistrationFormData } from '@/lib/validations/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
 import { authClient } from '@/services/api/auth-client'
+import {
+  AuthButton,
+  AuthCheckbox,
+  AuthField,
+  AuthInput,
+  AuthLabel,
+  AuthLink,
+  AuthMessage,
+  FieldError,
+} from '@/components/auth/auth-primitives'
 
 export function RegistrationForm() {
   const [submitStatus, setSubmitStatus] = React.useState<'idle' | 'success' | 'error'>('idle')
@@ -62,22 +66,14 @@ export function RegistrationForm() {
   }, [])
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {submitStatus === 'success' && (
-        <p className="text-sm text-primary" role="status">
-          {submitMessage}
-        </p>
-      )}
-      {submitStatus === 'error' && (
-        <p className="text-sm text-destructive" role="alert">
-          {submitMessage}
-        </p>
-      )}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
+      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="name">Nome</Label>
-          <Input
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
+        <AuthField>
+          <AuthLabel htmlFor="name">Nome</AuthLabel>
+          <AuthInput
             id="name"
             type="text"
             autoComplete="given-name"
@@ -86,16 +82,12 @@ export function RegistrationForm() {
             aria-describedby={errors.name ? 'name-error' : undefined}
             {...register('name')}
           />
-          {errors.name && (
-            <p id="name-error" className="text-sm text-destructive">
-              {errors.name.message}
-            </p>
-          )}
-        </div>
+          {errors.name && <FieldError id="name-error">{errors.name.message}</FieldError>}
+        </AuthField>
 
-        <div className="space-y-2">
-          <Label htmlFor="surname">Cognome</Label>
-          <Input
+        <AuthField>
+          <AuthLabel htmlFor="surname">Cognome</AuthLabel>
+          <AuthInput
             id="surname"
             type="text"
             autoComplete="family-name"
@@ -104,17 +96,13 @@ export function RegistrationForm() {
             aria-describedby={errors.surname ? 'surname-error' : undefined}
             {...register('surname')}
           />
-          {errors.surname && (
-            <p id="surname-error" className="text-sm text-destructive">
-              {errors.surname.message}
-            </p>
-          )}
-        </div>
+          {errors.surname && <FieldError id="surname-error">{errors.surname.message}</FieldError>}
+        </AuthField>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="email">Email</AuthLabel>
+        <AuthInput
           id="email"
           type="email"
           autoComplete="email"
@@ -123,16 +111,12 @@ export function RegistrationForm() {
           aria-describedby={errors.email ? 'email-error' : undefined}
           {...register('email')}
         />
-        {errors.email && (
-          <p id="email-error" className="text-sm text-destructive">
-            {errors.email.message}
-          </p>
-        )}
-      </div>
+        {errors.email && <FieldError id="email-error">{errors.email.message}</FieldError>}
+      </AuthField>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="password">Password</AuthLabel>
+        <AuthInput
           id="password"
           type="password"
           autoComplete="new-password"
@@ -141,16 +125,12 @@ export function RegistrationForm() {
           aria-describedby={errors.password ? 'password-error' : undefined}
           {...register('password')}
         />
-        {errors.password && (
-          <p id="password-error" className="text-sm text-destructive">
-            {errors.password.message}
-          </p>
-        )}
-      </div>
+        {errors.password && <FieldError id="password-error">{errors.password.message}</FieldError>}
+      </AuthField>
 
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Conferma password</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="confirmPassword">Conferma password</AuthLabel>
+        <AuthInput
           id="confirmPassword"
           type="password"
           autoComplete="new-password"
@@ -160,19 +140,17 @@ export function RegistrationForm() {
           {...register('confirmPassword')}
         />
         {errors.confirmPassword && (
-          <p id="confirmPassword-error" className="text-sm text-destructive">
-            {errors.confirmPassword.message}
-          </p>
+          <FieldError id="confirmPassword-error">{errors.confirmPassword.message}</FieldError>
         )}
-      </div>
+      </AuthField>
 
-      <div className="space-y-2">
+      <AuthField>
         <div className="flex items-start gap-3">
           <Controller
             name="terms"
             control={control}
             render={({ field }) => (
-              <Checkbox
+              <AuthCheckbox
                 id="terms"
                 checked={field.value}
                 onChange={(e) => field.onChange(e.target.checked)}
@@ -183,47 +161,23 @@ export function RegistrationForm() {
               />
             )}
           />
-          <div className="grid gap-1.5 leading-none">
-            <Label
-              htmlFor="terms"
-              className={cn('cursor-pointer text-sm font-normal text-muted-foreground')}
-            >
-              Accetto i{' '}
-              <Link
-                href="/termini"
-                className="text-primary underline underline-offset-4 hover:text-primary/90"
-              >
-                Termini di servizio
-              </Link>{' '}
-              e la{' '}
-              <Link
-                href="/privacy"
-                className="text-primary underline underline-offset-4 hover:text-primary/90"
-              >
-                Privacy policy
-              </Link>
-            </Label>
-            {errors.terms && (
-              <p id="terms-error" className="text-sm text-destructive">
-                {errors.terms.message}
-              </p>
-            )}
-          </div>
+          <AuthLabel
+            htmlFor="terms"
+            className="cursor-pointer font-normal leading-[1.5] text-ow-text-3"
+          >
+            Accetto i <AuthLink href="/termini">Termini di servizio</AuthLink> e la{' '}
+            <AuthLink href="/privacy">Privacy policy</AuthLink>
+          </AuthLabel>
         </div>
-      </div>
+        {errors.terms && <FieldError id="terms-error">{errors.terms.message}</FieldError>}
+      </AuthField>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <AuthButton type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Registrazione in corso...' : 'Registrati'}
-      </Button>
+      </AuthButton>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Hai già un account?{' '}
-        <Link
-          href="/login"
-          className="rounded text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Accedi
-        </Link>
+      <p className="text-center text-sm text-ow-text-3">
+        Hai già un account? <AuthLink href="/login">Accedi</AuthLink>
       </p>
     </form>
   )

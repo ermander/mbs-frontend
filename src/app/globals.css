@@ -63,7 +63,12 @@
     letter-spacing: -0.01em;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     letter-spacing: -0.025em;
     font-weight: 600;
   }
@@ -102,11 +107,93 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slide-in-left {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ------------------------------------------------------------------------------------------
+   OddWise — design tokens della landing.
+   Grammatica «Linear» (ADAPTER_STATUS §14.15x): canvas quasi nero neutro, superfici a gradini
+   neutri, bordi hairline al posto delle ombre, raggi 6/12, un solo colore cromatico (l'accento,
+   usato dalla CTA primaria e dalla cifra del profitto). Tema principale: dark (nessun
+   attributo). Varianti: <html data-theme="green"> (accento verde) e <html data-theme="light">.
+   Le variabili ow-* sono mappate in tailwind.config.js (colori ow-*, font ow-*, raggi ow-*).
+   ------------------------------------------------------------------------------------------ */
+:root {
+  --ow-bg: #08090a; /* canvas */
+  --ow-surface: #0f1011; /* card, chip, nav: un gradino sopra il canvas */
+  --ow-raised: #161718; /* calcolatore, pannelli in rilievo: due gradini */
+  --ow-deep: #161718; /* (compatibilità) stesso gradino del rilievo */
+  --ow-deep-border: rgba(77, 163, 255, 0.4); /* bordo del piano in evidenza */
+  --ow-accent: #4da3ff; /* azzurro: CTA primaria e cifra del profitto, nient'altro */
+  --ow-amber: #e0a526; /* (compatibilità) non usato dalla landing */
+  --ow-amber-text: #8a8f98;
+  --ow-text: #f7f8f8; /* titoli */
+  --ow-text-2: #d0d6e0; /* testo secondario, link */
+  --ow-text-3: #8a8f98; /* corpo, nav, eyebrow */
+  --ow-line: rgba(255, 255, 255, 0.08);
+  --ow-line-strong: rgba(255, 255, 255, 0.14);
+  --ow-on-accent: #08090a;
+  --ow-on-deep: #f7f8f8;
+  --ow-on-deep-2: #d0d6e0;
+  --ow-on-raised: #f7f8f8;
+  --ow-on-raised-2: #d0d6e0;
+  --ow-raised-muted: #8a8f98;
+  --ow-raised-line: rgba(255, 255, 255, 0.08);
+  --ow-raised-fill: rgba(255, 255, 255, 0.03);
+  --ow-neutral: #e5e5e6; /* pillola neutra della nav */
+  --ow-on-neutral: #08090a;
+  --ow-check-off: rgba(255, 255, 255, 0.18);
+  --ow-danger: #eb5757; /* errori dei form: colore di stato, non accento */
+  --ow-success: #27a644; /* conferme dei form */
+  --ow-shadow-card: inset 0 0 0 1px rgba(255, 255, 255, 0.08); /* anello hairline, niente ombra */
+  --ow-radius-card: 12px;
+  --ow-radius-card-lg: 12px;
+  --ow-radius-btn: 6px;
+  --ow-radius-pill: 9999px;
+}
+[data-theme='green'] {
+  --ow-deep-border: rgba(34, 212, 139, 0.4);
+  --ow-accent: #22d48b;
+}
+[data-theme='light'] {
+  --ow-bg: #f6f3ec;
+  --ow-surface: #ffffff;
+  --ow-raised: #15171e;
+  --ow-deep: #ffffff;
+  --ow-deep-border: rgba(14, 124, 91, 0.45);
+  --ow-accent: #0e7c5b;
+  --ow-amber-text: #5b5f6b;
+  --ow-text: #15171e;
+  --ow-text-2: #3e424d;
+  --ow-text-3: #5b5f6b;
+  --ow-line: #e3ded2;
+  --ow-line-strong: #d9d3c5;
+  --ow-on-accent: #ffffff;
+  --ow-on-deep: #15171e;
+  --ow-on-deep-2: #3e424d;
+  --ow-on-raised: #f6f3ec;
+  --ow-neutral: #15171e;
+  --ow-on-neutral: #ffffff;
+  --ow-check-off: #c8c3b6;
+  --ow-danger: #c0392b;
+  --ow-success: #1e7a3a;
+  --ow-shadow-card: inset 0 0 0 1px rgba(21, 23, 30, 0.1);
 }

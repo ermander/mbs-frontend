@@ -1,29 +1,19 @@
-import Image from 'next/image'
-
 import { cn } from '@/lib/utils'
 
 interface AuthHeaderProps {
   title: string
   subtitle?: string
   className?: string
-  showIcon?: boolean
 }
 
-export function AuthHeader({ title, subtitle, className, showIcon = true }: AuthHeaderProps) {
+/** Titolo delle pagine di accesso: 28px peso medio, sottotitolo 15px grigio, allineati a sinistra. */
+export function AuthHeader({ title, subtitle, className }: AuthHeaderProps) {
   return (
-    <div className={cn('space-y-3 text-center', className)}>
-      {showIcon && (
-        <Image
-          src="/loghi/mbs-icon.svg"
-          alt=""
-          width={48}
-          height={48}
-          className="mx-auto h-12 w-12"
-          priority
-        />
-      )}
-      <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-      {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+    <div className={cn('flex flex-col gap-2', className)}>
+      <h1 className="text-[28px] font-medium leading-[1.1] tracking-[-0.022em] text-ow-text">
+        {title}
+      </h1>
+      {subtitle && <p className="text-[15px] leading-[1.6] text-ow-text-3">{subtitle}</p>}
     </div>
   )
 }

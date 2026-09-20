@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MatcherLeg, MatcherMeta } from '@/types/matcher'
 import {
+  allBookmakerLogoSrcs,
   bookmakerLogoSrc,
   exchangeCommissionOf,
   legIsExchange,
@@ -36,6 +37,15 @@ describe('logos and names', () => {
     expect(bookmakerLogoSrc('perlaplay')).toBe('/loghi_book/49.png')
     expect(bookmakerLogoSrc('mylotteriesplay')).toBe('/loghi_book/mylotteriesplay.png')
     expect(bookmakerLogoSrc('xsport')).toBeNull()
+  })
+
+  it('lists one logo per brand for the landing carousel, sorted and without duplicates', () => {
+    const all = allBookmakerLogoSrcs()
+    expect(all).toHaveLength(35)
+    expect(new Set(all).size).toBe(all.length)
+    expect(all[0]).toBe('/loghi_book/14.png') // 888sport
+    expect(all).toContain('/loghi_book/mylotteriesplay.png')
+    for (const src of all) expect(src).toMatch(/^\/loghi_book\/[a-z0-9]+\.png$/)
   })
 
   it('drops the aliases from the display name', () => {

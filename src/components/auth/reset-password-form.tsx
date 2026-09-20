@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,9 +9,15 @@ import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validatio
 import { authClient } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthLabel,
+  AuthLink,
+  AuthMessage,
+  FieldError,
+} from '@/components/auth/auth-primitives'
 
 interface ResetPasswordFormProps {
   token: string
@@ -65,33 +70,20 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
       {submitStatus === 'success' && (
-        <p className="text-sm text-primary" role="status">
-          {submitMessage}
+        <p className="text-center text-sm text-ow-text-3">
+          <AuthLink href="/login">Accedi</AuthLink>
         </p>
       )}
-      {submitStatus === 'success' && (
-        <p className="text-center text-sm text-muted-foreground">
-          <Link
-            href="/login"
-            className="rounded text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Accedi
-          </Link>
-        </p>
-      )}
-      {submitStatus === 'error' && (
-        <p className="text-sm text-destructive" role="alert">
-          {submitMessage}
-        </p>
-      )}
+      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
       {submitStatus !== 'success' && (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="reset-password">Nuova password</Label>
-            <Input
+          <AuthField>
+            <AuthLabel htmlFor="reset-password">Nuova password</AuthLabel>
+            <AuthInput
               id="reset-password"
               type="password"
               autoComplete="new-password"
@@ -101,15 +93,13 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               {...register('password')}
             />
             {errors.password && (
-              <p id="reset-password-error" className="text-sm text-destructive">
-                {errors.password.message}
-              </p>
+              <FieldError id="reset-password-error">{errors.password.message}</FieldError>
             )}
-          </div>
+          </AuthField>
 
-          <div className="space-y-2">
-            <Label htmlFor="reset-confirm">Conferma password</Label>
-            <Input
+          <AuthField>
+            <AuthLabel htmlFor="reset-confirm">Conferma password</AuthLabel>
+            <AuthInput
               id="reset-confirm"
               type="password"
               autoComplete="new-password"
@@ -119,23 +109,16 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
               {...register('confirmPassword')}
             />
             {errors.confirmPassword && (
-              <p id="reset-confirm-error" className="text-sm text-destructive">
-                {errors.confirmPassword.message}
-              </p>
+              <FieldError id="reset-confirm-error">{errors.confirmPassword.message}</FieldError>
             )}
-          </div>
+          </AuthField>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <AuthButton type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Salvataggio...' : 'Aggiorna password'}
-          </Button>
+          </AuthButton>
 
-          <p className="text-center text-sm text-muted-foreground">
-            <Link
-              href="/recupero-password"
-              className="rounded text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Torna al recupero password
-            </Link>
+          <p className="text-center text-sm text-ow-text-3">
+            <AuthLink href="/recupero-password">Torna al recupero password</AuthLink>
           </p>
         </>
       )}

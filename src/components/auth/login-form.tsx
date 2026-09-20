@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,9 +9,15 @@ import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { useAuthStore } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
 import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  AuthButton,
+  AuthField,
+  AuthInput,
+  AuthLabel,
+  AuthLink,
+  AuthMessage,
+  FieldError,
+} from '@/components/auth/auth-primitives'
 
 interface LoginFormProps {
   redirectTo?: string
@@ -63,21 +68,13 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {submitStatus === 'success' && (
-        <p className="text-sm text-primary" role="status">
-          {submitMessage}
-        </p>
-      )}
-      {submitStatus === 'error' && (
-        <p className="text-sm text-destructive" role="alert">
-          {submitMessage}
-        </p>
-      )}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
+      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
-      <div className="space-y-2">
-        <Label htmlFor="login-email">Email</Label>
-        <Input
+      <AuthField>
+        <AuthLabel htmlFor="login-email">Email</AuthLabel>
+        <AuthInput
           id="login-email"
           type="email"
           autoComplete="email"
@@ -86,24 +83,17 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
           aria-describedby={errors.email ? 'login-email-error' : undefined}
           {...register('email')}
         />
-        {errors.email && (
-          <p id="login-email-error" className="text-sm text-destructive">
-            {errors.email.message}
-          </p>
-        )}
-      </div>
+        {errors.email && <FieldError id="login-email-error">{errors.email.message}</FieldError>}
+      </AuthField>
 
-      <div className="space-y-2">
+      <AuthField>
         <div className="flex items-center justify-between">
-          <Label htmlFor="login-password">Password</Label>
-          <Link
-            href="/recupero-password"
-            className="rounded text-xs text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
+          <AuthLabel htmlFor="login-password">Password</AuthLabel>
+          <AuthLink href="/recupero-password" className="text-[13px]">
             Password dimenticata?
-          </Link>
+          </AuthLink>
         </div>
-        <Input
+        <AuthInput
           id="login-password"
           type="password"
           autoComplete="current-password"
@@ -113,24 +103,16 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
           {...register('password')}
         />
         {errors.password && (
-          <p id="login-password-error" className="text-sm text-destructive">
-            {errors.password.message}
-          </p>
+          <FieldError id="login-password-error">{errors.password.message}</FieldError>
         )}
-      </div>
+      </AuthField>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <AuthButton type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Accesso in corso...' : 'Accedi'}
-      </Button>
+      </AuthButton>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Non hai un account?{' '}
-        <Link
-          href="/registrazione"
-          className="rounded text-primary underline underline-offset-4 hover:text-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Registrati
-        </Link>
+      <p className="text-center text-sm text-ow-text-3">
+        Non hai un account? <AuthLink href="/registrazione">Registrati</AuthLink>
       </p>
     </form>
   )

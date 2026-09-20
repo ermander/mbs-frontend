@@ -10,12 +10,20 @@ module.exports = {
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'monospace'],
+        // OddWise (landing): ow-display SOLO per il marchio, ow-mono SOLO per i numeri
+        // (quote, importi, prezzi); titoli e testo usano font-sans (Geist).
+        'ow-display': ['var(--font-ow-display)', 'var(--font-geist-sans)', 'sans-serif'],
+        'ow-mono': ['var(--font-ow-mono)', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
         pill: '9999px',
+        'ow-card': 'var(--ow-radius-card)',
+        'ow-card-lg': 'var(--ow-radius-card-lg)',
+        'ow-btn': 'var(--ow-radius-btn)',
+        'ow-pill': 'var(--ow-radius-pill)',
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -70,11 +78,42 @@ module.exports = {
           orange: '#ff9d53',
           red: '#ff4d6a',
         },
+        // OddWise design tokens (globals.css, .claude/design/tokens.css): tema dark blu di
+        // default, varianti con data-theme="green" | "light" sull'<html>.
+        ow: {
+          bg: 'var(--ow-bg)',
+          surface: 'var(--ow-surface)',
+          raised: 'var(--ow-raised)',
+          deep: 'var(--ow-deep)',
+          'deep-border': 'var(--ow-deep-border)',
+          accent: 'var(--ow-accent)',
+          amber: 'var(--ow-amber)',
+          'amber-text': 'var(--ow-amber-text)',
+          text: 'var(--ow-text)',
+          'text-2': 'var(--ow-text-2)',
+          'text-3': 'var(--ow-text-3)',
+          line: 'var(--ow-line)',
+          'line-strong': 'var(--ow-line-strong)',
+          'on-accent': 'var(--ow-on-accent)',
+          'on-deep': 'var(--ow-on-deep)',
+          'on-deep-2': 'var(--ow-on-deep-2)',
+          'on-raised': 'var(--ow-on-raised)',
+          'on-raised-2': 'var(--ow-on-raised-2)',
+          'raised-muted': 'var(--ow-raised-muted)',
+          'raised-line': 'var(--ow-raised-line)',
+          'raised-fill': 'var(--ow-raised-fill)',
+          neutral: 'var(--ow-neutral)',
+          'on-neutral': 'var(--ow-on-neutral)',
+          'check-off': 'var(--ow-check-off)',
+          danger: 'var(--ow-danger)',
+          success: 'var(--ow-success)',
+        },
       },
       boxShadow: {
         'glow-sm': 'var(--glow-primary)',
         'glow-md': 'var(--glow-primary-strong)',
         'glow-destructive': 'var(--glow-destructive)',
+        'ow-card': 'var(--ow-shadow-card)',
       },
       keyframes: {
         'accordion-down': {
@@ -93,12 +132,18 @@ module.exports = {
           from: { opacity: '0', transform: 'translateX(-8px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
+        // Carosello loghi: due copie della fila, la fila scorre di metà della sua larghezza.
+        'ow-marquee': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.4s ease-out',
         'slide-in-left': 'slide-in-left 0.3s ease-out',
+        'ow-marquee': 'ow-marquee 70s linear infinite',
       },
     },
   },

@@ -53,6 +53,17 @@ export function bookmakerLogoSrc(slug: string): string | null {
   return file ? `/loghi_book/${file}.png` : null
 }
 
+/**
+ * The logos of every bookmaker of the engine, one per brand, in slug order: the carousel
+ * of the landing ("35 siti di scommesse"). Alt text and names stay out of the landing
+ * (landing-content.test.ts), so only the paths are exposed.
+ */
+export function allBookmakerLogoSrcs(): string[] {
+  return Object.keys(LOGO_FILE_BY_SLUG)
+    .sort()
+    .map((slug) => `/loghi_book/${LOGO_FILE_BY_SLUG[slug]}.png`)
+}
+
 /** "Sisal (PokerStars · Snai)" → "Sisal": the aliases in the display name are noise in a table cell. */
 export function shortBookmakerName(name: string): string {
   return name.replace(/\s*\([^)]*\)\s*$/, '').trim() || name

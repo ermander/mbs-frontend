@@ -1,14 +1,12 @@
-import { RegistrationForm } from '@/components/auth/registration-form'
+import { AuthHeader } from '@/components/auth/auth-header'
 import { GuestGuard } from '@/components/auth/guest-guard'
+import { RegistrationForm } from '@/components/auth/registration-form'
 
 export default function RegistrazionePage() {
   return (
     <GuestGuard>
-      <div className="space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Crea un account</h1>
-          <p className="text-muted-foreground">Inizia gratis. Bastano pochi secondi.</p>
-        </div>
+      <div className="flex flex-col gap-8">
+        <AuthHeader title="Crea un account" subtitle="Inizia gratis. Bastano pochi secondi." />
         <RegistrationForm />
       </div>
     </GuestGuard>

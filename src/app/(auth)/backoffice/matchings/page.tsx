@@ -23,6 +23,7 @@ const MATCH_STATUSES = [
 const MATCH_METHODS = [
   { value: '', label: 'Tutti i metodi' },
   { value: 'exact_name_time', label: 'Exact Name+Time' },
+  { value: 'exact_name_day', label: 'Exact Name+Day (orario segnaposto)' },
   { value: 'fuzzy', label: 'Fuzzy' },
   { value: 'fuzzy_inverted', label: 'Fuzzy Inverted' },
   { value: 'alias', label: 'Alias' },

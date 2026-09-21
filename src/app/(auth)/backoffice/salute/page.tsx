@@ -279,6 +279,12 @@ export default function BackofficeSalutePage() {
                     <th className="pb-2 pr-3 text-right font-medium">Eventi</th>
                     <th className="pb-2 pr-3 text-right font-medium">Abbinati</th>
                     <th className="pb-2 pr-3 text-right font-medium">Orfani</th>
+                    <th
+                      className="pb-2 pr-3 text-right font-medium"
+                      title="Eventi di sport senza fixture a catalogo, messi da parte: né abbinati né orfani"
+                    >
+                      Fuori catalogo
+                    </th>
                     <th className="pb-2 pr-3 text-right font-medium">Quote</th>
                     <th className="pb-2 pr-3 text-right font-medium">Run 24 h</th>
                     <th className="pb-2 font-medium">Circuito</th>
@@ -344,7 +350,12 @@ export default function BackofficeSalutePage() {
                           {num(a.windowOrphaned)}
                         </td>
                         <td
-                          className={`py-2 pr-3 text-right tabular-nums ${a.windowRuns > 0 && a.windowEvents > 0 && a.windowOdds === 0 ? 'text-amber-500' : ''}`}
+                          className={`py-2 pr-3 text-right tabular-nums ${(a.windowOffCatalog ?? 0) > 0 ? 'text-muted-foreground' : 'text-muted-foreground/50'}`}
+                        >
+                          {num(a.windowOffCatalog ?? 0)}
+                        </td>
+                        <td
+                          className={`py-2 pr-3 text-right tabular-nums ${a.windowRuns > 0 && a.windowEvents - (a.windowOffCatalog ?? 0) > 0 && a.windowOdds === 0 ? 'text-amber-500' : ''}`}
                         >
                           {num(a.windowOdds)}
                         </td>
@@ -369,7 +380,7 @@ export default function BackofficeSalutePage() {
                   })}
                   {report.adapters.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-4 text-center text-muted-foreground">
+                      <td colSpan={12} className="py-4 text-center text-muted-foreground">
                         Nessun adapter abilitato.
                       </td>
                     </tr>

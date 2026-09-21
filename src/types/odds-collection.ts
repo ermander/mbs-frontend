@@ -196,6 +196,8 @@ export interface HealthAdapter {
   windowOdds: number
   windowMatched: number
   windowOrphaned: number
+  /** Events of sports without catalog fixtures, set aside: neither matched nor orphaned (ADAPTER_STATUS §14.152) */
+  windowOffCatalog: number
   schedulable: boolean
   skipReason: string | null
   initialized: boolean
@@ -265,7 +267,10 @@ export interface HealthReport {
   reviewQueue: Record<string, number>
   coverage: { fixturesNext48h: number; mappedNext48h: number }
   odds: Array<{ slug: string; status: string; rows: number; events: number }>
-  storage: { databaseBytes: number; tables: Array<{ name: string; bytes: number; liveRows: number }> }
+  storage: {
+    databaseBytes: number
+    tables: Array<{ name: string; bytes: number; liveRows: number }>
+  }
 }
 
 export interface OddsHealthResponse {

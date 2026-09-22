@@ -11,7 +11,6 @@ import {
   EMPTY_RESULT_BTTS_FILTERS,
   RESULT_BTTS_SHARED_KEYS,
   ResultBttsFilterBar,
-  excludedOf,
   type ResultBttsUiFilters,
 } from './result-btts-filter-bar'
 import { ResultBttsTable } from './result-btts-table'
@@ -40,11 +39,12 @@ interface Snapshot {
 }
 
 /**
- * «Risultato + Goal» (§14.122, §14.173): one of three combined markets
- * (1X2 + GG/NG, Totale gol + GG/NG, GG/NG 1° e 2° tempo) of every bookmaker
- * that prices it, compared inside the bookmaker itself with one outcome left
- * out (chosen in the bar, a default per market). The page loads on mount and
- * on every filter change, and reloads on demand with «Refresh quote»; no polling.
+ * «Risultato + Goal» (§14.122, §14.173, §14.174): the dutch over every
+ * result but the 0-0 inside one bookmaker, for the bookmakers that refund
+ * the stakes on a 0-0: 1X2 + GG/NG without «X & NG», or Totale gol + GG/NG
+ * without «Under & NG» plus the exact scores it leaves open. The page loads
+ * on mount and on every filter change, and reloads on demand with «Refresh
+ * quote»; no polling.
  */
 export function ResultBttsTool() {
   const [filters, setFiltersState] = useState<ResultBttsUiFilters>(EMPTY_RESULT_BTTS_FILTERS)
@@ -89,7 +89,6 @@ export function ResultBttsTool() {
   const query = useMemo<ResultBttsFilters>(() => {
     const q: ResultBttsFilters = {
       market: filters.market,
-      exclude: filters.exclude,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
       sort_by: filters.sortBy,
@@ -106,7 +105,6 @@ export function ResultBttsTool() {
   }, [
     page,
     filters.market,
-    filters.exclude,
     filters.sortBy,
     filters.competitionIds,
     filters.bookmakers,
@@ -158,10 +156,6 @@ export function ResultBttsTool() {
   const calculatedAt = snapshot?.calculatedAt ?? null
   const error = snapshot?.error ?? null
   const refresh = useCallback(() => setRefreshTick((tick) => tick + 1), [])
-  // The columns follow the answer on screen, not the bar: while a new market loads the
-  // old rows keep their own headers.
-  const shownMarket = meta?.market ?? filters.market
-  const shownExcluded = meta ? meta.excludedOutcome : excludedOf(filters)
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const shared = useMemo<SharedAmounts>(
@@ -192,8 +186,6 @@ export function ResultBttsTool() {
       )}
       <ResultBttsTable
         rows={rows}
-        marketKey={shownMarket}
-        excluded={shownExcluded}
         now={now}
         shared={shared}
         loading={loading}

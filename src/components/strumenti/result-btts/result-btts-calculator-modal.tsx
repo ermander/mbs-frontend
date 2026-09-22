@@ -29,8 +29,7 @@ import { buildDutchBet, type BetEventInfo } from '@/lib/calculators/bet-payloads
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
 import { formatKickoffLong } from '@/lib/matcher/format'
 import {
-  excludedHint,
-  outcomeLabel,
+  TOOL_MARKETS,
   resultBttsLegs,
   resultBttsMarketLabel,
   resultBttsRowKey,
@@ -39,7 +38,7 @@ import type { BetCategory } from '@/types/profit-tracker'
 import type { ResultBttsRow } from '@/types/result-btts'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 
-/** The event of a row as the Profit Tracker payloads describe it; the market with its line («U/O 2.5 + GG/NG»). */
+/** The event of a row as the Profit Tracker payloads describe it; the market with its line («U/O 2.5 + GG/NG + Ris. esatto»). */
 export function resultBttsEventInfo(row: ResultBttsRow): BetEventInfo {
   return {
     eventoDataIso: new Date(row.startTime).toISOString(),
@@ -57,12 +56,14 @@ interface ResultBttsCalculatorModalProps {
 }
 
 /**
- * The calculator of a row of «Risultato + Goal»: a dutch over the compared
- * outcomes of the row's market on one bookmaker (the stake on one, the
- * others covers for the same profit whichever wins). The excluded outcome
- * («X & NG», the 0-0, on the result market) is not covered: its row in the
- * profits shows what that costs. The view is keyed by the row, so it mounts
- * fresh with the row's prices and the shared amounts.
+ * The calculator of a row of «Risultato + Goal»: a plain dutch over the
+ * covered legs on one bookmaker (the stake on one, the others covers for the
+ * same profit whichever wins; no rimborso inside the dutch, every leg is a
+ * plain bet). The 0-0 is not covered: the bookmaker refunds it, and the
+ * «Rimborso 0-0» amount is what comes back in that case, capped at the
+ * outlay; its row in the profits shows the outlay at stake net of it. The
+ * view is keyed by the row, so it mounts fresh with the row's prices and the
+ * shared amounts.
  */
 export function ResultBttsCalculatorModal({
   row,
@@ -128,10 +129,8 @@ export function ResultBttsCalculatorView({
 }: ResultBttsCalculatorViewProps) {
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const legs = useMemo(() => resultBttsLegs(row), [row])
-  const excluded = row.excludedOutcome
-  const excludedOdds = excluded ? (row.prices[excluded]?.odds ?? null) : null
-  const excludedLabel = excluded ? outcomeLabel(row.marketKey, excluded) : null
-  const excludedNote = excludedHint(row.marketKey, excluded)
+  const zeroZeroOdds = row.zeroZero?.odds ?? null
+  const zeroZeroLabel = TOOL_MARKETS[row.marketKey].zeroZeroLabel
 
   const [quotes, setQuotes] = useState<string[]>(() => legs.map((leg) => leg.odds.toFixed(2)))
   const [puntaIndex, setPuntaIndex] = useState(0)
@@ -150,6 +149,7 @@ export function ResultBttsCalculatorView({
 
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
+  /** The bookmaker's refund on a 0-0, not a rimborso of the dutch: the legs are plain bets. */
   const rimborsoNum = parseNum(rimborso) ?? 0
   const quoteNums = quotes.map(parseNum)
   // The memo keys on the joined quotes: the array is rebuilt on every render.
@@ -162,11 +162,11 @@ export function ResultBttsCalculatorView({
         puntaIndex,
         puntata: puntataNum,
         bonus: bonusNum,
-        rimborso: rimborsoNum,
+        rimborso: 0,
         imbalancePercent: imbalance,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [quotesKey, puntaIndex, puntataNum, bonusNum, rimborsoNum, imbalance],
+    [quotesKey, puntaIndex, puntataNum, bonusNum, imbalance],
   )
 
   // One bookmaker for every leg: one account, the same on all of them.
@@ -189,13 +189,15 @@ export function ResultBttsCalculatorView({
     setSaving(true)
     setSaveError(null)
     try {
+      // The 0-0 refund is a promotion of the bookmaker, not a rimborso of a leg: it is
+      // recorded as a movement when it happens, never on the legs.
       const { betPayload, legsPayload } = buildDutchBet({
         event,
         categoria,
         puntaIndex,
         puntata: puntataNum,
         bonus: bonusNum,
-        rimborso: rimborsoNum,
+        rimborso: 0,
         legs: legs.map((leg, i) => ({
           selezione: leg.label,
           quotaGross: quoteNums[i] as number,
@@ -213,15 +215,16 @@ export function ResultBttsCalculatorView({
     }
   }
 
-  // The excluded outcome is not covered: every stake is lost, the rimborso (cashed when the punta loses) comes back.
-  const excludedProfit = result.totalOutlay != null ? -result.totalOutlay + rimborsoNum : null
+  // The 0-0 is not covered: every stake is at play and the bookmaker's refund comes back, never more than the outlay.
+  const zeroZeroRefund = result.totalOutlay != null ? Math.min(rimborsoNum, result.totalOutlay) : 0
+  const zeroZeroProfit = result.totalOutlay != null ? -result.totalOutlay + zeroZeroRefund : null
 
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
       <div
         className={cn(
           'grid gap-3 sm:grid-cols-3 sm:gap-4',
-          legs.length >= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4',
+          legs.length === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4',
         )}
       >
         {legs.map((leg, i) => {
@@ -229,7 +232,7 @@ export function ResultBttsCalculatorView({
           const legResult = result.legs[i]
           return (
             <div
-              key={leg.key}
+              key={`${leg.marketTypeKey}:${leg.outcomeKey}`}
               className={cn(
                 'rounded-xl border p-3 sm:p-4',
                 isPunta ? 'border-border bg-muted/40' : 'border-sky-500/20 bg-sky-500/5',
@@ -303,7 +306,7 @@ export function ResultBttsCalculatorView({
           />
           <DecimalField
             id="rb-calc-rimborso"
-            label="Rimborso € (opz.)"
+            label="Rimborso 0-0 € (opz.)"
             value={rimborso}
             onChange={setRimborso}
           />
@@ -353,7 +356,7 @@ export function ResultBttsCalculatorView({
                   <th className="px-4 py-2.5 text-left">Esito</th>
                   <th className="px-4 py-2.5 text-right">Incasso</th>
                   <th className="px-4 py-2.5 text-right">Esborso</th>
-                  {rimborsoNum > 0 && <th className="px-4 py-2.5 text-right">Rimborso</th>}
+                  {rimborsoNum > 0 && <th className="px-4 py-2.5 text-right">Rimborso 0-0</th>}
                   <th className="px-4 py-2.5 text-right">Totale</th>
                 </tr>
               </thead>
@@ -362,7 +365,7 @@ export function ResultBttsCalculatorView({
                   const legResult = result.legs[i]
                   return (
                     <tr
-                      key={`profit-${leg.key}`}
+                      key={`profit-${leg.marketTypeKey}:${leg.outcomeKey}`}
                       className={cn(
                         'border-b border-border/50',
                         legResult.isPunta ? 'bg-muted/40' : 'bg-sky-500/5',
@@ -378,8 +381,8 @@ export function ResultBttsCalculatorView({
                         {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
                       </td>
                       {rimborsoNum > 0 && (
-                        <td className="px-4 py-2.5 text-right font-medium text-primary">
-                          {legResult.isPunta ? '—' : formatSigned(rimborsoNum)}
+                        <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">
+                          —
                         </td>
                       )}
                       <td
@@ -393,38 +396,35 @@ export function ResultBttsCalculatorView({
                     </tr>
                   )
                 })}
-                {excludedLabel && (
-                  <tr className="bg-muted/20">
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      finisce <span className="font-medium text-foreground">{excludedLabel}</span>
-                      {excludedNote ? ` ${excludedNote}` : ''}
-                      {excludedOdds != null && (
-                        <span className="ml-1 text-xs">
-                          quotato {excludedOdds.toFixed(2)}, non coperto
-                        </span>
-                      )}
+                <tr className="bg-muted/20">
+                  <td className="px-4 py-2.5 text-muted-foreground">
+                    finisce <span className="font-medium text-foreground">0-0</span>
+                    {zeroZeroLabel !== '0-0' ? ` (${zeroZeroLabel})` : ''}
+                    <span className="ml-1 text-xs">
+                      {zeroZeroOdds != null ? `quotato ${zeroZeroOdds.toFixed(2)}, ` : ''}non
+                      coperto: rimborso del bookmaker
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">
+                    +0.00
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                    {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
+                  </td>
+                  {rimborsoNum > 0 && (
+                    <td className="px-4 py-2.5 text-right font-medium text-primary">
+                      {formatSigned(zeroZeroRefund)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">
-                      +0.00
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                      {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
-                    </td>
-                    {rimborsoNum > 0 && (
-                      <td className="px-4 py-2.5 text-right font-medium text-primary">
-                        {formatSigned(rimborsoNum)}
-                      </td>
+                  )}
+                  <td
+                    className={cn(
+                      'px-4 py-2.5 text-right font-semibold',
+                      profitClass(zeroZeroProfit),
                     )}
-                    <td
-                      className={cn(
-                        'px-4 py-2.5 text-right font-semibold',
-                        profitClass(excludedProfit),
-                      )}
-                    >
-                      {formatSigned(excludedProfit)} €
-                    </td>
-                  </tr>
-                )}
+                  >
+                    {formatSigned(zeroZeroProfit)} €
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

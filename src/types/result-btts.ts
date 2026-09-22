@@ -1,26 +1,12 @@
 /**
- * «Risultato + Goal» (§14.122, §14.173): a combined market compared inside
- * one bookmaker with one outcome left out. Mirrors the backend
+ * «Risultato + Goal» (§14.122, §14.173, §14.174): the dutch over every
+ * result but the 0-0 inside one bookmaker, for the bookmakers that refund
+ * the stakes on a 0-0. Mirrors the backend
  * (resources/odds-collection/tools/result-btts.service.ts).
  */
 
-export const TOOL_MARKET_KEYS = ['result_btts', 'total_btts', 'btts_halves'] as const
+export const TOOL_MARKET_KEYS = ['result_btts', 'total_btts'] as const
 export type ToolMarketKey = (typeof TOOL_MARKET_KEYS)[number]
-
-export const RESULT_BTTS_OUTCOME_KEYS = [
-  'home_yes',
-  'home_no',
-  'draw_yes',
-  'draw_no',
-  'away_yes',
-  'away_no',
-] as const
-export const TOTAL_BTTS_OUTCOME_KEYS = ['over_yes', 'over_no', 'under_yes', 'under_no'] as const
-export const BTTS_HALVES_OUTCOME_KEYS = ['yes_yes', 'yes_no', 'no_yes', 'no_no'] as const
-export type ResultBttsOutcomeKey =
-  | (typeof RESULT_BTTS_OUTCOME_KEYS)[number]
-  | (typeof TOTAL_BTTS_OUTCOME_KEYS)[number]
-  | (typeof BTTS_HALVES_OUTCOME_KEYS)[number]
 
 export interface ResultBttsPrice {
   odds: number
@@ -29,18 +15,23 @@ export interface ResultBttsPrice {
   lastSeenAt: string
 }
 
+/** One covered leg: an outcome of a canonical market of the bookmaker (the result, the total or the Correct Score). */
+export interface ResultBttsLeg extends ResultBttsPrice {
+  marketTypeKey: string
+  outcomeKey: string
+}
+
 export interface ResultBttsRow {
   eventId: string
   bookmakerId: string
   bookmakerSlug: string
   bookmakerName: string
   eventUrl: string | null
+  /** The canonical market the row is built on (the total's, for a total row). */
   canonicalMarketId: string
   marketKey: ToolMarketKey
-  /** The goals line of a «Totale gol + GG/NG» row; null for the other markets. */
+  /** The goals line of a «Totale gol + GG/NG» row; null for the result market. */
   line: number | null
-  /** The outcome left out of this row's rating; null when every outcome is compared. */
-  excludedOutcome: ResultBttsOutcomeKey | null
   homeName: string | null
   awayName: string | null
   /** ISO kickoff. */
@@ -50,13 +41,15 @@ export interface ResultBttsRow {
   competitionName: string
   nationName: string | null
   nationCode: string | null
-  /** The market's outcomes: the compared ones are always present, the excluded one when the bookmaker prices it. */
-  prices: Partial<Record<ResultBttsOutcomeKey, ResultBttsPrice>>
-  /** 100 / Σ 1/q over the compared outcomes. */
+  /** The covered legs, in page order: every one is priced. */
+  legs: ResultBttsLeg[]
+  /** The 0-0 as the bookmaker prices it («X & NG», or the 0-0 of the Correct Score), for information. */
+  zeroZero: ResultBttsPrice | null
+  /** 100 / Σ 1/q over the legs. */
   rating: number
-  /** Σ 1/q over every outcome of the market when all are priced, for information. */
+  /** Σ 1/q over the legs plus the 0-0 when priced, for information. */
   bookSum: number | null
-  /** ISO: the oldest of the compared prices. */
+  /** ISO: the oldest of the legs' prices. */
   lastSeenAt: string
   staleAfterSeconds: number
 }
@@ -72,10 +65,8 @@ export interface ResultBttsCompetition {
 
 export interface ResultBttsMeta {
   totalResults: number
-  /** The market of this answer, its outcomes in page order (canonical labels) and the exclusion applied. */
+  /** The market of this answer. */
   market: ToolMarketKey
-  outcomes: Array<{ key: ResultBttsOutcomeKey; label: string }>
-  excludedOutcome: ResultBttsOutcomeKey | null
   bookmakers: Array<{ slug: string; name: string }>
   competitions: ResultBttsCompetition[]
 }
@@ -90,8 +81,6 @@ export interface ResultBttsResponse {
 export interface ResultBttsFilters {
   /** The market compared; `result_btts` when absent. */
   market?: ToolMarketKey
-  /** The outcome left out: an outcome key of the market, `none` for no exclusion; the market's default when absent. */
-  exclude?: ResultBttsOutcomeKey | 'none'
   search?: string
   /** Comma-separated od_competitions ids. */
   competitions?: string

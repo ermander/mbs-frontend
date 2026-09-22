@@ -18,18 +18,22 @@ import {
 } from '@/lib/matcher/format'
 import type { SharedAmounts } from '@/lib/matcher/quick-profit'
 import {
-  RESULT_BTTS_COMPARED,
-  RESULT_BTTS_EXCLUDED,
-  RESULT_BTTS_OUTCOME_LABELS,
+  comparedKeys,
+  excludedHint,
+  outcomeLabel,
   resultBttsLegs,
+  resultBttsMarketLabel,
   resultBttsRowAge,
   resultBttsRowKey,
 } from '@/lib/result-btts'
-import type { ResultBttsRow } from '@/types/result-btts'
+import type { ResultBttsOutcomeKey, ResultBttsRow, ToolMarketKey } from '@/types/result-btts'
 import { cn } from '@/lib/utils'
 
 interface ResultBttsTableProps {
   rows: ResultBttsRow[]
+  /** The market and the exclusion of the rows on screen: they decide the columns (§14.173). */
+  marketKey: ToolMarketKey
+  excluded: ResultBttsOutcomeKey | null
   now: number
   shared: SharedAmounts
   loading: boolean
@@ -71,14 +75,14 @@ function NationFlag({
 }
 
 /**
- * The minimum profit of the five-way dutch with the shared amounts (stake on
- * «1 & GG», covers on the other four): a 0-0 is not among the outcomes, it
- * loses the whole outlay.
+ * The minimum profit of the dutch over the compared outcomes with the shared
+ * amounts (stake on the first, covers on the others): the excluded outcome is
+ * not among them, it loses the whole outlay.
  */
 function quickMinProfit(row: ResultBttsRow, shared: SharedAmounts): number | null {
   if (shared.puntata == null || shared.puntata <= 0) return null
   const legs = resultBttsLegs(row)
-  if (legs.length !== RESULT_BTTS_COMPARED.length) return null
+  if (legs.length < 2) return null
   const result = computeDutch({
     legs: legs.map((leg) => ({ grossOdds: leg.odds, commissionPercent: 0 })),
     puntaIndex: 0,
@@ -127,7 +131,7 @@ function ProfitCell({
         profit >= 0 ? 'text-emerald-400' : 'text-red-400',
         className,
       )}
-      title="Guadagno minimo fra i cinque esiti coperti, puntata su 1 & GG; uno 0-0 perde l'esborso"
+      title="Guadagno minimo fra gli esiti coperti, puntata sul primo; l'esito escluso perde l'esborso"
     >
       {profit >= 0 ? '+' : ''}
       {profit.toFixed(2)} €
@@ -140,7 +144,7 @@ function LastSeenCell({ row, now }: { row: ResultBttsRow; now: number }) {
   return (
     <span
       className="inline-block whitespace-nowrap text-xs tabular-nums"
-      title={`Quota vista meno di recente fra le cinque: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
+      title={`Quota vista meno di recente fra quelle confrontate: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
       aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
     >
       <span className={cn('block font-medium', ageClass(age, row.staleAfterSeconds))}>
@@ -151,7 +155,15 @@ function LastSeenCell({ row, now }: { row: ResultBttsRow; now: number }) {
   )
 }
 
-function PriceCell({ odds, excluded }: { odds: number | undefined; excluded?: boolean }) {
+function PriceCell({
+  odds,
+  excluded,
+  excludedLabel,
+}: {
+  odds: number | undefined
+  excluded?: boolean
+  excludedLabel?: string
+}) {
   if (odds == null) return <span className="text-xs text-muted-foreground">—</span>
   return (
     <span
@@ -161,7 +173,7 @@ function PriceCell({ odds, excluded }: { odds: number | undefined; excluded?: bo
           ? 'bg-muted text-muted-foreground line-through decoration-muted-foreground/60'
           : 'bg-sky-500/15 text-sky-300',
       )}
-      title={excluded ? 'X & NG (0-0): escluso dal confronto' : undefined}
+      title={excluded ? `${excludedLabel ?? 'Esito'}: escluso dal confronto` : undefined}
     >
       {odds.toFixed(2)}
     </span>
@@ -170,6 +182,8 @@ function PriceCell({ odds, excluded }: { odds: number | undefined; excluded?: bo
 
 export function ResultBttsTable({
   rows,
+  marketKey,
+  excluded,
   now,
   shared,
   loading,
@@ -182,6 +196,12 @@ export function ResultBttsTable({
 }: ResultBttsTableProps) {
   const start = total === 0 ? 0 : page * pageSize + 1
   const end = Math.min((page + 1) * pageSize, total)
+  const compared = comparedKeys(marketKey, excluded)
+  const label = (key: ResultBttsOutcomeKey) => outcomeLabel(marketKey, key)
+  const excludedLabel = excluded
+    ? `${label(excluded)} ${excludedHint(marketKey, excluded)}`.trim()
+    : null
+  const columns = 9 + compared.length + (excluded ? 1 : 0)
   const empty = (
     <div className="rounded-md border border-border bg-card p-8 text-center text-muted-foreground">
       {loading && rows.length === 0 ? 'Caricamento…' : 'Nessun confronto con questi filtri.'}
@@ -212,7 +232,8 @@ export function ResultBttsTable({
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {row.competitionName} · {formatKickoff(row.startTime)}
+                        {row.competitionName} · {formatKickoff(row.startTime)} ·{' '}
+                        {resultBttsMarketLabel(row)}
                       </p>
                     </div>
                     <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
@@ -221,25 +242,25 @@ export function ResultBttsTable({
                     <BookmakerLink leg={row}>
                       <BookmakerBadge slug={row.bookmakerSlug} name={row.bookmakerName} />
                     </BookmakerLink>
-                    {RESULT_BTTS_COMPARED.map((key) => (
+                    {compared.map((key) => (
                       <span
                         key={key}
                         className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1"
                       >
-                        <span className="text-xs">{RESULT_BTTS_OUTCOME_LABELS[key]}</span>
+                        <span className="text-xs">{label(key)}</span>
                         <span className="font-mono text-sm font-semibold tabular-nums text-sky-400">
                           {row.prices[key]?.odds.toFixed(2) ?? '—'}
                         </span>
                       </span>
                     ))}
-                    <span className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-muted-foreground line-through">
-                      <span className="text-xs">
-                        {RESULT_BTTS_OUTCOME_LABELS[RESULT_BTTS_EXCLUDED]}
+                    {excluded && (
+                      <span className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-muted-foreground line-through">
+                        <span className="text-xs">{label(excluded)}</span>
+                        <span className="font-mono text-sm tabular-nums">
+                          {row.prices[excluded]?.odds.toFixed(2) ?? '—'}
+                        </span>
                       </span>
-                      <span className="font-mono text-sm tabular-nums">
-                        {row.prices[RESULT_BTTS_EXCLUDED]?.odds.toFixed(2) ?? '—'}
-                      </span>
-                    </span>
+                    )}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span
@@ -277,17 +298,20 @@ export function ResultBttsTable({
               <th className="px-2 py-2 text-center font-medium">Sport</th>
               <th className="px-3 py-2 font-medium">Evento</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Book</th>
-              {RESULT_BTTS_COMPARED.map((key) => (
+              <th className="whitespace-nowrap px-2 py-2 font-medium">Mercato</th>
+              {compared.map((key) => (
                 <th key={key} className="whitespace-nowrap px-2 py-2 text-center font-medium">
-                  {RESULT_BTTS_OUTCOME_LABELS[key]}
+                  {label(key)}
                 </th>
               ))}
-              <th
-                className="whitespace-nowrap px-2 py-2 text-center font-medium"
-                title="Escluso dal confronto"
-              >
-                {RESULT_BTTS_OUTCOME_LABELS[RESULT_BTTS_EXCLUDED]} (escl.)
-              </th>
+              {excluded && (
+                <th
+                  className="whitespace-nowrap px-2 py-2 text-center font-medium"
+                  title={`${excludedLabel}: escluso dal confronto`}
+                >
+                  {label(excluded)} (escl.)
+                </th>
+              )}
               <th className="px-3 py-2 text-right font-medium">Rating</th>
               <th
                 className="px-3 py-2 text-right font-medium"
@@ -304,7 +328,7 @@ export function ResultBttsTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={14} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={columns} className="px-3 py-8 text-center text-muted-foreground">
                   {loading && rows.length === 0
                     ? 'Caricamento…'
                     : 'Nessun confronto con questi filtri.'}
@@ -356,14 +380,23 @@ export function ResultBttsTable({
                         />
                       </BookmakerLink>
                     </td>
-                    {RESULT_BTTS_COMPARED.map((key) => (
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
+                      {resultBttsMarketLabel(row)}
+                    </td>
+                    {compared.map((key) => (
                       <td key={key} className="whitespace-nowrap px-2 py-2 text-center">
                         <PriceCell odds={row.prices[key]?.odds} />
                       </td>
                     ))}
-                    <td className="whitespace-nowrap px-2 py-2 text-center">
-                      <PriceCell odds={row.prices[RESULT_BTTS_EXCLUDED]?.odds} excluded />
-                    </td>
+                    {excluded && (
+                      <td className="whitespace-nowrap px-2 py-2 text-center">
+                        <PriceCell
+                          odds={row.prices[excluded]?.odds}
+                          excluded
+                          excludedLabel={excludedLabel ?? undefined}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-right">
                       <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
                     </td>

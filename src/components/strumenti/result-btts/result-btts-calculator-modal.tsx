@@ -29,26 +29,24 @@ import { buildDutchBet, type BetEventInfo } from '@/lib/calculators/bet-payloads
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
 import { formatKickoffLong } from '@/lib/matcher/format'
 import {
-  RESULT_BTTS_EXCLUDED,
-  RESULT_BTTS_OUTCOME_LABELS,
+  excludedHint,
+  outcomeLabel,
   resultBttsLegs,
+  resultBttsMarketLabel,
   resultBttsRowKey,
 } from '@/lib/result-btts'
 import type { BetCategory } from '@/types/profit-tracker'
 import type { ResultBttsRow } from '@/types/result-btts'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 
-/** The market as the Profit Tracker payloads name it. */
-export const RESULT_BTTS_MERCATO = '1X2 + GG/NG'
-
-/** The event of a row as the Profit Tracker payloads describe it. */
+/** The event of a row as the Profit Tracker payloads describe it; the market with its line («U/O 2.5 + GG/NG»). */
 export function resultBttsEventInfo(row: ResultBttsRow): BetEventInfo {
   return {
     eventoDataIso: new Date(row.startTime).toISOString(),
     eventoNome: `${row.homeName ?? '?'} vs ${row.awayName ?? '?'}`,
     competizione: row.competitionName,
     sport: sportDisplay(row.sportName).ptSport,
-    mercato: RESULT_BTTS_MERCATO,
+    mercato: resultBttsMarketLabel(row),
   }
 }
 
@@ -59,11 +57,12 @@ interface ResultBttsCalculatorModalProps {
 }
 
 /**
- * The calculator of a row of «Risultato + Goal»: a dutch over the five
- * compared outcomes on one bookmaker (the stake on one, the others covers
- * for the same profit whichever wins). «X & NG», the 0-0, is not covered:
- * its row in the profits shows what that costs. The view is keyed by the
- * row, so it mounts fresh with the row's prices and the shared amounts.
+ * The calculator of a row of «Risultato + Goal»: a dutch over the compared
+ * outcomes of the row's market on one bookmaker (the stake on one, the
+ * others covers for the same profit whichever wins). The excluded outcome
+ * («X & NG», the 0-0, on the result market) is not covered: its row in the
+ * profits shows what that costs. The view is keyed by the row, so it mounts
+ * fresh with the row's prices and the shared amounts.
  */
 export function ResultBttsCalculatorModal({
   row,
@@ -95,7 +94,7 @@ export function ResultBttsCalculatorModal({
                   {formatKickoffLong(row.startTime)}
                 </span>
                 <span className="text-muted-foreground">
-                  {RESULT_BTTS_MERCATO} · {shortBookmakerName(row.bookmakerName)} · rating{' '}
+                  {resultBttsMarketLabel(row)} · {shortBookmakerName(row.bookmakerName)} · rating{' '}
                   {row.rating.toFixed(2)}%
                 </span>
               </div>
@@ -129,7 +128,10 @@ export function ResultBttsCalculatorView({
 }: ResultBttsCalculatorViewProps) {
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const legs = useMemo(() => resultBttsLegs(row), [row])
-  const excludedOdds = row.prices[RESULT_BTTS_EXCLUDED]?.odds ?? null
+  const excluded = row.excludedOutcome
+  const excludedOdds = excluded ? (row.prices[excluded]?.odds ?? null) : null
+  const excludedLabel = excluded ? outcomeLabel(row.marketKey, excluded) : null
+  const excludedNote = excludedHint(row.marketKey, excluded)
 
   const [quotes, setQuotes] = useState<string[]>(() => legs.map((leg) => leg.odds.toFixed(2)))
   const [puntaIndex, setPuntaIndex] = useState(0)
@@ -211,12 +213,17 @@ export function ResultBttsCalculatorView({
     }
   }
 
-  // The 0-0 is not covered: every stake is lost, the rimborso (cashed when the punta loses) comes back.
-  const zeroZeroProfit = result.totalOutlay != null ? -result.totalOutlay + rimborsoNum : null
+  // The excluded outcome is not covered: every stake is lost, the rimborso (cashed when the punta loses) comes back.
+  const excludedProfit = result.totalOutlay != null ? -result.totalOutlay + rimborsoNum : null
 
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+      <div
+        className={cn(
+          'grid gap-3 sm:grid-cols-3 sm:gap-4',
+          legs.length >= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4',
+        )}
+      >
         {legs.map((leg, i) => {
           const isPunta = i === puntaIndex
           const legResult = result.legs[i]
@@ -386,39 +393,38 @@ export function ResultBttsCalculatorView({
                     </tr>
                   )
                 })}
-                <tr className="bg-muted/20">
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    finisce{' '}
-                    <span className="font-medium text-foreground">
-                      {RESULT_BTTS_OUTCOME_LABELS[RESULT_BTTS_EXCLUDED]}
-                    </span>{' '}
-                    (0-0)
-                    {excludedOdds != null && (
-                      <span className="ml-1 text-xs">
-                        quotato {excludedOdds.toFixed(2)}, non coperto
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">
-                    +0.00
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                    {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
-                  </td>
-                  {rimborsoNum > 0 && (
-                    <td className="px-4 py-2.5 text-right font-medium text-primary">
-                      {formatSigned(rimborsoNum)}
+                {excludedLabel && (
+                  <tr className="bg-muted/20">
+                    <td className="px-4 py-2.5 text-muted-foreground">
+                      finisce <span className="font-medium text-foreground">{excludedLabel}</span>
+                      {excludedNote ? ` ${excludedNote}` : ''}
+                      {excludedOdds != null && (
+                        <span className="ml-1 text-xs">
+                          quotato {excludedOdds.toFixed(2)}, non coperto
+                        </span>
+                      )}
                     </td>
-                  )}
-                  <td
-                    className={cn(
-                      'px-4 py-2.5 text-right font-semibold',
-                      profitClass(zeroZeroProfit),
+                    <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">
+                      +0.00
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium text-destructive">
+                      {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
+                    </td>
+                    {rimborsoNum > 0 && (
+                      <td className="px-4 py-2.5 text-right font-medium text-primary">
+                        {formatSigned(rimborsoNum)}
+                      </td>
                     )}
-                  >
-                    {formatSigned(zeroZeroProfit)} €
-                  </td>
-                </tr>
+                    <td
+                      className={cn(
+                        'px-4 py-2.5 text-right font-semibold',
+                        profitClass(excludedProfit),
+                      )}
+                    >
+                      {formatSigned(excludedProfit)} €
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -37,6 +37,8 @@ const MARKET_LABELS: Record<string, string> = {
   handicap_asian: 'Handicap AS',
   double_chance: 'Doppia Chance',
   result_btts: '1X2 + GG/NG',
+  total_btts: 'U/O + GG/NG',
+  btts_halves: 'GG/NG 1T/2T',
 }
 
 const PERIOD_LABELS: Record<string, string> = {

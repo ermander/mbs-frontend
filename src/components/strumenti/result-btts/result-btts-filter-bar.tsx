@@ -9,11 +9,19 @@ import { MatcherCompetitionFilter } from '@/components/strumenti/matcher-competi
 import { BookmakerBadge } from '@/components/strumenti/scanner-v2/bookmaker-badge'
 import { shortBookmakerName } from '@/lib/bookmakers'
 import { ageLabel, ageSeconds, formatClock } from '@/lib/matcher/format'
+import { TOOL_MARKETS, TOOL_MARKET_LIST, isToolMarketKey, outcomeLabel } from '@/lib/result-btts'
 import { sanitizeDecimal } from '@/lib/utils'
-import type { ResultBttsMeta } from '@/types/result-btts'
+import type { ResultBttsMeta, ResultBttsOutcomeKey, ToolMarketKey } from '@/types/result-btts'
+
+/** The value of the exclusion select that compares every outcome. */
+export const EXCLUDE_NONE = 'none'
 
 /** The filters of «Risultato + Goal»: every field but the three shared amounts is a query parameter of GET /tools/result-btts. */
 export interface ResultBttsUiFilters {
+  /** The market compared (§14.173). */
+  market: ToolMarketKey
+  /** The outcome left out of the rating: an outcome key of the market, or `none`. */
+  exclude: ResultBttsOutcomeKey | typeof EXCLUDE_NONE
   search: string
   competitionIds: string[]
   bookmakers: string[]
@@ -28,6 +36,8 @@ export interface ResultBttsUiFilters {
 }
 
 export const EMPTY_RESULT_BTTS_FILTERS: ResultBttsUiFilters = {
+  market: 'result_btts',
+  exclude: TOOL_MARKETS.result_btts.defaultExcluded,
   search: '',
   competitionIds: [],
   bookmakers: [],
@@ -46,6 +56,13 @@ export const RESULT_BTTS_SHARED_KEYS: ReadonlySet<keyof ResultBttsUiFilters> = n
   'bonus',
   'rimborso',
 ])
+
+/** The excluded outcome the filters ask for, as the API and the rows carry it. */
+export function excludedOf(
+  filters: Pick<ResultBttsUiFilters, 'exclude'>,
+): ResultBttsOutcomeKey | null {
+  return filters.exclude === EXCLUDE_NONE ? null : filters.exclude
+}
 
 interface ResultBttsFilterBarProps {
   filters: ResultBttsUiFilters
@@ -104,10 +121,58 @@ export function ResultBttsFilterBar({
   }))
   const toggle = (list: string[], id: string) =>
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
+  const market = TOOL_MARKETS[filters.market]
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="rb-market" className="text-[11px] text-muted-foreground">
+            Mercato
+          </Label>
+          <select
+            id="rb-market"
+            value={filters.market}
+            onChange={(e) => {
+              const next = e.target.value
+              if (!isToolMarketKey(next)) return
+              // A new market gets its own default exclusion: an explicit reset, never a guess.
+              onChange({ market: next, exclude: TOOL_MARKETS[next].defaultExcluded })
+            }}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            {TOOL_MARKET_LIST.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="rb-exclude" className="text-[11px] text-muted-foreground">
+            Esito escluso
+          </Label>
+          <select
+            id="rb-exclude"
+            value={filters.exclude}
+            onChange={(e) => {
+              const next = e.target.value
+              if (next === EXCLUDE_NONE) onChange({ exclude: EXCLUDE_NONE })
+              else if ((market.outcomes as readonly string[]).includes(next))
+                onChange({ exclude: next as ResultBttsOutcomeKey })
+            }}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            title="L'esito lasciato fuori dal confronto: il rating è il dutch sugli altri"
+          >
+            {market.outcomes.map((key) => (
+              <option key={key} value={key}>
+                {outcomeLabel(market.key, key)}
+                {key === market.defaultExcluded ? ' (predefinito)' : ''}
+              </option>
+            ))}
+            <option value={EXCLUDE_NONE}>Nessuno (tutti gli esiti)</option>
+          </select>
+        </div>
         <div className="min-w-[200px] flex-1 space-y-1">
           <Label htmlFor="rb-search" className="text-[11px] text-muted-foreground">
             Cerca

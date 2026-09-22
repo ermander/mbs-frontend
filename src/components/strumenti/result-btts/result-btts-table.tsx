@@ -18,22 +18,17 @@ import {
 } from '@/lib/matcher/format'
 import type { SharedAmounts } from '@/lib/matcher/quick-profit'
 import {
-  comparedKeys,
-  excludedHint,
-  outcomeLabel,
+  TOOL_MARKETS,
   resultBttsLegs,
   resultBttsMarketLabel,
   resultBttsRowAge,
   resultBttsRowKey,
 } from '@/lib/result-btts'
-import type { ResultBttsOutcomeKey, ResultBttsRow, ToolMarketKey } from '@/types/result-btts'
+import type { ResultBttsRow } from '@/types/result-btts'
 import { cn } from '@/lib/utils'
 
 interface ResultBttsTableProps {
   rows: ResultBttsRow[]
-  /** The market and the exclusion of the rows on screen: they decide the columns (§14.173). */
-  marketKey: ToolMarketKey
-  excluded: ResultBttsOutcomeKey | null
   now: number
   shared: SharedAmounts
   loading: boolean
@@ -44,6 +39,8 @@ interface ResultBttsTableProps {
   onPageChange: (page: number) => void
   onOpenCalculator: (row: ResultBttsRow) => void
 }
+
+const COLUMNS = 11
 
 /** Bold on plain background; the green tint marks only a rating from 100% up. */
 function ratingBadge(rating: number) {
@@ -75,9 +72,10 @@ function NationFlag({
 }
 
 /**
- * The minimum profit of the dutch over the compared outcomes with the shared
- * amounts (stake on the first, covers on the others): the excluded outcome is
- * not among them, it loses the whole outlay.
+ * The minimum profit of the plain dutch over the legs with the shared stake
+ * and bonus (stake on the first, covers on the others): the 0-0 is not among
+ * them, it is refunded by the bookmaker, so the shared rimborso (the 0-0
+ * refund) never enters the dutch.
  */
 function quickMinProfit(row: ResultBttsRow, shared: SharedAmounts): number | null {
   if (shared.puntata == null || shared.puntata <= 0) return null
@@ -88,7 +86,7 @@ function quickMinProfit(row: ResultBttsRow, shared: SharedAmounts): number | nul
     puntaIndex: 0,
     puntata: shared.puntata,
     bonus: shared.bonus,
-    rimborso: shared.rimborso,
+    rimborso: 0,
     imbalancePercent: 0,
   })
   return result.guadagnoMinimo
@@ -131,7 +129,7 @@ function ProfitCell({
         profit >= 0 ? 'text-emerald-400' : 'text-red-400',
         className,
       )}
-      title="Guadagno minimo fra gli esiti coperti, puntata sul primo; l'esito escluso perde l'esborso"
+      title="Guadagno minimo fra le gambe coperte, puntata sulla prima; lo 0-0 è rimborsato"
     >
       {profit >= 0 ? '+' : ''}
       {profit.toFixed(2)} €
@@ -144,7 +142,7 @@ function LastSeenCell({ row, now }: { row: ResultBttsRow; now: number }) {
   return (
     <span
       className="inline-block whitespace-nowrap text-xs tabular-nums"
-      title={`Quota vista meno di recente fra quelle confrontate: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
+      title={`Quota vista meno di recente fra le gambe: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
       aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
     >
       <span className={cn('block font-medium', ageClass(age, row.staleAfterSeconds))}>
@@ -155,35 +153,36 @@ function LastSeenCell({ row, now }: { row: ResultBttsRow; now: number }) {
   )
 }
 
-function PriceCell({
-  odds,
-  excluded,
-  excludedLabel,
-}: {
-  odds: number | undefined
-  excluded?: boolean
-  excludedLabel?: string
-}) {
-  if (odds == null) return <span className="text-xs text-muted-foreground">—</span>
+/** A covered leg: its label and price. */
+function LegChip({ label, odds }: { label: string; odds: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="font-mono text-xs font-semibold tabular-nums text-sky-300">
+        {odds.toFixed(2)}
+      </span>
+    </span>
+  )
+}
+
+/** The 0-0: not covered, refunded by the bookmaker; shown struck through with the bookmaker's price. */
+function ZeroZeroChip({ row }: { row: ResultBttsRow }) {
+  const label = TOOL_MARKETS[row.marketKey].zeroZeroLabel
   return (
     <span
-      className={cn(
-        'inline-flex items-center rounded-md px-2 py-1 font-mono text-sm font-semibold tabular-nums',
-        excluded
-          ? 'bg-muted text-muted-foreground line-through decoration-muted-foreground/60'
-          : 'bg-sky-500/15 text-sky-300',
-      )}
-      title={excluded ? `${excludedLabel ?? 'Esito'}: escluso dal confronto` : undefined}
+      className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-muted-foreground line-through decoration-muted-foreground/60"
+      title={`${label} (0-0): non coperto, rimborsato dal bookmaker`}
     >
-      {odds.toFixed(2)}
+      <span className="text-[11px]">{label}</span>
+      <span className="font-mono text-xs font-semibold tabular-nums">
+        {row.zeroZero ? row.zeroZero.odds.toFixed(2) : '—'}
+      </span>
     </span>
   )
 }
 
 export function ResultBttsTable({
   rows,
-  marketKey,
-  excluded,
   now,
   shared,
   loading,
@@ -196,12 +195,6 @@ export function ResultBttsTable({
 }: ResultBttsTableProps) {
   const start = total === 0 ? 0 : page * pageSize + 1
   const end = Math.min((page + 1) * pageSize, total)
-  const compared = comparedKeys(marketKey, excluded)
-  const label = (key: ResultBttsOutcomeKey) => outcomeLabel(marketKey, key)
-  const excludedLabel = excluded
-    ? `${label(excluded)} ${excludedHint(marketKey, excluded)}`.trim()
-    : null
-  const columns = 9 + compared.length + (excluded ? 1 : 0)
   const empty = (
     <div className="rounded-md border border-border bg-card p-8 text-center text-muted-foreground">
       {loading && rows.length === 0 ? 'Caricamento…' : 'Nessun confronto con questi filtri.'}
@@ -242,25 +235,14 @@ export function ResultBttsTable({
                     <BookmakerLink leg={row}>
                       <BookmakerBadge slug={row.bookmakerSlug} name={row.bookmakerName} />
                     </BookmakerLink>
-                    {compared.map((key) => (
-                      <span
-                        key={key}
-                        className="inline-flex items-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-2 py-1"
-                      >
-                        <span className="text-xs">{label(key)}</span>
-                        <span className="font-mono text-sm font-semibold tabular-nums text-sky-400">
-                          {row.prices[key]?.odds.toFixed(2) ?? '—'}
-                        </span>
-                      </span>
+                    {row.legs.map((leg) => (
+                      <LegChip
+                        key={`${leg.marketTypeKey}:${leg.outcomeKey}`}
+                        label={leg.label}
+                        odds={leg.odds}
+                      />
                     ))}
-                    {excluded && (
-                      <span className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-muted-foreground line-through">
-                        <span className="text-xs">{label(excluded)}</span>
-                        <span className="font-mono text-sm tabular-nums">
-                          {row.prices[excluded]?.odds.toFixed(2) ?? '—'}
-                        </span>
-                      </span>
-                    )}
+                    <ZeroZeroChip row={row} />
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span
@@ -299,19 +281,18 @@ export function ResultBttsTable({
               <th className="px-3 py-2 font-medium">Evento</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Book</th>
               <th className="whitespace-nowrap px-2 py-2 font-medium">Mercato</th>
-              {compared.map((key) => (
-                <th key={key} className="whitespace-nowrap px-2 py-2 text-center font-medium">
-                  {label(key)}
-                </th>
-              ))}
-              {excluded && (
-                <th
-                  className="whitespace-nowrap px-2 py-2 text-center font-medium"
-                  title={`${excludedLabel}: escluso dal confronto`}
-                >
-                  {label(excluded)} (escl.)
-                </th>
-              )}
+              <th
+                className="px-2 py-2 font-medium"
+                title="Le gambe coperte: ogni risultato tranne lo 0-0"
+              >
+                Gambe coperte
+              </th>
+              <th
+                className="whitespace-nowrap px-2 py-2 text-center font-medium"
+                title="Lo 0-0: non coperto, rimborsato dal bookmaker"
+              >
+                0-0 (rimb.)
+              </th>
               <th className="px-3 py-2 text-right font-medium">Rating</th>
               <th
                 className="px-3 py-2 text-right font-medium"
@@ -328,7 +309,7 @@ export function ResultBttsTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={COLUMNS} className="px-3 py-8 text-center text-muted-foreground">
                   {loading && rows.length === 0
                     ? 'Caricamento…'
                     : 'Nessun confronto con questi filtri.'}
@@ -383,20 +364,20 @@ export function ResultBttsTable({
                     <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
                       {resultBttsMarketLabel(row)}
                     </td>
-                    {compared.map((key) => (
-                      <td key={key} className="whitespace-nowrap px-2 py-2 text-center">
-                        <PriceCell odds={row.prices[key]?.odds} />
-                      </td>
-                    ))}
-                    {excluded && (
-                      <td className="whitespace-nowrap px-2 py-2 text-center">
-                        <PriceCell
-                          odds={row.prices[excluded]?.odds}
-                          excluded
-                          excludedLabel={excludedLabel ?? undefined}
-                        />
-                      </td>
-                    )}
+                    <td className="min-w-[320px] px-2 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {row.legs.map((leg) => (
+                          <LegChip
+                            key={`${leg.marketTypeKey}:${leg.outcomeKey}`}
+                            label={leg.label}
+                            odds={leg.odds}
+                          />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 text-center">
+                      <ZeroZeroChip row={row} />
+                    </td>
                     <td className="px-3 py-2 text-right">
                       <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
                     </td>

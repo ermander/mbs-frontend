@@ -1,8 +1,11 @@
 /**
- * «Risultato + Goal» (§14.122): the Result & Both Teams To Score market
- * compared inside one bookmaker, «X & NG» left out. Mirrors the backend
+ * «Risultato + Goal» (§14.122, §14.173): a combined market compared inside
+ * one bookmaker with one outcome left out. Mirrors the backend
  * (resources/odds-collection/tools/result-btts.service.ts).
  */
+
+export const TOOL_MARKET_KEYS = ['result_btts', 'total_btts', 'btts_halves'] as const
+export type ToolMarketKey = (typeof TOOL_MARKET_KEYS)[number]
 
 export const RESULT_BTTS_OUTCOME_KEYS = [
   'home_yes',
@@ -12,7 +15,12 @@ export const RESULT_BTTS_OUTCOME_KEYS = [
   'away_yes',
   'away_no',
 ] as const
-export type ResultBttsOutcomeKey = (typeof RESULT_BTTS_OUTCOME_KEYS)[number]
+export const TOTAL_BTTS_OUTCOME_KEYS = ['over_yes', 'over_no', 'under_yes', 'under_no'] as const
+export const BTTS_HALVES_OUTCOME_KEYS = ['yes_yes', 'yes_no', 'no_yes', 'no_no'] as const
+export type ResultBttsOutcomeKey =
+  | (typeof RESULT_BTTS_OUTCOME_KEYS)[number]
+  | (typeof TOTAL_BTTS_OUTCOME_KEYS)[number]
+  | (typeof BTTS_HALVES_OUTCOME_KEYS)[number]
 
 export interface ResultBttsPrice {
   odds: number
@@ -28,6 +36,11 @@ export interface ResultBttsRow {
   bookmakerName: string
   eventUrl: string | null
   canonicalMarketId: string
+  marketKey: ToolMarketKey
+  /** The goals line of a «Totale gol + GG/NG» row; null for the other markets. */
+  line: number | null
+  /** The outcome left out of this row's rating; null when every outcome is compared. */
+  excludedOutcome: ResultBttsOutcomeKey | null
   homeName: string | null
   awayName: string | null
   /** ISO kickoff. */
@@ -37,13 +50,13 @@ export interface ResultBttsRow {
   competitionName: string
   nationName: string | null
   nationCode: string | null
-  /** The five compared outcomes are always present; «draw_no» when the bookmaker prices it. */
+  /** The market's outcomes: the compared ones are always present, the excluded one when the bookmaker prices it. */
   prices: Partial<Record<ResultBttsOutcomeKey, ResultBttsPrice>>
-  /** 100 / Σ 1/q over the five compared outcomes. */
+  /** 100 / Σ 1/q over the compared outcomes. */
   rating: number
-  /** Σ 1/q over all six outcomes when the sixth is priced, for information. */
+  /** Σ 1/q over every outcome of the market when all are priced, for information. */
   bookSum: number | null
-  /** ISO: the oldest of the five compared prices. */
+  /** ISO: the oldest of the compared prices. */
   lastSeenAt: string
   staleAfterSeconds: number
 }
@@ -59,6 +72,10 @@ export interface ResultBttsCompetition {
 
 export interface ResultBttsMeta {
   totalResults: number
+  /** The market of this answer, its outcomes in page order (canonical labels) and the exclusion applied. */
+  market: ToolMarketKey
+  outcomes: Array<{ key: ResultBttsOutcomeKey; label: string }>
+  excludedOutcome: ResultBttsOutcomeKey | null
   bookmakers: Array<{ slug: string; name: string }>
   competitions: ResultBttsCompetition[]
 }
@@ -71,6 +88,10 @@ export interface ResultBttsResponse {
 }
 
 export interface ResultBttsFilters {
+  /** The market compared; `result_btts` when absent. */
+  market?: ToolMarketKey
+  /** The outcome left out: an outcome key of the market, `none` for no exclusion; the market's default when absent. */
+  exclude?: ResultBttsOutcomeKey | 'none'
   search?: string
   /** Comma-separated od_competitions ids. */
   competitions?: string

@@ -36,9 +36,46 @@ export function resultBttsRowAge(row: Pick<ResultBttsRow, 'lastSeenAt'>, nowMs: 
   return ageSeconds(row.lastSeenAt, nowMs)
 }
 
+/** «2026-09-25»: the value of a day option, a local calendar day. */
+export function localDayValue(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+export interface DayOption {
+  /** «2026-09-25» */
+  value: string
+  /** «gio 25/09» */
+  label: string
+}
+
+/**
+ * The days the «Dal giorno» / «Al giorno» selects offer (§14.179): today and
+ * the next `count − 1` local days, so the filter is a pick, never typed. The
+ * feed lists about two weeks of fixtures.
+ */
+export function dayOptions(nowMs: number, count = 15): DayOption[] {
+  const today = new Date(nowMs)
+  today.setHours(0, 0, 0, 0)
+  const options: DayOption[] = []
+  for (let i = 0; i < count; i++) {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i)
+    options.push({
+      value: localDayValue(day),
+      label: day.toLocaleDateString('it-IT', {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+      }),
+    })
+  }
+  return options
+}
+
 /**
  * The bounds of a whole local day for the kickoff filter: «2026-09-25» (the
- * value of a date input) → from its first instant to its last, in the
+ * value of a day option) → from its first instant to its last, in the
  * browser's time zone, as ISO strings. Null when the value is not a date.
  */
 export function localDayBounds(date: string): { from: string; to: string } | null {

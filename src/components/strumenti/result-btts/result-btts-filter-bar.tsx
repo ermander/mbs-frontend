@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ageLabel, ageSeconds, formatClock } from '@/lib/matcher/format'
+import { dayOptions } from '@/lib/result-btts'
 import type { ResultBttsMeta } from '@/types/result-btts'
 
 /** The filters of «Risultato + Goal» (§14.177): search, a day range on the kickoff, the order. Every field is a query parameter of GET /tools/result-btts. */
 export interface ResultBttsUiFilters {
   search: string
-  /** «YYYY-MM-DD» from a date input: the whole local day, whatever the kickoff hour. */
+  /** «YYYY-MM-DD» picked from the day selects (empty: any day): the whole local day, whatever the kickoff hour. */
   startFrom: string
   startTo: string
   sortBy: 'rating' | 'start_time'
@@ -35,6 +36,44 @@ interface ResultBttsFilterBarProps {
   now: number
 }
 
+function DaySelect({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  options: ReturnType<typeof dayOptions>
+  onChange: (value: string) => void
+}) {
+  // A day picked before the page was opened stays selectable until it is cleared.
+  const stale = value && !options.some((o) => o.value === value)
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id} className="text-[11px] text-muted-foreground">
+        {label}
+      </Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+      >
+        <option value="">Qualsiasi</option>
+        {stale && <option value={value}>{value}</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export function ResultBttsFilterBar({
   filters,
   onChange,
@@ -45,6 +84,8 @@ export function ResultBttsFilterBar({
   calculatedAt,
   now,
 }: ResultBttsFilterBarProps) {
+  // The page clock ticks every few seconds; the list changes only past midnight.
+  const days = dayOptions(now)
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -63,30 +104,20 @@ export function ResultBttsFilterBar({
             />
           </div>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="rb-from" className="text-[11px] text-muted-foreground">
-            Dal giorno
-          </Label>
-          <Input
-            id="rb-from"
-            type="date"
-            value={filters.startFrom}
-            onChange={(e) => onChange({ startFrom: e.target.value })}
-            className="h-8"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="rb-to" className="text-[11px] text-muted-foreground">
-            Al giorno
-          </Label>
-          <Input
-            id="rb-to"
-            type="date"
-            value={filters.startTo}
-            onChange={(e) => onChange({ startTo: e.target.value })}
-            className="h-8"
-          />
-        </div>
+        <DaySelect
+          id="rb-from"
+          label="Dal giorno"
+          value={filters.startFrom}
+          options={days}
+          onChange={(startFrom) => onChange({ startFrom })}
+        />
+        <DaySelect
+          id="rb-to"
+          label="Al giorno"
+          value={filters.startTo}
+          options={days}
+          onChange={(startTo) => onChange({ startTo })}
+        />
         <div className="space-y-1">
           <Label htmlFor="rb-sort" className="text-[11px] text-muted-foreground">
             Ordina per

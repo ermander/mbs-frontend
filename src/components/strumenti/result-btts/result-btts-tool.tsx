@@ -3,13 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { getResultBttsRows } from '@/services/api/result-btts-client'
-import { parseNum } from '@/lib/calculators/engines/odds'
-import type { SharedAmounts } from '@/lib/matcher/quick-profit'
+import { localDayBounds } from '@/lib/result-btts'
 import type { ResultBttsFilters, ResultBttsMeta, ResultBttsRow } from '@/types/result-btts'
 import { ResultBttsCalculatorModal } from './result-btts-calculator-modal'
 import {
   EMPTY_RESULT_BTTS_FILTERS,
-  RESULT_BTTS_SHARED_KEYS,
   ResultBttsFilterBar,
   type ResultBttsUiFilters,
 } from './result-btts-filter-bar'
@@ -39,12 +37,10 @@ interface Snapshot {
 }
 
 /**
- * «Risultato + Goal» (§14.122, §14.173, §14.174): the dutch over every
- * result but the 0-0 inside one bookmaker, for the bookmakers that refund
- * the stakes on a 0-0: 1X2 + GG/NG without «X & NG», or Totale gol + GG/NG
- * without «Under & NG» plus the exact scores it leaves open. The page loads
- * on mount and on every filter change, and reloads on demand with «Refresh
- * quote»; no polling.
+ * «Risultato + Goal» (§14.122, §14.177): the dutch over the five outcomes of
+ * 1X2 + GG/NG but «X & NG» (the 0-0, refunded by the bookmaker), inside one
+ * bookmaker. The page loads on mount and on every filter change, and reloads
+ * on demand with «Refresh quote»; no polling.
  */
 export function ResultBttsTool() {
   const [filters, setFiltersState] = useState<ResultBttsUiFilters>(EMPTY_RESULT_BTTS_FILTERS)
@@ -59,22 +55,11 @@ export function ResultBttsTool() {
 
   const setFilters = useCallback((patch: Partial<ResultBttsUiFilters>) => {
     setFiltersState((prev) => ({ ...prev, ...patch }))
-    if (
-      (Object.keys(patch) as Array<keyof ResultBttsUiFilters>).some(
-        (k) => !RESULT_BTTS_SHARED_KEYS.has(k),
-      )
-    ) {
-      setPage(0)
-    }
+    setPage(0)
   }, [])
 
   const resetFilters = useCallback(() => {
-    setFiltersState((prev) => ({
-      ...EMPTY_RESULT_BTTS_FILTERS,
-      stake: prev.stake,
-      bonus: prev.bonus,
-      rimborso: prev.rimborso,
-    }))
+    setFiltersState(EMPTY_RESULT_BTTS_FILTERS)
     setPage(0)
   }, [])
 
@@ -88,31 +73,19 @@ export function ResultBttsTool() {
 
   const query = useMemo<ResultBttsFilters>(() => {
     const q: ResultBttsFilters = {
-      market: filters.market,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
       sort_by: filters.sortBy,
       sort_dir: filters.sortBy === 'start_time' ? 'ASC' : 'DESC',
     }
     if (debouncedSearch) q.search = debouncedSearch
-    if (filters.competitionIds.length > 0) q.competitions = filters.competitionIds.join(',')
-    if (filters.bookmakers.length > 0) q.bookmaker = filters.bookmakers.join(',')
-    const minRating = parseNum(filters.minRating)
-    if (minRating != null) q.min_rating = minRating
-    if (filters.startFrom) q.start_time_from = new Date(filters.startFrom).toISOString()
-    if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
+    // A day means the whole local day: every kickoff of that date, whatever its hour.
+    const from = localDayBounds(filters.startFrom)
+    const to = localDayBounds(filters.startTo)
+    if (from) q.start_time_from = from.from
+    if (to) q.start_time_to = to.to
     return q
-  }, [
-    page,
-    filters.market,
-    filters.sortBy,
-    filters.competitionIds,
-    filters.bookmakers,
-    filters.minRating,
-    filters.startFrom,
-    filters.startTo,
-    debouncedSearch,
-  ])
+  }, [page, filters.sortBy, filters.startFrom, filters.startTo, debouncedSearch])
 
   const loadKey = `${JSON.stringify(query)}#${refreshTick}`
   useEffect(() => {
@@ -156,16 +129,7 @@ export function ResultBttsTool() {
   const calculatedAt = snapshot?.calculatedAt ?? null
   const error = snapshot?.error ?? null
   const refresh = useCallback(() => setRefreshTick((tick) => tick + 1), [])
-
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const shared = useMemo<SharedAmounts>(
-    () => ({
-      puntata: parseNum(filters.stake),
-      bonus: parseNum(filters.bonus) ?? 0,
-      rimborso: parseNum(filters.rimborso) ?? 0,
-    }),
-    [filters.stake, filters.bonus, filters.rimborso],
-  )
 
   return (
     <div className="space-y-4">
@@ -187,7 +151,6 @@ export function ResultBttsTool() {
       <ResultBttsTable
         rows={rows}
         now={now}
-        shared={shared}
         loading={loading}
         page={page}
         totalPages={totalPages}
@@ -196,11 +159,7 @@ export function ResultBttsTool() {
         onPageChange={setPage}
         onOpenCalculator={setCalculatorRow}
       />
-      <ResultBttsCalculatorModal
-        row={calculatorRow}
-        defaults={{ stake: filters.stake, bonus: filters.bonus, rimborso: filters.rimborso }}
-        onClose={() => setCalculatorRow(null)}
-      />
+      <ResultBttsCalculatorModal row={calculatorRow} onClose={() => setCalculatorRow(null)} />
     </div>
   )
 }

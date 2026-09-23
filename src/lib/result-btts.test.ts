@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   RESULT_BTTS_MARKET_LABEL,
   RESULT_BTTS_ZERO_ZERO_LABEL,
+  dayOptions,
   localDayBounds,
+  localDayValue,
   resultBttsLegs,
   resultBttsRating,
   resultBttsRowAge,
@@ -76,5 +78,25 @@ describe('risultato + goal: the dutch over the five legs but «X & NG»', () => 
     expect(localDayBounds('')).toBeNull()
     expect(localDayBounds('2026-09-25T18:45')).toBeNull()
     expect(localDayBounds('2026-02-30')).toBeNull()
+  })
+  it('the day selects offer today and the next days, values a day option can feed back to localDayBounds (§14.179)', () => {
+    const now = new Date(2026, 8, 25, 23, 30).getTime() // late evening: still the 25th locally
+    const options = dayOptions(now, 4)
+    expect(options.map((o) => o.value)).toEqual([
+      '2026-09-25',
+      '2026-09-26',
+      '2026-09-27',
+      '2026-09-28',
+    ])
+    expect(options[0].label).toMatch(/^ven\.? 25\/09$/)
+    expect(options[3].label).toMatch(/^lun\.? 28\/09$/)
+    expect(dayOptions(now).length).toBe(15)
+    expect(localDayValue(new Date(2026, 0, 3))).toBe('2026-01-03')
+    expect(localDayBounds(options[1].value)?.from).toBe(new Date(2026, 8, 26).toISOString())
+    // Month end rolls over.
+    expect(dayOptions(new Date(2026, 8, 30).getTime(), 2).map((o) => o.value)).toEqual([
+      '2026-09-30',
+      '2026-10-01',
+    ])
   })
 })

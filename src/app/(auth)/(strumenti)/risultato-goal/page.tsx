@@ -11,7 +11,7 @@ export default function RisultatoGoalPage() {
       <ToolAuthGuard tool="result_btts">
         <ToolPageShell
           toolName="Risultato + Goal"
-          description="Ogni risultato coperto tranne lo 0-0, rimborsato dal bookmaker: 1X2 + Goal/NoGoal senza X & NoGoal, oppure Totale gol + Goal/NoGoal con i risultati esatti che lascia scoperti."
+          description="Il mercato 1X2 + Goal/NoGoal dentro lo stesso bookmaker: cinque esiti coperti, lo 0-0 (X & NoGoal) rimborsato dal bookmaker."
         >
           <ResultBttsTool />
         </ToolPageShell>

@@ -4,52 +4,24 @@ import { RefreshCw, RotateCcw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
-import { MatcherCompetitionFilter } from '@/components/strumenti/matcher-competition-filter'
-import { BookmakerBadge } from '@/components/strumenti/scanner-v2/bookmaker-badge'
-import { shortBookmakerName } from '@/lib/bookmakers'
 import { ageLabel, ageSeconds, formatClock } from '@/lib/matcher/format'
-import { TOOL_MARKET_LIST, isToolMarketKey } from '@/lib/result-btts'
-import { sanitizeDecimal } from '@/lib/utils'
-import type { ResultBttsMeta, ToolMarketKey } from '@/types/result-btts'
+import type { ResultBttsMeta } from '@/types/result-btts'
 
-/** The filters of «Risultato + Goal»: every field but the three shared amounts is a query parameter of GET /tools/result-btts. */
+/** The filters of «Risultato + Goal» (§14.177): search, a day range on the kickoff, the order. Every field is a query parameter of GET /tools/result-btts. */
 export interface ResultBttsUiFilters {
-  /** The market compared (§14.173, §14.174). */
-  market: ToolMarketKey
   search: string
-  competitionIds: string[]
-  bookmakers: string[]
-  minRating: string
+  /** «YYYY-MM-DD» from a date input: the whole local day, whatever the kickoff hour. */
   startFrom: string
   startTo: string
   sortBy: 'rating' | 'start_time'
-  /** Shared with every calculator of the page: stake, bonus and the bookmaker's 0-0 refund in euro. */
-  stake: string
-  bonus: string
-  rimborso: string
 }
 
 export const EMPTY_RESULT_BTTS_FILTERS: ResultBttsUiFilters = {
-  market: 'result_btts',
   search: '',
-  competitionIds: [],
-  bookmakers: [],
-  minRating: '',
   startFrom: '',
   startTo: '',
   sortBy: 'rating',
-  stake: '',
-  bonus: '',
-  rimborso: '',
 }
-
-/** The fields that do not change the query: editing them keeps the page. */
-export const RESULT_BTTS_SHARED_KEYS: ReadonlySet<keyof ResultBttsUiFilters> = new Set([
-  'stake',
-  'bonus',
-  'rimborso',
-])
 
 interface ResultBttsFilterBarProps {
   filters: ResultBttsUiFilters
@@ -63,35 +35,6 @@ interface ResultBttsFilterBarProps {
   now: number
 }
 
-function AmountField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="w-24 space-y-1">
-      <Label htmlFor={id} className="text-[11px] text-muted-foreground">
-        {label}
-      </Label>
-      <Input
-        id={id}
-        type="text"
-        inputMode="decimal"
-        placeholder="0"
-        value={value}
-        onChange={(e) => onChange(sanitizeDecimal(e.target.value))}
-        className="h-8"
-      />
-    </div>
-  )
-}
-
 export function ResultBttsFilterBar({
   filters,
   onChange,
@@ -102,38 +45,10 @@ export function ResultBttsFilterBar({
   calculatedAt,
   now,
 }: ResultBttsFilterBarProps) {
-  const bookOptions = (meta?.bookmakers ?? []).map((b) => ({
-    id: b.slug,
-    name: shortBookmakerName(b.name),
-  }))
-  const toggle = (list: string[], id: string) =>
-    list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
-
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-card p-3">
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="rb-market" className="text-[11px] text-muted-foreground">
-            Mercato
-          </Label>
-          <select
-            id="rb-market"
-            value={filters.market}
-            onChange={(e) => {
-              const next = e.target.value
-              if (isToolMarketKey(next)) onChange({ market: next })
-            }}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-            title="Le gambe coprono ogni risultato tranne lo 0-0, rimborsato dal bookmaker"
-          >
-            {TOOL_MARKET_LIST.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="min-w-[200px] flex-1 space-y-1">
+        <div className="min-w-[220px] flex-1 space-y-1">
           <Label htmlFor="rb-search" className="text-[11px] text-muted-foreground">
             Cerca
           </Label>
@@ -148,52 +63,13 @@ export function ResultBttsFilterBar({
             />
           </div>
         </div>
-        <MatcherCompetitionFilter
-          competitions={meta?.competitions}
-          scope={{}}
-          selectedIds={filters.competitionIds}
-          onToggle={(id) => onChange({ competitionIds: toggle(filters.competitionIds, id) })}
-          className="min-w-[220px]"
-        />
-        <SearchableMultiSelect
-          label="Bookmaker"
-          options={bookOptions}
-          selectedIds={filters.bookmakers}
-          onToggle={(id) => onChange({ bookmakers: toggle(filters.bookmakers, id) })}
-          buttonLabel="Bookmaker"
-          placeholder="Tutti i bookmaker"
-          searchPlaceholder="Cerca bookmaker"
-          showBadges
-          size="sm"
-          className="min-w-[200px]"
-          renderOption={(o) => (
-            <span className="flex items-center gap-2">
-              <BookmakerBadge slug={o.id} name={o.name} />
-              <span>{o.name}</span>
-            </span>
-          )}
-        />
-        <div className="w-24 space-y-1">
-          <Label htmlFor="rb-min-rating" className="text-[11px] text-muted-foreground">
-            Rating min %
-          </Label>
-          <Input
-            id="rb-min-rating"
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            value={filters.minRating}
-            onChange={(e) => onChange({ minRating: sanitizeDecimal(e.target.value) })}
-            className="h-8"
-          />
-        </div>
         <div className="space-y-1">
           <Label htmlFor="rb-from" className="text-[11px] text-muted-foreground">
-            Dal
+            Dal giorno
           </Label>
           <Input
             id="rb-from"
-            type="datetime-local"
+            type="date"
             value={filters.startFrom}
             onChange={(e) => onChange({ startFrom: e.target.value })}
             className="h-8"
@@ -201,11 +77,11 @@ export function ResultBttsFilterBar({
         </div>
         <div className="space-y-1">
           <Label htmlFor="rb-to" className="text-[11px] text-muted-foreground">
-            Al
+            Al giorno
           </Label>
           <Input
             id="rb-to"
-            type="datetime-local"
+            type="date"
             value={filters.startTo}
             onChange={(e) => onChange({ startTo: e.target.value })}
             className="h-8"
@@ -227,29 +103,7 @@ export function ResultBttsFilterBar({
             <option value="start_time">Calcio d&apos;inizio</option>
           </select>
         </div>
-      </div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <AmountField
-            id="rb-stake"
-            label="Puntata €"
-            value={filters.stake}
-            onChange={(v) => onChange({ stake: v })}
-          />
-          <AmountField
-            id="rb-bonus"
-            label="Bonus €"
-            value={filters.bonus}
-            onChange={(v) => onChange({ bonus: v })}
-          />
-          <AmountField
-            id="rb-rimborso"
-            label="Rimborso 0-0 €"
-            value={filters.rimborso}
-            onChange={(v) => onChange({ rimborso: v })}
-          />
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {calculatedAt && (
             <span
               className="text-[11px] text-muted-foreground"

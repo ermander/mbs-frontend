@@ -167,7 +167,7 @@ export const EARNINGS = {
     {
       label: 'Bonus di benvenuto',
       value: '500 – 1.000 €',
-      note: 'una volta sola, esaurendo i bonus dei 35 siti di scommesse',
+      note: 'una volta sola, esaurendo i bonus dei 40 siti di scommesse',
     },
     {
       label: 'Bonus ricorrenti',
@@ -189,7 +189,7 @@ export const TOOLS = {
     {
       n: '01',
       title: 'Oddsmatcher',
-      text: 'La quota migliore per ogni bonus su 35 siti di scommesse.',
+      text: 'La quota migliore per ogni bonus su 40 siti di scommesse.',
     },
     {
       n: '02',
@@ -214,9 +214,9 @@ export const TOOLS = {
 
 export const BETTING_SITES = {
   eyebrow: 'SITI DI SCOMMESSE MONITORATI',
-  title: '35 siti di scommesse italiani, quote aggiornate in tempo reale',
+  title: '40 siti di scommesse italiani, quote aggiornate in tempo reale',
   aside: 'Solo licenze ADM',
-  logosAlt: 'Loghi dei 35 siti di scommesse monitorati',
+  logosAlt: 'Loghi dei 40 siti di scommesse monitorati',
 } as const
 
 export interface PlanFeature {
@@ -258,7 +258,7 @@ export const MATCHED_BETTING_PLANS = {
         f('Guida e strumenti per monetizzare gratis la tua prima offerta di benvenuto', true),
         f('Calcolatori punta-banca, punta-punta, tripunta', true),
         f('Guide base: concetti e strumenti', true),
-        f('Oddsmatcher completo, 35 siti di scommesse', false),
+        f('Oddsmatcher completo, 40 siti di scommesse', false),
         f('Guide bonus benvenuto, ricorrenti e avanzate', false),
         f('Forum', false),
         f('Profit tracker e storico giocate', false),
@@ -275,7 +275,7 @@ export const MATCHED_BETTING_PLANS = {
       cta: 'Scegli Base',
       features: [
         f('Tutto il piano Free', true),
-        f('Oddsmatcher completo, 35 siti di scommesse', true),
+        f('Oddsmatcher completo, 40 siti di scommesse', true),
         f('Calcolatori multipla, fun bonus sport, bonus slot, Baccarat, Roulette', true),
         f('Guide bonus benvenuto, ricorrenti e avanzate', true),
         f('Forum', true),

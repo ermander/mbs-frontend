@@ -18,17 +18,21 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   betpassion: '46',
   betpoint: '23',
   betsson: '19',
+  // Bgame, Fastbet, NetBet, Sunbet, Winamax: brands the RobinOdds list never had, files named after the slug.
+  bgame: 'bgame',
   bwin: '10',
   codere: '47',
   daznbet: '17',
   domusbet: '12',
   eplay24: '22',
   eurobet: '13',
+  fastbet: 'fastbet',
   goldbet: '16',
   leovegas: '18',
   marathonbet: '1',
   // MyLotteriesPlay: a brand the RobinOdds list never had, its file is named after the slug.
   mylotteriesplay: 'mylotteriesplay',
+  netbet: 'netbet',
   netwin: '45',
   perlaplay: '49',
   planetwin365: '21',
@@ -39,10 +43,12 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   sportbet: '37',
   stake: '41',
   stanleybet: '30',
+  sunbet: 'sunbet',
   starcasino: '31',
   totosi: '34',
   vincitu: '44',
   williamhill: '33',
+  winamax: 'winamax',
   winbet: '40',
   zonagioco: '42',
 }
@@ -55,7 +61,7 @@ export function bookmakerLogoSrc(slug: string): string | null {
 
 /**
  * The logos of every bookmaker of the engine, one per brand, in slug order: the carousel
- * of the landing ("35 siti di scommesse"). Alt text and names stay out of the landing
+ * of the landing ("40 siti di scommesse"). Alt text and names stay out of the landing
  * (landing-content.test.ts), so only the paths are exposed.
  */
 export function allBookmakerLogoSrcs(): string[] {

@@ -36,12 +36,14 @@ describe('logos and names', () => {
     expect(bookmakerLogoSrc('BETFAIR')).toBe('/loghi_book/36.png')
     expect(bookmakerLogoSrc('perlaplay')).toBe('/loghi_book/49.png')
     expect(bookmakerLogoSrc('mylotteriesplay')).toBe('/loghi_book/mylotteriesplay.png')
+    for (const slug of ['bgame', 'fastbet', 'netbet', 'sunbet', 'winamax'])
+      expect(bookmakerLogoSrc(slug)).toBe(`/loghi_book/${slug}.png`)
     expect(bookmakerLogoSrc('xsport')).toBeNull()
   })
 
   it('lists one logo per brand for the landing carousel, sorted and without duplicates', () => {
     const all = allBookmakerLogoSrcs()
-    expect(all).toHaveLength(35)
+    expect(all).toHaveLength(40)
     expect(new Set(all).size).toBe(all.length)
     expect(all[0]).toBe('/loghi_book/14.png') // 888sport
     expect(all).toContain('/loghi_book/mylotteriesplay.png')

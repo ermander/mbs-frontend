@@ -19,10 +19,10 @@ describe('landing copy (OddWise)', () => {
     expect(CALCULATOR_EXAMPLE.lay.site).toBe('Betfair')
   })
 
-  it('the "35 siti di scommesse" of the copy are the 35 logos of the carousel', () => {
-    expect(allBookmakerLogoSrcs()).toHaveLength(35)
-    expect(content.BETTING_SITES.title).toContain('35 siti di scommesse')
-    expect(content.TOOLS.items[0].text).toContain('35 siti di scommesse')
+  it('the "40 siti di scommesse" of the copy are the 40 logos of the carousel', () => {
+    expect(allBookmakerLogoSrcs()).toHaveLength(40)
+    expect(content.BETTING_SITES.title).toContain('40 siti di scommesse')
+    expect(content.TOOLS.items[0].text).toContain('40 siti di scommesse')
   })
 
   it('has the sections of the mockup with their counts', () => {

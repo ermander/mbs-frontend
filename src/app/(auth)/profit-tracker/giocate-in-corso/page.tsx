@@ -129,6 +129,10 @@ export default function GiocateInCorsoPage() {
         eventoNome: original.eventoNome,
         modalitaSaldo: original.modalitaSaldo,
         accountId: original.accountId,
+        // La categoria (matched betting, surebet, valuebet) segue l'originale:
+        // senza, il backend la rimetteva a matched_betting e il Report
+        // rendicontava il clone nella categoria sbagliata.
+        categoria: original.categoria,
         tag: null,
         nota: original.nota ?? null,
       }

@@ -1,7 +1,10 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
+import { cn } from '@/lib/utils'
 import { getMatcherResults, getMatcherMeta } from '@/services/api/matcher-client'
 import {
   MatcherCompetitionFilter,
@@ -16,7 +19,6 @@ import type {
 } from '@/types/matcher'
 
 const PAGE_SIZE = 50
-const AUTO_REFRESH_MS = 60_000
 const SEARCH_DEBOUNCE_MS = 350
 
 const MATCH_TYPES: Array<{ value: string; label: string }> = [
@@ -230,17 +232,12 @@ export default function MatcherPage() {
     loadResults()
   }, [loadResults])
 
-  // Auto-refresh: skip when user is on deeper pages or tab is hidden, to avoid
-  // costly refetches the user isn't waiting for.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (page > 0) return
-      if (typeof document !== 'undefined' && document.hidden) return
-      loadResults()
-      loadMeta()
-    }, AUTO_REFRESH_MS)
-    return () => clearInterval(interval)
-  }, [loadResults, loadMeta, page])
+  // No polling (product rule, 2026-09-27): the page loads on mount and on every
+  // filter change, and the admin reloads on demand with «Aggiorna».
+  const refresh = useCallback(() => {
+    void loadResults()
+    void loadMeta()
+  }, [loadResults, loadMeta])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -254,6 +251,10 @@ export default function MatcherPage() {
             {calculatedAt && ` — aggiornato ${formatDate(calculatedAt)}`}
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+          Aggiorna
+        </Button>
       </div>
 
       {/* Filters */}

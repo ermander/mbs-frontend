@@ -29,7 +29,6 @@ import {
   GitMerge,
   CalendarDays,
   ListFilter,
-  Radio,
   Users,
 } from 'lucide-react'
 
@@ -128,7 +127,6 @@ export const authNavSections: AuthNavSection[] = [
       { label: 'Matcher', href: '/backoffice/matcher', icon: GitMerge },
       { label: 'Palinsesto API-Football', href: '/backoffice/palinsesto', icon: CalendarDays },
       { label: 'Competizioni da leggere', href: '/backoffice/competizioni', icon: ListFilter },
-      { label: 'Eventi SR', href: '/backoffice/eventi-sportradar', icon: Radio },
       { label: 'Utenti', href: '/backoffice/users', icon: Users },
     ],
   },

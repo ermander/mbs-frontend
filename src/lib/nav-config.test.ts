@@ -14,7 +14,7 @@ describe('visibleNavSections', () => {
       'Backoffice',
     ])
     expect(sections[0][1]).toEqual(['Odds Scanner', 'Risultato + Goal', 'Calcolatori'])
-    expect(sections[3][1]).toHaveLength(13)
+    expect(sections[3][1]).toHaveLength(12)
   })
   it('a user with the tool sees Risultato + Goal but not Backoffice', () => {
     const sections = outline({ role: 'USER_ROLE', tools: ['result_btts'] })

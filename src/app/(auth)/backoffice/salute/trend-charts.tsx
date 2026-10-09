@@ -41,7 +41,7 @@ const RANGES = [
   { label: '14 g', hours: 336 },
 ]
 
-type Unit = 'count' | 'ms' | 's'
+type Unit = 'count' | 'ms' | 's' | 'bytes'
 
 interface ChartDef {
   title: string
@@ -79,9 +79,30 @@ const CHARTS: ChartDef[] = [
   { title: 'Righe del matcher', metric: 'matcher_rows' },
   { title: 'Durata rebuild', metric: 'rebuild_duration_ms', unit: 'ms' },
   { title: 'Durata refresh', metric: 'refresh_duration_ms', unit: 'ms' },
+  // §14.219: byte usciti dal proxy residenziale (forwarder mbs-proxy), per bookmaker; il giorno è UTC.
+  {
+    title: 'Proxy: traffico del giorno',
+    metric: 'proxy_bytes_day',
+    perBookmaker: true,
+    unit: 'bytes',
+    hint: 'byte su e giù dal proxy residenziale, giorno UTC',
+  },
+  {
+    title: 'Proxy: traffico del mese',
+    metric: 'proxy_bytes_month',
+    perBookmaker: true,
+    unit: 'bytes',
+    hint: 'cumulato del mese',
+  },
 ]
 
 function formatValue(v: number, unit?: Unit): string {
+  if (unit === 'bytes') {
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)} GB`
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)} MB`
+    if (v >= 1e3) return `${Math.round(v / 1e3)} kB`
+    return `${Math.round(v)} B`
+  }
   if (unit === 's') {
     if (v >= 3600) return `${(v / 3600).toFixed(1)} h`
     if (v >= 60) return `${(v / 60).toFixed(1)} min`

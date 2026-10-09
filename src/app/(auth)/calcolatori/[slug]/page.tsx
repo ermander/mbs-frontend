@@ -8,6 +8,7 @@ const KNOWN_SLUGS = new Set([
   'baccarat',
   'roulette',
   'fun-bonus',
+  'risultato-goal',
 ])
 
 export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug: string }> }) {

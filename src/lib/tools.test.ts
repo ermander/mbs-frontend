@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canUseTool } from './tools'
+import { canUseTool, hasRole } from './tools'
 
 describe('canUseTool', () => {
   it('an admin can use every tool, whatever the array says', () => {
@@ -12,5 +12,18 @@ describe('canUseTool', () => {
     expect(canUseTool({ role: 'USER_ROLE' }, 'result_btts')).toBe(false)
     expect(canUseTool(null, 'result_btts')).toBe(false)
     expect(canUseTool(undefined, 'result_btts')).toBe(false)
+  })
+})
+
+describe('hasRole', () => {
+  it('an admin-only card: the admin sees it, a user or a missing user does not', () => {
+    expect(hasRole({ role: 'ADMIN_ROLE' }, 'ADMIN_ROLE')).toBe(true)
+    expect(hasRole({ role: 'USER_ROLE' }, 'ADMIN_ROLE')).toBe(false)
+    expect(hasRole(null, 'ADMIN_ROLE')).toBe(false)
+    expect(hasRole(undefined, 'ADMIN_ROLE')).toBe(false)
+  })
+  it('a card for everyone: no role asked, anyone passes, the missing user too', () => {
+    expect(hasRole({ role: 'USER_ROLE' }, undefined)).toBe(true)
+    expect(hasRole(null, undefined)).toBe(true)
   })
 })

@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot, Gift } from 'lucide-react'
+import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot, Gift, Goal } from 'lucide-react'
 
 import { CalculatorCard } from '@/components/calculators/calculator-card'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
@@ -13,6 +13,10 @@ import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOffl
 import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
 import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
 import { FunBonusCalculator } from '@/components/calculators/FunBonusCalculator'
+import { ResultBttsOfflineCalculator } from '@/components/calculators/ResultBttsOfflineCalculator'
+import { useAuthStore } from '@/stores/auth-store'
+import { hasRole } from '@/lib/tools'
+import type { UserRole } from '@/services/api/auth-client'
 
 type Slug =
   | 'punta-banca'
@@ -22,12 +26,15 @@ type Slug =
   | 'baccarat'
   | 'roulette'
   | 'fun-bonus'
+  | 'risultato-goal'
 
 const CALCS: Array<{
   slug: Slug
   title: string
   description: string
   icon: typeof Scale
+  /** Se presente, la card è visibile solo agli utenti con quel ruolo (§14.220). */
+  requiresRole?: UserRole
   render: () => React.ReactNode
 }> = [
   {
@@ -83,6 +90,16 @@ const CALCS: Array<{
     icon: Gift,
     render: () => <FunBonusCalculator />,
   },
+  {
+    // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per gli admin.
+    slug: 'risultato-goal',
+    title: 'Risultato + Goal (offline)',
+    description:
+      'Le cinque quote di 1X2 + Goal/NoGoal dentro lo stesso bookmaker inserite a mano: puntata su un esito, coperture sugli altri, lo 0-0 (X & NoGoal) rimborsato dal bookmaker. Solo admin.',
+    icon: Goal,
+    requiresRole: 'ADMIN_ROLE',
+    render: () => <ResultBttsOfflineCalculator />,
+  },
 ]
 
 function CalcolatoriDashboard() {
@@ -90,6 +107,9 @@ function CalcolatoriDashboard() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const expandedSlug = searchParams.get('expand') as Slug | null
+  const user = useAuthStore((s) => s.user)
+  // §14.220: le card riservate a un ruolo spariscono per gli altri, «expand» compreso.
+  const calcs = CALCS.filter((calc) => hasRole(user, calc.requiresRole))
 
   const handleToggle = React.useCallback(
     (slug: Slug) => {
@@ -115,7 +135,7 @@ function CalcolatoriDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {CALCS.map((calc) => (
+        {calcs.map((calc) => (
           <CalculatorCard
             key={calc.slug}
             title={calc.title}

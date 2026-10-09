@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/services/api/auth-client'
+import type { AuthUser, UserRole } from '@/services/api/auth-client'
 
 /**
  * Per-user tools (ADAPTER_STATUS §14.122). The backend gates each tool's API
@@ -17,4 +17,16 @@ export function canUseTool(
   if (!user) return false
   if (user.role === 'ADMIN_ROLE') return true
   return Array.isArray(user.tools) && user.tools.includes(tool)
+}
+
+/**
+ * Whether the user has the role a page or a card asks for; nothing asked,
+ * everyone passes. The admin-only offline calculator (§14.220) is gated here.
+ */
+export function hasRole(
+  user: Pick<AuthUser, 'role'> | null | undefined,
+  role: UserRole | undefined,
+): boolean {
+  if (!role) return true
+  return user?.role === role
 }

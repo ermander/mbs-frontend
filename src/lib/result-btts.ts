@@ -1,6 +1,7 @@
+import type { BetEventInfo } from '@/lib/calculators/bet-payloads'
 import { dutchRating } from '@/lib/calculators/engines/odds'
 import { ageSeconds } from '@/lib/matcher/format'
-import type { ResultBttsLeg, ResultBttsRow } from '@/types/result-btts'
+import type { ResultBttsLeg, ResultBttsOutcomeKey, ResultBttsRow } from '@/types/result-btts'
 
 /**
  * Pure helpers of «Risultato + Goal» (§14.122, §14.177): the market's names,
@@ -13,6 +14,22 @@ import type { ResultBttsLeg, ResultBttsRow } from '@/types/result-btts'
 export const RESULT_BTTS_MARKET_LABEL = '1X2 + GG/NG'
 /** How the bookmaker names the 0-0 on this market. */
 export const RESULT_BTTS_ZERO_ZERO_LABEL = 'X & NG'
+
+/**
+ * The five covered outcomes of the market in page order, labelled as the
+ * backend labels the legs of a row: the legs of the offline calculator
+ * (§14.220), whose prices are typed by hand.
+ */
+export const RESULT_BTTS_COVERED_OUTCOMES: ReadonlyArray<{
+  outcomeKey: ResultBttsOutcomeKey
+  label: string
+}> = [
+  { outcomeKey: 'home_yes', label: '1 & GG' },
+  { outcomeKey: 'home_no', label: '1 & NG' },
+  { outcomeKey: 'draw_yes', label: 'X & GG' },
+  { outcomeKey: 'away_yes', label: '2 & GG' },
+  { outcomeKey: 'away_no', label: '2 & NG' },
+]
 
 /** The covered legs of a row; a row with a price that is not a price yields none. */
 export function resultBttsLegs(row: Pick<ResultBttsRow, 'legs'>): ResultBttsLeg[] {
@@ -86,4 +103,37 @@ export function localDayBounds(date: string): { from: string; to: string } | nul
   const to = new Date(year, month - 1, day, 23, 59, 59, 999)
   if (Number.isNaN(from.getTime()) || from.getDate() !== day) return null
   return { from: from.toISOString(), to: to.toISOString() }
+}
+
+/** What the admin types for the bet of the offline calculator. */
+export interface ResultBttsOfflineEventInput {
+  eventoNome: string
+  /** The value of a `datetime-local` input («2026-10-11T20:45»), in the browser's time zone. */
+  eventoDataLocal: string
+  competizione: string
+}
+
+/** The name of the bet when the admin leaves the event blank. */
+export const RESULT_BTTS_OFFLINE_EVENT_NAME = 'Risultato + Goal'
+
+/**
+ * The event of the offline calculator (§14.220) as the Profit Tracker
+ * payloads describe it: the kickoff typed as a local date-time turned into
+ * ISO, football (the market exists on football only), the market's name;
+ * blank names fall back like in the other offline calculators. Null when the
+ * date-time is not one.
+ */
+export function resultBttsOfflineEventInfo(
+  input: ResultBttsOfflineEventInput,
+): BetEventInfo | null {
+  if (input.eventoDataLocal.trim() === '') return null
+  const kickoff = new Date(input.eventoDataLocal)
+  if (Number.isNaN(kickoff.getTime())) return null
+  return {
+    eventoDataIso: kickoff.toISOString(),
+    eventoNome: input.eventoNome.trim() || RESULT_BTTS_OFFLINE_EVENT_NAME,
+    competizione: input.competizione.trim() || 'N/D',
+    sport: 'calcio',
+    mercato: RESULT_BTTS_MARKET_LABEL,
+  }
 }

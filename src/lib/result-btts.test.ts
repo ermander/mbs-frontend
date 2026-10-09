@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RESULT_BTTS_COVERED_OUTCOMES,
   RESULT_BTTS_MARKET_LABEL,
+  RESULT_BTTS_OFFLINE_EVENT_NAME,
   RESULT_BTTS_ZERO_ZERO_LABEL,
   dayOptions,
   localDayBounds,
   localDayValue,
   resultBttsLegs,
+  resultBttsOfflineEventInfo,
   resultBttsRating,
   resultBttsRowAge,
   resultBttsRowKey,
@@ -98,5 +101,49 @@ describe('risultato + goal: the dutch over the five legs but «X & NG»', () => 
       '2026-09-30',
       '2026-10-01',
     ])
+  })
+})
+
+describe('offline calculator (§14.220)', () => {
+  it('the five covered outcomes in page order, the 0-0 left out', () => {
+    expect(RESULT_BTTS_COVERED_OUTCOMES.map((o) => `${o.outcomeKey}:${o.label}`)).toEqual([
+      'home_yes:1 & GG',
+      'home_no:1 & NG',
+      'draw_yes:X & GG',
+      'away_yes:2 & GG',
+      'away_no:2 & NG',
+    ])
+    expect(RESULT_BTTS_COVERED_OUTCOMES.some((o) => o.outcomeKey === 'draw_no')).toBe(false)
+    // The same legs, in the same order, as a row of the page.
+    expect(RESULT_BTTS_COVERED_OUTCOMES.map((o) => o.label)).toEqual(
+      resultBttsLegs(MONZA).map((l) => l.label),
+    )
+  })
+  it('the event of the bet: local kickoff to ISO, blank names fall back, no date no event', () => {
+    const info = resultBttsOfflineEventInfo({
+      eventoNome: ' Genoa - Como ',
+      eventoDataLocal: '2026-10-11T20:45',
+      competizione: '',
+    })
+    expect(info).toMatchObject({
+      eventoNome: 'Genoa - Como',
+      competizione: 'N/D',
+      sport: 'calcio',
+      mercato: RESULT_BTTS_MARKET_LABEL,
+    })
+    expect(info?.eventoDataIso).toBe(new Date(2026, 9, 11, 20, 45).toISOString())
+    expect(
+      resultBttsOfflineEventInfo({
+        eventoNome: '',
+        eventoDataLocal: '2026-10-11T20:45',
+        competizione: ' Serie A ',
+      }),
+    ).toMatchObject({ eventoNome: RESULT_BTTS_OFFLINE_EVENT_NAME, competizione: 'Serie A' })
+    expect(
+      resultBttsOfflineEventInfo({ eventoNome: 'x', eventoDataLocal: '', competizione: '' }),
+    ).toBeNull()
+    expect(
+      resultBttsOfflineEventInfo({ eventoNome: 'x', eventoDataLocal: 'ieri', competizione: '' }),
+    ).toBeNull()
   })
 })

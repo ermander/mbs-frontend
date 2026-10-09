@@ -14,15 +14,16 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Native arm64 build (ADAPTER_STATUS §14.226): the VPS is aarch64 and nothing
+    # runs the amd64 image. Under QEMU on an x86 runner the arm64 `next build`
+    # failed on next/font/google (Node 24 image, 2026-10-10) while the native
+    # build passed.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,12 +35,12 @@ jobs:
           username: ermander
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build and push multi-arch image
+      - name: Build and push arm64 image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}

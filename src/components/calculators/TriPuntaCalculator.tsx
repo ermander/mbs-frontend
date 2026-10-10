@@ -8,6 +8,7 @@ import {
   stakeBCFromStakeA,
   stakeBCFromStakeARimborso,
 } from '@/lib/calculators/tri-punta'
+import { roundStake } from '@/lib/calculators/stake-step'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
@@ -121,7 +122,8 @@ export function TriPuntaCalculator() {
   const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
   const imbalanceFactor = 1 + imbalancePercent / 100
 
-  const stakes = useMemo(() => {
+  // Valori esatti: fanno da bersaglio alle contropuntate parziali.
+  const stakesExact = useMemo(() => {
     if (puntataEffettivaA <= 0 || quotaANum == null || quotaBNum == null || quotaCNum == null)
       return null
     let result: { stakeB: number; stakeC: number } | null
@@ -143,13 +145,17 @@ export function TriPuntaCalculator() {
     return { stakeB: adjB, stakeC: adjC }
   }, [puntataEffettivaA, quotaANum, quotaBNum, quotaCNum, rimborsoNum, imbalanceFactor])
 
-  const stakeB = stakes?.stakeB ?? null
-  const stakeC = stakes?.stakeC ?? null
+  const stakeBExact = stakesExact?.stakeB ?? null
+  const stakeCExact = stakesExact?.stakeC ?? null
+  // Le contropuntate da piazzare: multipli di 0,05 € (§14.229). Profitti,
+  // riepilogo e salvataggio partono da queste.
+  const stakeB = stakeBExact == null ? null : roundStake(stakeBExact)
+  const stakeC = stakeCExact == null ? null : roundStake(stakeCExact)
 
   /* ── Contropuntata parziale B (multi-step, max 6) ── */
   const partialPuntaResultsB = useMemo(() => {
-    if (partialPuntasB.length === 0 || quotaBNum == null || stakeB == null) return []
-    const coverageTarget = stakeB * quotaBNum
+    if (partialPuntasB.length === 0 || quotaBNum == null || stakeBExact == null) return []
+    const coverageTarget = stakeBExact * quotaBNum
     type StepResult = { newStake: number }
     const results: (StepResult | null)[] = []
     let coveredSum = 0
@@ -166,20 +172,21 @@ export function TriPuntaCalculator() {
         break
       }
       coveredSum += amountNum * prevOdds
-      const newStake = (coverageTarget - coveredSum) / newOddsNum
-      if (!Number.isFinite(newStake) || newStake < 0) {
+      const newStakeExact = (coverageTarget - coveredSum) / newOddsNum
+      if (!Number.isFinite(newStakeExact) || newStakeExact < 0) {
         results.push(null)
         break
       }
-      results.push({ newStake })
+      // Anche il resto da puntare va a multipli di 0,05 €.
+      results.push({ newStake: roundStake(newStakeExact) })
     }
     return results
-  }, [partialPuntasB, quotaBNum, stakeB])
+  }, [partialPuntasB, quotaBNum, stakeBExact])
 
   /* ── Contropuntata parziale C (multi-step, max 6) ── */
   const partialPuntaResultsC = useMemo(() => {
-    if (partialPuntasC.length === 0 || quotaCNum == null || stakeC == null) return []
-    const coverageTarget = stakeC * quotaCNum
+    if (partialPuntasC.length === 0 || quotaCNum == null || stakeCExact == null) return []
+    const coverageTarget = stakeCExact * quotaCNum
     type StepResult = { newStake: number }
     const results: (StepResult | null)[] = []
     let coveredSum = 0
@@ -196,15 +203,16 @@ export function TriPuntaCalculator() {
         break
       }
       coveredSum += amountNum * prevOdds
-      const newStake = (coverageTarget - coveredSum) / newOddsNum
-      if (!Number.isFinite(newStake) || newStake < 0) {
+      const newStakeExact = (coverageTarget - coveredSum) / newOddsNum
+      if (!Number.isFinite(newStakeExact) || newStakeExact < 0) {
         results.push(null)
         break
       }
-      results.push({ newStake })
+      // Anche il resto da puntare va a multipli di 0,05 €.
+      results.push({ newStake: roundStake(newStakeExact) })
     }
     return results
-  }, [partialPuntasC, quotaCNum, stakeC])
+  }, [partialPuntasC, quotaCNum, stakeCExact])
 
   const hasValidPartialPuntasB =
     partialPuntasB.length > 0 &&

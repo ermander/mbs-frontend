@@ -12,7 +12,14 @@
  *
  * Last event:  hedgeStake_N = (S × Q - rimborso) / denom_N
  * Earlier:     hedgeStake_i = hedgeStake_{i+1} × payout_{i+1} / denom_i
+ *
+ * Every hedge stake is rounded to five cents (`roundStake`, §14.229) as soon
+ * as it is computed, and each earlier hedge is sized on the ROUNDED stake of
+ * the next one: the chain is the one the user actually places, so the cost
+ * of every hedge is the cost of the rounded stake.
  */
+
+import { roundStake } from '@/lib/calculators/stake-step'
 
 export interface MultiplaHedgeEvent {
   type: 'punta-banca' | 'punta-punta'
@@ -67,7 +74,7 @@ export function multiplaLayStakes(
       costFactor: factors[i]!.cost,
     }))
   }
-  stakes[n - 1] = (backStakeTotale * totalBackOdds - rimborso) / factors[n - 1]!.denom
+  stakes[n - 1] = roundStake((backStakeTotale * totalBackOdds - rimborso) / factors[n - 1]!.denom)
 
   // Earlier events (backward)
   for (let i = n - 2; i >= 0; i--) {
@@ -75,7 +82,7 @@ export function multiplaLayStakes(
     if (denom <= 0) {
       stakes[i] = 0
     } else {
-      stakes[i] = (stakes[i + 1]! * factors[i + 1]!.payout) / denom
+      stakes[i] = roundStake((stakes[i + 1]! * factors[i + 1]!.payout) / denom)
     }
   }
 

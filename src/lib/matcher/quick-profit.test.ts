@@ -43,8 +43,8 @@ describe('quickProfit', () => {
   it('back/lay: the Punta-Banca minimum profit and the lay stake', () => {
     const r = row({ legs: [leg('sisal', 'BACK Over', 2), leg('betfair', 'LAY Over', 2, true)] })
     const q = quickProfit(r, { puntata: 100, bonus: 0, rimborso: 0 }, 5, null)
-    expect(q.covers).toEqual([102.56])
-    expect(q.profit).toBeCloseTo(-2.57, 9)
+    expect(q.covers).toEqual([102.55])
+    expect(q.profit).toBeCloseTo(-2.58, 9)
   })
 
   it('dutch: the stake goes on the first leg, an exchange leg is re-priced from its net value', () => {
@@ -63,8 +63,8 @@ describe('quickProfit', () => {
       legs: [leg('bwin', '1', 2.1), leg('sisal', 'X', 3.4), leg('betsson', '2', 3.6)],
     })
     const q = quickProfit(r, { puntata: 100, bonus: 0, rimborso: 0 }, 4.5, null)
-    expect(q.covers).toEqual([61.76, 58.33])
-    expect(q.profit).toBeCloseTo(-10.106, 3)
+    expect(q.covers).toEqual([61.75, 58.35])
+    expect(q.profit).toBeCloseTo(-10.15, 9)
   })
 })
 

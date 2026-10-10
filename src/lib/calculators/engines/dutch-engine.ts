@@ -1,4 +1,5 @@
-import { dutchRating, netOdds, round2 } from './odds'
+import { roundStake } from '@/lib/calculators/stake-step'
+import { dutchRating, netOdds } from './odds'
 
 /**
  * Dutching engine for two or three legs, all back bets: the stake goes on one
@@ -9,8 +10,9 @@ import { dutchRating, netOdds, round2 } from './odds'
  *
  * with every price net of its exchange commission (q_net = 1 + (q − 1)(1 − c)),
  * so a leg on an exchange is priced the way the matcher rated it. Cover
- * stakes are rounded to the cent before the profits, like the stake the user
- * actually places. Profits count the real stake as the only cost of the punta
+ * stakes are rounded to five cents (`roundStake`, §14.229) before the
+ * profits, like the stake the user actually places. Profits count the real
+ * stake as the only cost of the punta
  * leg: a bonus is not money out of pocket. The rimborso is cashed when the
  * punta leg loses, i.e. when a cover wins.
  */
@@ -38,7 +40,7 @@ export interface DutchLegResult {
   isPunta: boolean
   grossOdds: number | null
   netOdds: number | null
-  /** Stake on the leg: puntata + bonus on the punta leg, the rounded cover otherwise. */
+  /** Stake on the leg: puntata + bonus on the punta leg, the cover rounded to five cents otherwise. */
   stake: number | null
   /** The cover before rounding (the punta stake as is). */
   stakeExact: number | null
@@ -100,7 +102,7 @@ export function computeDutch(input: DutchInput): DutchResult {
       const exact = ((numerator as number) / net) * imbalanceFactor
       if (Number.isFinite(exact) && exact >= 0) {
         stakeExact = exact
-        stake = round2(exact)
+        stake = roundStake(exact)
       }
     }
     return {

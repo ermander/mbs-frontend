@@ -4,15 +4,18 @@ import {
   layStakeWithImbalance,
   liability,
 } from '@/lib/calculators/punta-banca'
+import { roundStake } from '@/lib/calculators/stake-step'
 import { backLayRating, round2 } from './odds'
 
 /**
  * Punta-Banca engine: the arithmetic of the Oddsmatcher calculator modal
  * (`oddsmatcher-calculator-modal.tsx`) as a pure function, so the scanner v2
- * shares it without a third copy. Same formulas, same rounding: the lay stake
- * is rounded to the cent before the liability and the exchange profit, as the
- * exchange would take it; the partial lays follow the coverage target of the
- * already unbalanced stake. Commission and imbalance are percentages.
+ * shares it without a third copy. Same formulas; the lay stake is rounded to
+ * five cents (`roundStake`, §14.229) before the liability and the exchange
+ * profit, as the stake the user places on the exchange; the partial lays
+ * follow the coverage target of the already unbalanced exact stake and the
+ * rest to lay is rounded the same way. Commission and imbalance are
+ * percentages.
  */
 
 export interface PartialLayInput {
@@ -52,7 +55,7 @@ export interface PuntaBancaResult {
   isRimborso: boolean
   /** Lay stake for equal profit, exact. */
   layStake: number | null
-  /** The same rounded to the cent: what the user types on the exchange. */
+  /** The same rounded to five cents: what the user types on the exchange. */
   layStakeRounded: number | null
   /** Liability of the rounded lay stake. */
   responsabilita: number | null
@@ -115,7 +118,8 @@ export function computePuntaBanca(input: PuntaBancaInput): PuntaBancaResult {
     }
   }
 
-  const layStakeRounded = layStake != null && Number.isFinite(layStake) ? round2(layStake) : null
+  const layStakeRounded =
+    layStake != null && Number.isFinite(layStake) ? roundStake(layStake) : null
   const responsabilita =
     layStakeRounded != null && quotaBancaNum != null
       ? liability(layStakeRounded, quotaBancaNum)
@@ -153,11 +157,13 @@ export function computePuntaBanca(input: PuntaBancaInput): PuntaBancaResult {
         partialLayResults.push(null)
         break
       }
-      const newLayStake = (coverageTarget - coveredSum) / denominator
-      if (!Number.isFinite(newLayStake) || newLayStake < 0) {
+      const newLayStakeExact = (coverageTarget - coveredSum) / denominator
+      if (!Number.isFinite(newLayStakeExact) || newLayStakeExact < 0) {
         partialLayResults.push(null)
         break
       }
+      // The rest to lay is a stake to place: five cents too.
+      const newLayStake = roundStake(newLayStakeExact)
       partialLayResults.push({ newLayStake, newLiability: newLayStake * (newOdds - 1) })
     }
   }

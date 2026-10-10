@@ -19,15 +19,15 @@ function input(overrides: Partial<DutchInput> = {}): DutchInput {
 }
 
 describe('computeDutch — two legs', () => {
-  it('100 on 2.00 against 2.20: cover 90.91, both profits ≈ 9.09, rating 104.76', () => {
+  it('100 on 2.00 against 2.20: cover 90.90 (five cents), profits 9.10 / 9.08, rating 104.76', () => {
     const r = computeDutch(input())
     expect(r.legs[1].stakeExact).toBeCloseTo(stakeBFromStakeA(100, 2, 2.2) as number, 9)
-    expect(r.legs[1].stake).toBe(90.91)
+    expect(r.legs[1].stake).toBe(90.9)
     expect(r.legs[0].stake).toBe(100)
-    expect(r.totalOutlay).toBeCloseTo(190.91, 9)
-    expect(r.legs[0].profit).toBeCloseTo(9.09, 9)
-    expect(r.legs[1].profit).toBeCloseTo(9.092, 3)
-    expect(r.guadagnoMinimo).toBeCloseTo(9.09, 9)
+    expect(r.totalOutlay).toBeCloseTo(190.9, 9)
+    expect(r.legs[0].profit).toBeCloseTo(9.1, 9)
+    expect(r.legs[1].profit).toBeCloseTo(9.08, 9)
+    expect(r.guadagnoMinimo).toBeCloseTo(9.08, 9)
     expect(r.rating).toBeCloseTo(104.76, 2)
     expect(r.showSummary).toBe(true)
   })
@@ -44,9 +44,17 @@ describe('computeDutch — two legs', () => {
   it('rimborso: the cover follows stakeBFromStakeARimborso and both outcomes pay the same', () => {
     const r = computeDutch(input({ legs: [book(3), book(1.5)], puntata: 10, rimborso: 10 }))
     expect(r.legs[1].stakeExact).toBeCloseTo(stakeBFromStakeARimborso(10, 3, 1.5, 10) as number, 9)
-    expect(r.legs[1].stake).toBe(13.33)
-    expect(r.legs[0].profit).toBeCloseTo(6.67, 9)
-    expect(r.legs[1].profit).toBeCloseTo(6.665, 3)
+    expect(r.legs[1].stake).toBe(13.35)
+    expect(r.legs[0].profit).toBeCloseTo(6.65, 9)
+    expect(r.legs[1].profit).toBeCloseTo(6.675, 9)
+  })
+
+  it('a cover lands on five cents, never on the odd cent (§14.229)', () => {
+    const r = computeDutch(input({ legs: [book(2), book(2.17)] }))
+    expect(r.legs[1].stakeExact).toBeCloseTo(92.1659, 4)
+    expect(r.legs[1].stake).toBe(92.15)
+    expect(computeDutch(input({ legs: [book(2), book(2.5)] })).legs[1].stake).toBe(80)
+    expect(computeDutch(input({ legs: [book(2), book(2.08)] })).legs[1].stake).toBe(96.15)
   })
 
   it('the stake can go on the second leg', () => {
@@ -66,10 +74,10 @@ describe('computeDutch — two legs', () => {
   it('bonus: covers stake + bonus, the real stake is the only cost of the punta leg', () => {
     const r = computeDutch(input({ bonus: 50 }))
     expect(r.puntataEffettiva).toBe(150)
-    expect(r.legs[1].stake).toBe(136.36)
-    expect(r.totalOutlay).toBeCloseTo(236.36, 9)
-    expect(r.legs[0].profit).toBeCloseTo(63.64, 9)
-    expect(r.legs[1].profit).toBeCloseTo(63.632, 3)
+    expect(r.legs[1].stake).toBe(136.35)
+    expect(r.totalOutlay).toBeCloseTo(236.35, 9)
+    expect(r.legs[0].profit).toBeCloseTo(63.65, 9)
+    expect(r.legs[1].profit).toBeCloseTo(63.62, 9)
   })
 
   it('nothing to compute without a stake, a price or a positive numerator; the rating survives', () => {
@@ -89,13 +97,13 @@ describe('computeDutch — three legs', () => {
     const lib = stakeBCFromStakeA(100, 2.1, 3.4, 3.6) as { stakeB: number; stakeC: number }
     expect(r.legs[1].stakeExact).toBeCloseTo(lib.stakeB, 9)
     expect(r.legs[2].stakeExact).toBeCloseTo(lib.stakeC, 9)
-    expect(r.legs[1].stake).toBe(61.76)
-    expect(r.legs[2].stake).toBe(58.33)
-    expect(r.totalOutlay).toBeCloseTo(220.09, 9)
-    expect(r.legs[0].profit).toBeCloseTo(-10.09, 9)
-    expect(r.legs[1].profit).toBeCloseTo(-10.106, 3)
-    expect(r.legs[2].profit).toBeCloseTo(-10.102, 3)
-    expect(r.guadagnoMinimo).toBeCloseTo(-10.106, 3)
+    expect(r.legs[1].stake).toBe(61.75)
+    expect(r.legs[2].stake).toBe(58.35)
+    expect(r.totalOutlay).toBeCloseTo(220.1, 9)
+    expect(r.legs[0].profit).toBeCloseTo(-10.1, 9)
+    expect(r.legs[1].profit).toBeCloseTo(-10.15, 9)
+    expect(r.legs[2].profit).toBeCloseTo(-10.04, 9)
+    expect(r.guadagnoMinimo).toBeCloseTo(-10.15, 9)
     expect(r.rating).toBeCloseTo(95.41, 2)
   })
 
@@ -103,6 +111,6 @@ describe('computeDutch — three legs', () => {
     const r = computeDutch(input({ legs: [book(2.1), book(3.4), book(3.6)], puntaIndex: 1 }))
     expect(r.legs[1].isPunta).toBe(true)
     expect(r.legs[0].stake).toBe(161.9)
-    expect(r.legs[2].stake).toBe(94.44)
+    expect(r.legs[2].stake).toBe(94.45)
   })
 })

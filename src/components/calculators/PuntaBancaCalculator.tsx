@@ -9,6 +9,7 @@ import {
   layStakeRimborso,
   ratingPercent,
 } from '@/lib/calculators/punta-banca'
+import { roundStake } from '@/lib/calculators/stake-step'
 import { PuntaBancaSaveModal } from '@/components/calculators/PuntaBancaSaveModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,7 +70,8 @@ export function PuntaBancaCalculator() {
 
   // Formula unica: (puntataEffettiva * quotaPunta - rimborso) / (quotaBanca - comm%)
   // Quando rimborso=0 → formula standard. Quando bonus=0 → formula rimborso pura.
-  const layStakeValue = useMemo(() => {
+  // Valore esatto: fa da bersaglio alle bancate parziali e al rating.
+  const layStakeExact = useMemo(() => {
     if (totalPuntataEffettiva <= 0 || quotaPuntaNum == null || quotaBancaNum == null) return null
     const base = layStakeRimborso(
       totalPuntataEffettiva,
@@ -91,6 +93,10 @@ export function PuntaBancaCalculator() {
     imbalancePercent,
   ])
 
+  // La bancata da piazzare: multipli di 0,05 € (§14.229). Responsabilità,
+  // profitto dell'exchange, riepilogo e salvataggio partono da questa.
+  const layStakeValue = layStakeExact == null ? null : roundStake(layStakeExact)
+
   const responsabilita = useMemo(() => {
     if (layStakeValue == null || quotaBancaNum == null) return null
     return liability(layStakeValue, quotaBancaNum)
@@ -102,12 +108,12 @@ export function PuntaBancaCalculator() {
       partialLays.length === 0 ||
       quotaPuntaNum == null ||
       quotaBancaNum == null ||
-      layStakeValue == null
+      layStakeExact == null
     )
       return []
 
     const c = commissioneNum / 100
-    const coverageTarget = layStakeValue * (quotaBancaNum - c)
+    const coverageTarget = layStakeExact * (quotaBancaNum - c)
 
     type StepResult = { newLayStake: number; newLiability: number }
     const results: (StepResult | null)[] = []
@@ -136,18 +142,20 @@ export function PuntaBancaCalculator() {
         break
       }
 
-      const newLayStake = (coverageTarget - coveredSum) / denominator
-      if (!Number.isFinite(newLayStake) || newLayStake < 0) {
+      const newLayStakeExact = (coverageTarget - coveredSum) / denominator
+      if (!Number.isFinite(newLayStakeExact) || newLayStakeExact < 0) {
         results.push(null)
         break
       }
 
+      // Anche il resto da bancare va a multipli di 0,05 €.
+      const newLayStake = roundStake(newLayStakeExact)
       const newLiability = newLayStake * (newOddsNum - 1)
       results.push({ newLayStake, newLiability })
     }
 
     return results
-  }, [partialLays, quotaPuntaNum, quotaBancaNum, layStakeValue, commissioneNum])
+  }, [partialLays, quotaPuntaNum, quotaBancaNum, layStakeExact, commissioneNum])
 
   const hasValidPartialLays =
     partialLays.length > 0 &&
@@ -189,10 +197,11 @@ export function PuntaBancaCalculator() {
   }, [layStakeValue, commissioneNum])
   const effectiveExchangeProfit = partialLayTotals?.totalExchangeProfit ?? singleExchangeProfit
 
+  // Il rating legge le quote, non l'arrotondamento: sulla bancata esatta.
   const rating = useMemo(() => {
-    if (totalPuntataEffettiva <= 0 || layStakeValue == null) return null
-    return ratingPercent(totalPuntataEffettiva, layStakeValue)
-  }, [totalPuntataEffettiva, layStakeValue])
+    if (totalPuntataEffettiva <= 0 || layStakeExact == null) return null
+    return ratingPercent(totalPuntataEffettiva, layStakeExact)
+  }, [totalPuntataEffettiva, layStakeExact])
 
   /** Totale se vinci la puntata sul Book (su tutti i conti moltiplicati) */
   const totalSeVinciPuntata = useMemo(() => {

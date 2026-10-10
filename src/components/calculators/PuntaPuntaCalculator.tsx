@@ -8,6 +8,7 @@ import {
   stakeBFromStakeA,
   stakeBFromStakeARimborso,
 } from '@/lib/calculators/punta-punta'
+import { roundStake } from '@/lib/calculators/stake-step'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
@@ -105,7 +106,8 @@ export function PuntaPuntaCalculator() {
   const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
   const imbalanceFactor = 1 + imbalancePercent / 100
 
-  const stakeB = useMemo(() => {
+  // Valore esatto: fa da bersaglio alle contropuntate parziali.
+  const stakeBExact = useMemo(() => {
     if (puntataEffettivaA <= 0 || quotaANum == null || quotaBNum == null) return null
     let base: number | null
     if (rimborsoNum > 0) {
@@ -118,11 +120,15 @@ export function PuntaPuntaCalculator() {
     return Number.isFinite(adjusted) ? adjusted : null
   }, [puntataEffettivaA, quotaANum, quotaBNum, rimborsoNum, imbalanceFactor])
 
+  // La contropuntata da piazzare: multipli di 0,05 € (§14.229). Profitti,
+  // riepilogo e salvataggio partono da questa.
+  const stakeB = stakeBExact == null ? null : roundStake(stakeBExact)
+
   /* ── Contropuntata parziale (multi-step, max 6) ── */
   const partialPuntaResults = useMemo(() => {
-    if (partialPuntas.length === 0 || quotaBNum == null || stakeB == null) return []
+    if (partialPuntas.length === 0 || quotaBNum == null || stakeBExact == null) return []
 
-    const coverageTarget = stakeB * quotaBNum
+    const coverageTarget = stakeBExact * quotaBNum
 
     type StepResult = { newStake: number }
     const results: (StepResult | null)[] = []
@@ -150,17 +156,18 @@ export function PuntaPuntaCalculator() {
         break
       }
 
-      const newStake = (coverageTarget - coveredSum) / newOddsNum
-      if (!Number.isFinite(newStake) || newStake < 0) {
+      const newStakeExact = (coverageTarget - coveredSum) / newOddsNum
+      if (!Number.isFinite(newStakeExact) || newStakeExact < 0) {
         results.push(null)
         break
       }
 
-      results.push({ newStake })
+      // Anche il resto da puntare va a multipli di 0,05 €.
+      results.push({ newStake: roundStake(newStakeExact) })
     }
 
     return results
-  }, [partialPuntas, quotaBNum, stakeB])
+  }, [partialPuntas, quotaBNum, stakeBExact])
 
   const hasValidPartialPuntas =
     partialPuntas.length > 0 &&

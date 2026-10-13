@@ -37,6 +37,15 @@ export function resultBttsLegs(row: Pick<ResultBttsRow, 'legs'>): ResultBttsLeg[
   return row.legs
 }
 
+/** The leg with the lowest price (the first on a tie): where the user always puts the stake (§14.242). */
+export function resultBttsLowestOddsIndex(
+  legs: ReadonlyArray<Pick<ResultBttsLeg, 'odds'>>,
+): number {
+  let best = 0
+  for (let i = 1; i < legs.length; i++) if (legs[i].odds < legs[best].odds) best = i
+  return best
+}
+
 /** 100 / Σ 1/q over the legs, as the backend rates the row; null when the row has no usable legs. */
 export function resultBttsRating(row: Pick<ResultBttsRow, 'legs'>): number | null {
   const legs = resultBttsLegs(row)

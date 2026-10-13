@@ -12,6 +12,7 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { resolveProfitTrackerBook, shortBookmakerName } from '@/lib/bookmakers'
 import type { Account } from '@/types/profit-tracker'
 import { cn } from '@/lib/utils'
+import { formatNum } from './calculator-shared'
 
 export type AssignTone = 'primary' | 'destructive' | 'sky'
 
@@ -36,6 +37,12 @@ interface AssignAccountsModalProps {
   savedBetId: string | null
   /** Closes both this modal and the calculator behind it. */
   onDone: () => void
+  /** Account preselected per leg key when the modal opens (§14.242); the user can change each. */
+  initialSelection?: Record<string, string>
+  /** Account the calculator recommends per leg key: marked in the options and under the select. */
+  recommended?: Record<string, string>
+  /** Available balance per account id (balance net of the open drafts), shown next to the collaborator. */
+  balances?: Record<string, number>
 }
 
 const TONES: Record<AssignTone, { box: string; label: string; badge: string }> = {
@@ -78,6 +85,9 @@ export function AssignAccountsModal({
   error,
   savedBetId,
   onDone,
+  initialSelection,
+  recommended,
+  balances,
 }: AssignAccountsModalProps) {
   const books = useProfitTrackerStore((s) => s.allBooks)
   const holders = useProfitTrackerStore((s) => s.allHolders)
@@ -91,6 +101,8 @@ export function AssignAccountsModal({
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null)
 
   const legsKey = useMemo(() => legs.map((l) => `${l.key}:${l.bookmaker.slug}`).join('|'), [legs])
+  // The preselection is read when the modal opens, by value: a new object with the same ids must not reload.
+  const initialKey = JSON.stringify(initialSelection ?? {})
 
   useEffect(() => {
     if (!open) return
@@ -98,7 +110,7 @@ export function AssignAccountsModal({
     const load = async () => {
       setLoading(true)
       setLoadError(null)
-      setSelected({})
+      setSelected(JSON.parse(initialKey) as Record<string, string>)
       try {
         if (holders.length === 0) await fetchHolders()
         let resolvedBooks = books
@@ -107,14 +119,20 @@ export function AssignAccountsModal({
           resolvedBooks = useProfitTrackerStore.getState().allBooks
         }
         const next: Record<string, LegAccounts> = {}
+        // Legs on the same book (the five of «Risultato + Goal») share one request.
+        const accountsByBook = new Map<string, Account[]>()
         for (const leg of legs) {
           const book = resolveProfitTrackerBook(resolvedBooks, leg.bookmaker)
           if (!book) {
             next[leg.key] = { bookId: null, bookName: null, accounts: [] }
             continue
           }
-          const res = await getAccounts({ bookId: book.id })
-          next[leg.key] = { bookId: book.id, bookName: book.nome, accounts: res.items }
+          let accounts = accountsByBook.get(book.id)
+          if (!accounts) {
+            accounts = (await getAccounts({ bookId: book.id })).items
+            accountsByBook.set(book.id, accounts)
+          }
+          next[leg.key] = { bookId: book.id, bookName: book.nome, accounts }
         }
         if (!cancelled) setByLeg(next)
       } catch (err) {
@@ -130,7 +148,16 @@ export function AssignAccountsModal({
     }
     // legsKey stands for `legs`: a new array with the same legs must not reload.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, legsKey, books, holders.length, fetchAllBooks, fetchHolders])
+  }, [open, legsKey, initialKey, books, holders.length, fetchAllBooks, fetchHolders])
+
+  const holderName = (acc: Account) => holders.find((h) => h.id === acc.holderId)?.nome ?? acc.nome
+  const optionLabel = (acc: Account, legKey: string) => {
+    const balance = balances?.[acc.id]
+    const parts = [holderName(acc)]
+    if (balance != null) parts.push(`${formatNum(balance)} €`)
+    if (recommended?.[legKey] === acc.id) parts.push('consigliato')
+    return parts.join(' · ')
+  }
 
   const allChosen = legs.every((l) => selected[l.key])
 
@@ -215,10 +242,10 @@ export function AssignAccountsModal({
                       </span>
                     </div>
                     <SearchableSelect
-                      options={(info?.accounts ?? []).map((acc) => {
-                        const holder = holders.find((h) => h.id === acc.holderId)
-                        return { value: acc.id, label: holder?.nome ?? acc.nome }
-                      })}
+                      options={(info?.accounts ?? []).map((acc) => ({
+                        value: acc.id,
+                        label: optionLabel(acc, leg.key),
+                      }))}
                       value={selected[leg.key] ?? ''}
                       onChange={(value) => setSelected((prev) => ({ ...prev, [leg.key]: value }))}
                       placeholder="Seleziona collaboratore"
@@ -226,6 +253,17 @@ export function AssignAccountsModal({
                       allowEmpty={false}
                       portalContainer={portalEl}
                     />
+                    {(() => {
+                      const wanted = recommended?.[leg.key]
+                      if (!wanted || selected[leg.key] === wanted) return null
+                      const acc = info?.accounts.find((a) => a.id === wanted)
+                      if (!acc) return null
+                      return (
+                        <p className="text-[11px] text-muted-foreground">
+                          Consigliato: {optionLabel(acc, leg.key).replace(' · consigliato', '')}
+                        </p>
+                      )
+                    })()}
                     {info && info.bookId == null && (
                       <p className="rounded-ow-btn border border-border px-3 py-2 text-xs text-amber-400">
                         Nessun libro del Profit Tracker corrisponde a {bookmakerName}. Collegalo dal

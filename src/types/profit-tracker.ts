@@ -428,6 +428,17 @@ export interface PuntateInCorsoTotale {
   totale: number
 }
 
+/**
+ * The stakes an account has on open legs of non-archived bets (§14.242): the
+ * drafts («bozza», not yet taken from the balance) and the legs in progress
+ * («in_corso», already taken). Accounts without open legs are not listed.
+ */
+export interface AccountOpenStakes {
+  accountId: string
+  bozzaStake: number
+  inCorsoStake: number
+}
+
 export interface ActivityFeedFilters {
   source?: ActivityFeedSource
   stato?: AccountMovementStato

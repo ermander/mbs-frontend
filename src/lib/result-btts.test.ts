@@ -8,6 +8,7 @@ import {
   localDayBounds,
   localDayValue,
   resultBttsLegs,
+  resultBttsLowestOddsIndex,
   resultBttsOfflineEventInfo,
   resultBttsRating,
   resultBttsRowAge,
@@ -37,6 +38,13 @@ const MONZA: Pick<ResultBttsRow, 'legs' | 'zeroZero' | 'eventId' | 'bookmakerSlu
   }
 
 describe('risultato + goal: the dutch over the five legs but «X & NG»', () => {
+  it('the stake starts on the lowest price, the first on a tie', () => {
+    // 4.33 three times: the first of them, X & GG.
+    expect(resultBttsLowestOddsIndex(MONZA.legs)).toBe(2)
+    expect(resultBttsLowestOddsIndex([{ odds: 3 }, { odds: 2.5 }, { odds: 2.5 }])).toBe(1)
+    expect(resultBttsLowestOddsIndex([])).toBe(0)
+  })
+
   it('legs, rating and labels', () => {
     expect(RESULT_BTTS_MARKET_LABEL).toBe('1X2 + GG/NG')
     expect(RESULT_BTTS_ZERO_ZERO_LABEL).toBe('X & NG')

@@ -3,6 +3,7 @@ import { apiClient } from './client'
 import type {
   Account,
   AccountMovement,
+  AccountOpenStakes,
   AccountMovementStato,
   AccountMovementType,
   ActivityFeedFilters,
@@ -624,6 +625,15 @@ export async function getProfitReportDetail(
   const response = await apiClient.get<ProfitReportDetailResult>('/profit-tracker/report/detail', {
     params: params ?? {},
   })
+  return response.data
+}
+
+// Open stakes per account (drafts and legs in progress), for the calculators
+
+export async function getAccountsOpenStakes(): Promise<{ items: AccountOpenStakes[] }> {
+  const response = await apiClient.get<{ items: AccountOpenStakes[] }>(
+    '/profit-tracker/accounts/open-stakes',
+  )
   return response.data
 }
 

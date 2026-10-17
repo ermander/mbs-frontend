@@ -394,28 +394,28 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
               )}
             </div>
           )}
-          <div className="grid flex-1 grid-cols-2 gap-2 rounded-md bg-muted/40 p-2.5 sm:grid-cols-4">
-            <ResultStat
-              label="Esborso totale"
-              value={result.totalOutlay != null ? `€${formatNum(result.totalOutlay)}` : '—'}
-            />
-            <ResultStat
-              label="Coperture"
-              value={formatNum(
-                result.legs.filter((l) => !l.isPunta).reduce((s, l) => s + (l.stake ?? 0), 0) ||
-                  null,
-              )}
-            />
-            <ResultStat
-              label="Guadagno min"
-              value={result.guadagnoMinimo != null ? `€${formatNum(result.guadagnoMinimo)}` : '—'}
-              className={profitClass(result.guadagnoMinimo)}
-            />
-            <ResultStat
-              label="Rating"
-              value={result.rating != null ? `${formatNum(result.rating)}%` : '—'}
-            />
-          </div>
+        </div>
+        {/* The four figures on a row of their own (§14.245): beside three fields and the advice they overlapped. */}
+        <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-2.5 sm:grid-cols-4">
+          <ResultStat
+            label="Esborso totale"
+            value={result.totalOutlay != null ? `€${formatNum(result.totalOutlay)}` : '—'}
+          />
+          <ResultStat
+            label="Coperture"
+            value={formatNum(
+              result.legs.filter((l) => !l.isPunta).reduce((s, l) => s + (l.stake ?? 0), 0) || null,
+            )}
+          />
+          <ResultStat
+            label="Guadagno min"
+            value={result.guadagnoMinimo != null ? `€${formatNum(result.guadagnoMinimo)}` : '—'}
+            className={profitClass(result.guadagnoMinimo)}
+          />
+          <ResultStat
+            label="Rating"
+            value={result.rating != null ? `${formatNum(result.rating)}%` : '—'}
+          />
         </div>
       </div>
 

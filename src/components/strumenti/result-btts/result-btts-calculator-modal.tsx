@@ -24,10 +24,14 @@ import { computeDutch } from '@/lib/calculators/engines/dutch-engine'
 import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildDutchBet, type BetEventInfo } from '@/lib/calculators/bet-payloads'
 import {
+  MIN_FAVOURITE_STAKE,
+  adviseStake,
   recommendAccounts,
   type Allocation,
   type AllocationLeg,
+  type StakeAdvice,
 } from '@/lib/calculators/account-allocation'
+import { useResultBttsSettingsStore } from '@/stores/result-btts-settings-store'
 import {
   loadBookAccountsAvailability,
   type BookAccountsAvailability,
@@ -67,7 +71,8 @@ interface ResultBttsCalculatorModalProps {
  * the same profit whichever wins. The 0-0 («X & NG») is not covered: the
  * bookmaker refunds the stakes. The bet goes to the Profit Tracker as a
  * surebet, one account per leg, with the accounts the tool recommends
- * (§14.242). The view is keyed by the row, so it mounts fresh with its prices.
+ * (§14.242, rule of §14.243). The view is keyed by the row, so it mounts
+ * fresh with its prices.
  */
 export function ResultBttsCalculatorModal({ row, onClose }: ResultBttsCalculatorModalProps) {
   const event = useMemo(() => (row ? resultBttsEventInfo(row) : null), [row])
@@ -134,6 +139,14 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
   const [puntaIndex, setPuntaIndex] = useState(() => resultBttsLowestOddsIndex(legs))
   const [puntata, setPuntata] = useState('')
 
+  // The two knobs of the stake advice (§14.244), kept in the browser; typed as text, stored as numbers.
+  const cushion = useResultBttsSettingsStore((s) => s.cushion)
+  const maxStake = useResultBttsSettingsStore((s) => s.maxStake)
+  const setCushion = useResultBttsSettingsStore((s) => s.setCushion)
+  const setMaxStake = useResultBttsSettingsStore((s) => s.setMaxStake)
+  const [cushionText, setCushionText] = useState(() => String(cushion))
+  const [maxStakeText, setMaxStakeText] = useState(() => String(maxStake))
+
   const [assignOpen, setAssignOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -193,10 +206,30 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
     return recommendAccounts(
       allocationLegs,
       bookAccounts.accounts.map((a) => ({ id: a.account.id, available: a.available })),
+      { cushion },
     )
     // quotesKey stands for `quoteNums`, rebuilt on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, bookAccounts, legs, quotesKey])
+  }, [result, bookAccounts, legs, quotesKey, cushion])
+
+  // The stake advice needs the prices and the accounts, not the stake: it is there before typing.
+  const advice: StakeAdvice | null = useMemo(() => {
+    if (bookAccounts.status !== 'ready') return null
+    if (legs.length < 2 || quoteNums.some((q) => q == null || q <= 0)) return null
+    return adviseStake({
+      legs: legs.map((leg, i) => ({ key: leg.outcomeKey, odds: quoteNums[i] as number })),
+      puntaIndex,
+      accounts: bookAccounts.accounts.map((a) => ({ id: a.account.id, available: a.available })),
+      cushion,
+      maxStake,
+    })
+    // quotesKey stands for `quoteNums`, rebuilt on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookAccounts, legs, quotesKey, puntaIndex, cushion, maxStake])
+  const holderNameOf = (accountId: string) =>
+    bookAccounts.status === 'ready'
+      ? (bookAccounts.accounts.find((a) => a.account.id === accountId)?.holderName ?? accountId)
+      : accountId
 
   const balances = useMemo(() => {
     if (bookAccounts.status !== 'ready') return undefined
@@ -298,7 +331,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
         })}
       </div>
 
-      <div className="rounded-lg border border-border p-4">
+      <div className="space-y-3 rounded-lg border border-border p-4">
         <div className="flex flex-wrap items-end gap-4">
           <DecimalField
             id="rb-calc-puntata"
@@ -307,6 +340,60 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
             onChange={setPuntata}
             className="w-32"
           />
+          <DecimalField
+            id="rb-calc-cushion"
+            label="Cuscinetto €"
+            value={cushionText}
+            onChange={(v) => {
+              setCushionText(v)
+              setCushion(parseNum(v) ?? 0)
+            }}
+            className="w-28"
+          />
+          <DecimalField
+            id="rb-calc-max-stake"
+            label="Puntata max €"
+            value={maxStakeText}
+            onChange={(v) => {
+              setMaxStakeText(v)
+              setMaxStake(parseNum(v) ?? 0)
+            }}
+            className="w-28"
+          />
+          {advice && (
+            <div className="flex items-center gap-2 pb-1 text-sm">
+              {advice.recommended != null ? (
+                <>
+                  <span className="text-muted-foreground">Consigliata</span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {formatNum(advice.recommended)} €
+                  </span>
+                  {advice.favouriteAccountId && (
+                    <span className="text-muted-foreground">
+                      su {holderNameOf(advice.favouriteAccountId)}
+                      {advice.cappedBy === 'max' && ' (tetto)'}
+                      {advice.cappedBy === 'covers' && ' (limite delle coperture)'}
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPuntata(String(advice.recommended))}
+                    disabled={parseNum(puntata) === advice.recommended}
+                  >
+                    Usa
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-amber-400">
+                  Nessun conto regge una favorita da almeno {MIN_FAVOURITE_STAKE} € con il
+                  cuscinetto: ricarica un conto o abbassa il cuscinetto.
+                </span>
+              )}
+            </div>
+          )}
           <div className="grid flex-1 grid-cols-2 gap-2 rounded-md bg-muted/40 p-2.5 sm:grid-cols-4">
             <ResultStat
               label="Esborso totale"
@@ -342,6 +429,8 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
           stakes={result.legs.map((l) => l.stake)}
           state={bookAccounts}
           allocation={allocation}
+          advice={advice}
+          cushion={cushion}
         />
       )}
 
@@ -445,14 +534,16 @@ interface RecommendedAccountsPanelProps {
   stakes: Array<number | null>
   state: BookAccountsState
   allocation: Allocation | null
+  advice: StakeAdvice | null
+  cushion: number
 }
 
 /**
- * «Su quali conti puntare» (§14.242): per leg, the account of the bookmaker
- * the tool recommends, its available balance and what it becomes if the leg
- * wins or loses. The lowest price goes on the poorest account that covers
- * its stake, the next prices on the next poorest, the long shots on the
- * richest: see `recommendAccounts`.
+ * «Su quali conti puntare» (§14.242, §14.243): per leg, the account of the
+ * bookmaker the tool recommends, its available balance and what it becomes
+ * if the leg wins or loses. The favourite goes on the poorest account that
+ * covers its stake, the covers on the richest, the accounts in between hold
+ * nothing: see `recommendAccounts`.
  */
 function RecommendedAccountsPanel({
   bookmakerName,
@@ -463,16 +554,23 @@ function RecommendedAccountsPanel({
   stakes,
   state,
   allocation,
+  advice,
+  cushion,
 }: RecommendedAccountsPanelProps) {
   const shortName = shortBookmakerName(bookmakerName)
+  const holderNameOf = (accountId: string) =>
+    state.status === 'ready'
+      ? (state.accounts.find((a) => a.account.id === accountId)?.holderName ?? accountId)
+      : accountId
   return (
     <div className="rounded-lg border border-border">
       <div className="border-b border-border px-4 py-3">
         <p className="text-sm font-medium text-foreground">Su quali conti puntare</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          La quota più bassa sul conto {shortName} con il saldo disponibile più basso che copre la
-          puntata; le altre a salire, le quote alte sui conti più ricchi. Disponibile = saldo
-          attuale meno le bozze aperte.
+          La favorita (quota più bassa) sul conto {shortName} con il saldo disponibile più basso che
+          la copre; le coperture sui conti più ricchi, la più grossa sul più ricco; gli altri conti
+          restano fermi. Disponibile = saldo attuale meno le bozze aperte; ogni conto tiene il
+          cuscinetto ({formatNum(cushion)} €) dopo le sue puntate.
         </p>
       </div>
       {state.status === 'loading' && (
@@ -574,10 +672,32 @@ function RecommendedAccountsPanel({
                 Nessuna combinazione copre tutte le puntate: ricarica un conto o abbassa la puntata.
               </p>
             )}
+            {allocation.feasible && allocation.belowCushionAccountIds.length > 0 && (
+              <p className="text-amber-400">
+                Sotto il cuscinetto:{' '}
+                {allocation.belowCushionAccountIds.map(holderNameOf).join(', ')}.
+              </p>
+            )}
+            {advice && advice.ladder.length > 0 && (
+              <p>
+                Favorita:{' '}
+                {advice.ladder
+                  .map(
+                    (step) => `fino a ${formatNum(step.upTo)} € su ${holderNameOf(step.accountId)}`,
+                  )
+                  .join(', ')}
+                {advice.refillAccountIds.length > 0 &&
+                  `; da ricaricare: ${advice.refillAccountIds.map(holderNameOf).join(', ')}`}
+                .
+              </p>
+            )}
             {allocation.feasible && !allocation.distinct && (
               <p>
                 I conti non bastano per una gamba ciascuno: alcune gambe vanno sullo stesso conto.
               </p>
+            )}
+            {allocation.idleAccountIds.length > 0 && (
+              <p>Fermi: {allocation.idleAccountIds.map(holderNameOf).join(', ')}.</p>
             )}
             {state.bozzeUnknown && (
               <p className="text-amber-400">

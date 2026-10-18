@@ -73,7 +73,8 @@ export function RegistrationForm() {
         <GoogleSignInButton />
         <p className="text-center text-[13px] leading-[1.5] text-ow-text-3">
           Continuando con Google accetti i <AuthLink href="/termini">Termini di servizio</AuthLink>{' '}
-          e la <AuthLink href="/privacy">Privacy policy</AuthLink>.
+          e dichiari di aver letto l&apos;
+          <AuthLink href="/privacy">informativa sulla privacy</AuthLink>.
         </p>
       </div>
       <AuthDivider />
@@ -177,8 +178,8 @@ export function RegistrationForm() {
               htmlFor="terms"
               className="cursor-pointer font-normal leading-[1.5] text-ow-text-3"
             >
-              Accetto i <AuthLink href="/termini">Termini di servizio</AuthLink> e la{' '}
-              <AuthLink href="/privacy">Privacy policy</AuthLink>
+              Accetto i <AuthLink href="/termini">Termini di servizio</AuthLink> e dichiaro di aver
+              letto l&apos;<AuthLink href="/privacy">informativa sulla privacy</AuthLink>
             </AuthLabel>
           </div>
           {errors.terms && <FieldError id="terms-error">{errors.terms.message}</FieldError>}

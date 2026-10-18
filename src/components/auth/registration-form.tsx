@@ -16,6 +16,7 @@ import {
   AuthMessage,
   FieldError,
 } from '@/components/auth/auth-primitives'
+import { AuthPasswordInput } from '@/components/auth/auth-password-input'
 import { AuthDivider, GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 
 export function RegistrationForm() {
@@ -127,9 +128,8 @@ export function RegistrationForm() {
 
         <AuthField>
           <AuthLabel htmlFor="password">Password</AuthLabel>
-          <AuthInput
+          <AuthPasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             placeholder="Almeno 8 caratteri"
             aria-invalid={Boolean(errors.password)}
@@ -143,9 +143,8 @@ export function RegistrationForm() {
 
         <AuthField>
           <AuthLabel htmlFor="confirmPassword">Conferma password</AuthLabel>
-          <AuthInput
+          <AuthPasswordInput
             id="confirmPassword"
-            type="password"
             autoComplete="new-password"
             placeholder="Ripeti la password"
             aria-invalid={Boolean(errors.confirmPassword)}

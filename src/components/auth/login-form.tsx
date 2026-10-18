@@ -18,6 +18,7 @@ import {
   AuthMessage,
   FieldError,
 } from '@/components/auth/auth-primitives'
+import { AuthPasswordInput } from '@/components/auth/auth-password-input'
 import { AuthDivider, GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 
 interface LoginFormProps {
@@ -98,9 +99,8 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
               Password dimenticata?
             </AuthLink>
           </div>
-          <AuthInput
+          <AuthPasswordInput
             id="login-password"
-            type="password"
             autoComplete="current-password"
             placeholder="La tua password"
             aria-invalid={Boolean(errors.password)}

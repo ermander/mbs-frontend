@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { TelegramLinkWidget } from '@/components/profit-tracker/telegram-link-widget'
 import { authClient } from '@/services/api/auth-client'
@@ -217,9 +218,8 @@ function SecurityCard() {
         >
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="password-current">Password attuale</Label>
-            <Input
+            <PasswordInput
               id="password-current"
-              type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               autoComplete="current-password"
@@ -227,9 +227,8 @@ function SecurityCard() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password-new">Nuova password</Label>
-            <Input
+            <PasswordInput
               id="password-new"
-              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               autoComplete="new-password"
@@ -238,9 +237,8 @@ function SecurityCard() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password-confirm">Conferma nuova password</Label>
-            <Input
+            <PasswordInput
               id="password-confirm"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"

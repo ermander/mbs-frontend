@@ -12,12 +12,12 @@ import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import {
   AuthButton,
   AuthField,
-  AuthInput,
   AuthLabel,
   AuthLink,
   AuthMessage,
   FieldError,
 } from '@/components/auth/auth-primitives'
+import { AuthPasswordInput } from '@/components/auth/auth-password-input'
 
 interface ResetPasswordFormProps {
   token: string
@@ -83,9 +83,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         <>
           <AuthField>
             <AuthLabel htmlFor="reset-password">Nuova password</AuthLabel>
-            <AuthInput
+            <AuthPasswordInput
               id="reset-password"
-              type="password"
               autoComplete="new-password"
               placeholder="Almeno 8 caratteri"
               aria-invalid={Boolean(errors.password)}
@@ -99,9 +98,8 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
           <AuthField>
             <AuthLabel htmlFor="reset-confirm">Conferma password</AuthLabel>
-            <AuthInput
+            <AuthPasswordInput
               id="reset-confirm"
-              type="password"
               autoComplete="new-password"
               placeholder="Ripeti la password"
               aria-invalid={Boolean(errors.confirmPassword)}

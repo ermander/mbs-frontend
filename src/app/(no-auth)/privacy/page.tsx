@@ -1,5 +1,5 @@
 import { LegalPage, type LegalSection } from '@/components/landing/legal-primitives'
-import { TextLink } from '@/components/landing/landing-primitives'
+import { DsTextLink } from '@/components/landing/ds-primitives'
 import { SiteShell } from '@/components/landing/site-shell'
 
 const SECTIONS: readonly LegalSection[] = [
@@ -97,7 +97,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Il sito utilizza cookie e tecnologie simili per il funzionamento del servizio e, ove
         previsto, per analisi e personalizzazione. Per maggiori informazioni sui cookie e su come
-        gestirli consulta la nostra <TextLink href="/cookie">informativa sui cookie</TextLink>.
+        gestirli consulta la nostra <DsTextLink href="/cookie">informativa sui cookie</DsTextLink>.
       </p>
     ),
   },
@@ -120,7 +120,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Per esercitare i diritti previsti dal GDPR o per qualsiasi domanda sulla privacy puoi
         contattarci all&apos;indirizzo email indicato nella{' '}
-        <TextLink href="/contatti">pagina Contatti</TextLink>.
+        <DsTextLink href="/contatti">pagina Contatti</DsTextLink>.
       </p>
     ),
   },

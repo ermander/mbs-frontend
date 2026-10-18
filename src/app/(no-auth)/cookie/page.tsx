@@ -1,5 +1,5 @@
 import { LegalPage, type LegalSection } from '@/components/landing/legal-primitives'
-import { TextLink } from '@/components/landing/landing-primitives'
+import { DsTextLink } from '@/components/landing/ds-primitives'
 import { SiteShell } from '@/components/landing/site-shell'
 
 const SECTIONS: readonly LegalSection[] = [
@@ -10,7 +10,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Questa informativa spiega cosa sono i cookie e come li utilizziamo sul sito OddWise. Si
         rivolge a tutti i visitatori. Per il trattamento dei dati personali nel suo insieme
-        rimandiamo alla nostra <TextLink href="/privacy">informativa sulla privacy</TextLink>.
+        rimandiamo alla nostra <DsTextLink href="/privacy">informativa sulla privacy</DsTextLink>.
       </p>
     ),
   },
@@ -72,7 +72,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Per il trattamento dei dati personali raccolti tramite cookie e per esercitare i tuoi
         diritti rimandiamo all&apos;
-        <TextLink href="/privacy">informativa sulla privacy</TextLink>.
+        <DsTextLink href="/privacy">informativa sulla privacy</DsTextLink>.
       </p>
     ),
   },
@@ -93,7 +93,7 @@ const SECTIONS: readonly LegalSection[] = [
     body: (
       <p>
         Per domande relative ai cookie puoi contattarci all&apos;indirizzo email indicato nella{' '}
-        <TextLink href="/contatti">pagina Contatti</TextLink>.
+        <DsTextLink href="/contatti">pagina Contatti</DsTextLink>.
       </p>
     ),
   },

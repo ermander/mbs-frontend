@@ -1,29 +1,21 @@
 import { FAQ } from '@/lib/landing-content'
-import { Eyebrow, LandingContainer } from '@/components/landing/landing-primitives'
+import { DsContainer } from '@/components/landing/ds-primitives'
 
-/** Domande e risposte tutte visibili, come nel mockup: niente accordion. */
+/** «Domande frequenti»: quattro coppie domanda/risposta su due colonne da lg, separate da hairline. */
 export function FaqSection() {
   return (
-    <section id="faq" className="py-16 lg:py-24">
-      <LandingContainer className="flex flex-col gap-8 lg:flex-row lg:gap-16">
-        <div className="flex flex-col gap-3 lg:w-[380px] lg:shrink-0">
-          <Eyebrow>{FAQ.eyebrow}</Eyebrow>
-          <h2 className="text-[28px] font-medium leading-[1.1] tracking-[-0.022em] text-ow-text sm:text-[32px] lg:text-[40px]">
-            {FAQ.title}
-          </h2>
-        </div>
-        <dl className="flex flex-1 flex-col">
+    <section id="faq" className="pt-16">
+      <DsContainer>
+        <h2 className="ds-title mb-2">{FAQ.title}</h2>
+        <div className="grid gap-x-16 lg:grid-cols-2">
           {FAQ.items.map((item) => (
-            <div
-              key={item.q}
-              className="flex flex-col gap-1.5 border-t border-ow-line py-4 lg:py-5"
-            >
-              <dt className="text-base font-medium tracking-[-0.012em] text-ow-text">{item.q}</dt>
-              <dd className="text-[15px] leading-[1.6] text-ow-text-3">{item.a}</dd>
+            <div key={item.q} className="border-b border-ds-line py-5">
+              <h3 className="ds-subheading">{item.q}</h3>
+              <p className="ds-body mt-1.5 text-ds-ink-muted [text-wrap:pretty]">{item.a}</p>
             </div>
           ))}
-        </dl>
-      </LandingContainer>
+        </div>
+      </DsContainer>
     </section>
   )
 }

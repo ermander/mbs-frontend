@@ -1,50 +1,58 @@
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 
 import { HERO, LANDING_ROUTES } from '@/lib/landing-content'
-import { cn } from '@/lib/utils'
-import { CalculatorCard } from '@/components/landing/calculator-card'
-import {
-  LandingButton,
-  LandingContainer,
-  landingFocusRing,
-} from '@/components/landing/landing-primitives'
+import { DsMoney } from '@/components/landing/ds-data'
+import { DsButton, DsCard, DsContainer } from '@/components/landing/ds-primitives'
 
 /**
- * Hero: testo e CTA a sinistra, card del calcolatore a destra. Titolo in peso medio con
- * tracking stretto, testo in grigio, una sola CTA piena più un link con freccia. Sul telefono
- * occupa la prima schermata con la card compatta appoggiata al fondo.
+ * Hero del design: titolo display-xl con la frase chiave sottolineata in accento, testo in
+ * body-lg, CTA primaria e secondaria da 48px, riga di rassicurazione con lo scudo; a destra la
+ * card «Profitto stimato del primo mese». Sotto lg le due colonne si impilano.
  */
 export function HeroSection() {
+  const { estimate } = HERO
   return (
-    <section id="top" className="flex min-h-[calc(100svh-4rem)] flex-col lg:block lg:min-h-0">
-      <LandingContainer className="flex flex-1 flex-col pt-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-24 xl:gap-16">
-        <div className="flex flex-col gap-4 lg:min-w-0 lg:max-w-[600px] lg:flex-1 lg:gap-6">
-          <h1 className="text-[34px] font-medium leading-[1.08] tracking-[-0.022em] text-ow-text md:text-[44px] lg:text-[48px] lg:leading-[1.05] xl:text-[56px]">
-            {HERO.title}
+    <section id="top" className="pb-12 pt-12 lg:pb-16 lg:pt-24">
+      <DsContainer className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-16">
+        <div>
+          <h1 className="ds-display-xl">
+            {HERO.titleBefore}
+            <span className="underline decoration-ds-accent decoration-[6px] underline-offset-[6px]">
+              {HERO.titleMark}
+            </span>
+            {HERO.titleAfter}
           </h1>
-          <p className="max-w-[52ch] text-base leading-[1.6] text-ow-text-3">{HERO.text}</p>
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
-            <LandingButton href={LANDING_ROUTES.promo} variant="accent" className="h-10 sm:h-9">
+          <p className="ds-body-lg mt-6 max-w-[68ch] text-ds-ink-muted">{HERO.text}</p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <DsButton href={LANDING_ROUTES.guide} variant="primary" size="lg" iconEnd="arrow-right">
               {HERO.ctaPrimary}
-            </LandingButton>
-            <Link
-              href={LANDING_ROUTES.how}
-              className={cn(
-                'inline-flex items-center gap-1.5 self-start rounded-ow-btn text-sm text-ow-text-2 transition-colors hover:text-ow-text',
-                landingFocusRing,
-              )}
-            >
+            </DsButton>
+            <DsButton href={LANDING_ROUTES.oddsmatcher} size="lg">
               {HERO.ctaSecondary}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
+            </DsButton>
           </div>
+          <p className="ds-body-sm mt-4 flex items-center gap-2 text-ds-ink-muted">
+            <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden />
+            {HERO.reassurance}
+          </p>
         </div>
 
-        <div className="mt-8 flex flex-1 flex-col items-center justify-end md:pb-10 lg:mt-0 lg:flex-none lg:pb-0">
-          <CalculatorCard />
-        </div>
-      </LandingContainer>
+        <DsCard size="lg" title={estimate.title}>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <span className="ds-label uppercase text-ds-ink-muted">{estimate.profitLabel}</span>
+              <div className="mt-1">
+                <DsMoney value={estimate.profit} size="xl" />
+              </div>
+            </div>
+            <div>
+              <span className="ds-label uppercase text-ds-ink-muted">{estimate.timeLabel}</span>
+              <div className="ds-num-xl mt-1">{estimate.time}</div>
+            </div>
+          </div>
+          <p className="ds-body-sm mt-5 text-ds-ink-muted">{estimate.note}</p>
+        </DsCard>
+      </DsContainer>
     </section>
   )
 }

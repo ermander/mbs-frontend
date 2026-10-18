@@ -48,7 +48,7 @@ export default function AccountProfiloPage() {
       {user ? (
         <>
           <AccountDataCard key={`${user.id}:${user.name}:${user.username}`} user={user} />
-          <SecurityCard />
+          <SecurityCard user={user} />
           <NotificationsCard />
         </>
       ) : (
@@ -171,7 +171,65 @@ function isStrongPassword(pw: string): boolean {
   )
 }
 
-function SecurityCard() {
+/**
+ * §14.249: chi è entrato con Google e non ha mai impostato una password (`hasPassword` false)
+ * non vede il form «Cambia password», che il backend rifiuterebbe con un 400, ma un pulsante
+ * che gli manda il link per impostarne una. `hasPassword` assente (backend più vecchio) =
+ * form come prima.
+ */
+function SecurityCard({ user }: { user: AuthUser }) {
+  const withoutPassword = user.hasPassword === false
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Sicurezza</CardTitle>
+        <CardDescription>
+          {withoutPassword
+            ? 'Il tuo account accede con Google e non ha una password.'
+            : 'Cambia la password. Le altre sessioni aperte verranno disconnesse.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {withoutPassword ? <SetPasswordPanel email={user.email} /> : <ChangePasswordForm />}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SetPasswordPanel({ email }: { email: string }) {
+  const [sending, setSending] = useState(false)
+
+  const handleClick = async () => {
+    if (sending) return
+    setSending(true)
+    try {
+      const { message } = await authClient.requestPasswordReset(email)
+      toast.success(message)
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'Impossibile inviare il link per impostare la password.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="set-password-panel"
+    >
+      <p className="text-sm text-muted-foreground">
+        Per entrare anche con email e password, ricevi su{' '}
+        <span className="font-medium text-foreground">{email}</span> un link per impostarne una.
+        Continuerai comunque ad accedere con Google.
+      </p>
+      <Button type="button" size="sm" className="shrink-0" onClick={handleClick} disabled={sending}>
+        {sending ? 'Invio...' : 'Imposta una password'}
+      </Button>
+    </div>
+  )
+}
+
+function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -203,66 +261,48 @@ function SecurityCard() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Sicurezza</CardTitle>
-        <CardDescription>
-          Cambia la password. Le altre sessioni aperte verranno disconnesse.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-4 sm:grid-cols-2"
-          data-testid="password-form"
-        >
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="password-current">Password attuale</Label>
-            <PasswordInput
-              id="password-current"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password-new">Nuova password</Label>
-            <PasswordInput
-              id="password-new"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-              aria-invalid={weak || undefined}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password-confirm">Conferma nuova password</Label>
-            <PasswordInput
-              id="password-confirm"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-              aria-invalid={mismatch || undefined}
-            />
-          </div>
-          <p
-            className={`text-xs sm:col-span-2 ${weak ? 'text-destructive' : 'text-muted-foreground'}`}
-          >
-            {PASSWORD_HINT}
-          </p>
-          {mismatch && (
-            <p className="text-xs text-destructive sm:col-span-2">
-              Le due password non coincidono.
-            </p>
-          )}
-          <div className="flex justify-end sm:col-span-2">
-            <Button type="submit" size="sm" disabled={!canSave}>
-              {saving ? 'Aggiornamento...' : 'Cambia password'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" data-testid="password-form">
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="password-current">Password attuale</Label>
+        <PasswordInput
+          id="password-current"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          autoComplete="current-password"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="password-new">Nuova password</Label>
+        <PasswordInput
+          id="password-new"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          autoComplete="new-password"
+          aria-invalid={weak || undefined}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="password-confirm">Conferma nuova password</Label>
+        <PasswordInput
+          id="password-confirm"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          aria-invalid={mismatch || undefined}
+        />
+      </div>
+      <p className={`text-xs sm:col-span-2 ${weak ? 'text-destructive' : 'text-muted-foreground'}`}>
+        {PASSWORD_HINT}
+      </p>
+      {mismatch && (
+        <p className="text-xs text-destructive sm:col-span-2">Le due password non coincidono.</p>
+      )}
+      <div className="flex justify-end sm:col-span-2">
+        <Button type="submit" size="sm" disabled={!canSave}>
+          {saving ? 'Aggiornamento...' : 'Cambia password'}
+        </Button>
+      </div>
+    </form>
   )
 }
 

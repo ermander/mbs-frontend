@@ -26,6 +26,12 @@ export interface RegisterResponse {
   email: string
 }
 
+/**
+ * §14.246: dove porta «Continua con Google». Una navigazione, non una chiamata axios: il
+ * backend (dietro il rewrite /api) manda il browser a Google e lo riporta su /accesso-google.
+ */
+export const GOOGLE_AUTH_START_URL = '/api/auth/google'
+
 export const authClient = {
   async register(payload: { email: string; password: string; name: string; username: string }) {
     const { data } = await apiClient.post<RegisterResponse>('/auth/register', payload)

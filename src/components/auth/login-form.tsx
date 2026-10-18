@@ -18,6 +18,7 @@ import {
   AuthMessage,
   FieldError,
 } from '@/components/auth/auth-primitives'
+import { AuthDivider, GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 
 interface LoginFormProps {
   redirectTo?: string
@@ -68,52 +69,57 @@ export function LoginForm({ redirectTo = POST_AUTH_REDIRECT }: LoginFormProps) {
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-      {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
-      {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
+    <div className="flex flex-col gap-5">
+      <GoogleSignInButton />
+      <AuthDivider />
 
-      <AuthField>
-        <AuthLabel htmlFor="login-email">Email</AuthLabel>
-        <AuthInput
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          placeholder="nome@esempio.it"
-          aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? 'login-email-error' : undefined}
-          {...register('email')}
-        />
-        {errors.email && <FieldError id="login-email-error">{errors.email.message}</FieldError>}
-      </AuthField>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+        {submitStatus === 'success' && <AuthMessage tone="success">{submitMessage}</AuthMessage>}
+        {submitStatus === 'error' && <AuthMessage tone="error">{submitMessage}</AuthMessage>}
 
-      <AuthField>
-        <div className="flex items-center justify-between">
-          <AuthLabel htmlFor="login-password">Password</AuthLabel>
-          <AuthLink href="/recupero-password" className="text-[13px]">
-            Password dimenticata?
-          </AuthLink>
-        </div>
-        <AuthInput
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="La tua password"
-          aria-invalid={Boolean(errors.password)}
-          aria-describedby={errors.password ? 'login-password-error' : undefined}
-          {...register('password')}
-        />
-        {errors.password && (
-          <FieldError id="login-password-error">{errors.password.message}</FieldError>
-        )}
-      </AuthField>
+        <AuthField>
+          <AuthLabel htmlFor="login-email">Email</AuthLabel>
+          <AuthInput
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder="nome@esempio.it"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'login-email-error' : undefined}
+            {...register('email')}
+          />
+          {errors.email && <FieldError id="login-email-error">{errors.email.message}</FieldError>}
+        </AuthField>
 
-      <AuthButton type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Accesso in corso...' : 'Accedi'}
-      </AuthButton>
+        <AuthField>
+          <div className="flex items-center justify-between">
+            <AuthLabel htmlFor="login-password">Password</AuthLabel>
+            <AuthLink href="/recupero-password" className="text-[13px]">
+              Password dimenticata?
+            </AuthLink>
+          </div>
+          <AuthInput
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="La tua password"
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={errors.password ? 'login-password-error' : undefined}
+            {...register('password')}
+          />
+          {errors.password && (
+            <FieldError id="login-password-error">{errors.password.message}</FieldError>
+          )}
+        </AuthField>
 
-      <p className="text-center text-sm text-ow-text-3">
-        Non hai un account? <AuthLink href="/registrazione">Registrati</AuthLink>
-      </p>
-    </form>
+        <AuthButton type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Accesso in corso...' : 'Accedi'}
+        </AuthButton>
+
+        <p className="text-center text-sm text-ow-text-3">
+          Non hai un account? <AuthLink href="/registrazione">Registrati</AuthLink>
+        </p>
+      </form>
+    </div>
   )
 }

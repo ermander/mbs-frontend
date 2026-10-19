@@ -37,7 +37,8 @@ const ROLE_LABEL: Record<AuthUser['role'], string> = {
 }
 
 function getInitials(name: string | undefined, email: string | undefined): string {
-  const source = (name ?? email ?? '').trim()
+  // || e non ??: dalla registrazione del design (§14.253) il nome può essere la stringa vuota.
+  const source = (name || email || '').trim()
   if (!source) return '?'
   const parts = source.split(/\s+/).filter(Boolean)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
@@ -119,7 +120,7 @@ function AccountDataCard({ user }: { user: AuthUser }) {
           {getInitials(user.name, user.email)}
         </div>
         <div className="min-w-0">
-          <CardTitle className="text-lg">{user.name}</CardTitle>
+          <CardTitle className="text-lg">{user.name || user.email}</CardTitle>
           <CardDescription className="mt-1 truncate">
             @{user.username} · {ROLE_LABEL[user.role]}
             {joinedAt ? ` · iscritto dal ${joinedAt}` : ''}

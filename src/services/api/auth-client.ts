@@ -38,7 +38,8 @@ export interface RegisterResponse {
 export const GOOGLE_AUTH_START_URL = '/api/auth/google'
 
 export const authClient = {
-  async register(payload: { email: string; password: string; name: string; username: string }) {
+  /** §14.253: il nome è facoltativo, la registrazione del design non lo chiede. */
+  async register(payload: { email: string; password: string; name?: string; username: string }) {
     const { data } = await apiClient.post<RegisterResponse>('/auth/register', payload)
     return data
   },

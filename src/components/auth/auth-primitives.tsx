@@ -13,21 +13,11 @@ import {
 } from '@/components/landing/landing-primitives'
 
 /**
- * Guscio delle pagine di accesso (login, registrazione, recupero e reimposta password,
- * verifica email): barra da 64px con il marchio, colonna da 400px al centro. Con `split`
- * la pagina si divide in due da lg: a sinistra un pannello (superficie con hairline), per
- * ora vuoto, che può ospitare `aside`; a destra il form. Stessa grammatica della landing:
- * superfici neutre, bordi hairline, un solo accento.
+ * Guscio delle pagine di accesso ancora sulla grammatica «Linear» (recupero e reimposta
+ * password, verifica email, ritorno da Google): barra da 64px con il marchio, colonna da 400px
+ * al centro. Login e registrazione sono su DsAuthShell (§14.252, §14.253).
  */
-export function AuthShell({
-  split = false,
-  aside,
-  children,
-}: {
-  split?: boolean
-  aside?: React.ReactNode
-  children: React.ReactNode
-}) {
+export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-ow-bg font-sans tracking-[-0.011em] text-ow-text antialiased">
       <header className="border-b border-ow-line">
@@ -51,12 +41,7 @@ export function AuthShell({
         </LandingContainer>
       </header>
 
-      <div className={cn('flex flex-1', split && 'lg:grid lg:grid-cols-2')}>
-        {split && (
-          <aside className="hidden border-r border-ow-line bg-ow-surface lg:flex lg:items-center lg:justify-center lg:p-12">
-            {aside}
-          </aside>
-        )}
+      <div className="flex flex-1">
         <main className="flex flex-1 justify-center px-5 py-12 sm:px-8 sm:py-16 lg:items-center">
           <div className="w-full max-w-[400px]">{children}</div>
         </main>
@@ -95,24 +80,6 @@ export const AuthLabel = React.forwardRef<
   />
 ))
 AuthLabel.displayName = 'AuthLabel'
-
-export const AuthCheckbox = React.forwardRef<
-  HTMLInputElement,
-  Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>
->(({ className, ...props }, ref) => (
-  <input
-    type="checkbox"
-    ref={ref}
-    className={cn(
-      'mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-ow-line-strong bg-transparent accent-ow-accent',
-      landingFocusRing,
-      'disabled:cursor-not-allowed disabled:opacity-50',
-      className,
-    )}
-    {...props}
-  />
-))
-AuthCheckbox.displayName = 'AuthCheckbox'
 
 /** Pulsante dei form (<button>): stesse varianti e misure di LandingButton, 40px per i form. */
 export const AuthButton = React.forwardRef<

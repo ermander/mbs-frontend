@@ -35,17 +35,6 @@ export function GoogleSignInButton({
   )
 }
 
-/** Separatore «oppure» fra Google e il form con email e password. */
-export function AuthDivider({ children = 'oppure' }: { children?: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 text-[13px] text-ow-text-3" role="separator">
-      <span aria-hidden className="h-px flex-1 bg-ow-line" />
-      <span>{children}</span>
-      <span aria-hidden className="h-px flex-1 bg-ow-line" />
-    </div>
-  )
-}
-
 /** Il marchio «G» di Google nei suoi quattro colori: è un marchio di terzi, non un accento nostro. */
 export function GoogleMark({ size = 18 }: { size?: number }) {
   return (

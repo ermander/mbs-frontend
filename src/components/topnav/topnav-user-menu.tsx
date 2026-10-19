@@ -18,7 +18,8 @@ import { cn } from '@/lib/utils'
 import { useHoverMenu } from './use-hover-menu'
 
 function getInitials(name: string | undefined, email: string | undefined): string {
-  const source = (name ?? email ?? '').trim()
+  // || e non ??: dalla registrazione del design (§14.253) il nome può essere la stringa vuota.
+  const source = (name || email || '').trim()
   if (!source) return '?'
   const parts = source.split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
@@ -33,7 +34,7 @@ export function TopnavUserMenu() {
   const logout = useAuthStore((s) => s.logout)
 
   const initials = getInitials(user?.name, user?.email ?? undefined)
-  const displayName = user?.name ?? user?.username ?? 'Account'
+  const displayName = user?.name || user?.username || 'Account'
   const email = user?.email ?? ''
   const AccountIcon = accountNavItem.icon
   const { open, onOpenChange, hoverProps, triggerProps } = useHoverMenu()

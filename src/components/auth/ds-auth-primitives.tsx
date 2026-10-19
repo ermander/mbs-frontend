@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowRight, CircleX, TriangleAlert } from 'lucide-react'
+import { ArrowRight, CircleX, Info, TriangleAlert } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
@@ -9,7 +9,8 @@ import { GOOGLE_AUTH_START_URL } from '@/services/api/auth-client'
 /**
  * Primitive dei form di accesso sul design system (§14.252): TextField a 48px con etichetta ed
  * errore, Callout, pulsante <button> con le varianti del design e «Continua con Google». I form
- * ancora sulla grammatica «Linear» (registrazione, recupero) usano auth-primitives.
+ * ancora sulla grammatica «Linear» (recupero e reimposta password, verifica email) usano
+ * auth-primitives.
  */
 
 /** Etichetta + controllo + errore: gap 4px come l'ow-field del design. */
@@ -68,28 +69,42 @@ export function DsFieldError({ id, children }: { id: string; children: React.Rea
   )
 }
 
-/** Callout del design nel tono warning: fondo warning-soft, icona e titolo in warning, testo in ink. */
+/** Suggerimento sotto il campo: 14px/20px in ink-muted, al posto dell'errore quando non ce n'è. */
+export function DsFieldHint({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} className="text-sm leading-5 text-ds-ink-muted">
+      {children}
+    </p>
+  )
+}
+
+const CALLOUT_TONES = {
+  warning: { box: 'bg-ds-warning-soft', accent: 'text-ds-warning', Icon: TriangleAlert },
+  note: { box: 'bg-ds-info-soft', accent: 'text-ds-info', Icon: Info },
+} as const
+
+/**
+ * Callout del design: warning (fondo warning-soft, annuncia un errore) o note (fondo info-soft);
+ * icona e titolo nel colore del tono, testo in ink.
+ */
 export function DsCallout({
   tone = 'warning',
   title,
   children,
 }: {
-  tone?: 'warning'
+  tone?: keyof typeof CALLOUT_TONES
   title: string
   children: React.ReactNode
 }) {
+  const { box, accent, Icon } = CALLOUT_TONES[tone]
   return (
     <div
-      role="alert"
-      className={cn('flex gap-3 rounded-ds-md p-4', tone === 'warning' && 'bg-ds-warning-soft')}
+      role={tone === 'warning' ? 'alert' : undefined}
+      className={cn('flex gap-3 rounded-ds-md p-4', box)}
     >
-      <TriangleAlert
-        className={cn('mt-0.5 h-5 w-5 shrink-0', tone === 'warning' && 'text-ds-warning')}
-        strokeWidth={2}
-        aria-hidden
-      />
+      <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', accent)} strokeWidth={2} aria-hidden />
       <div>
-        <p className={cn('ds-subheading mb-1', tone === 'warning' && 'text-ds-warning')}>{title}</p>
+        <p className={cn('ds-subheading mb-1', accent)}>{title}</p>
         <div className="text-ds-ink">{children}</div>
       </div>
     </div>
@@ -143,10 +158,17 @@ DsFormButton.displayName = 'DsFormButton'
  * 20px e testo 16px a 600. Come in google-sign-in-button è un <a> verso /api/auth/google
  * (§14.246), non un pulsante: la rotta risponde con un redirect verso Google.
  */
-export function DsGoogleSignInButton({ label = 'Continua con Google' }: { label?: string }) {
+export function DsGoogleSignInButton({
+  label = 'Continua con Google',
+  onClick,
+}: {
+  label?: string
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>
+}) {
   return (
     <a
       href={GOOGLE_AUTH_START_URL}
+      onClick={onClick}
       className={cn(
         'flex h-12 w-full items-center justify-center gap-3 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-5 font-semibold text-ds-ink transition-colors hover:bg-ds-surface-sunken',
         dsFocusRing,

@@ -44,6 +44,17 @@ const buttonSize: Record<DsButtonSize, string> = {
   lg: 'h-12 px-6 text-[17px]',
 }
 
+/** Le classi del Button del design, per chi deve renderlo come <button> (i form di accesso, §14.252). */
+export function dsButtonClass(variant: DsButtonVariant, size: DsButtonSize, block?: boolean) {
+  return cn(
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ds-sm border font-semibold leading-none transition-colors',
+    block && 'flex w-full',
+    buttonVariant[variant],
+    buttonSize[size],
+    dsFocusRing,
+  )
+}
+
 /** Pulsante del design, qui sempre un link: 40px, peso 600, raggio 6px, freccia opzionale in coda. */
 export function DsButton({
   href,
@@ -63,17 +74,7 @@ export function DsButton({
   children: React.ReactNode
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ds-sm border font-semibold leading-none transition-colors',
-        block && 'flex w-full',
-        buttonVariant[variant],
-        buttonSize[size],
-        dsFocusRing,
-        className,
-      )}
-    >
+    <Link href={href} className={cn(dsButtonClass(variant, size, block), className)}>
       {children}
       {iconEnd === 'arrow-right' && (
         <ArrowRight className={cn('shrink-0', size === 'sm' ? 'h-4 w-4' : 'h-5 w-5')} aria-hidden />

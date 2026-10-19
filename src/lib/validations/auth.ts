@@ -28,9 +28,14 @@ export const registrationSchema = z
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>
 
+/** Messaggi del design della pagina di accesso (§14.252). Nessun minimo sulla password: la verifica è del backend. */
 export const loginSchema = z.object({
-  email: z.string().min(1, 'Campo obbligatorio').email('Email non valida'),
-  password: z.string().min(1, 'Campo obbligatorio'),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Inserisci l'email con cui ti sei registrato")
+    .email("Controlla l'indirizzo: manca la @ o il dominio"),
+  password: z.string().min(1, 'Inserisci la password'),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>

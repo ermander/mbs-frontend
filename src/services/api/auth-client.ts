@@ -15,6 +15,11 @@ export interface AuthUser {
   createdAt?: string
   /** Strumenti abilitati dal backoffice (§14.122); assente sui backend più vecchi. Un admin li ha tutti. */
   tools?: string[]
+  /**
+   * §14.249: false per un account entrato con Google (§14.246) che non ha mai impostato una
+   * password; assente sui backend più vecchi, che il profilo tratta come «ha una password».
+   */
+  hasPassword?: boolean
 }
 
 export interface AuthResponse {

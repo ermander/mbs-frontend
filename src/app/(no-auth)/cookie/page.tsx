@@ -1,5 +1,5 @@
 import { LegalPage, type LegalSection } from '@/components/landing/legal-primitives'
-import { TextLink } from '@/components/landing/landing-primitives'
+import { DsTextLink } from '@/components/landing/ds-primitives'
 import { SiteShell } from '@/components/landing/site-shell'
 
 // =====================================================================
@@ -72,7 +72,8 @@ const LOCAL_STORAGE: readonly StorageRow[] = [
   },
 ]
 
-const TH = 'py-2 pr-4 text-left text-[12px] font-medium uppercase tracking-[0.08em] text-ow-text-3'
+const TH =
+  'py-2 pr-4 text-left text-[12px] font-medium uppercase tracking-[0.08em] text-ds-ink-muted'
 const TD = 'py-3 pr-4 align-top text-[14px] leading-[1.55]'
 
 function CookieTable() {
@@ -80,7 +81,7 @@ function CookieTable() {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] border-collapse">
         <thead>
-          <tr className="border-b border-ow-line">
+          <tr className="border-b border-ds-line">
             <th scope="col" className={TH}>
               Nome
             </th>
@@ -98,10 +99,10 @@ function CookieTable() {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-ow-line">
+        <tbody className="divide-y divide-ds-line">
           {COOKIES.map((c) => (
             <tr key={c.name}>
-              <td className={`${TD} whitespace-nowrap font-ow-mono text-ow-text`}>{c.name}</td>
+              <td className={`${TD} whitespace-nowrap font-mono text-ds-ink`}>{c.name}</td>
               <td className={TD}>{c.purpose}</td>
               <td className={TD}>{c.kind}</td>
               <td className={TD}>{c.duration}</td>
@@ -119,7 +120,7 @@ function StorageTable() {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[480px] border-collapse">
         <thead>
-          <tr className="border-b border-ow-line">
+          <tr className="border-b border-ds-line">
             <th scope="col" className={TH}>
               Chiave
             </th>
@@ -128,10 +129,10 @@ function StorageTable() {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-ow-line">
+        <tbody className="divide-y divide-ds-line">
           {LOCAL_STORAGE.map((s) => (
             <tr key={s.key}>
-              <td className={`${TD} whitespace-nowrap font-ow-mono text-ow-text`}>{s.key}</td>
+              <td className={`${TD} whitespace-nowrap font-mono text-ds-ink`}>{s.key}</td>
               <td className={TD}>{s.purpose}</td>
             </tr>
           ))}
@@ -150,7 +151,7 @@ const SECTIONS: readonly LegalSection[] = [
         Questa informativa spiega quali cookie e quali altre forme di memorizzazione nel browser usa
         il sito OddWise, a cosa servono e perché non ti chiediamo un consenso. Per il trattamento
         dei dati personali nel suo insieme rimandiamo all&apos;
-        <TextLink href="/privacy">informativa sulla privacy</TextLink>.
+        <DsTextLink href="/privacy">informativa sulla privacy</DsTextLink>.
       </p>
     ),
   },
@@ -259,7 +260,7 @@ const SECTIONS: readonly LegalSection[] = [
     body: (
       <p>
         Per domande sui cookie scrivi al titolare ai recapiti indicati nell&apos;
-        <TextLink href="/privacy#titolare">informativa sulla privacy</TextLink>.
+        <DsTextLink href="/privacy#titolare">informativa sulla privacy</DsTextLink>.
       </p>
     ),
   },

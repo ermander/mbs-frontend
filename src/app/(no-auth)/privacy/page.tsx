@@ -1,5 +1,5 @@
 import { LegalPage, type LegalSection } from '@/components/landing/legal-primitives'
-import { TextLink } from '@/components/landing/landing-primitives'
+import { DsTextLink } from '@/components/landing/ds-primitives'
 import { SiteShell } from '@/components/landing/site-shell'
 
 // =====================================================================
@@ -27,14 +27,14 @@ const TITOLARE_EMAIL = '[EMAIL DI CONTATTO PER LA PRIVACY]'
 /** Valore ancora da compilare: evidenziato per non passare inosservato. */
 function Placeholder({ children }: { children: string }) {
   return (
-    <span className="rounded-sm border border-dashed border-ow-amber px-1.5 py-0.5 font-ow-mono text-[13px] text-ow-amber-text">
+    <span className="rounded-sm border border-dashed border-ds-warning px-1.5 py-0.5 font-mono text-[13px] text-ds-warning">
       {children}
     </span>
   )
 }
 
 function Term({ children }: { children: React.ReactNode }) {
-  return <strong className="font-medium text-ow-text">{children}</strong>
+  return <strong className="font-medium text-ds-ink">{children}</strong>
 }
 
 const SECTIONS: readonly LegalSection[] = [
@@ -203,8 +203,9 @@ const SECTIONS: readonly LegalSection[] = [
           <Term>Dati dell&apos;account e del servizio</Term> (profilo, dati del Profit Tracker,
           collegamento Telegram): finché il tuo account esiste. Puoi chiedere la cancellazione
           dell&apos;account scrivendo al titolare ai recapiti della sezione{' '}
-          <TextLink href="#titolare">Titolare del trattamento</TextLink>: eliminiamo l&apos;account
-          e, con esso, tutti i dati collegati entro un mese dalla richiesta (art. 12 GDPR).
+          <DsTextLink href="#titolare">Titolare del trattamento</DsTextLink>: eliminiamo
+          l&apos;account e, con esso, tutti i dati collegati entro un mese dalla richiesta (art. 12
+          GDPR).
         </li>
         <li>
           <Term>Log tecnici del server</Term>: per il tempo strettamente necessario alle finalità di
@@ -212,8 +213,8 @@ const SECTIONS: readonly LegalSection[] = [
         </li>
         <li>
           <Term>Dati memorizzati nel tuo browser</Term> (vedi l&apos;
-          <TextLink href="/cookie">informativa sui cookie</TextLink>): restano sul tuo dispositivo
-          finché non li cancelli tu.
+          <DsTextLink href="/cookie">informativa sui cookie</DsTextLink>): restano sul tuo
+          dispositivo finché non li cancelli tu.
         </li>
       </ul>
     ),
@@ -229,7 +230,8 @@ const SECTIONS: readonly LegalSection[] = [
           opporti al trattamento basato sul legittimo interesse (artt. 15-21 GDPR). Nome, username,
           email e password puoi modificarli da solo nella pagina del profilo; per il resto scrivi al
           titolare ai recapiti della sezione{' '}
-          <TextLink href="#titolare">Titolare del trattamento</TextLink>: rispondiamo entro un mese.
+          <DsTextLink href="#titolare">Titolare del trattamento</DsTextLink>: rispondiamo entro un
+          mese.
         </p>
         <p>
           Hai inoltre il diritto di proporre reclamo all&apos;Autorità Garante per la protezione dei
@@ -257,7 +259,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Il sito usa soltanto cookie tecnici di autenticazione, nessun cookie analitico o di
         profilazione, e per questo non mostra un banner. Nomi, durata e dettagli sono nell&apos;
-        <TextLink href="/cookie">informativa sui cookie</TextLink>, che descrive anche i dati
+        <DsTextLink href="/cookie">informativa sui cookie</DsTextLink>, che descrive anche i dati
         memorizzati nel tuo browser.
       </p>
     ),
@@ -280,7 +282,7 @@ const SECTIONS: readonly LegalSection[] = [
       <p>
         Per esercitare i tuoi diritti o per qualsiasi domanda sulla privacy scrivi al titolare ai
         recapiti indicati nella sezione{' '}
-        <TextLink href="#titolare">Titolare del trattamento</TextLink>.
+        <DsTextLink href="#titolare">Titolare del trattamento</DsTextLink>.
       </p>
     ),
   },

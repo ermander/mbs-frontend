@@ -14,6 +14,10 @@ module.exports = {
         // (quote, importi, prezzi); titoli e testo usano font-sans (Geist).
         'ow-display': ['var(--font-ow-display)', 'var(--font-geist-sans)', 'sans-serif'],
         'ow-mono': ['var(--font-ow-mono)', 'monospace'],
+        // Design system OddWise di Claude Design (§14.248, pagine pubbliche): serif per display,
+        // titoli e marchio, sans per il resto. Le variabili le imposta next/font sul guscio pubblico.
+        'ds-serif': ['var(--font-ds-serif)', 'Georgia', 'Times New Roman', 'serif'],
+        'ds-sans': ['var(--font-ds-sans)', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -24,6 +28,10 @@ module.exports = {
         'ow-card-lg': 'var(--ow-radius-card-lg)',
         'ow-btn': 'var(--ow-radius-btn)',
         'ow-pill': 'var(--ow-radius-pill)',
+        'ds-xs': '4px',
+        'ds-sm': '6px',
+        'ds-md': '10px',
+        'ds-lg': '16px',
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -78,6 +86,32 @@ module.exports = {
           orange: '#ff9d53',
           red: '#ff4d6a',
         },
+        // Design system OddWise di Claude Design (globals.css, §14.248): tema chiaro delle pagine
+        // pubbliche, scuro con data-theme="dark" sull'<html>.
+        ds: {
+          surface: 'var(--ds-surface)',
+          'surface-raised': 'var(--ds-surface-raised)',
+          'surface-sunken': 'var(--ds-surface-sunken)',
+          line: 'var(--ds-line)',
+          'line-strong': 'var(--ds-line-strong)',
+          ink: 'var(--ds-ink)',
+          'ink-muted': 'var(--ds-ink-muted)',
+          'ink-faint': 'var(--ds-ink-faint)',
+          brand: 'var(--ds-brand)',
+          'brand-hover': 'var(--ds-brand-hover)',
+          'brand-soft': 'var(--ds-brand-soft)',
+          'on-brand': 'var(--ds-on-brand)',
+          accent: 'var(--ds-accent)',
+          'on-accent': 'var(--ds-on-accent)',
+          profit: 'var(--ds-profit)',
+          'profit-soft': 'var(--ds-profit-soft)',
+          loss: 'var(--ds-loss)',
+          'loss-soft': 'var(--ds-loss-soft)',
+          warning: 'var(--ds-warning)',
+          'warning-soft': 'var(--ds-warning-soft)',
+          info: 'var(--ds-info)',
+          'info-soft': 'var(--ds-info-soft)',
+        },
         // OddWise design tokens (globals.css, .claude/design/tokens.css): tema dark blu di
         // default, varianti con data-theme="green" | "light" sull'<html>.
         ow: {
@@ -114,6 +148,10 @@ module.exports = {
         'glow-md': 'var(--glow-primary-strong)',
         'glow-destructive': 'var(--glow-destructive)',
         'ow-card': 'var(--ow-shadow-card)',
+        'ds-sm': 'var(--ds-shadow-sm)',
+        'ds-md': 'var(--ds-shadow-md)',
+        'ds-lg': 'var(--ds-shadow-lg)',
+        'ds-focus': 'var(--ds-focus-ring)',
       },
       keyframes: {
         'accordion-down': {

@@ -52,10 +52,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://matched-betting-system.com'),
 }
 
-// Tema della landing: dark blu di default; NEXT_PUBLIC_OW_THEME=green|light per le varianti
-// di tokens.css (data-theme sull'<html>).
+// Tema: NEXT_PUBLIC_OW_THEME imposta data-theme sull'<html>. Per le pagine pubbliche (token ds-*
+// di globals.css, §14.248) il chiaro è il default e «dark» la variante; «green» e «light» sono le
+// varianti dei token ow-* dell'area autenticata.
 const OW_THEME = process.env.NEXT_PUBLIC_OW_THEME
-const dataTheme = OW_THEME === 'green' || OW_THEME === 'light' ? OW_THEME : undefined
+const dataTheme =
+  OW_THEME === 'green' || OW_THEME === 'light' || OW_THEME === 'dark' ? OW_THEME : undefined
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Reading headers forces dynamic rendering so Next.js injects the per-request

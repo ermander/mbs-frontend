@@ -8,6 +8,14 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +23,11 @@ import { TelegramLinkWidget } from '@/components/profit-tracker/telegram-link-wi
 import { authClient } from '@/services/api/auth-client'
 import type { AuthUser } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
+import {
+  ACCOUNT_DELETE_CONFIRM_WORD,
+  accountDeletionPayload,
+  deletionUsesPassword,
+} from '@/lib/account-deletion'
 import { getErrorMessage } from '@/lib/error-utils'
 import { TELEGRAM_BOT_USERNAME } from '@/lib/telegram-bot'
 
@@ -50,6 +63,7 @@ export default function AccountProfiloPage() {
           <AccountDataCard key={`${user.id}:${user.name}:${user.username}`} user={user} />
           <SecurityCard user={user} />
           <NotificationsCard />
+          <DeleteAccountCard user={user} />
         </>
       ) : (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -328,5 +342,145 @@ function NotificationsCard() {
         <TelegramLinkWidget botUsername={TELEGRAM_BOT_USERNAME} />
       </CardContent>
     </Card>
+  )
+}
+
+// ── Elimina account ───────────────────────────────────────────────────
+
+/**
+ * §14.251: cancellazione dell'account da parte dell'utente (art. 17 GDPR). La card in fondo al
+ * profilo apre una finestra di conferma: chi ha una password la ridigita, chi accede solo con
+ * Google scrive la parola di conferma. Il backend cancella la riga e tutti i dati collegati,
+ * risponde 204 e azzera i cookie; qui si svuota lo store e si torna alla home con una
+ * navigazione completa, così il guard dell'area riservata non ha nulla da reindirizzare.
+ */
+function DeleteAccountCard({ user }: { user: AuthUser }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Card className="border-destructive/40">
+      <CardHeader>
+        <CardTitle className="text-lg">Elimina account</CardTitle>
+        <CardDescription>
+          Elimina definitivamente l&apos;account e tutti i dati collegati: collaboratori, conti,
+          wallet, movimenti, giocate, promemoria e collegamento Telegram. L&apos;operazione non si
+          può annullare.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex justify-end">
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={() => setOpen(true)}
+          data-testid="delete-account-open"
+        >
+          Elimina account
+        </Button>
+        {open && <DeleteAccountDialog user={user} onClose={() => setOpen(false)} />}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Montata solo mentre è aperta: i campi ripartono vuoti a ogni apertura. */
+function DeleteAccountDialog({ user, onClose }: { user: AuthUser; onClose: () => void }) {
+  const clearUser = useAuthStore((s) => s.clearUser)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const usesPassword = deletionUsesPassword(user)
+  const payload = accountDeletionPayload(user, { password, confirm })
+  const canDelete = payload !== null && !deleting
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && !deleting) onClose()
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!payload || deleting) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await authClient.deleteMe(payload)
+      toast.success('Account eliminato.')
+      clearUser()
+      // Navigazione completa, non router.replace: svuota anche gli store in memoria (Profit
+      // Tracker, agenda) con i dati dell'utente appena cancellato e non lascia al guard
+      // dell'area riservata il tempo di reindirizzare a /login (stessa scelta del guard su /me).
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- ricarica voluta
+      window.location.href = '/'
+    } catch (err) {
+      setError(getErrorMessage(err) || "Impossibile eliminare l'account.")
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md" showClose={!deleting}>
+        <form onSubmit={handleSubmit} data-testid="delete-account-form">
+          <DialogHeader>
+            <DialogTitle>Eliminare l&apos;account?</DialogTitle>
+            <DialogDescription>
+              Perderai l&apos;accesso a OddWise e tutti i dati del Profit Tracker.{' '}
+              {usesPassword
+                ? 'Per confermare inserisci la password attuale.'
+                : `Per confermare scrivi ${ACCOUNT_DELETE_CONFIRM_WORD} nel campo qui sotto.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5 p-4 text-sm">
+            {usesPassword ? (
+              <>
+                <Label htmlFor="delete-account-password">Password attuale</Label>
+                <PasswordInput
+                  id="delete-account-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  autoFocus
+                  disabled={deleting}
+                />
+              </>
+            ) : (
+              <>
+                <Label htmlFor="delete-account-confirm">Scrivi {ACCOUNT_DELETE_CONFIRM_WORD}</Label>
+                <Input
+                  id="delete-account-confirm"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder={ACCOUNT_DELETE_CONFIRM_WORD}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  autoFocus
+                  disabled={deleting}
+                />
+              </>
+            )}
+            {error && (
+              <p className="pt-1 text-xs text-destructive" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={onClose} disabled={deleting}>
+              Annulla
+            </Button>
+            <Button
+              variant="destructive"
+              type="submit"
+              disabled={!canDelete}
+              data-testid="delete-account-submit"
+            >
+              {deleting ? 'Eliminazione...' : 'Elimina definitivamente'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

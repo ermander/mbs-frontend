@@ -92,4 +92,13 @@ export const authClient = {
     const { data } = await apiClient.post<{ message: string }>('/auth/change-password', payload)
     return data
   },
+
+  /**
+   * §14.251: cancellazione dell'account (art. 17 GDPR). Chi ha una password la ridigita, chi
+   * accede solo con Google manda la parola di conferma. Il backend risponde 204 e cancella i
+   * cookie di sessione: dopo questa chiamata l'utente non esiste più.
+   */
+  async deleteMe(payload: { password: string } | { confirm: string }) {
+    await apiClient.delete('/auth/me', { data: payload })
+  },
 }

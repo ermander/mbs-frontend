@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { registrationSchema } from './auth'
+import { forgotPasswordSchema, registrationSchema, resetPasswordSchema } from './auth'
 
 /** Il primo messaggio di errore di un campo, come lo mostra il form (§14.253). */
 function firstError(input: Record<string, unknown>, field: string): string | undefined {
@@ -48,5 +48,53 @@ describe('registrationSchema (registrazione dal design, §14.253)', () => {
     expect(firstError({ ...VALID, password: 'CorrectHorse12' }, 'password')).toBe(
       'Aggiungi almeno un carattere speciale, per esempio ! o ?',
     )
+  })
+})
+
+describe('forgotPasswordSchema (recupero password dal design, §14.257)', () => {
+  const issue = (email: string) =>
+    forgotPasswordSchema.safeParse({ email }).error?.issues[0]?.message
+
+  it("accetta un'email e la ripulisce dagli spazi", () => {
+    expect(forgotPasswordSchema.parse({ email: ' nome@esempio.it ' })).toEqual({
+      email: 'nome@esempio.it',
+    })
+  })
+
+  it('usa i messaggi del design', () => {
+    expect(issue('')).toBe("Inserisci l'email con cui ti sei registrato")
+    expect(issue('nome.esempio.it')).toBe("Controlla l'indirizzo: manca la @ o il dominio")
+  })
+})
+
+describe('resetPasswordSchema (reimposta password dal design, §14.257)', () => {
+  const GOOD = 'CorrectHorse1!'
+  /** Il primo messaggio di ciascun campo, quello che mostra il form. */
+  const issues = (password: string, confirmPassword: string) => {
+    const first: Record<string, string> = {}
+    for (const i of resetPasswordSchema.safeParse({ password, confirmPassword }).error?.issues ??
+      []) {
+      first[String(i.path[0])] ??= i.message
+    }
+    return first
+  }
+
+  it('accetta due password uguali con la regola del backend', () => {
+    expect(resetPasswordSchema.safeParse({ password: GOOD, confirmPassword: GOOD }).success).toBe(
+      true,
+    )
+  })
+
+  it('tiene la regola del backend, non gli 8 caratteri del design', () => {
+    expect(issues('', GOOD).password).toBe('Scegli una password')
+    expect(issues('abc12345', 'abc12345').password).toBe('Usa almeno 12 caratteri')
+    expect(issues('CorrectHorse12', 'CorrectHorse12').password).toBe(
+      'Aggiungi almeno un carattere speciale, per esempio ! o ?',
+    )
+  })
+
+  it('chiede la ripetizione e la vuole uguale', () => {
+    expect(issues(GOOD, '').confirmPassword).toBe('Ripeti la password')
+    expect(issues(GOOD, 'CorrectHorse2!').confirmPassword).toBe('Le due password non coincidono')
   })
 })

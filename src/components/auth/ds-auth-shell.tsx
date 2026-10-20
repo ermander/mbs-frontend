@@ -4,7 +4,8 @@ import { BookOpen, Check, ListChecks, MessagesSquare } from 'lucide-react'
 import { BRAND, LANDING_ROUTES, PRICING } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
 import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
-import { DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
+import { DsContainer, DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
+import { LandingFooterLink } from '@/components/landing/landing-footer-link'
 
 /** Le tre cose che chi accede ritrova: dal pannello di sinistra del design (Claude Design). */
 const RETURN_POINTS = [
@@ -119,5 +120,88 @@ export function DsAuthShell({
         {children}
       </main>
     </div>
+  )
+}
+
+/** Le voci del piè di pagina del recupero password: le stesse tre del design. */
+const CENTERED_FOOTER_LINKS = [
+  { href: LANDING_ROUTES.privacy, label: 'Privacy' },
+  { href: LANDING_ROUTES.termini, label: 'Termini' },
+  { href: LANDING_ROUTES.contatti, label: 'Contatti' },
+] as const
+
+/**
+ * Guscio del recupero e della reimposta password dal design di Claude Design (§14.257): barra
+ * alta 64px in surface-raised con il marchio a sinistra e `headerAside` a destra, una colonna di
+ * 440px al centro della pagina, piè di pagina di una riga con l'avvertenza in caption e Privacy,
+ * Termini, Contatti. Stessi token ds-* e font Source di DsAuthShell.
+ */
+export function DsCenteredAuthShell({
+  headerAside,
+  children,
+}: {
+  headerAside?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        dsSerif.variable,
+        dsSans.variable,
+        'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light]',
+      )}
+    >
+      <header className="border-b border-ds-line bg-ds-surface-raised">
+        <DsContainer className="flex h-16 items-center justify-between gap-4">
+          <Link
+            href={LANDING_ROUTES.home}
+            aria-label={BRAND.name}
+            className={cn('shrink-0 rounded-ds-sm', dsFocusRing)}
+          >
+            <DsWordmark size="sm" />
+          </Link>
+          {headerAside && (
+            <span className="ds-body-sm text-right text-ds-ink-muted">{headerAside}</span>
+          )}
+        </DsContainer>
+      </header>
+
+      <main className="flex flex-1 items-center justify-center px-5 py-12 sm:px-6 sm:py-16">
+        <div className="w-full max-w-[440px]">{children}</div>
+      </main>
+
+      <footer className="border-t border-ds-line bg-ds-surface-raised">
+        <DsContainer className="flex flex-wrap items-center justify-between gap-6 py-6">
+          <p className="ds-caption max-w-[68ch] text-ds-ink-muted [text-wrap:pretty]">
+            {DISCLAIMER}
+          </p>
+          <nav aria-label="Piè di pagina" className="ds-body-sm flex gap-6 text-ds-ink-muted">
+            {CENTERED_FOOTER_LINKS.map((link) => (
+              <LandingFooterLink key={link.href} href={link.href}>
+                {link.label}
+              </LandingFooterLink>
+            ))}
+          </nav>
+        </DsContainer>
+      </footer>
+    </div>
+  )
+}
+
+/** «Ti è tornata in mente? Accedi» nella barra del recupero password (§14.257), come nel design. */
+export function DsBackToLogin() {
+  return (
+    <>
+      Ti è tornata in mente?{' '}
+      <Link
+        href={LANDING_ROUTES.login}
+        className={cn(
+          'rounded-sm text-ds-brand underline underline-offset-2 hover:text-ds-brand-hover',
+          dsFocusRing,
+        )}
+      >
+        Accedi
+      </Link>
+    </>
   )
 }

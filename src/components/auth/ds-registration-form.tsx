@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { Clock } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
@@ -26,6 +25,7 @@ import {
   DsInput,
   DsLabel,
 } from '@/components/auth/ds-auth-primitives'
+import { DsCheckInbox, DsInboxEmail, type ResendState } from '@/components/auth/ds-check-inbox'
 
 const GENERIC_ERROR = 'Registrazione non riuscita per un errore del server. Riprova tra poco.'
 
@@ -49,15 +49,6 @@ const inlineLink = cn(
   'rounded-sm text-ds-brand transition-colors hover:text-ds-brand-hover',
   dsFocusRing,
 )
-
-type ResendState = 'idle' | 'sending' | 'sent' | 'error'
-
-const RESEND_LABEL: Record<ResendState, string> = {
-  idle: 'Invia di nuovo',
-  sending: 'Invio in corso…',
-  sent: 'Email inviata di nuovo',
-  error: 'Invio non riuscito, riprova',
-}
 
 /**
  * Registrazione dal design di Claude Design (§14.253): Google, «oppure con email», email e
@@ -120,12 +111,15 @@ export function DsRegistrationForm() {
 
   if (sentTo) {
     return (
-      <CheckInbox
-        email={sentTo}
+      <DsCheckInbox
+        note="Se non arriva entro un minuto, controlla la posta indesiderata."
         resend={resend}
         onResend={onResend}
         onChangeEmail={() => setSentTo(null)}
-      />
+      >
+        Abbiamo mandato un link di conferma a <DsInboxEmail>{sentTo}</DsInboxEmail>. Aprilo per
+        attivare l&apos;account: vale 24 ore.
+      </DsCheckInbox>
     )
   }
 
@@ -289,55 +283,5 @@ export function DsRegistrationForm() {
         .
       </p>
     </>
-  )
-}
-
-/** «Controlla la posta»: il titolo prende il fuoco, così il lettore di schermo annuncia il cambio. */
-function CheckInbox({
-  email,
-  resend,
-  onResend,
-  onChangeEmail,
-}: {
-  email: string
-  resend: ResendState
-  onResend: () => void
-  onChangeEmail: () => void
-}) {
-  const headingRef = React.useRef<HTMLHeadingElement>(null)
-  React.useEffect(() => {
-    headingRef.current?.focus()
-  }, [])
-
-  return (
-    <div className="max-w-[440px]">
-      <Clock className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
-      <h1 ref={headingRef} tabIndex={-1} className="ds-title mt-4 outline-none">
-        Controlla la posta
-      </h1>
-      <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
-        Abbiamo mandato un link di conferma a{' '}
-        <b className="font-semibold text-ds-ink [overflow-wrap:anywhere]">{email}</b>. Aprilo per
-        attivare l&apos;account: vale 24 ore.
-      </p>
-      <div className="mt-6">
-        <DsCallout tone="note" title="Nota">
-          Se non arriva entro un minuto, controlla la posta indesiderata.
-        </DsCallout>
-      </div>
-      <div className="mt-6 flex flex-wrap items-center gap-3" aria-live="polite">
-        <DsFormButton
-          variant="secondary"
-          size="md"
-          onClick={onResend}
-          disabled={resend === 'sending' || resend === 'sent'}
-        >
-          {RESEND_LABEL[resend]}
-        </DsFormButton>
-        <DsFormButton variant="ghost" size="md" onClick={onChangeEmail}>
-          Cambia email
-        </DsFormButton>
-      </div>
-    </div>
   )
 }

@@ -77,6 +77,17 @@ export const authClient = {
     return data
   },
 
+  /**
+   * §14.257: l'email del link di reimposta, se è ancora valido; 400 se è scaduto o già usato.
+   * I backend senza la rotta rispondono 404: la pagina va avanti senza l'email.
+   */
+  async checkPasswordResetToken(token: string) {
+    const { data } = await apiClient.post<{ email: string }>('/auth/reset-password/check', {
+      token,
+    })
+    return data
+  },
+
   async resetPassword(payload: { token: string; password: string }) {
     const { data } = await apiClient.post<AuthResponse>('/auth/reset-password', payload)
     return data

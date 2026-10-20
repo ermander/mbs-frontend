@@ -75,4 +75,15 @@ describe('landing copy (OddWise, design di Claude Design)', () => {
     expect(current('/privacy')).toEqual(['Privacy'])
     expect(current('/')).toEqual([])
   })
+
+  it('segna nella barra la sezione delle offerte, anche sul dettaglio', () => {
+    const active = (pathname: string) =>
+      content.LANDING_NAV_LINKS.filter((l) => content.isCurrentSection(l.href, pathname)).map(
+        (l) => l.label,
+      )
+    expect(active('/offerte')).toEqual(['Offerte'])
+    expect(active('/offerte/snai-30')).toEqual(['Offerte'])
+    expect(active('/offerte-vecchie')).toEqual([])
+    expect(active('/')).toEqual([])
+  })
 })

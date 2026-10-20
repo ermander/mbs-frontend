@@ -2,17 +2,24 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 
-import { BRAND, LANDING_NAV_LINKS, LANDING_ROUTES } from '@/lib/landing-content'
+import { BRAND, LANDING_NAV_LINKS, LANDING_ROUTES, isCurrentSection } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
 import { DsButton, DsContainer, DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
 
-/** Voce della barra: 500 in ink-muted, ink al passaggio (l'indicatore della voce attiva non serve sulla landing). */
-const linkClass = cn(
-  'flex h-16 items-center rounded-ds-sm px-3 font-medium text-ds-ink-muted transition-colors hover:text-ds-ink',
-  dsFocusRing,
-)
+/**
+ * Voce della barra: 500 in ink-muted, ink al passaggio; la sezione in cui si è (le offerte,
+ * §14.259) in ink a 600 con la riga brand da 2px sotto, come la voce attiva della Navbar.
+ */
+function linkClass(active: boolean) {
+  return cn(
+    'flex h-16 items-center rounded-ds-sm px-3 font-medium text-ds-ink-muted transition-[color,box-shadow] hover:text-ds-ink',
+    active && 'rounded-none font-semibold text-ds-ink shadow-[inset_0_-2px_0_var(--ds-brand)]',
+    dsFocusRing,
+  )
+}
 
 /**
  * La Navbar del design: 64px su surface-raised con hairline sotto, marchio, cinque voci e due
@@ -20,6 +27,7 @@ const linkClass = cn(
  */
 export function LandingNav() {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
   const close = () => setOpen(false)
 
   return (
@@ -35,13 +43,20 @@ export function LandingNav() {
 
         <nav aria-label="Principale" className="hidden flex-1 lg:block">
           <ul className="flex items-center gap-1">
-            {LANDING_NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className={linkClass}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {LANDING_NAV_LINKS.map((link) => {
+              const active = isCurrentSection(link.href, pathname)
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={linkClass(active)}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </nav>
 
@@ -77,8 +92,10 @@ export function LandingNav() {
                 key={link.href}
                 href={link.href}
                 onClick={close}
+                aria-current={isCurrentSection(link.href, pathname) ? 'page' : undefined}
                 className={cn(
                   'rounded-ds-sm px-3 py-2.5 font-medium text-ds-ink-muted transition-colors hover:bg-ds-surface-sunken hover:text-ds-ink',
+                  isCurrentSection(link.href, pathname) && 'font-semibold text-ds-ink',
                   dsFocusRing,
                 )}
               >

@@ -69,6 +69,11 @@ export function isCurrentPage(href: string, pathname: string): boolean {
   return !href.includes('#') && href === pathname
 }
 
+/** La voce della barra è la sezione in cui si è: la sua pagina o una sotto (/offerte/snai-30). */
+export function isCurrentSection(href: string, pathname: string): boolean {
+  return isCurrentPage(href, pathname) || (href !== '/' && pathname.startsWith(`${href}/`))
+}
+
 export const BRAND = {
   name: 'OddWise',
   tagline: 'Il matched betting, spiegato bene.',

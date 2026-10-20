@@ -39,6 +39,17 @@ export async function deleteBackofficeOffer(id: string): Promise<void> {
   await apiClient.delete(`/backoffice/offers/${id}`)
 }
 
+/**
+ * Carica un'immagine di una guida (§14.264): i byte del file così come sono, col suo tipo; il backend
+ * la riconosce dai primi byte e restituisce l'indirizzo da mettere nel blocco (/api/uploads/offers/…).
+ */
+export async function uploadOfferImage(file: File): Promise<string> {
+  const response = await apiClient.post<{ url: string }>('/backoffice/offers/images', file, {
+    headers: { 'Content-Type': file.type },
+  })
+  return response.data.url
+}
+
 /** I messaggi di un 400 del backend ({ errors: [...] } dalla validazione Joi), se ci sono. */
 export function validationErrorsOf(error: unknown): string[] {
   const data = (error as { response?: { data?: { errors?: unknown } } })?.response?.data

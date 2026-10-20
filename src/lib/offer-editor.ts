@@ -61,6 +61,20 @@ export const GROUP_SUGGESTIONS: Record<OfferType, string[]> = {
   esclusive: [],
 }
 
+/** Le immagini che il backend accetta (§14.264): i quattro formati, al massimo 5 MB. */
+export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/** Il controllo prima del caricamento: null se il file va bene, altrimenti la frase da mostrare. */
+export function imageFileError(file: { type: string; size: number }): string | null {
+  if (!(IMAGE_TYPES as readonly string[]).includes(file.type)) {
+    return 'Formato non accettato: carica un PNG, JPEG, WebP o GIF.'
+  }
+  if (file.size > MAX_IMAGE_BYTES) return 'L’immagine supera i 5 MB.'
+  if (file.size === 0) return 'Il file è vuoto.'
+  return null
+}
+
 /** Il badge «Scade tra N giorni» compare da questo numero di giorni in giù. */
 export const EXPIRING_SOON_DAYS = 3
 

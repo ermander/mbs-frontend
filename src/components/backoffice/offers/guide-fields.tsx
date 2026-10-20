@@ -1,16 +1,22 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { useId, useRef, useState } from 'react'
+import { ImageUp, Plus } from 'lucide-react'
 
 import {
   BLOCK_LABELS,
   BUTTON_KIND_LABELS,
   CALLOUT_TONE_LABELS,
+  IMAGE_TYPES,
+  imageFileError,
+  isSitePath,
   moveItem,
   newBlock,
   removeAt,
   replaceAt,
 } from '@/lib/offer-editor'
+import { getErrorMessage } from '@/lib/error-utils'
+import { uploadOfferImage } from '@/services/api/backoffice-offers-client'
 import type {
   GuideBlock,
   GuideBlockType,
@@ -413,29 +419,7 @@ function BlockFields({
         </div>
       )
     case 'image':
-      return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <TextField
-            label="Indirizzo dell'immagine"
-            value={block.src}
-            onChange={(src) => onChange({ ...block, src })}
-            placeholder="https://… oppure /uploads/…"
-            hint="Il caricamento dal backoffice arriva con la fase 4: per ora un indirizzo."
-            className="sm:col-span-2"
-          />
-          <TextField
-            label="Testo alternativo"
-            value={block.alt}
-            onChange={(alt) => onChange({ ...block, alt })}
-            hint="Cosa mostra l'immagine, per chi non la vede."
-          />
-          <TextField
-            label="Didascalia"
-            value={block.caption}
-            onChange={(caption) => onChange({ ...block, caption })}
-          />
-        </div>
-      )
+      return <ImageBlockFields block={block} onChange={onChange} />
     case 'buttons':
       return (
         <div className="space-y-3">
@@ -470,6 +454,101 @@ function BlockFields({
         </div>
       )
   }
+}
+
+/**
+ * Il blocco immagine (§14.264): «Carica immagine» manda il file al backend e mette nel blocco
+ * l'indirizzo che torna; in alternativa si scrive un indirizzo a mano. La miniatura compare solo
+ * per gli indirizzi del sito: quelli esterni la CSP li blocca anche sulla pagina pubblica.
+ */
+function ImageBlockFields({
+  block,
+  onChange,
+}: {
+  block: Extract<GuideBlock, { type: 'image' }>
+  onChange: (block: GuideBlock) => void
+}) {
+  const inputId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return
+    const problem = imageFileError(file)
+    setError(problem)
+    if (problem) return
+    setUploading(true)
+    try {
+      const src = await uploadOfferImage(file)
+      onChange({ ...block, src, alt: block.alt || file.name.replace(/\.[^.]+$/, '') })
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Caricamento non riuscito.')
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <input
+          ref={inputRef}
+          id={inputId}
+          type="file"
+          accept={IMAGE_TYPES.join(',')}
+          className="sr-only"
+          onChange={(e) => void upload(e.target.files?.[0])}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          <ImageUp />{' '}
+          {uploading ? 'Caricamento…' : block.src ? 'Sostituisci immagine' : 'Carica immagine'}
+        </Button>
+        <span className="text-[11px] text-muted-foreground">
+          PNG, JPEG, WebP o GIF, fino a 5 MB.
+        </span>
+        {error && (
+          <span role="alert" className="text-xs text-destructive">
+            {error}
+          </span>
+        )}
+      </div>
+      {block.src && isSitePath(block.src) && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={block.src}
+          alt=""
+          className="max-h-48 w-auto max-w-full rounded-md border border-border sm:col-span-2"
+        />
+      )}
+      <TextField
+        label="Indirizzo dell'immagine"
+        value={block.src}
+        onChange={(src) => onChange({ ...block, src })}
+        placeholder="Si compila da solo col caricamento"
+        hint="Un indirizzo esterno (https://…) non si vede sul sito: la CSP lo blocca. Meglio caricarla."
+        className="sm:col-span-2"
+      />
+      <TextField
+        label="Testo alternativo"
+        value={block.alt}
+        onChange={(alt) => onChange({ ...block, alt })}
+        hint="Cosa mostra l'immagine, per chi non la vede."
+      />
+      <TextField
+        label="Didascalia"
+        value={block.caption}
+        onChange={(caption) => onChange({ ...block, caption })}
+      />
+    </div>
+  )
 }
 
 function ButtonFields({

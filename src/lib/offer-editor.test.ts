@@ -6,6 +6,7 @@ import {
   emptyGuide,
   emptyInput,
   expiryLabel,
+  imageFileError,
   inputFromAdmin,
   moveItem,
   newBlock,
@@ -233,5 +234,16 @@ describe('riga del backoffice', () => {
     expect(expiryLabel({ ...admin, daysLeft: null, expiryOverride: 'active' })).toBe(
       'Attiva (forzata)',
     )
+  })
+})
+
+describe('immagini da caricare', () => {
+  it('quattro formati, fino a 5 MB, mai vuote', () => {
+    expect(imageFileError({ type: 'image/png', size: 1000 })).toBeNull()
+    expect(imageFileError({ type: 'image/webp', size: 5 * 1024 * 1024 })).toBeNull()
+    expect(imageFileError({ type: 'image/svg+xml', size: 1000 })).toMatch(/Formato non accettato/)
+    expect(imageFileError({ type: '', size: 1000 })).toMatch(/Formato non accettato/)
+    expect(imageFileError({ type: 'image/jpeg', size: 5 * 1024 * 1024 + 1 })).toMatch(/5 MB/)
+    expect(imageFileError({ type: 'image/gif', size: 0 })).toBe('Il file è vuoto.')
   })
 })

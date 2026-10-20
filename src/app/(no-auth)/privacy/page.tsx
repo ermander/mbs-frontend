@@ -34,7 +34,7 @@ function Placeholder({ children }: { children: string }) {
 }
 
 function Term({ children }: { children: React.ReactNode }) {
-  return <strong className="font-medium text-ds-ink">{children}</strong>
+  return <strong className="font-semibold">{children}</strong>
 }
 
 const SECTIONS: readonly LegalSection[] = [
@@ -235,7 +235,8 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <p>
           Hai inoltre il diritto di proporre reclamo all&apos;Autorità Garante per la protezione dei
-          dati personali (garanteprivacy.it).
+          dati personali (
+          <DsTextLink href="https://www.garanteprivacy.it">garanteprivacy.it</DsTextLink>).
         </p>
       </>
     ),

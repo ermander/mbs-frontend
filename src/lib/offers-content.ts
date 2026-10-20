@@ -65,6 +65,29 @@ const GROUP_ORDER: Record<OfferType, readonly (string | null)[]> = {
 
 export const ALL_BOOKS = 'all'
 
+/**
+ * Oggi elenco e dettaglio delle offerte sono pubblici (§14.259-14.260). Per riservarli a chi ha un
+ * account basta true: OffersAccess li avvolge nella guard dell'area autenticata, che rimanda al
+ * login chi non è entrato.
+ */
+export const OFFERS_LOGIN_REQUIRED: boolean = false
+
+/** Il tipo dal parametro ?tipo= della pagina (link «indietro» del dettaglio); il benvenuto se manca o è sconosciuto. */
+export function parseOfferType(value: string | string[] | undefined): OfferType {
+  const v = Array.isArray(value) ? value[0] : value
+  return OFFER_TYPES.some((t) => t.value === v) ? (v as OfferType) : 'benvenuto'
+}
+
+/** L'offerta con quell'id, null se non c'è. */
+export function offerById(offers: readonly Offer[], id: string): Offer | null {
+  return offers.find((offer) => offer.id === id) ?? null
+}
+
+/** La pagina dell'elenco aperta sul tipo dell'offerta. */
+export function offersListHref(type: OfferType): string {
+  return `/offerte?tipo=${type}`
+}
+
 export const OFFERS_COPY = {
   title: 'Offerte',
   tablistLabel: 'Tipo di offerta',

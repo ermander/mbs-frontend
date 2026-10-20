@@ -1,9 +1,9 @@
 'use client'
 
 import { useId, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BadgePercent, ChevronDown } from 'lucide-react'
 
-import { bookmakerLogoSrc } from '@/lib/bookmakers'
 import {
   ALL_BOOKS,
   OFFERS_COPY,
@@ -16,26 +16,37 @@ import {
   offerBadge,
   offerHref,
   offerSections,
+  offersListHref,
+  parseOfferType,
   type Offer,
   type OfferType,
 } from '@/lib/offers-content'
 import { cn } from '@/lib/utils'
 import { DsBadge, DsMoney } from '@/components/landing/ds-data'
 import { DsButton, DsCard, dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { BookLogo } from '@/components/offers/offer-parts'
 
 /**
  * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): le tre schede del tipo, il filtro
  * per sito, una sezione per gruppo con le carte su tre colonne (due da md, una sul telefono) e le
- * scadute in fondo. Cambiare tipo azzera il filtro, come nel design.
+ * scadute in fondo. Il tipo scelto sta solo nell'indirizzo (?tipo=, §14.260): il link «indietro» del
+ * dettaglio e il tasto indietro del browser riaprono la stessa scheda. Il filtro vale per il tipo su
+ * cui è stato scelto, quindi cambiare tipo lo azzera, come nel design.
  */
 export function OffersList({ offers }: { offers: readonly Offer[] }) {
-  const [type, setType] = useState<OfferType>('benvenuto')
-  const [book, setBook] = useState<string>(ALL_BOOKS)
+  const type = parseOfferType(useSearchParams().get('tipo') ?? undefined)
+  const [filter, setFilter] = useState<{ type: OfferType; book: string }>({
+    type,
+    book: ALL_BOOKS,
+  })
+  const book = filter.type === type ? filter.book : ALL_BOOKS
+  const setBook = (value: string) => setFilter({ type, book: value })
   const panelId = useId()
 
+  // replaceState aggiorna useSearchParams senza ricaricare la pagina.
   const selectType = (value: OfferType) => {
-    setType(value)
-    setBook(ALL_BOOKS)
+    setFilter({ type: value, book: ALL_BOOKS })
+    window.history.replaceState(null, '', offersListHref(value))
   }
 
   const sections = offerSections(offers, type, book)
@@ -213,29 +224,6 @@ function BookSelect({
         />
       </div>
     </div>
-  )
-}
-
-/** Logo del sito alto 24px; senza file, il nome in una pastiglia col bordo. */
-function BookLogo({ slug, name }: { slug: string; name: string }) {
-  const src = bookmakerLogoSrc(slug)
-  if (!src) {
-    return (
-      <span className="inline-flex h-6 items-center whitespace-nowrap rounded-ds-xs border border-ds-line bg-ds-surface-raised px-2 text-xs font-semibold leading-4 tracking-[0.02em] text-ds-ink">
-        {name}
-      </span>
-    )
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={name}
-      title={name}
-      width={96}
-      height={24}
-      className="block h-6 w-auto rounded-ds-xs"
-    />
   )
 }
 

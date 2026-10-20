@@ -1,7 +1,8 @@
 import { CircleX, Info, Lightbulb, TriangleAlert } from 'lucide-react'
 
 import { bookmakerLogoSrc } from '@/lib/bookmakers'
-import { CALLOUT_TITLES, richTextParts, type GuideCalloutTone } from '@/lib/offer-guides'
+import { CALLOUT_TITLES, richTextParts } from '@/lib/offer-guides'
+import type { GuideCalloutTone } from '@/types/offers'
 import { cn } from '@/lib/utils'
 
 /** Pezzi comuni a elenco e dettaglio delle offerte (§14.259-14.260), dai componenti del design. */

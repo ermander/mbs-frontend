@@ -13,14 +13,14 @@ import { SAMPLE_OFFERS, offerById, offersListHref, parseOfferType } from '@/lib/
 
 describe('guide di esempio', () => {
   it('appartengono a offerte del catalogo', () => {
-    for (const [id, guide] of Object.entries(SAMPLE_GUIDES)) {
-      expect(guide.offerId).toBe(id)
+    for (const id of Object.keys(SAMPLE_GUIDES)) {
       expect(offerById(SAMPLE_OFFERS, id), id).not.toBeNull()
     }
   })
 
   it('la guida Snai ha i cinque passi, le quattro domande e i sei termini del design', () => {
-    const guide = guideFor('snai-30')!
+    const { guide, updatedOn } = guideFor('snai-30')!
+    expect(updatedOn).toBe('2026-10-18')
     expect(guide.steps.map((s) => s.title)).toEqual([
       'Registrati su Snai',
       'Deposita 60 €',
@@ -29,7 +29,8 @@ describe('guide di esempio', () => {
       'Rendi prelevabile il deposito',
     ])
     expect(guide.faq).toHaveLength(4)
-    expect(guide.terms).toHaveLength(6)
+    expect(guide.terms.rows).toHaveLength(6)
+    expect(guide.steps[3].blocks.map((b) => b.type)).toEqual(['paragraph', 'checklist', 'buttons'])
     expect(guideFor('betflag-10')).toBeNull()
   })
 
@@ -40,7 +41,8 @@ describe('guide di esempio', () => {
 
   it('porta i pulsanti interni a pagine che esistono', () => {
     const internal = Object.values(SAMPLE_GUIDES)
-      .flatMap((g) => g.steps.flatMap((s) => s.actions ?? []))
+      .flatMap(({ guide }) => guide.steps.flatMap((s) => s.blocks))
+      .flatMap((b) => (b.type === 'buttons' ? b.buttons : []))
       .filter((a) => a.kind !== 'external')
       .map((a) => a.href)
     expect(internal).toEqual(['/odds-scanner', '/calcolatori?expand=punta-banca'])

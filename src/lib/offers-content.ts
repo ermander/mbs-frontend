@@ -1,4 +1,5 @@
 import type { DsBadgeTone } from '@/components/landing/ds-data'
+import type { OfferDifficulty, OfferType } from '@/types/offers'
 
 /**
  * Elenco delle offerte dal design «OddWise Offerte» di Claude Design (artifact
@@ -16,8 +17,7 @@ import type { DsBadgeTone } from '@/components/landing/ds-data'
  * non c'è dove salvarli.
  */
 
-export type OfferType = 'benvenuto' | 'ricorrenti' | 'esclusive'
-export type OfferDifficulty = 'Facile' | 'Media' | 'Difficile'
+export type { OfferDifficulty, OfferType }
 
 export interface Offer {
   id: string
@@ -36,6 +36,11 @@ export interface Offer {
   expiresInDays?: number
   /** Data di scadenza (AAAA-MM-GG) di un'offerta già scaduta: la carta va fra le «Scadute». */
   expiredOn?: string
+  /**
+   * Scaduta anche senza data (forzata dal backoffice, §14.262); senza il campo vale expiredOn.
+   * Le offerte dell'API lo portano sempre.
+   */
+  expired?: boolean
 }
 
 export const OFFER_TYPES: readonly { value: OfferType; label: string; description: string }[] = [
@@ -155,7 +160,7 @@ export const SAMPLE_OFFERS: readonly Offer[] = [
 ]
 
 export function isExpired(offer: Offer): boolean {
-  return Boolean(offer.expiredOn)
+  return offer.expired ?? Boolean(offer.expiredOn)
 }
 
 function plural(n: number, one: string, many: string): string {

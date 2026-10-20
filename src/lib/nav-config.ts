@@ -119,6 +119,7 @@ export const authNavSections: AuthNavSection[] = [
       { label: 'Dashboard', href: '/backoffice/dashboard', icon: LayoutDashboard },
       { label: 'Salute', href: '/backoffice/salute', icon: Activity },
       { label: 'Bookmaker', href: '/backoffice/books', icon: BookMarked },
+      { label: 'Offerte', href: '/backoffice/offerte', icon: Gift },
       { label: 'Metodi di pagamento', href: '/backoffice/payment-methods', icon: CreditCard },
       { label: 'Categorie movimenti', href: '/backoffice/movement-categories', icon: Tags },
       { label: 'Scraper', href: '/backoffice/scrapers', icon: Bot },

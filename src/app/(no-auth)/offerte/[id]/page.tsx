@@ -18,10 +18,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function OffertaPage({ params }: Params) {
   const offer = offerById(SAMPLE_OFFERS, (await params).id)
   if (!offer) notFound()
+  const sample = guideFor(offer.id)
   return (
     <OffersAccess>
       <SiteShell>
-        <OfferDetail offer={offer} guide={guideFor(offer.id)} />
+        <OfferDetail offer={offer} guide={sample?.guide ?? null} updatedOn={sample?.updatedOn} />
       </SiteShell>
     </OffersAccess>
   )

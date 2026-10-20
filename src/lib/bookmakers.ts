@@ -53,6 +53,11 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   zonagioco: '42',
 }
 
+/** The slugs that have a logo, in order: the site choices of the offers editor (§14.262). */
+export function bookmakerSlugsWithLogo(): string[] {
+  return Object.keys(LOGO_FILE_BY_SLUG).sort()
+}
+
 /** Path of the logo for a bookmaker slug, null when there is none: the caller falls back to the name. */
 export function bookmakerLogoSrc(slug: string): string | null {
   const file = LOGO_FILE_BY_SLUG[slug.toLowerCase()]

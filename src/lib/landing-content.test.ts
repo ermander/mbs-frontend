@@ -63,4 +63,16 @@ describe('landing copy (OddWise, design di Claude Design)', () => {
       expect.arrayContaining(['Prezzi', 'Contatti', 'Privacy', 'Termini', 'Cookie']),
     )
   })
+
+  it('the footer links work from every public page and only the current page is marked', () => {
+    for (const link of content.LANDING_FOOTER_LINKS) expect(link.href).toMatch(/^\//)
+    expect(content.LANDING_ROUTES.prezzi).toBe('/#prezzi')
+    const current = (pathname: string) =>
+      content.LANDING_FOOTER_LINKS.filter((l) => content.isCurrentPage(l.href, pathname)).map(
+        (l) => l.label,
+      )
+    expect(current('/termini')).toEqual(['Termini'])
+    expect(current('/privacy')).toEqual(['Privacy'])
+    expect(current('/')).toEqual([])
+  })
 })

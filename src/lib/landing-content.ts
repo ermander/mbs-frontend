@@ -16,7 +16,9 @@ export interface LandingLink {
 
 /**
  * Destinazioni reali dietro i link del design: le sezioni dell'app (a chi non è autenticato la
- * guard rimanda al login), le rotte di accesso, l'ancora dei prezzi e le pagine pubbliche.
+ * guard rimanda al login), le rotte di accesso, l'ancora dei prezzi e le pagine pubbliche. I
+ * prezzi stanno sulla landing: l'ancora porta il percorso, perché il footer compare anche sulle
+ * pagine legali e sui contatti, dove «#prezzi» da solo non porta da nessuna parte.
  */
 export const LANDING_ROUTES = {
   home: '/',
@@ -27,7 +29,7 @@ export const LANDING_ROUTES = {
   oddsmatcher: '/odds-scanner',
   calcolatori: '/calcolatori',
   forum: '/forum',
-  prezzi: '#prezzi',
+  prezzi: '/#prezzi',
   contatti: '/contatti',
   privacy: '/privacy',
   termini: '/termini',
@@ -61,6 +63,11 @@ export const LANDING_FOOTER_COLUMNS: readonly (readonly LandingLink[])[] = [
 ]
 
 export const LANDING_FOOTER_LINKS: readonly LandingLink[] = LANDING_FOOTER_COLUMNS.flat()
+
+/** Il link porta alla pagina che si sta leggendo (il design la segna nel footer); le ancore mai. */
+export function isCurrentPage(href: string, pathname: string): boolean {
+  return !href.includes('#') && href === pathname
+}
 
 export const BRAND = {
   name: 'OddWise',

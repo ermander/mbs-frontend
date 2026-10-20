@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { BRAND, FOOTER, LANDING_FOOTER_COLUMNS, LANDING_ROUTES } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
 import { DsContainer, DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
+import { LandingFooterLink } from '@/components/landing/landing-footer-link'
 
-/** Piè di pagina del design: marchio con tagline, link in body-sm su tre colonne (due sul telefono), avvertenza in caption sotto un'hairline. */
+/** Piè di pagina del design: marchio con tagline, link in body-sm su tre colonne (due sul telefono) con la pagina corrente segnata, avvertenza in caption sotto un'hairline. */
 export function LandingFooter() {
   return (
     <footer className="mt-auto border-t border-ds-line bg-ds-surface-raised">
@@ -25,15 +26,7 @@ export function LandingFooter() {
               <ul key={column[0].href} className="flex flex-col gap-2">
                 {column.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className={cn(
-                        'rounded-sm transition-colors hover:text-ds-brand hover:underline',
-                        dsFocusRing,
-                      )}
-                    >
-                      {link.label}
-                    </Link>
+                    <LandingFooterLink href={link.href}>{link.label}</LandingFooterLink>
                   </li>
                 ))}
               </ul>

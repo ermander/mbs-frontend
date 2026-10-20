@@ -15,11 +15,8 @@ describe('recoveryErrorMessage (§14.257)', () => {
 
   it('preferisce il message del controller, poi il primo errore della validazione', () => {
     expect(
-      recoveryErrorMessage(
-        httpError(500, { message: 'Errore durante il recupero password' }),
-        'riserva',
-      ),
-    ).toBe('Errore durante il recupero password')
+      recoveryErrorMessage(httpError(400, { message: 'Link non valido o scaduto' }), 'riserva'),
+    ).toBe('Link non valido o scaduto')
     expect(
       recoveryErrorMessage(
         httpError(400, { errors: ['"email" must be a valid email'] }),
@@ -31,6 +28,21 @@ describe('recoveryErrorMessage (§14.257)', () => {
   it('usa la riserva senza risposta (rete giù) o con un corpo vuoto', () => {
     expect(recoveryErrorMessage(new Error('Network Error'), 'riserva')).toBe('riserva')
     expect(recoveryErrorMessage(httpError(502, ''), 'riserva')).toBe('riserva')
+  })
+
+  it('sui 5xx usa la riserva: in produzione il message è «Internal server error» (§14.258)', () => {
+    expect(
+      recoveryErrorMessage(
+        httpError(500, { status: 500, message: 'Internal server error' }),
+        'riserva',
+      ),
+    ).toBe('riserva')
+    expect(
+      recoveryErrorMessage(
+        httpError(500, { message: 'Errore durante il recupero password' }),
+        'riserva',
+      ),
+    ).toBe('riserva')
   })
 })
 

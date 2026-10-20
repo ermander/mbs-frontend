@@ -17,9 +17,15 @@ function responseData(err: unknown): { message?: unknown; errors?: unknown } | u
     : undefined
 }
 
-/** Il testo da mostrare: il 429 in italiano, poi `message`, poi il primo di `errors`, poi `fallback`. */
+/**
+ * Il testo da mostrare: il 429 in italiano, poi `message`, poi il primo di `errors`, poi
+ * `fallback`. Sui 5xx sempre `fallback` (§14.258): in produzione il middleware degli errori
+ * sostituisce il messaggio del controller con «Internal server error», in inglese.
+ */
 export function recoveryErrorMessage(err: unknown, fallback: string): string {
-  if (getResponseStatus(err) === 429) return TOO_MANY_ATTEMPTS
+  const status = getResponseStatus(err)
+  if (status === 429) return TOO_MANY_ATTEMPTS
+  if (status !== undefined && status >= 500) return fallback
   const data = responseData(err)
   if (typeof data?.message === 'string' && data.message) return data.message
   if (Array.isArray(data?.errors) && typeof data.errors[0] === 'string') return data.errors[0]

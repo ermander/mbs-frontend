@@ -9,8 +9,8 @@ import { GOOGLE_AUTH_START_URL } from '@/services/api/auth-client'
 /**
  * Primitive dei form di accesso sul design system (§14.252): TextField a 48px con etichetta ed
  * errore, Callout, pulsante <button> con le varianti del design e «Continua con Google»; dal
- * §14.257 anche recupero e reimposta password. Verifica email e ritorno da Google, ancora sulla
- * grammatica «Linear», usano auth-primitives.
+ * §14.257 anche recupero e reimposta password, dal §14.258 la verifica email. Il ritorno da
+ * Google, ancora sulla grammatica «Linear», usa auth-primitives.
  */
 
 /** Etichetta + controllo + errore: gap 4px come l'ow-field del design. */

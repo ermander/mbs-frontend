@@ -68,6 +68,15 @@ export const authClient = {
     return data
   },
 
+  /**
+   * §14.258: «Inviami un nuovo link» su un link di attivazione scaduto. Il token vecchio è la
+   * prova: il backend lo sostituisce con uno nuovo da 24 ore e risponde l'email a cui l'ha mandato.
+   */
+  async resendVerificationEmail(token: string) {
+    const { data } = await apiClient.post<{ email: string }>('/auth/verify-email/resend', { token })
+    return data
+  },
+
   async requestPasswordReset(email: string) {
     const { data } = await apiClient.post<{
       message: string

@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   GUIDE_COPY,
-  SAMPLE_GUIDES,
   formatLongDate,
-  guideFor,
   guideMetaLine,
   richTextParts,
   stepsTitle,
 } from '@/lib/offer-guides'
-import { SAMPLE_OFFERS, offerById, offersListHref, parseOfferType } from '@/lib/offers-content'
+import { offerById, offersListHref, parseOfferType } from '@/lib/offers-content'
+import { SAMPLE_GUIDES, SAMPLE_OFFERS, guideFor } from '@/lib/offers-sample'
 
 describe('guide di esempio', () => {
   it('appartengono a offerte del catalogo', () => {

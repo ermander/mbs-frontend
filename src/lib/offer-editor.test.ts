@@ -18,7 +18,7 @@ import {
   suggestedSlug,
   validateInput,
 } from '@/lib/offer-editor'
-import { guideFor } from '@/lib/offer-guides'
+import { guideFor } from '@/lib/offers-sample'
 import { isExpired, offerBadge } from '@/lib/offers-content'
 import type { OfferAdmin, OfferCardApi, OfferInput } from '@/types/offers'
 

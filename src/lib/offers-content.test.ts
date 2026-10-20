@@ -5,7 +5,6 @@ import {
   ALL_BOOKS,
   OFFERS_COPY,
   OFFER_TYPES,
-  SAMPLE_OFFERS,
   activeCount,
   bookOptions,
   emptyTitle,
@@ -15,6 +14,7 @@ import {
   offerSections,
   type Offer,
 } from '@/lib/offers-content'
+import { SAMPLE_OFFERS } from '@/lib/offers-sample'
 
 const offer = (over: Partial<Offer>): Offer => ({
   id: 'x',

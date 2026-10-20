@@ -6,9 +6,9 @@ import type { OfferDifficulty, OfferType } from '@/types/offers'
  * 7WRKR9sJpAQA8BUmvG2Ndp, ADAPTER_STATUS §14.259): tre tipi (benvenuto, ricorrenti, esclusive),
  * sezioni per gruppo e in fondo le scadute, filtro per sito di scommesse.
  *
- * Il catalogo qui sotto è quello DI ESEMPIO del design (titoli, profitti, difficoltà, date): non
- * esiste ancora un archivio delle offerte nel backend. Va sostituito con i dati veri prima della
- * pubblicazione; le funzioni pure lavorano su qualunque elenco di Offer.
+ * Dal §14.263 le offerte vengono dal database (GET /offers, lib/offers-api.ts, convertite con
+ * offerFromCard); il catalogo d'esempio del design è in lib/offers-sample.ts, solo per i test.
+ * Le funzioni pure lavorano su qualunque elenco di Offer.
  *
  * Deviazioni dal design: il filtro si chiama «Sito di scommesse» e non «Bookmaker», e la parola
  * sparisce anche dalla descrizione del benvenuto e dalle note (regola del brand, come sulla
@@ -112,52 +112,8 @@ export const OFFERS_COPY = {
     'Prova con un altro sito di scommesse o guarda tutte le offerte di questo tipo.',
   emptyAction: 'Mostra tutte',
   responsibleGaming: 'Gioco vietato ai minori di 18 anni. Gioca responsabilmente.',
+  loadError: 'Non riusciamo a caricare le offerte in questo momento. Riprova tra qualche minuto.',
 } as const
-
-const o = (
-  id: string,
-  type: OfferType,
-  group: string | null,
-  bookSlug: string,
-  bookName: string,
-  title: string,
-  profit: number | null,
-  difficulty: OfferDifficulty,
-  extra?: Pick<Offer, 'isNew' | 'expiresInDays' | 'expiredOn'>,
-): Offer => ({ id, type, group, bookSlug, bookName, title, profit, difficulty, ...extra })
-
-/** Il catalogo d'esempio del design, nello stesso ordine (vedi il commento in testa). */
-// prettier-ignore
-export const SAMPLE_OFFERS: readonly Offer[] = [
-  o('snai-30', 'benvenuto', 'Singola', 'snai', 'Snai', 'Deposita 60 €, ricevi 30 € di bonus', 25, 'Facile'),
-  o('betflag-10', 'benvenuto', 'Singola', 'betflag', 'Betflag', 'Scommetti 50 €, ricevi 10 € di free bet', 5.5, 'Facile'),
-  o('daznbet-100', 'benvenuto', 'Multipla', 'daznbet', 'Daznbet', 'Scommetti 200 €, ricevi 100 € in quintupla', 40, 'Media'),
-  o('eurobet-100', 'benvenuto', 'Multipla', 'eurobet', 'Eurobet', 'Deposita 200 €, ricevi 100 € in quintupla', 60, 'Media'),
-  o('sisal-100', 'benvenuto', 'Multipla', 'sisal', 'Sisal', 'Deposita 200 €, scommetti 10 €, ricevi 100 € in quadrupla', 65, 'Media', { isNew: true }),
-  o('stanleybet-40', 'benvenuto', 'Multipla', 'stanleybet', 'Stanleybet', 'Scommetti 20 €, ricevi 4 × 10 € in tripla', 29, 'Media'),
-  o('williamhill-100', 'benvenuto', 'Multipla', 'williamhill', 'William Hill', 'Scommetti 100 €, ricevi 10 × 10 € di free bet', 55, 'Media'),
-  o('planetwin-50', 'benvenuto', 'Multipla', 'planetwin365', 'Planetwin365', 'Scommetti 50 €, ricevi 50 € in sestupla', 26, 'Difficile'),
-  o('bet365-100', 'benvenuto', 'Rollover', 'bet365', 'Bet365', 'Deposita fino a 100 €, ricevi il 100 % con rollover', 70, 'Difficile'),
-  o('netbet-30', 'benvenuto', 'Rimborso', 'netbet', 'Netbet', 'Scommetti 10 €, ricevi fino a 30 € di free bet', 10, 'Media'),
-  o('goldbet-slot', 'benvenuto', 'Casinò', 'goldbet', 'Goldbet', 'Deposita 500 €, ricevi 50 € per le slot IGT', 20, 'Facile'),
-  o('leovegas-casino', 'benvenuto', 'Casinò', 'leovegas', 'LeoVegas', 'Deposita 20 €, ricevi 20 € per il casinò', 8, 'Media'),
-  o('admiralbet-20', 'benvenuto', 'Singola', 'admiralbet', 'Admiralbet', 'Scommetti 20 €, ricevi 20 € di free bet', 12, 'Facile', { expiredOn: '2026-10-16' }),
-  o('winbet-25', 'benvenuto', 'Singola', 'winbet', 'Winbet', 'Deposita 25 €, ricevi 25 € di bonus', 14, 'Facile', { expiredOn: '2026-09-30' }),
-  o('sisal-ruota-scommesse', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus scommesse', null, 'Facile'),
-  o('sisal-ruota-casino', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus casinò e slot', null, 'Facile'),
-  o('goldbet-live', 'ricorrenti', 'Ogni settimana', 'goldbet', 'Goldbet', 'Rimborso del 10 % sul casinò live, fino a 10 €', 2, 'Media', { expiresInDays: 2 }),
-  o('betsson-quadrupla', 'ricorrenti', 'Ogni settimana', 'betsson', 'Betsson', 'Scommetti 10 € in quadrupla, ricevi 5 € di free bet', 1.5, 'Media', { isNew: true }),
-  o('bwin-multipla', 'ricorrenti', 'Ogni settimana', 'bwin', 'Bwin', 'Rimborso del 50 % sulla prima multipla della settimana, fino a 20 €', 6, 'Media'),
-  o('888-mensile', 'ricorrenti', 'Ogni mese', '888sport', '888sport', 'Rimborso del 10 % sulle perdite nette del mese, fino a 50 €', 12, 'Facile'),
-  o('bet365-maggiorate', 'ricorrenti', 'Quando disponibili', 'bet365', 'Bet365', 'Quote maggiorate con la spunta gialla', null, 'Difficile'),
-  o('eurobet-superquote', 'ricorrenti', 'Quando disponibili', 'eurobet', 'Eurobet', 'Super quote sugli eventi di Serie A', null, 'Media'),
-  o('snai-tripla', 'ricorrenti', 'Ogni settimana', 'snai', 'Snai', 'Scommetti 50 € in tripla, ricevi 15 € di free bet', 3, 'Media', { expiredOn: '2026-10-19' }),
-  o('bet365-venezia', 'ricorrenti', 'Quando disponibili', 'bet365', 'Bet365', 'Rimborso del 100 % su Venezia – Napoli', null, 'Media', { expiredOn: '2026-10-17' }),
-  o('betpassion-escl', 'esclusive', null, 'betpassion', 'Betpassion', 'Via e-mail: scommetti 150 € in tripla, ricevi 50 € di free bet', 18, 'Media'),
-  o('leovegas-escl', 'esclusive', null, 'leovegas', 'LeoVegas', 'Via SMS: rimborso del 20 % sulle perdite della settimana, fino a 50 €', 15, 'Facile'),
-  o('netbet-escl', 'esclusive', null, 'netbet', 'Netbet', 'Nel conto: ricarica 50 €, ricevi altri 50 €', 22, 'Media', { isNew: true }),
-  o('888-escl', 'esclusive', null, '888sport', '888sport', 'Via e-mail: deposita 20 €, ricevi 20 € di free bet', 10, 'Facile', { expiredOn: '2026-10-05' }),
-]
 
 export function isExpired(offer: Offer): boolean {
   return offer.expired ?? Boolean(offer.expiredOn)

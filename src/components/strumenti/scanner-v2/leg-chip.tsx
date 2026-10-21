@@ -1,48 +1,8 @@
 'use client'
 
-import { BookmakerBadge } from './bookmaker-badge'
 import { shortBookmakerName } from '@/lib/bookmakers'
-import { ageClass, ageLabel, ageSeconds, formatClock, outcomeName } from '@/lib/matcher/format'
 import type { MatcherLeg } from '@/types/matcher'
 import { cn } from '@/lib/utils'
-
-export type LegRole = 'punta' | 'banca' | 'dutch'
-
-interface LegChipProps {
-  leg: MatcherLeg
-  role: LegRole
-  /** The price to show (gross on an exchange dutch leg). */
-  displayOdds: number
-  /** Set on an exchange dutch leg: the stored net price, for the tooltip. */
-  netOdds?: number | null
-  commissionPercent?: number
-  now: number
-  staleAfterSeconds?: number
-  className?: string
-}
-
-const TONES: Record<LegRole, { box: string; odds: string; tag: string | null; tagClass: string }> =
-  {
-    // Hairline boxes for every role; the role lives in the tag and in the colour of the price only.
-    punta: {
-      box: 'border-border bg-card',
-      odds: 'text-foreground',
-      tag: 'PUNTA',
-      tagClass: 'text-muted-foreground',
-    },
-    banca: {
-      box: 'border-border bg-card',
-      odds: 'text-rose-400',
-      tag: 'BANCA',
-      tagClass: 'text-rose-400',
-    },
-    dutch: {
-      box: 'border-border bg-card',
-      odds: 'text-foreground',
-      tag: null,
-      tagClass: '',
-    },
-  }
 
 /** The bookmaker's event page, opened in a new tab by clicking the logo itself (no extra icon); the click must not reach the row (which opens the calculator). */
 export function BookmakerLink({
@@ -70,59 +30,5 @@ export function BookmakerLink({
     >
       {children}
     </a>
-  )
-}
-
-/** One leg of a combination: bookmaker (a link to its event page when known), outcome, price, role and the age of the price as a dot. */
-export function LegChip({
-  leg,
-  role,
-  displayOdds,
-  netOdds,
-  commissionPercent,
-  now,
-  staleAfterSeconds,
-  className,
-}: LegChipProps) {
-  const tone = TONES[role]
-  const age = leg.lastSeenAt ? ageSeconds(leg.lastSeenAt, now) : null
-  const priceTitle =
-    netOdds != null && commissionPercent != null
-      ? `Quota lorda ${displayOdds.toFixed(2)} · netta ${netOdds.toFixed(3)} con commissione ${commissionPercent.toLocaleString('it-IT')}%`
-      : undefined
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-ow-btn border px-2 py-1 align-middle',
-        tone.box,
-        className,
-      )}
-    >
-      <BookmakerLink leg={leg}>
-        <BookmakerBadge slug={leg.bookmakerSlug} name={leg.bookmakerName} />
-      </BookmakerLink>
-      <span className="truncate text-xs text-foreground">{outcomeName(leg)}</span>
-      <span
-        className={cn('font-mono text-[13px] font-medium tabular-nums', tone.odds)}
-        title={priceTitle}
-      >
-        {displayOdds.toFixed(2)}
-      </span>
-      {tone.tag && (
-        <span className={cn('font-mono text-[9px] uppercase tracking-[0.02em]', tone.tagClass)}>
-          {tone.tag}
-        </span>
-      )}
-      {age != null && leg.lastSeenAt && (
-        <span
-          className={cn(
-            'inline-block h-2 w-2 shrink-0 rounded-full bg-current',
-            ageClass(age, staleAfterSeconds),
-          )}
-          title={`Quota vista ${ageLabel(age)} fa (alle ${formatClock(leg.lastSeenAt)})`}
-          aria-label={`Quota vista ${ageLabel(age)} fa`}
-        />
-      )}
-    </span>
   )
 }

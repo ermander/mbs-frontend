@@ -1,16 +1,15 @@
 'use client'
 
-import { RefreshCw, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableMultiSelect } from '@/components/ui/searchable-multi-select'
+import { Filter, ListChecks, RefreshCw, Search, X } from 'lucide-react'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { CalcNumberField, CalcSelect, CalcTextField } from '@/components/calculators/calc-ds'
 import {
-  MatcherCompetitionFilter,
+  competitionLabel,
   pruneCompetitionIds,
 } from '@/components/strumenti/matcher-competition-filter'
-import { BookmakerBadge } from './bookmaker-badge'
+import { OmBookLogo, OmDropdown, OmSportIcon, type OmOption } from './om-ds'
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
-import { MATCH_TYPE_OPTIONS, marketLabel } from '@/lib/matcher/format'
+import { MATCH_TYPE_OPTIONS, ageLabel, ageSeconds, marketLabel } from '@/lib/matcher/format'
 import type { MatchType, MatcherBookmaker, MatcherMeta } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +24,8 @@ export interface ScannerV2Filters {
   stake: string
   bonus: string
   rimborso: string
+  /** «Ordina per» (§14.272): rating from the highest, or kickoff from the nearest. */
+  sort: 'rating' | 'start_time'
   matchType: MatchType | ''
   sport: string
   nation: string
@@ -49,6 +50,7 @@ export const EMPTY_FILTERS: ScannerV2Filters = {
   stake: '',
   bonus: '',
   rimborso: '',
+  sort: 'rating',
   matchType: '',
   sport: '',
   nation: '',
@@ -72,7 +74,7 @@ export const SHARED_AMOUNT_KEYS: ReadonlySet<keyof ScannerV2Filters> = new Set([
   'rimborso',
 ])
 
-/** Groups of the advanced panel that are active (the badge on the «Filtri» button). */
+/** Groups of the advanced panel that are active (the count on the «Filtri» button). */
 export function countActiveFilters(f: ScannerV2Filters): number {
   return [
     f.matchType !== '',
@@ -93,7 +95,7 @@ interface ScannerV2FilterBarProps {
   filters: ScannerV2Filters
   onChange: (patch: Partial<ScannerV2Filters>) => void
   onReset: () => void
-  /** «Refresh quote»: reloads the results with the filters applied right now. */
+  /** «Aggiorna»: reloads the results with the filters applied right now. */
   onRefresh: () => void
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -101,65 +103,40 @@ interface ScannerV2FilterBarProps {
   books: MatcherBookmaker[]
   exchanges: MatcherBookmaker[]
   loading: boolean
+  /** Clock of the page, for «Quote aggiornate … fa». */
+  now: number
   multiplaOpen: boolean
   onMultiplaOpenChange: (open: boolean) => void
-  /** Chosen events and the target count, for the badge on the button. */
-  multiplaSelected: number
-  multiplaTarget: number
 }
 
-const LABEL_CLASS = 'font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground'
-const SELECT_CLASS =
-  'h-8 w-full min-w-0 rounded-ow-btn border border-border bg-surface-1 px-2 text-[13px] text-foreground'
-const noExponent = (e: React.KeyboardEvent<HTMLInputElement>) =>
-  ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()
+const SORT_OPTIONS = [
+  { value: 'rating', label: 'Rating' },
+  { value: 'start_time', label: 'Data e ora' },
+]
 
-function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded border border-border bg-surface-1 px-1.5 py-0.5 text-[11px] text-muted-foreground">
-      {children}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="ml-0.5 hover:text-foreground"
-        aria-label="Togli filtro"
-      >
-        <X className="h-2.5 w-2.5" />
-      </button>
-    </span>
-  )
+function bookOptions(list: MatcherBookmaker[]): OmOption[] {
+  return list.map((b) => ({
+    value: b.slug,
+    label: shortBookmakerName(b.name),
+    render: <OmBookLogo slug={b.slug} name={b.name} />,
+  }))
 }
 
-function AmountField({
-  label,
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  ariaLabel: string
-}) {
+/** A group of the advanced panel: the label on the left, the fields in a grid of four. */
+function PanelGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <Input
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="0.01"
-        placeholder="€"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={noExponent}
-        className="h-8 w-20 rounded-ow-btn text-[13px]"
-        aria-label={ariaLabel}
-      />
+    <div className="grid items-start gap-3 md:grid-cols-[120px_minmax(0,1fr)] md:gap-6">
+      <span className="ds-label uppercase text-ds-ink-muted md:pt-[26px]">{title}</span>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
     </div>
   )
 }
 
+/**
+ * The bar of the Oddsmatcher from the design (§14.272): a card with search, the two bookmaker
+ * menus, the shared stake and the sort; under it Filtri, Multipla, Azzera and the age of the
+ * prices with «Aggiorna»; the advanced panel (Evento, Scommessa) and the active filters.
+ */
 export function ScannerV2FilterBar({
   filters,
   onChange,
@@ -171,426 +148,388 @@ export function ScannerV2FilterBar({
   books,
   exchanges,
   loading,
+  now,
   multiplaOpen,
   onMultiplaOpenChange,
-  multiplaSelected,
-  multiplaTarget,
 }: ScannerV2FilterBarProps) {
   const activeCount = countActiveFilters(filters)
   const bookName = (slug: string, list: MatcherBookmaker[]) =>
     shortBookmakerName(list.find((b) => b.slug === slug)?.name ?? slug)
   const namesOf = (slugs: string[], list: MatcherBookmaker[]) =>
     slugs.map((s) => bookName(s, list)).join(', ')
-  const toggleIn = (key: 'books' | 'coverBooks' | 'exchanges', slug: string) => {
-    const current = filters[key]
-    onChange({
-      [key]: current.includes(slug) ? current.filter((s) => s !== slug) : [...current, slug],
+
+  const scope = { sport: filters.sport, nation: filters.nation }
+  const competitionsInScope = (meta?.competitions ?? []).filter(
+    (c) =>
+      (!scope.sport || c.sportName === scope.sport) &&
+      (!scope.nation || c.nationName === scope.nation),
+  )
+  const withSport = new Set(competitionsInScope.map((c) => c.sportName)).size > 1
+  const competitionOpts: OmOption[] = competitionsInScope.map((c) => ({
+    value: c.id,
+    label: competitionLabel(c, withSport),
+    count: c.results,
+  }))
+  const competitionNames = new Map(
+    (meta?.competitions ?? []).map((c) => [c.id, competitionLabel(c, false)]),
+  )
+
+  const sportOpts: OmOption[] = (meta?.sports ?? []).map((s) => ({
+    value: s,
+    label: sportDisplay(s).label,
+    icon: <OmSportIcon sport={s} size={18} />,
+  }))
+  const nationOpts: OmOption[] = (meta?.nations ?? []).map((n) => ({ value: n, label: n }))
+  const marketOpts: OmOption[] = (meta?.marketTypes ?? []).map((m) => ({
+    value: m,
+    label: marketLabel(m, null),
+  }))
+  const typeOpts: OmOption[] = MATCH_TYPE_OPTIONS.filter((o) => o.value !== '').map((o) => ({
+    value: o.value,
+    label: o.label,
+  }))
+
+  const age = meta?.calculatedAt != null ? ageLabel(ageSeconds(meta.calculatedAt, now)) : null
+
+  const chips: { key: string; label: string; clear: () => void }[] = []
+  if (filters.matchType)
+    chips.push({
+      key: 'tipo',
+      label: `Tipo: ${MATCH_TYPE_OPTIONS.find((o) => o.value === filters.matchType)?.label}`,
+      clear: () => onChange({ matchType: '' }),
     })
-  }
-  const multiLabel = (
-    selected: string[],
-    list: MatcherBookmaker[],
-    singular: string,
-    plural: string,
-  ) =>
-    selected.length === 0
-      ? 'Tutti'
-      : selected.length === 1
-        ? bookName(selected[0], list)
-        : `${selected.length} ${plural}`.replace(plural, selected.length === 1 ? singular : plural)
+  if (filters.sport)
+    chips.push({
+      key: 'sport',
+      label: `Sport: ${sportDisplay(filters.sport).label}`,
+      clear: () => onChange({ sport: '', competitionIds: [] }),
+    })
+  if (filters.nation)
+    chips.push({
+      key: 'nazione',
+      label: `Nazione: ${filters.nation}`,
+      clear: () => onChange({ nation: '', competitionIds: [] }),
+    })
+  if (filters.competitionIds.length > 0)
+    chips.push({
+      key: 'competizioni',
+      label: `Competizione: ${filters.competitionIds.map((id) => competitionNames.get(id) ?? id).join(', ')}`,
+      clear: () => onChange({ competitionIds: [] }),
+    })
+  if (filters.marketType)
+    chips.push({
+      key: 'mercato',
+      label: `Mercato: ${marketLabel(filters.marketType, null)}`,
+      clear: () => onChange({ marketType: '' }),
+    })
+  if (filters.books.length > 0)
+    chips.push({
+      key: 'book',
+      label: `Bookmaker: ${namesOf(filters.books, books)}`,
+      clear: () => onChange({ books: [] }),
+    })
+  if (filters.coverBooks.length > 0)
+    chips.push({
+      key: 'copertura',
+      label: `Copertura: ${namesOf(filters.coverBooks, books)}`,
+      clear: () => onChange({ coverBooks: [] }),
+    })
+  if (filters.exchanges.length > 0)
+    chips.push({
+      key: 'exchange',
+      label: `Exchange: ${namesOf(filters.exchanges, exchanges)}`,
+      clear: () => onChange({ exchanges: [] }),
+    })
+  if (filters.minRating.trim() || filters.maxRating.trim())
+    chips.push({
+      key: 'rating',
+      label: `Rating: ${filters.minRating || '—'} – ${filters.maxRating || '—'} %`,
+      clear: () => onChange({ minRating: '', maxRating: '' }),
+    })
+  if (filters.minOdds.trim() || filters.maxOdds.trim())
+    chips.push({
+      key: 'quota',
+      label: `Quota: ${filters.minOdds || '—'} – ${filters.maxOdds || '—'}`,
+      clear: () => onChange({ minOdds: '', maxOdds: '' }),
+    })
+  if (filters.startFrom.trim() || filters.startTo.trim())
+    chips.push({
+      key: 'date',
+      label: `Date: ${filters.startFrom ? filters.startFrom.replace('T', ' ') : '—'} → ${
+        filters.startTo ? filters.startTo.replace('T', ' ') : '—'
+      }`,
+      clear: () => onChange({ startFrom: '', startTo: '' }),
+    })
+  const hasAnyFilter = activeCount > 0 || filters.search.trim() !== ''
 
   return (
-    <div className="space-y-0">
-      {/* Main bar */}
-      <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-ow-card border border-border bg-surface-1 px-3 py-2">
-        <div className="relative min-w-[180px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Cerca evento o competizione…"
-            value={filters.search}
-            onChange={(e) => onChange({ search: e.target.value })}
-            className="h-8 border-0 bg-transparent pl-8 text-[13px] focus-visible:ring-0"
-            aria-label="Cerca per evento o competizione"
-          />
+    <div className="flex flex-col gap-4">
+      {/* Barra principale */}
+      <div className="grid grid-cols-2 items-end gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-4 shadow-ds-sm sm:grid-cols-2 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_120px_150px]">
+        <div className="col-span-2 flex min-w-0 flex-col gap-1.5 lg:col-span-1">
+          <label htmlFor="om-search" className="text-sm font-semibold leading-5 text-ds-ink">
+            Cerca
+          </label>
+          <div className="flex h-10 items-center gap-2 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-2.5 transition-[border-color,box-shadow] duration-150 focus-within:border-ds-brand focus-within:shadow-ds-focus">
+            <Search className="h-4 w-4 flex-none text-ds-ink-muted" aria-hidden />
+            <input
+              id="om-search"
+              type="search"
+              placeholder="Evento o competizione"
+              value={filters.search}
+              onChange={(e) => onChange({ search: e.target.value })}
+              className="ds-body h-full min-w-0 flex-1 border-0 bg-transparent text-ds-ink outline-none placeholder:text-ds-ink-faint"
+            />
+          </div>
         </div>
-
-        <div className="hidden h-5 w-px bg-border sm:block" />
-
-        <AmountField
+        <OmDropdown
+          id="om-books"
+          label="Bookmaker principale"
+          allLabel="Tutti i bookmaker"
+          options={bookOptions(books)}
+          selected={filters.books}
+          onChange={(next) => onChange({ books: next })}
+          panelWidth={220}
+          className="col-span-2 sm:col-span-1"
+        />
+        <OmDropdown
+          id="om-cover"
+          label="Bookmaker di copertura"
+          allLabel="Tutti i bookmaker"
+          options={bookOptions(books)}
+          selected={filters.coverBooks}
+          onChange={(next) => onChange({ coverBooks: next })}
+          panelWidth={220}
+          className="col-span-2 sm:col-span-1"
+        />
+        <CalcNumberField
+          id="om-stake"
           label="Puntata"
+          suffix="€"
+          placeholder="0,00"
           value={filters.stake}
           onChange={(v) => onChange({ stake: v })}
-          ariaLabel="Puntata condivisa"
         />
-        <AmountField
-          label="Bonus"
-          value={filters.bonus}
-          onChange={(v) => onChange({ bonus: v })}
-          ariaLabel="Bonus condiviso"
+        <CalcSelect
+          id="om-sort"
+          label="Ordina per"
+          size="md"
+          options={SORT_OPTIONS}
+          value={filters.sort}
+          onChange={(v) => onChange({ sort: v === 'start_time' ? 'start_time' : 'rating' })}
         />
-        <AmountField
-          label="Rimborso"
-          value={filters.rimborso}
-          onChange={(v) => onChange({ rimborso: v })}
-          ariaLabel="Rimborso condiviso"
-        />
-
-        <div className="hidden h-5 w-px bg-border sm:block" />
-
-        <button
-          type="button"
-          onClick={() => onOpenChange(!open)}
-          aria-expanded={open}
-          className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-ow-btn border px-3 text-[13px] transition-colors',
-            open
-              ? 'border-border bg-accent font-medium text-foreground'
-              : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
-          )}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filtri
-          {activeCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded bg-foreground px-1 font-mono text-[10px] font-medium text-background">
-              {activeCount}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => onMultiplaOpenChange(!multiplaOpen)}
-          aria-expanded={multiplaOpen}
-          className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-ow-btn border px-3 text-[13px] transition-colors',
-            multiplaOpen
-              ? 'border-border bg-accent font-medium text-foreground'
-              : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
-          )}
-        >
-          Multipla
-          {multiplaSelected > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded bg-foreground px-1 font-mono text-[10px] font-medium text-background">
-              {multiplaSelected}/{multiplaTarget}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="inline-flex h-8 items-center gap-1 rounded-ow-btn px-2 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-          aria-label="Reset filtri"
-        >
-          <RotateCcw className="h-3 w-3" />
-          Reset
-        </button>
-
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          aria-busy={loading}
-          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-ow-btn border border-border px-3 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-wait disabled:opacity-70"
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-          Refresh quote
-        </button>
       </div>
 
-      {/* Active filter chips */}
-      {activeCount > 0 && !open && (
-        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-2">
-          {filters.matchType && (
-            <Chip onRemove={() => onChange({ matchType: '' })}>
-              Tipo: {MATCH_TYPE_OPTIONS.find((o) => o.value === filters.matchType)?.label}
-            </Chip>
+      {/* Azioni */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onOpenChange(!open)}
+            aria-expanded={open}
+            className={dsButtonClass(open ? 'primary' : 'secondary', 'sm')}
+          >
+            <Filter className="h-4 w-4" aria-hidden />
+            Filtri{activeCount > 0 ? ` · ${activeCount}` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => onMultiplaOpenChange(!multiplaOpen)}
+            aria-expanded={multiplaOpen}
+            className={dsButtonClass(multiplaOpen ? 'primary' : 'secondary', 'sm')}
+          >
+            <ListChecks className="h-4 w-4" aria-hidden />
+            Multipla
+          </button>
+          {hasAnyFilter && (
+            <button type="button" onClick={onReset} className={dsButtonClass('ghost', 'sm')}>
+              <X className="h-4 w-4" aria-hidden />
+              Azzera
+            </button>
           )}
-          {filters.sport && (
-            <Chip onRemove={() => onChange({ sport: '', competitionIds: [] })}>
-              Sport: {sportDisplay(filters.sport).label}
-            </Chip>
-          )}
-          {filters.nation && (
-            <Chip onRemove={() => onChange({ nation: '', competitionIds: [] })}>
-              Nazione: {filters.nation}
-            </Chip>
-          )}
-          {filters.competitionIds.length > 0 && (
-            <Chip onRemove={() => onChange({ competitionIds: [] })}>
-              Competizioni: {filters.competitionIds.length}
-            </Chip>
-          )}
-          {filters.marketType && (
-            <Chip onRemove={() => onChange({ marketType: '' })}>
-              Mercato: {marketLabel(filters.marketType, null)}
-            </Chip>
-          )}
-          {filters.books.length > 0 && (
-            <Chip onRemove={() => onChange({ books: [] })}>
-              Book: {namesOf(filters.books, books)}
-            </Chip>
-          )}
-          {filters.coverBooks.length > 0 && (
-            <Chip onRemove={() => onChange({ coverBooks: [] })}>
-              Copertura: {namesOf(filters.coverBooks, books)}
-            </Chip>
-          )}
-          {filters.exchanges.length > 0 && (
-            <Chip onRemove={() => onChange({ exchanges: [] })}>
-              Exchange: {namesOf(filters.exchanges, exchanges)}
-            </Chip>
-          )}
-          {(filters.minRating.trim() || filters.maxRating.trim()) && (
-            <Chip onRemove={() => onChange({ minRating: '', maxRating: '' })}>
-              Rating: {filters.minRating || '—'} – {filters.maxRating || '—'} %
-            </Chip>
-          )}
-          {(filters.minOdds.trim() || filters.maxOdds.trim()) && (
-            <Chip onRemove={() => onChange({ minOdds: '', maxOdds: '' })}>
-              Quota: {filters.minOdds || '—'} – {filters.maxOdds || '—'}
-            </Chip>
-          )}
-          {(filters.startFrom.trim() || filters.startTo.trim()) && (
-            <Chip onRemove={() => onChange({ startFrom: '', startTo: '' })}>
-              Date: {filters.startFrom ? filters.startFrom.replace('T', ' ') : '—'} →{' '}
-              {filters.startTo ? filters.startTo.replace('T', ' ') : '—'}
-            </Chip>
-          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {age && <span className="ds-caption text-ds-ink-muted">Quote aggiornate {age} fa</span>}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            aria-busy={loading}
+            className={cn(dsButtonClass('ghost', 'sm'), 'disabled:cursor-wait disabled:opacity-70')}
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+            Aggiorna
+          </button>
+        </div>
+      </div>
+
+      {/* Filtri avanzati */}
+      {open && (
+        <div className="flex flex-col gap-5 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-5 shadow-ds-sm sm:px-6">
+          <PanelGroup title="Evento">
+            <OmDropdown
+              id="om-sport"
+              label="Sport"
+              allLabel="Tutti gli sport"
+              size="sm"
+              single
+              searchable={sportOpts.length > 6}
+              options={sportOpts}
+              selected={filters.sport ? [filters.sport] : []}
+              onChange={(next) => {
+                const sport = next[0] ?? ''
+                onChange({
+                  sport,
+                  competitionIds: pruneCompetitionIds(filters.competitionIds, meta?.competitions, {
+                    sport,
+                    nation: filters.nation,
+                  }),
+                })
+              }}
+            />
+            <OmDropdown
+              id="om-nation"
+              label="Nazione"
+              allLabel="Tutte le nazioni"
+              size="sm"
+              single
+              options={nationOpts}
+              selected={filters.nation ? [filters.nation] : []}
+              onChange={(next) => {
+                const nation = next[0] ?? ''
+                onChange({
+                  nation,
+                  competitionIds: pruneCompetitionIds(filters.competitionIds, meta?.competitions, {
+                    sport: filters.sport,
+                    nation,
+                  }),
+                })
+              }}
+            />
+            <div className="sm:col-span-2">
+              <OmDropdown
+                id="om-competitions"
+                label="Competizione"
+                allLabel={
+                  meta && meta.competitions === undefined
+                    ? 'Competizioni non disponibili'
+                    : competitionOpts.length === 0
+                      ? 'Nessuna competizione'
+                      : 'Tutte le competizioni'
+                }
+                size="sm"
+                panelWidth={340}
+                options={competitionOpts}
+                selected={filters.competitionIds}
+                onChange={(next) => onChange({ competitionIds: next })}
+                emptyText="Nessuna competizione con questo nome o nazione."
+              />
+            </div>
+            <CalcTextField
+              id="om-from"
+              label="Dal"
+              type="datetime-local"
+              value={filters.startFrom}
+              onChange={(v) => onChange({ startFrom: v })}
+            />
+            <CalcTextField
+              id="om-to"
+              label="Al"
+              type="datetime-local"
+              value={filters.startTo}
+              onChange={(v) => onChange({ startTo: v })}
+            />
+          </PanelGroup>
+          <div className="h-px bg-ds-line" />
+          <PanelGroup title="Scommessa">
+            <OmDropdown
+              id="om-type"
+              label="Tipo"
+              allLabel="Tutti i tipi"
+              size="sm"
+              single
+              searchable={false}
+              options={typeOpts}
+              selected={filters.matchType ? [filters.matchType] : []}
+              onChange={(next) => onChange({ matchType: (next[0] as MatchType | undefined) ?? '' })}
+            />
+            <OmDropdown
+              id="om-market"
+              label="Mercato"
+              allLabel="Tutti i mercati"
+              size="sm"
+              single
+              options={marketOpts}
+              selected={filters.marketType ? [filters.marketType] : []}
+              onChange={(next) => onChange({ marketType: next[0] ?? '' })}
+            />
+            <OmDropdown
+              id="om-exchange"
+              label="Exchange"
+              allLabel="Tutti gli exchange"
+              size="sm"
+              searchable={exchanges.length > 6}
+              panelWidth={220}
+              options={bookOptions(exchanges)}
+              selected={filters.exchanges}
+              onChange={(next) => onChange({ exchanges: next })}
+              emptyText="Nessun exchange nel deposito"
+            />
+            <span className="hidden lg:block" aria-hidden />
+            <CalcNumberField
+              id="om-min-odds"
+              label="Quota minima"
+              size="sm"
+              placeholder="es. 1,50"
+              value={filters.minOdds}
+              onChange={(v) => onChange({ minOdds: v })}
+            />
+            <CalcNumberField
+              id="om-max-odds"
+              label="Quota massima"
+              size="sm"
+              placeholder="—"
+              value={filters.maxOdds}
+              onChange={(v) => onChange({ maxOdds: v })}
+            />
+            <CalcNumberField
+              id="om-min-rating"
+              label="Rating minimo"
+              size="sm"
+              suffix="%"
+              placeholder="es. 98"
+              value={filters.minRating}
+              onChange={(v) => onChange({ minRating: v })}
+            />
+            <CalcNumberField
+              id="om-max-rating"
+              label="Rating massimo"
+              size="sm"
+              suffix="%"
+              placeholder="—"
+              value={filters.maxRating}
+              onChange={(v) => onChange({ maxRating: v })}
+            />
+          </PanelGroup>
         </div>
       )}
 
-      {/* Advanced filters panel */}
-      {open && (
-        <div className="mt-2 animate-fade-in rounded-ow-card border border-border bg-surface-1 p-4">
-          <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Tipo</Label>
-              <select
-                className={SELECT_CLASS}
-                value={filters.matchType}
-                onChange={(e) => onChange({ matchType: e.target.value as MatchType | '' })}
-              >
-                {MATCH_TYPE_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Sport</Label>
-              <select
-                className={SELECT_CLASS}
-                value={filters.sport}
-                onChange={(e) => {
-                  const sport = e.target.value
-                  onChange({
-                    sport,
-                    competitionIds: pruneCompetitionIds(
-                      filters.competitionIds,
-                      meta?.competitions,
-                      {
-                        sport,
-                        nation: filters.nation,
-                      },
-                    ),
-                  })
-                }}
-              >
-                <option value="">Tutti gli sport</option>
-                {meta?.sports.map((s) => {
-                  const d = sportDisplay(s)
-                  return (
-                    <option key={s} value={s}>
-                      {d.icon ? `${d.icon} ${d.label}` : d.label}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Nazione</Label>
-              <select
-                className={SELECT_CLASS}
-                value={filters.nation}
-                onChange={(e) => {
-                  const nation = e.target.value
-                  onChange({
-                    nation,
-                    competitionIds: pruneCompetitionIds(
-                      filters.competitionIds,
-                      meta?.competitions,
-                      {
-                        sport: filters.sport,
-                        nation,
-                      },
-                    ),
-                  })
-                }}
-              >
-                <option value="">Tutte le nazioni</option>
-                {meta?.nations?.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1 sm:col-span-2 lg:col-span-1 xl:col-span-2">
-              <Label className={LABEL_CLASS}>Competizioni</Label>
-              <MatcherCompetitionFilter
-                competitions={meta?.competitions}
-                scope={{ sport: filters.sport, nation: filters.nation }}
-                selectedIds={filters.competitionIds}
-                onToggle={(id) =>
-                  onChange({
-                    competitionIds: filters.competitionIds.includes(id)
-                      ? filters.competitionIds.filter((x) => x !== id)
-                      : [...filters.competitionIds, id],
-                  })
-                }
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Mercato</Label>
-              <select
-                className={SELECT_CLASS}
-                value={filters.marketType}
-                onChange={(e) => onChange({ marketType: e.target.value })}
-              >
-                <option value="">Tutti i mercati</option>
-                {meta?.marketTypes.map((m) => (
-                  <option key={m} value={m}>
-                    {marketLabel(m, null)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Book</Label>
-              <SearchableMultiSelect
-                options={books.map((b) => ({ id: b.slug, name: shortBookmakerName(b.name) }))}
-                selectedIds={filters.books}
-                onToggle={(slug) => toggleIn('books', slug)}
-                buttonLabel={multiLabel(filters.books, books, 'book', 'book')}
-                searchPlaceholder="Cerca book…"
-                searchInputAriaLabel="Filtra book"
-                emptyMessage="Nessun book"
-                size="sm"
-                className="w-full"
-                renderOption={(opt) => <BookmakerBadge slug={opt.id} name={opt.name} />}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label
-                className={LABEL_CLASS}
-                title="I book su cui possono stare le altre gambe della combinazione"
-              >
-                Book di copertura
-              </Label>
-              <SearchableMultiSelect
-                options={books.map((b) => ({ id: b.slug, name: shortBookmakerName(b.name) }))}
-                selectedIds={filters.coverBooks}
-                onToggle={(slug) => toggleIn('coverBooks', slug)}
-                buttonLabel={multiLabel(filters.coverBooks, books, 'book', 'book')}
-                searchPlaceholder="Cerca book…"
-                searchInputAriaLabel="Filtra book di copertura"
-                emptyMessage="Nessun book"
-                size="sm"
-                className="w-full"
-                renderOption={(opt) => <BookmakerBadge slug={opt.id} name={opt.name} />}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Exchange</Label>
-              <SearchableMultiSelect
-                options={exchanges.map((b) => ({ id: b.slug, name: shortBookmakerName(b.name) }))}
-                selectedIds={filters.exchanges}
-                onToggle={(slug) => toggleIn('exchanges', slug)}
-                buttonLabel={multiLabel(filters.exchanges, exchanges, 'exchange', 'exchange')}
-                searchPlaceholder="Cerca exchange…"
-                searchInputAriaLabel="Filtra exchange"
-                emptyMessage="Nessun exchange nel deposito"
-                size="sm"
-                className="w-full"
-                renderOption={(opt) => <BookmakerBadge slug={opt.id} name={opt.name} />}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Rating min %</Label>
-              <Input
-                type="number"
-                placeholder="es. 98"
-                value={filters.minRating}
-                onChange={(e) => onChange({ minRating: e.target.value })}
-                onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-                min={0}
-                step={0.5}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Rating max %</Label>
-              <Input
-                type="number"
-                placeholder="—"
-                value={filters.maxRating}
-                onChange={(e) => onChange({ maxRating: e.target.value })}
-                onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-                min={0}
-                step={0.5}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS} title="Quota della gamba su cui va la puntata">
-                Quota min
-              </Label>
-              <Input
-                type="number"
-                placeholder="es. 1.50"
-                value={filters.minOdds}
-                onChange={(e) => onChange({ minOdds: e.target.value })}
-                onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-                min={1}
-                step={0.01}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS} title="Quota della gamba su cui va la puntata">
-                Quota max
-              </Label>
-              <Input
-                type="number"
-                placeholder="—"
-                value={filters.maxOdds}
-                onChange={(e) => onChange({ maxOdds: e.target.value })}
-                onKeyDown={noExponent}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-                min={1}
-                step={0.01}
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Dal</Label>
-              <Input
-                type="datetime-local"
-                value={filters.startFrom}
-                onChange={(e) => onChange({ startFrom: e.target.value })}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-              />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1">
-              <Label className={LABEL_CLASS}>Al</Label>
-              <Input
-                type="datetime-local"
-                value={filters.startTo}
-                onChange={(e) => onChange({ startTo: e.target.value })}
-                className="h-8 w-full min-w-0 rounded-ow-btn text-[13px]"
-              />
-            </div>
-          </div>
+      {/* Filtri attivi */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="ds-label uppercase text-ds-ink-muted">Filtri attivi</span>
+          {chips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={c.clear}
+              aria-label={`Togli il filtro ${c.label}`}
+              className={cn(dsButtonClass('ghost', 'sm'), 'max-w-full')}
+            >
+              <span className="truncate">{c.label}</span>
+              <X className="h-4 w-4 flex-none" aria-hidden />
+            </button>
+          ))}
         </div>
       )}
     </div>

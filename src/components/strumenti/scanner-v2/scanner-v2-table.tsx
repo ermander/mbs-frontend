@@ -1,29 +1,26 @@
 'use client'
 
 import React from 'react'
-import { Calculator, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { BookmakerBadge } from './bookmaker-badge'
-import { BookmakerLink, LegChip, type LegRole } from './leg-chip'
+import { Calculator } from 'lucide-react'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DsMoney } from '@/components/landing/ds-data'
+import { BookmakerLink } from './leg-chip'
+import { OmBetLeg, OmBookLogo, OmEmptyState, OmPagination, OmRating, OmSportIcon } from './om-ds'
 import { legIsExchange, shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
 import { resolveCompetitionFlag } from '@/lib/country-flags'
 import {
-  ageClass,
   ageLabel,
   ageSeconds,
+  ageTone,
   formatClock,
-  formatKickoff,
-  formatKickoffDate,
   formatKickoffTime,
   isLayLeg,
   marketLabel,
-  matchTypeLabel,
   matcherRowKey,
   outcomeName,
 } from '@/lib/matcher/format'
 import { legDisplayOdds, quickProfit, type SharedAmounts } from '@/lib/matcher/quick-profit'
-import type { MatcherMeta, MatcherResult } from '@/types/matcher'
+import type { MatcherLeg, MatcherMeta, MatcherResult } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
 /** Selection of the Multipla (§14.99): shown as a checkbox column while the panel is open. */
@@ -43,65 +40,45 @@ interface ScannerV2TableProps {
   /** Exchange commission in percent (4.5). */
   commissionPercent: number
   loading: boolean
+  /** A short green flash after «Aggiorna» brought new prices. */
+  flash: boolean
+  /** The row whose calculator is open: its button is the primary one. */
+  activeKey: string | null
   page: number
-  totalPages: number
   total: number
   pageSize: number
   onPageChange: (page: number) => void
   onOpenCalculator: (row: MatcherResult) => void
+  onResetFilters: () => void
 }
 
-/** Mono on plain background; the green tint marks only a rating from 100% up. */
-function ratingBadge(rating: number) {
-  const base =
-    'inline-flex items-center rounded px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums'
-  if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-300`
-  return `${base} text-foreground`
+const dateFormat = new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: '2-digit' })
+
+/** «25/09 · 20:45», as in the design. */
+function kickoffLabel(iso: string): string {
+  return `${dateFormat.format(new Date(iso))} · ${formatKickoffTime(iso)}`
 }
 
-/** Flag of the competition's nation (the European one for UEFA competitions filed under «World»), the nation name when no flag is available. */
-function NationFlag({
-  code,
-  name,
-  competition,
-}: {
-  code: string | null
-  name: string | null
-  competition: string
-}) {
-  const flag = resolveCompetitionFlag(code, name, competition)
-  if (!flag) return name ? <span>{name}</span> : null
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={flag.url}
-      alt={flag.label}
-      title={flag.label || undefined}
-      className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover align-[-1px]"
-    />
-  )
+/** Oldest price of the row, the one that decides whether it is still worth a look. */
+function rowAge(row: MatcherResult, now: number): number | null {
+  const ages = row.legs
+    .filter((l) => l.lastSeenAt)
+    .map((l) => ageSeconds(l.lastSeenAt as string, now))
+  return ages.length ? Math.max(...ages) : null
 }
 
-/** Neutral for a back price, a light rose for a lay one; the outcome sits in its own «Esito» cell. */
-function oddsCellClass(lay: boolean) {
-  return cn(
-    'inline-flex items-center rounded px-1.5 py-0.5',
-    lay ? 'bg-rose-500/15 text-rose-300' : 'bg-muted text-foreground',
-  )
-}
+const ageToneClass = { fresh: 'text-ds-ink-muted', aging: 'text-ds-warning', old: 'text-ds-loss' }
 
 /**
- * Last update of the row, as text: the age of the oldest price on the
- * first line (coloured like the leg dots: green fresh, amber aging, red
- * old) and the clock time it was seen on the second; the tooltip lists
- * the age of each leg. The clock icon lives only in the table header.
+ * «Aggiornata»: the age of the oldest price, in warning when it is aging and in loss when it is
+ * old (thresholds of `ageTone`, scaled on events re-read slowly); the tooltip lists every leg.
  */
-function LastSeenCell({ row, now }: { row: MatcherResult; now: number }) {
+function AgeCell({ row, now }: { row: MatcherResult; now: number }) {
   const age = rowAge(row, now)
   if (age == null) {
     return (
       <span
-        className="text-xs text-muted-foreground"
+        className="ds-body-sm text-ds-ink-muted"
         title="Ultimo aggiornamento non disponibile per questa combinazione"
       >
         n.d.
@@ -119,125 +96,142 @@ function LastSeenCell({ row, now }: { row: MatcherResult; now: number }) {
         `${shortBookmakerName(l.bookmakerName)} ${ageLabel(ageSeconds(l.lastSeenAt as string, now))} fa`,
     )
     .join(' · ')
-  const title = `Ultimo aggiornamento della combinazione: ${ageLabel(age)} fa (alle ${formatClock(oldest)}), cioè la quota vista meno di recente fra quelle delle gambe. ${perLeg}.`
   return (
     <span
-      className="inline-block whitespace-nowrap text-xs tabular-nums"
-      title={title}
-      aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
+      className={cn(
+        'ds-body-sm whitespace-nowrap tabular-nums',
+        ageToneClass[ageTone(age, row.staleAfterSeconds)],
+      )}
+      title={`Ultimo aggiornamento della combinazione: ${ageLabel(age)} fa (alle ${formatClock(oldest)}), cioè la quota vista meno di recente fra quelle delle gambe. ${perLeg}.`}
     >
-      <span className={cn('block font-medium', ageClass(age, row.staleAfterSeconds))}>
-        {ageLabel(age)} fa
-      </span>
-      <span className="block text-muted-foreground">{formatClock(oldest)}</span>
+      {ageLabel(age)}
     </span>
   )
 }
 
-/** The type as a quiet tag: the label tells it, no colour code. */
-function matchTypeBadge() {
-  return 'inline-flex items-center whitespace-nowrap rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground'
-}
-
-function formatEuro(n: number): string {
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)} €`
-}
-
-/** Oldest price of the row, the one that decides whether it is still worth a look. */
-function rowAge(row: MatcherResult, now: number): number | null {
-  const ages = row.legs
-    .filter((l) => l.lastSeenAt)
-    .map((l) => ageSeconds(l.lastSeenAt as string, now))
-  return ages.length ? Math.max(...ages) : null
-}
-
-export function RowLegs({
-  row,
-  meta,
-  now,
-  commissionPercent,
-  className,
-}: {
-  row: MatcherResult
-  meta: MatcherMeta | null
-  now: number
-  commissionPercent: number
-  className?: string
-}) {
+function NationFlag({ row }: { row: MatcherResult }) {
+  const flag = resolveCompetitionFlag(row.nationCode, row.nationName, row.competitionName)
+  if (!flag) return null
   return (
-    <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
-      {row.legs.map((leg, i) => {
-        const role: LegRole = row.matchType === 'back_lay' ? (i === 0 ? 'punta' : 'banca') : 'dutch'
-        const exchangeDutch = row.matchType !== 'back_lay' && legIsExchange(leg, meta)
-        return (
-          <LegChip
-            key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
-            leg={leg}
-            role={role}
-            displayOdds={legDisplayOdds(leg, row, meta, commissionPercent)}
-            netOdds={exchangeDutch ? leg.odds : null}
-            commissionPercent={exchangeDutch ? commissionPercent : undefined}
-            now={now}
-            staleAfterSeconds={row.staleAfterSeconds}
-          />
-        )
-      })}
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={flag.url}
+      alt={flag.label}
+      title={flag.label || undefined}
+      width={16}
+      height={12}
+      className="inline-block h-3 w-4 flex-none rounded-[2px] border border-ds-line object-cover"
+    />
   )
 }
 
-function ProfitCell({
+/** One leg as the design's BetLeg, with the logo linking to the event page when known. */
+function Leg({
+  row,
+  leg,
+  index,
+  meta,
+  commissionPercent,
+}: {
+  row: MatcherResult
+  leg: MatcherLeg
+  index: number
+  meta: MatcherMeta | null
+  commissionPercent: number
+}) {
+  const lay = isLayLeg(leg) || (row.matchType === 'back_lay' && index > 0)
+  const exchangeDutch = row.matchType !== 'back_lay' && legIsExchange(leg, meta)
+  const displayOdds = legDisplayOdds(leg, row, meta, commissionPercent)
+  return (
+    <OmBetLeg
+      logo={
+        <BookmakerLink leg={leg}>
+          <OmBookLogo slug={leg.bookmakerSlug} name={leg.bookmakerName} size="sm" />
+        </BookmakerLink>
+      }
+      outcome={outcomeName(leg)}
+      odds={displayOdds}
+      lay={lay}
+      oddsTitle={
+        exchangeDutch
+          ? `Quota lorda ${displayOdds.toFixed(2)} · netta ${leg.odds.toFixed(3)} con commissione ${commissionPercent.toLocaleString('it-IT')}%`
+          : undefined
+      }
+    />
+  )
+}
+
+function eventName(row: MatcherResult): string {
+  return `${row.homeName ?? '?'} – ${row.awayName ?? '?'}`
+}
+
+/** Quick result of the shared stake, on the phone cards only (the calculator has the full one). */
+function QuickProfit({
   row,
   shared,
   commissionPercent,
   meta,
-  className,
 }: {
   row: MatcherResult
   shared: SharedAmounts
   commissionPercent: number
   meta: MatcherMeta | null
-  className?: string
 }) {
-  if (shared.puntata == null || shared.puntata <= 0) {
-    return (
-      <span
-        className={cn('text-xs text-muted-foreground', className)}
-        title="Inserisci la puntata nella barra"
-      >
-        —
-      </span>
-    )
-  }
+  if (shared.puntata == null || shared.puntata <= 0) return null
   const q = quickProfit(row, shared, commissionPercent, meta)
-  if (q.profit == null) {
-    return (
-      <span
-        className={cn('text-xs text-muted-foreground', className)}
-        title="Copertura non calcolabile con questi importi"
-      >
-        n.d.
-      </span>
-    )
-  }
-  const coverLabel = row.matchType === 'back_lay' ? 'Bancata' : 'Copertura'
-  const title = `${coverLabel} ${q.covers.map((c) => c.toFixed(2)).join(' · ')} € · puntata sulla gamba ${
-    row.matchType === 'back_lay' ? 'Punta' : '1'
-  }`
+  if (q.profit == null) return null
+  return <DsMoney value={q.profit} size="sm" />
+}
+
+function MultiplaCheckbox({ row, multipla }: { row: MatcherResult; multipla: MultiplaSelection }) {
+  const selected = multipla.isSelected(row)
+  const { ok, reason } = multipla.eligibility(row)
   return (
-    <span
-      className={cn(
-        'font-mono text-[13px] font-medium tabular-nums',
-        q.profit >= 0 ? 'text-emerald-400' : 'text-red-400',
-        className,
-      )}
-      title={title}
-    >
-      {formatEuro(q.profit)}
-    </span>
+    <input
+      type="checkbox"
+      checked={selected}
+      disabled={!ok && !selected}
+      onChange={() => multipla.onToggle(row)}
+      onClick={(e) => e.stopPropagation()}
+      title={reason ?? (selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla')}
+      aria-label={`${selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla'}: ${eventName(row)}`}
+      className="m-0 h-4 w-4 accent-[var(--ds-brand)] disabled:cursor-not-allowed disabled:opacity-40"
+    />
   )
 }
 
+function CalcButton({
+  row,
+  active,
+  onOpen,
+}: {
+  row: MatcherResult
+  active: boolean
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Calcola ${eventName(row)}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onOpen()
+      }}
+      className={cn(dsButtonClass(active ? 'primary' : 'secondary', 'sm'), 'w-8 px-0')}
+    >
+      <Calculator className="h-4 w-4" aria-hidden />
+    </button>
+  )
+}
+
+const SKELETON_ROWS = 8
+
+/**
+ * The results of the Oddsmatcher as the design's Table (§14.272): Data, Evento (with market and
+ * competition), Puntata, Bancata · copertura, Rating, Aggiornata and the calculator. A click on the
+ * row opens the calculator (or ticks it while the Multipla is open). On the phone the rows become
+ * cards. Skeleton on the first load, EmptyState when the filters leave nothing.
+ */
 export function ScannerV2Table({
   results,
   meta,
@@ -245,306 +239,259 @@ export function ScannerV2Table({
   shared,
   commissionPercent,
   loading,
+  flash,
+  activeKey,
   page,
-  totalPages,
   total,
   pageSize,
   onPageChange,
   onOpenCalculator,
+  onResetFilters,
   multipla,
 }: ScannerV2TableProps) {
-  const start = total === 0 ? 0 : page * pageSize + 1
-  const end = Math.min((page + 1) * pageSize, total)
-  // «Book 3 / Esito 3 / Quota 3» appear only when a row of the page has a third leg.
-  const legColumns = Math.max(2, ...results.map((r) => r.legs.length))
+  const clickRow = (row: MatcherResult) => {
+    if (multipla) {
+      if (multipla.isSelected(row) || multipla.eligibility(row).ok) multipla.onToggle(row)
+      return
+    }
+    onOpenCalculator(row)
+  }
 
-  const empty = (
-    <div className="rounded-ow-card border border-border bg-card p-8 text-center text-[13px] text-muted-foreground">
-      {loading && results.length === 0 ? 'Caricamento…' : 'Nessuna combinazione con questi filtri.'}
-    </div>
-  )
+  if (loading && results.length === 0) {
+    return (
+      <div
+        aria-busy="true"
+        className="overflow-hidden rounded-ds-md border border-ds-line bg-ds-surface-raised shadow-ds-sm"
+      >
+        <div className="h-10 border-b border-ds-line bg-ds-surface-sunken" />
+        {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-[72px_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_90px] gap-6 border-b border-ds-line px-4 py-3.5"
+          >
+            {Array.from({ length: 5 }, (_, k) => (
+              <div key={k} className="h-4 rounded-ds-xs bg-ds-surface-sunken" />
+            ))}
+          </div>
+        ))}
+        <p className="ds-body-sm m-0 px-4 py-3 text-ds-ink-muted">Caricamento delle quote…</p>
+      </div>
+    )
+  }
+
+  if (results.length === 0) {
+    return <OmEmptyStateWithReset onReset={onResetFilters} />
+  }
 
   return (
-    <div className="space-y-3">
-      {/* Mobile: cards */}
-      <div className="flex flex-col gap-3 md:hidden">
-        {results.length === 0
-          ? empty
-          : results.map((row) => {
-              const sport = sportDisplay(row.sportName)
-              const age = rowAge(row, now)
-              return (
-                <div
-                  key={matcherRowKey(row)}
-                  className="rounded-ow-card border border-border bg-card p-3 transition-colors"
-                  onClick={() => onOpenCalculator(row)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        {sport.icon && <span className="text-sm">{sport.icon}</span>}
-                        <span className="truncate text-sm font-medium">
-                          {row.homeName} – {row.awayName}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {row.competitionName} · {marketLabel(row.marketTypeKey, row.line, row)} ·{' '}
-                        {formatKickoff(row.startTime)}
-                      </p>
+    <div className="flex flex-col gap-4">
+      <div
+        className={cn(
+          'rounded-ds-md transition-colors duration-150',
+          flash ? 'bg-ds-profit-soft' : 'bg-transparent',
+        )}
+      >
+        {/* Telefono: schede */}
+        <ul className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
+          {results.map((row) => {
+            const key = matcherRowKey(row)
+            return (
+              <li
+                key={key}
+                onClick={() => clickRow(row)}
+                className={cn(
+                  'flex cursor-pointer flex-col gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised p-4 shadow-ds-sm',
+                  multipla?.isSelected(row) && 'border-ds-brand bg-ds-brand-soft',
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="ds-body-sm block truncate font-semibold text-ds-ink">
+                      {eventName(row)}
                     </div>
-                    <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
+                    <div className="ds-caption mt-0.5 flex min-w-0 items-center gap-1.5 text-ds-ink-muted">
+                      <span className="inline-flex text-ds-ink">
+                        <OmSportIcon sport={row.sportName} size={14} />
+                      </span>
+                      <span className="truncate">
+                        {marketLabel(row.marketTypeKey, row.line, row)} · {row.competitionName}
+                      </span>
+                    </div>
                   </div>
-                  <RowLegs
-                    row={row}
-                    meta={meta}
-                    now={now}
-                    commissionPercent={commissionPercent}
-                    className="mt-2"
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={matchTypeBadge()}>{matchTypeLabel(row.matchType)}</span>
-                      {age != null && (
-                        <span
-                          className={cn(
-                            'text-[11px] tabular-nums',
-                            ageClass(age, row.staleAfterSeconds),
-                          )}
-                        >
-                          vista {ageLabel(age)} fa
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {multipla && <MultiplaCheckbox row={row} multipla={multipla} />}
-                      <ProfitCell
+                  <OmRating value={row.rating} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {row.legs.map((leg, i) => (
+                    <Leg
+                      key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
+                      row={row}
+                      leg={leg}
+                      index={i}
+                      meta={meta}
+                      commissionPercent={commissionPercent}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="ds-body-sm flex min-w-0 flex-wrap items-center gap-x-1.5 tabular-nums text-ds-ink-muted">
+                    {kickoffLabel(row.startTime)} · <AgeCell row={row} now={now} />
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <QuickProfit
+                      row={row}
+                      shared={shared}
+                      commissionPercent={commissionPercent}
+                      meta={meta}
+                    />
+                    {multipla ? (
+                      <MultiplaCheckbox row={row} multipla={multipla} />
+                    ) : (
+                      <CalcButton
                         row={row}
-                        shared={shared}
-                        commissionPercent={commissionPercent}
-                        meta={meta}
+                        active={activeKey === key}
+                        onOpen={() => onOpenCalculator(row)}
                       />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        aria-label="Apri calcolatore"
-                        onClick={() => onOpenCalculator(row)}
-                      >
-                        <Calculator className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )
-            })}
-      </div>
+              </li>
+            )
+          })}
+        </ul>
 
-      {/* Desktop: table. The results scroll inside this box, both ways, so the
-          page, the toolbar and the pagination stay put and the horizontal
-          scrollbar is always within reach; the header row sticks to the top. */}
-      <div className="hidden max-h-[calc(100dvh-17rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-ow-card border border-border md:block">
-        <table className="w-full min-w-[1100px] text-[13px]">
-          <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-            <tr className="bg-muted/50 text-left font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-              {multipla && (
-                <th className="w-10 px-2 py-2 text-center font-normal" aria-label="Multipla" />
-              )}
-              <th className="whitespace-nowrap px-3 py-2 font-normal">Data</th>
-              <th className="px-2 py-2 text-center font-normal" aria-label="Sport">
-                Sport
-              </th>
-              <th className="px-3 py-2 font-normal">Evento</th>
-              <th className="whitespace-nowrap px-3 py-2 font-normal">Mercato</th>
-              {Array.from({ length: legColumns }, (_, i) => (
-                <React.Fragment key={i}>
-                  <th className="whitespace-nowrap px-3 py-2 font-normal">Book {i + 1}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-normal">Esito {i + 1}</th>
-                  <th className="whitespace-nowrap px-3 py-2 font-normal">Quota {i + 1}</th>
-                </React.Fragment>
-              ))}
-              <th className="px-3 py-2 text-right font-normal">Rating</th>
-              <th className="px-2 py-2 text-center font-normal" title="Ultimo aggiornamento">
-                <Clock className="inline h-3.5 w-3.5" aria-label="Ultimo aggiornamento" />
-              </th>
-              <th className="px-2 py-2 text-center font-normal" aria-label="Calcolatore" />
-            </tr>
-          </thead>
-          <tbody>
-            {results.length === 0 ? (
+        {/* Tabella */}
+        <div className="hidden overflow-x-auto rounded-ds-md border border-ds-line bg-ds-surface-raised md:block">
+          <table className="w-full border-collapse">
+            <caption className="sr-only">Combinazioni puntata/bancata e dutch</caption>
+            <thead>
               <tr>
-                <td
-                  colSpan={(multipla ? 1 : 0) + 7 + legColumns * 3}
-                  className="px-3 py-8 text-center text-muted-foreground"
-                >
-                  {loading && results.length === 0
-                    ? 'Caricamento…'
-                    : 'Nessuna combinazione con questi filtri.'}
-                </td>
+                {multipla && (
+                  <th scope="col" className="w-10 bg-ds-surface-sunken p-3 pl-4">
+                    <span className="sr-only">Multipla</span>
+                  </th>
+                )}
+                {['Data', 'Evento', 'Puntata', 'Bancata · copertura'].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="ds-label whitespace-nowrap bg-ds-surface-sunken p-3 text-left uppercase text-ds-ink-muted first:pl-4"
+                  >
+                    {label}
+                  </th>
+                ))}
+                {['Rating', 'Aggiornata'].map((label) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className="ds-label whitespace-nowrap bg-ds-surface-sunken p-3 text-right uppercase text-ds-ink-muted"
+                  >
+                    {label}
+                  </th>
+                ))}
+                <th scope="col" className="bg-ds-surface-sunken p-3 pr-4">
+                  <span className="sr-only">Calcolatore</span>
+                </th>
               </tr>
-            ) : (
-              results.map((row) => {
+            </thead>
+            <tbody>
+              {results.map((row) => {
+                const key = matcherRowKey(row)
+                const selected = multipla?.isSelected(row) || activeKey === key
                 const sport = sportDisplay(row.sportName)
                 return (
                   <tr
-                    key={matcherRowKey(row)}
+                    key={key}
+                    onClick={() => clickRow(row)}
                     className={cn(
-                      'cursor-pointer border-b border-border transition-colors hover:bg-accent/60',
-                      multipla?.isSelected(row) && 'bg-accent',
+                      'cursor-pointer',
+                      selected ? 'bg-ds-brand-soft' : 'hover:bg-ds-surface-sunken',
                     )}
-                    onClick={() => onOpenCalculator(row)}
                   >
                     {multipla && (
-                      <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="border-t border-ds-line p-3 pl-4 align-middle">
                         <MultiplaCheckbox row={row} multipla={multipla} />
                       </td>
                     )}
-                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
-                      <div className="text-foreground">{formatKickoffDate(row.startTime)}</div>
-                      <div className="text-muted-foreground">
-                        h. {formatKickoffTime(row.startTime)}
-                      </div>
+                    <td className="ds-body-sm whitespace-nowrap border-t border-ds-line p-3 align-middle tabular-nums text-ds-ink-muted first:pl-4">
+                      {kickoffLabel(row.startTime)}
                     </td>
-                    <td className="px-2 py-2 text-center" title={sport.label}>
-                      {sport.icon ? (
-                        <span className="text-lg leading-none" aria-hidden>
-                          {sport.icon}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">{sport.label}</span>
-                      )}
-                    </td>
-                    <td className="min-w-[200px] px-3 py-2">
-                      <div className="whitespace-nowrap font-medium">
-                        {row.homeName} – {row.awayName}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <NationFlag
-                          code={row.nationCode}
-                          name={row.nationName}
-                          competition={row.competitionName}
-                        />
-                        <span>{row.competitionName}</span>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      {marketLabel(row.marketTypeKey, row.line, row)}
-                    </td>
-                    {Array.from({ length: legColumns }, (_, i) => {
-                      const leg = row.legs[i]
-                      if (!leg) {
-                        return (
-                          <React.Fragment key={i}>
-                            <td className="px-3 py-2" />
-                            <td className="px-3 py-2" />
-                            <td className="px-3 py-2" />
-                          </React.Fragment>
-                        )
-                      }
-                      const lay = isLayLeg(leg) || (row.matchType === 'back_lay' && i > 0)
-                      const exchangeDutch = row.matchType !== 'back_lay' && legIsExchange(leg, meta)
-                      const displayOdds = legDisplayOdds(leg, row, meta, commissionPercent)
-                      const priceTitle = exchangeDutch
-                        ? `Quota lorda ${displayOdds.toFixed(2)} · netta ${leg.odds.toFixed(3)} con commissione ${commissionPercent.toLocaleString('it-IT')}%`
-                        : undefined
-                      return (
-                        <React.Fragment key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            <BookmakerLink leg={leg}>
-                              <BookmakerBadge
-                                slug={leg.bookmakerSlug}
-                                name={leg.bookmakerName}
-                                size="md"
-                              />
-                            </BookmakerLink>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
-                            {outcomeName(leg)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            <span className={oddsCellClass(lay)} title={priceTitle}>
-                              <span className="font-mono text-[13px] font-medium tabular-nums">
-                                {displayOdds.toFixed(2)}
-                              </span>
-                            </span>
-                          </td>
-                        </React.Fragment>
-                      )
-                    })}
-                    <td className="px-3 py-2 text-right">
-                      <span className={ratingBadge(row.rating)}>{row.rating.toFixed(2)}%</span>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <LastSeenCell row={row} now={now} />
-                    </td>
-                    <td className="px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label="Apri calcolatore"
-                        onClick={() => onOpenCalculator(row)}
+                    <td className="min-w-[200px] border-t border-ds-line p-3 align-middle">
+                      <span
+                        className="block max-w-[260px] truncate font-semibold text-ds-ink"
+                        title={eventName(row)}
                       >
-                        <Calculator className="h-4 w-4" />
-                      </Button>
+                        {eventName(row)}
+                      </span>
+                      <span className="ds-caption mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-ds-ink-muted">
+                        <span className="inline-flex text-ds-ink" title={sport.label}>
+                          <OmSportIcon sport={row.sportName} size={14} />
+                        </span>
+                        {marketLabel(row.marketTypeKey, row.line, row)} ·
+                        <NationFlag row={row} />
+                        <span className="max-w-[220px] truncate" title={row.competitionName}>
+                          {row.competitionName}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="border-t border-ds-line p-3 align-middle">
+                      <Leg
+                        row={row}
+                        leg={row.legs[0]}
+                        index={0}
+                        meta={meta}
+                        commissionPercent={commissionPercent}
+                      />
+                    </td>
+                    <td className="border-t border-ds-line p-3 align-middle">
+                      <span className="inline-flex flex-col items-start gap-1">
+                        {row.legs.slice(1).map((leg, i) => (
+                          <Leg
+                            key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
+                            row={row}
+                            leg={leg}
+                            index={i + 1}
+                            meta={meta}
+                            commissionPercent={commissionPercent}
+                          />
+                        ))}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap border-t border-ds-line p-3 text-right align-middle">
+                      <OmRating value={row.rating} />
+                    </td>
+                    <td className="border-t border-ds-line p-3 text-right align-middle">
+                      <AgeCell row={row} now={now} />
+                    </td>
+                    <td className="border-t border-ds-line p-3 pr-4 text-right align-middle">
+                      <CalcButton
+                        row={row}
+                        active={activeKey === key}
+                        onOpen={() => onOpenCalculator(row)}
+                      />
                     </td>
                   </tr>
                 )
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
-      {total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-ow-card border border-border bg-surface-1 px-4 py-2">
-          <p className="text-[13px] tabular-nums text-muted-foreground">
-            {start}–{end} di {total.toLocaleString('it-IT')} combinazioni
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-ow-btn"
-              onClick={() => onPageChange(Math.max(0, page - 1))}
-              disabled={page <= 0}
-              aria-label="Pagina precedente"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Indietro
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Pagina {page + 1} di {Math.max(1, totalPages)}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-ow-btn"
-              onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
-              aria-label="Pagina successiva"
-            >
-              Avanti
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <OmPagination page={page} pageSize={pageSize} total={total} onChange={onPageChange} />
     </div>
   )
 }
 
-function MultiplaCheckbox({ row, multipla }: { row: MatcherResult; multipla: MultiplaSelection }) {
-  const selected = multipla.isSelected(row)
-  const { ok, reason } = multipla.eligibility(row)
+function OmEmptyStateWithReset({ onReset }: { onReset: () => void }) {
   return (
-    <span title={reason ?? (selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla')}>
-      <Checkbox
-        checked={selected}
-        disabled={!ok}
-        onChange={() => multipla.onToggle(row)}
-        aria-label={selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla'}
-      />
-    </span>
+    <OmEmptyState
+      title="Nessuna partita con questi filtri"
+      description="Nessuna combinazione con questi filtri in questo momento. Prova ad abbassare il rating minimo o ad azzerare i filtri."
+      action={
+        <button type="button" onClick={onReset} className={dsButtonClass('primary', 'md')}>
+          Azzera i filtri
+        </button>
+      }
+    />
   )
 }

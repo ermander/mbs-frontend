@@ -31,23 +31,33 @@ const RatingSlotContext = React.createContext<HTMLElement | null>(null)
 const BRIDGE_CLASS = 'ds-calc-bridge'
 
 /**
- * Pannelli montati: se due convivono per un attimo (il nuovo montato prima che il vecchio si
- * smonti), ponte e blocco dello scorrimento si tolgono solo quando se ne va l'ultimo.
+ * Chi tiene il ponte sull'<html>: i pannelli montati e, nell'oddsmatcher chiaro (§14.272), i
+ * dialoghi shadcn aperti sopra la pagina. Se due convivono per un attimo (il nuovo montato prima
+ * che il vecchio si smonti), la classe si toglie solo quando se ne va l'ultimo.
  */
+let bridgeHolders = 0
+
+/** Mette il ponte shadcn → ds-* sull'<html>; la funzione restituita lo rilascia. */
+export function holdCalcBridge() {
+  bridgeHolders += 1
+  if (bridgeHolders === 1) document.documentElement.classList.add(BRIDGE_CLASS)
+  return () => {
+    bridgeHolders -= 1
+    if (bridgeHolders === 0) document.documentElement.classList.remove(BRIDGE_CLASS)
+  }
+}
+
+/** Pannelli montati: lo scorrimento della pagina torna solo quando se ne va l'ultimo. */
 let mountedPanels = 0
 
 function lockPage() {
+  const releaseBridge = holdCalcBridge()
   mountedPanels += 1
-  if (mountedPanels === 1) {
-    document.documentElement.classList.add(BRIDGE_CLASS)
-    document.body.style.overflow = 'hidden'
-  }
+  if (mountedPanels === 1) document.body.style.overflow = 'hidden'
   return () => {
+    releaseBridge()
     mountedPanels -= 1
-    if (mountedPanels === 0) {
-      document.documentElement.classList.remove(BRIDGE_CLASS)
-      document.body.style.overflow = ''
-    }
+    if (mountedPanels === 0) document.body.style.overflow = ''
   }
 }
 

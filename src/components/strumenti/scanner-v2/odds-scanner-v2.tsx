@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { getMatcherMeta, getMatcherResults } from '@/services/api/matcher-client'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { holdCalcBridge } from '@/components/calculators/calculator-panel'
 import { exchangeCommissionOf, shortBookmakerName } from '@/lib/bookmakers'
 import { bookmakersParam, coverBookmakersParam } from '@/lib/matcher/bookmaker-params'
 import { parseNum } from '@/lib/calculators/engines/odds'
@@ -35,8 +36,10 @@ const PAGE_SIZE = 50
 // One view: the store of every combination from the 80% floor up, all bookmakers
 // against all, recomputed by the backend when prices change (§14.77, §14.86).
 // No polling: the page loads on mount and on every filter change, and the user
-// reloads on demand with «Refresh quote».
+// reloads on demand with «Aggiorna».
 const SEARCH_DEBOUNCE_MS = 350
+/** The green flash of the table after «Aggiorna» (motion-flash of the design). */
+const FLASH_MS = 600
 
 /** A ticking clock so the ages on screen keep moving between reloads. */
 function useNow(intervalMs: number): number {
@@ -73,6 +76,7 @@ export function OddsScannerV2() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [calculatorRow, setCalculatorRow] = useState<MatcherResult | null>(null)
+  const [flash, setFlash] = useState(false)
   const now = useNow(5_000)
 
   // ── Multipla ──
@@ -100,6 +104,7 @@ export function OddsScannerV2() {
       stake: prev.stake,
       bonus: prev.bonus,
       rimborso: prev.rimborso,
+      sort: prev.sort,
     }))
     setPage(0)
   }, [])
@@ -159,8 +164,9 @@ export function OddsScannerV2() {
     const q: MatcherFilters = {
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
-      sort_by: 'rating',
-      sort_dir: 'DESC',
+      // «Ordina per»: the best rating first, or the nearest kickoff first.
+      sort_by: filters.sort,
+      sort_dir: filters.sort === 'start_time' ? 'ASC' : 'DESC',
     }
     if (filters.sport) q.sport = filters.sport
     if (filters.matchType) q.match_type = filters.matchType
@@ -201,6 +207,7 @@ export function OddsScannerV2() {
     return q
   }, [
     page,
+    filters.sort,
     filters.sport,
     filters.matchType,
     filters.marketType,
@@ -242,16 +249,19 @@ export function OddsScannerV2() {
     }
   }, [])
 
-  const loadResults = useCallback(async () => {
+  const loadResults = useCallback(async (): Promise<boolean> => {
     setLoading(true)
+    let ok = false
     try {
       const res = await getMatcherResults(query)
       setResults(res.results)
       setTotal(res.total)
+      ok = true
     } catch {
-      /* ignore: the user can retry with «Refresh quote» */
+      /* ignore: the user can retry with «Aggiorna» */
     }
     setLoading(false)
+    return ok
   }, [query])
 
   useEffect(() => {
@@ -262,13 +272,20 @@ export function OddsScannerV2() {
     void loadResults()
   }, [loadResults])
 
-  // «Refresh quote»: same query, filters as they are right now.
+  // «Aggiorna»: same query, filters as they are right now; the table flashes when it worked.
   const refresh = useCallback(() => {
-    void loadResults()
     void loadMeta()
+    void loadResults().then((ok) => {
+      if (!ok) return
+      setFlash(true)
+      setTimeout(() => setFlash(false), FLASH_MS)
+    })
   }, [loadResults, loadMeta])
 
-  const totalPages = Math.ceil(total / PAGE_SIZE)
+  // The page is light (ds-*): the shadcn dialogs opened over it (calculator, accounts) take the
+  // same palette through the bridge of the calculators while they are open.
+  const dialogOpen = calculatorRow != null || multiplaSaveOpen
+  useEffect(() => (dialogOpen ? holdCalcBridge() : undefined), [dialogOpen])
   const commissionPercent = exchangeCommissionOf(meta) * 100
   const shared = useMemo<SharedAmounts>(
     () => ({
@@ -362,7 +379,7 @@ export function OddsScannerV2() {
     if (!activeBook || multiplaEvents.length < 2) return
     const stake = shared.puntata ?? 0
     if (stake <= 0 && shared.bonus <= 0) {
-      setMultiplaError('Inserisci almeno la puntata o il bonus nella barra.')
+      setMultiplaError('Inserisci la puntata nella barra o la puntata bonus nella multipla.')
       return
     }
     setMultiplaSaving(true)
@@ -391,7 +408,7 @@ export function OddsScannerV2() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <ScannerV2FilterBar
         filters={filters}
         onChange={setFilters}
@@ -403,10 +420,9 @@ export function OddsScannerV2() {
         books={books}
         exchanges={exchanges}
         loading={loading}
+        now={now}
         multiplaOpen={multiplaOpen}
         onMultiplaOpenChange={openMultipla}
-        multiplaSelected={multiplaRows.length}
-        multiplaTarget={multiplaParams.numEventi}
       />
       {multiplaOpen && (
         <ScannerV2MultiplaPanel
@@ -421,6 +437,9 @@ export function OddsScannerV2() {
             setMultiplaSaveOpen(true)
           }}
           shared={shared}
+          bonus={filters.bonus}
+          rimborso={filters.rimborso}
+          onAmountsChange={setFilters}
           bookName={activeBookName}
         />
       )}
@@ -431,12 +450,14 @@ export function OddsScannerV2() {
         shared={shared}
         commissionPercent={commissionPercent}
         loading={loading}
+        flash={flash}
+        activeKey={calculatorRow ? matcherRowKey(calculatorRow) : null}
         page={page}
-        totalPages={totalPages}
         total={total}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
         onOpenCalculator={setCalculatorRow}
+        onResetFilters={resetFilters}
         multipla={multiplaSelection}
       />
       <MatcherCalculatorModal

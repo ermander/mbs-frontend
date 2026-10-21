@@ -867,7 +867,7 @@ export function CalcTextField({
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  type?: 'text' | 'datetime-local'
+  type?: 'text' | 'date' | 'datetime-local'
   size?: keyof typeof controlHeight
   className?: string
 }) {

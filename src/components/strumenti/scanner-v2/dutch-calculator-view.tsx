@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import {
+  CalcBoost,
   CalcImbalance,
   CalcNumberField,
   CalcOutcomeTable,
@@ -13,6 +14,13 @@ import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { computeDutch } from '@/lib/calculators/engines/dutch-engine'
 import { grossOdds, parseNum } from '@/lib/calculators/engines/odds'
+import {
+  NO_BOOST,
+  boostNote,
+  boostPercent,
+  boostedOdds,
+  type BoostInput,
+} from '@/lib/calculators/boost'
 import { buildDutchBet, type BetEventInfo } from '@/lib/calculators/bet-payloads'
 import { legIsExchange, shortBookmakerName } from '@/lib/bookmakers'
 import { outcomeName } from '@/lib/matcher/format'
@@ -74,6 +82,7 @@ export function DutchCalculatorView({
   const [categoria, setCategoria] = useState<BetCategory>(() =>
     row.rating >= 100 ? 'surebet' : 'matched_betting',
   )
+  const [boosts, setBoosts] = useState<BoostInput[]>(() => row.legs.map(() => NO_BOOST))
 
   const [assignOpen, setAssignOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -84,9 +93,13 @@ export function DutchCalculatorView({
   const bonusNum = parseNum(bonus) ?? 0
   const rimborsoNum = parseNum(rimborso) ?? 0
   const commissioneNum = parseNum(commissione) ?? 0
-  const quoteNums = quotes.map(parseNum)
-  // The memos below key on the joined quotes: the array is rebuilt on every render.
-  const quotesKey = quotes.join('|')
+  const typedNums = quotes.map(parseNum)
+  // §14.274: a boosted leg (never an exchange one) is priced at its effective price everywhere,
+  // saved bet included; the typed price only goes into the note.
+  const boostPcts = boosts.map((b, i) => (exchangeFlags[i] ? 0 : boostPercent(b)))
+  const quoteNums = typedNums.map((q, i) => boostedOdds(q, boostPcts[i]))
+  // The memos below key on the joined quotes and boosts: the arrays are rebuilt on every render.
+  const quotesKey = `${quotes.join('|')}#${boostPcts.join('|')}`
 
   const result = useMemo(
     () =>
@@ -155,6 +168,13 @@ export function DutchCalculatorView({
           accountId: accountIds[`leg${i}`],
           stake: result.legs[i].stake as number,
         })),
+        nota: boostNote(
+          row.legs.map((leg, i) => ({
+            label: `${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`,
+            odds: typedNums[i],
+            percent: boostPcts[i],
+          })),
+        ),
       })
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       setSavedBetId(bet.id)
@@ -236,6 +256,18 @@ export function DutchCalculatorView({
                     }
                     figureLabel={isPunta ? 'Puntata' : 'Copertura'}
                     figure={amount(legResult?.stake ?? null)}
+                    footer={
+                      exchangeFlags[i] ? undefined : (
+                        <CalcBoost
+                          id={`dutch-boost-${i}`}
+                          boost={boosts[i]}
+                          onChange={(next) =>
+                            setBoosts((prev) => prev.map((b, j) => (j === i ? next : b)))
+                          }
+                          effectiveOdds={boostPcts[i] > 0 ? quoteNums[i] : null}
+                        />
+                      )
+                    }
                     selectable
                     selected={isPunta}
                     onSelect={() => setPuntaIndex(i)}

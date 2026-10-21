@@ -41,6 +41,8 @@ interface PuntaBancaSaveModalProps {
   partialLayResults: ({ newLayStake: number; newLiability: number } | null)[]
   /** Numero di conti su cui duplicare la gamba punta (stessa quota/stake, copertura unica). */
   numConti: number
+  /** Nota della giocata: la quota maggiorata, quando c'è (§14.274). */
+  nota?: string
 }
 
 function parseNum(s: string): number | null {
@@ -83,6 +85,7 @@ export function PuntaBancaSaveModal({
   partialLays,
   partialLayResults,
   numConti,
+  nota,
 }: PuntaBancaSaveModalProps) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const books = useProfitTrackerStore((s) => s.allBooks)
@@ -308,7 +311,7 @@ export function PuntaBancaSaveModal({
         modalitaSaldo: 'reale' as const,
         accountId: puntaAccountIds[0],
         tag: undefined as string | undefined,
-        nota: undefined as string | undefined,
+        nota,
       }
 
       const puntaLegBase = {
@@ -437,6 +440,7 @@ export function PuntaBancaSaveModal({
     rimborsoNum,
     partialLays,
     partialLayResults,
+    nota,
     saveOngoingBetFromCalculator,
   ])
 

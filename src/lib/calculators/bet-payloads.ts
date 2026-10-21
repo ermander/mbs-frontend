@@ -54,6 +54,8 @@ export interface PuntaBancaBetArgs {
   responsabilita: number
   partialLays: Array<{ amount: number | null; newOdds: number | null }>
   partialLayResults: Array<{ newLayStake: number; newLiability: number } | null>
+  /** Note of the bet: the boosted price, when there is one (§14.274). */
+  nota?: string
 }
 
 export function buildPuntaBancaBet(args: PuntaBancaBetArgs): BetPayloads {
@@ -69,7 +71,7 @@ export function buildPuntaBancaBet(args: PuntaBancaBetArgs): BetPayloads {
     modalitaSaldo: 'reale',
     accountId: args.accountIdPunta,
     tag: undefined,
-    nota: undefined,
+    nota: args.nota,
   }
 
   const puntaLeg: CreateBetLegPayload = {
@@ -175,6 +177,8 @@ export interface DutchBetArgs {
   bonus: number
   rimborso: number
   legs: DutchBetLegArgs[]
+  /** Note of the bet: the boosted prices, when there are any (§14.274). */
+  nota?: string
 }
 
 /** Two or three back legs: the punta leg first (posizione 0), the covers in leg order. */
@@ -192,7 +196,7 @@ export function buildDutchBet(args: DutchBetArgs): BetPayloads {
     modalitaSaldo: 'reale',
     accountId: punta.accountId,
     tag: undefined,
-    nota: undefined,
+    nota: args.nota,
   }
 
   const legFor = (

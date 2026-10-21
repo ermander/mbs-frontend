@@ -46,6 +46,14 @@ describe('buildPuntaBancaBet', () => {
     partialLayResults: [],
   }
 
+  it('carries the note of a boosted price, and no note without one (§14.274)', () => {
+    const nota = 'Quota maggiorata: Punta Over su Sisal 2,05 +10 % → 2,155'
+    const boosted = buildPuntaBancaBet({ ...base, quotaPunta: 2.155, nota })
+    expect(boosted.betPayload.nota).toBe(nota)
+    expect(boosted.legsPayload[0].quota).toBe(2.155)
+    expect(buildPuntaBancaBet(base).betPayload.nota).toBeUndefined()
+  })
+
   it('one punta leg and one banca leg, the bet on the punta account, flagged as scanner', () => {
     const { betPayload, legsPayload } = buildPuntaBancaBet(base)
     expect(betPayload).toMatchObject({

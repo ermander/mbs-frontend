@@ -26,6 +26,7 @@ import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
 import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import {
+  CalcBoost,
   CalcFigure,
   CalcImbalance,
   CalcLayout,
@@ -40,6 +41,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import {
+  NO_BOOST,
+  boostNote,
+  boostPercent,
+  boostedOdds,
+  type BoostInput,
+} from '@/lib/calculators/boost'
 
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
@@ -98,6 +106,8 @@ export function PuntaPuntaCalculator() {
   const [scopePuntaA, setScopePuntaA] = useState<TeamScope | ''>('')
   const [scopePuntaB, setScopePuntaB] = useState<TeamScope | ''>('')
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
+  const [boostA, setBoostA] = useState<BoostInput>(NO_BOOST)
+  const [boostB, setBoostB] = useState<BoostInput>(NO_BOOST)
   const [isSaving, setIsSaving] = useState(false)
   const [holderModalError, setHolderModalError] = useState<string | null>(null)
   const [savedBetId, setSavedBetId] = useState<string | null>(null)
@@ -107,8 +117,12 @@ export function PuntaPuntaCalculator() {
   const bonusNum = parseNum(bonus) ?? 0
   const rimborsoNum = parseNum(rimborso) ?? 0
   const puntataEffettivaA = (puntataANum ?? 0) + bonusNum
-  const quotaANum = parseNum(quotaA)
-  const quotaBNum = parseNum(quotaB)
+  // §14.274: una punta maggiorata vale alla quota effettiva in tutto il calcolatore, giocata salvata
+  // compresa; la quota scritta va solo nella nota.
+  const boostAPct = boostPercent(boostA)
+  const boostBPct = boostPercent(boostB)
+  const quotaANum = boostedOdds(parseNum(quotaA), boostAPct)
+  const quotaBNum = boostedOdds(parseNum(quotaB), boostBPct)
 
   const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
   const imbalanceFactor = 1 + imbalancePercent / 100
@@ -368,7 +382,10 @@ export function PuntaPuntaCalculator() {
         modalitaSaldo: 'reale' as const,
         accountId: accountIdPuntaA,
         tag: undefined as string | undefined,
-        nota: undefined as string | undefined,
+        nota: boostNote([
+          { label: 'Punta 1', odds: parseNum(quotaA), percent: boostAPct },
+          { label: 'Punta 2', odds: parseNum(quotaB), percent: boostBPct },
+        ]),
       }
       const tipoBonusA = rimborsoNum > 0 ? 'rimborso' : bonusNum > 0 ? 'bonus' : 'none'
 
@@ -539,7 +556,15 @@ export function PuntaPuntaCalculator() {
                   value={amount(puntataEffettivaA > 0 ? puntataEffettivaA : null)}
                 />
               }
-            />
+            >
+              <CalcBoost
+                id="boost-a"
+                boost={boostA}
+                onChange={setBoostA}
+                effectiveOdds={boostAPct > 0 ? quotaANum : null}
+                className="col-span-full border-t border-ds-line pt-3"
+              />
+            </OutcomeRow>
             <OutcomeRow
               title="Punta 2"
               odds={
@@ -552,7 +577,15 @@ export function PuntaPuntaCalculator() {
                 />
               }
               figure={<CalcFigure label="Copertura" live value={amount(stakeB)} />}
-            />
+            >
+              <CalcBoost
+                id="boost-b"
+                boost={boostB}
+                onChange={setBoostB}
+                effectiveOdds={boostBPct > 0 ? quotaBNum : null}
+                className="col-span-full border-t border-ds-line pt-3"
+              />
+            </OutcomeRow>
 
             {stakeB != null && (
               <CalcPartials

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import {
+  CalcBoost,
   CalcImbalance,
   CalcNumberField,
   CalcOutcomeTable,
@@ -14,6 +15,13 @@ import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { computePuntaBanca } from '@/lib/calculators/engines/punta-banca-engine'
 import { parseNum } from '@/lib/calculators/engines/odds'
+import {
+  NO_BOOST,
+  boostNote,
+  boostPercent,
+  boostedOdds,
+  type BoostInput,
+} from '@/lib/calculators/boost'
 import { buildPuntaBancaBet, type BetEventInfo } from '@/lib/calculators/bet-payloads'
 import { outcomeName } from '@/lib/matcher/format'
 import { shortBookmakerName } from '@/lib/bookmakers'
@@ -68,6 +76,7 @@ export function PuntaBancaCalculatorView({
   const [imbalance, setImbalance] = useState(0)
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
+  const [boost, setBoost] = useState<BoostInput>(NO_BOOST)
 
   const [assignOpen, setAssignOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -77,7 +86,11 @@ export function PuntaBancaCalculatorView({
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
   const rimborsoNum = parseNum(rimborso) ?? 0
-  const quotaPuntaNum = parseNum(quotaPunta)
+  // §14.274: with a boost the whole calculator (lay, rating, profits, saved bet) runs on the
+  // effective price; the typed one only goes into the note.
+  const quotaPuntaTyped = parseNum(quotaPunta)
+  const boostPct = boostPercent(boost)
+  const quotaPuntaNum = boostedOdds(quotaPuntaTyped, boostPct)
   const quotaBancaNum = parseNum(quotaBanca)
   const commissioneNum = parseNum(commissione) ?? 0
 
@@ -175,6 +188,9 @@ export function PuntaBancaCalculatorView({
           newOdds: parseNum(p.newOdds),
         })),
         partialLayResults: result.partialLayResults,
+        nota: boostNote([
+          { label: `Punta ${selezione} su ${bookName}`, odds: quotaPuntaTyped, percent: boostPct },
+        ]),
       })
       const bet = await saveOngoingBetFromCalculator(betPayload, legsPayload)
       setSavedBetId(bet.id)
@@ -247,6 +263,14 @@ export function PuntaBancaCalculatorView({
                 }
                 figureLabel="Puntata"
                 figure={amount(result.puntataEffettiva > 0 ? result.puntataEffettiva : null)}
+                footer={
+                  <CalcBoost
+                    id="pb-boost"
+                    boost={boost}
+                    onChange={setBoost}
+                    effectiveOdds={boostPct > 0 ? quotaPuntaNum : null}
+                  />
+                }
               />
               <MatcherLegCard
                 tone="loss"

@@ -12,6 +12,7 @@ import { roundStake } from '@/lib/calculators/stake-step'
 import { PuntaBancaSaveModal } from '@/components/calculators/PuntaBancaSaveModal'
 import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import {
+  CalcBoost,
   CalcFigure,
   CalcImbalance,
   CalcLayout,
@@ -25,6 +26,13 @@ import {
   type OutcomeProfitRow,
 } from '@/components/calculators/calc-ds'
 import { formatOdds } from '@/lib/landing-format'
+import {
+  NO_BOOST,
+  boostNote,
+  boostPercent,
+  boostedOdds,
+  type BoostInput,
+} from '@/lib/calculators/boost'
 
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
@@ -43,12 +51,20 @@ export function PuntaBancaCalculator() {
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
   const [saveModalOpen, setSaveModalOpen] = useState(false)
   const [numConti, setNumConti] = useState('1')
+  const [boost, setBoost] = useState<BoostInput>(NO_BOOST)
 
   const puntataNum = parseNum(puntata)
   const bonusNum = parseNum(bonus) ?? 0
   const rimborsoNum = parseNum(rimborso) ?? 0
   const puntataEffettiva = (puntataNum ?? 0) + bonusNum
-  const quotaPuntaNum = parseNum(quotaPunta)
+  // §14.274: con la maggiorazione tutto il calcolatore (bancata, rating, profitti, giocata salvata)
+  // lavora sulla quota effettiva; quella scritta va solo nella nota.
+  const quotaPuntaTyped = parseNum(quotaPunta)
+  const boostPct = boostPercent(boost)
+  const quotaPuntaNum = useMemo(
+    () => boostedOdds(quotaPuntaTyped, boostPct),
+    [quotaPuntaTyped, boostPct],
+  )
   const commissioneNum = parseNum(commissione) ?? 0
   const quotaBancaNum = parseNum(quotaBanca)
   const imbalancePercent = Math.max(-30, Math.min(30, imbalance))
@@ -329,6 +345,13 @@ export function PuntaBancaCalculator() {
                 />
               }
             >
+              <CalcBoost
+                id="boost-punta"
+                boost={boost}
+                onChange={setBoost}
+                effectiveOdds={boostPct > 0 ? quotaPuntaNum : null}
+                className="col-span-full border-t border-ds-line pt-3"
+              />
               {numContiNum > 1 && (
                 <p className="ds-body-sm col-span-full m-0 text-ds-ink-muted">
                   Stessa puntata su {numContiNum} conti dello stesso sito: la bancata copre il
@@ -468,6 +491,7 @@ export function PuntaBancaCalculator() {
         partialLays={partialLays}
         partialLayResults={partialLayResults}
         numConti={numContiNum}
+        nota={boostNote([{ label: 'Punta', odds: quotaPuntaTyped, percent: boostPct }])}
       />
     </div>
   )

@@ -7,6 +7,7 @@ import { DsField, DsLabel } from '@/components/auth/ds-auth-primitives'
 import { DsMoney } from '@/components/landing/ds-data'
 import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { formatMoney, formatOdds } from '@/lib/landing-format'
+import { formatBoostedOdds } from '@/lib/calculators/boost'
 import { cn } from '@/lib/utils'
 
 /**
@@ -730,6 +731,79 @@ export function CalcSwitch({
         <span className="text-sm font-semibold leading-5">{label}</span>
       </button>
       {hint && <p className="ds-body-sm m-0 text-ds-ink-muted">{hint}</p>}
+    </div>
+  )
+}
+
+/**
+ * «Maggiorazione» del design (§14.274): lo Switch («Magg.» quando è acceso, per lasciare posto) e
+ * il campo della percentuale a destra; sotto, la quota effettiva su cui calcola il calcolatore. Il
+ * clic non risale (la scheda dutch che lo contiene è un radio).
+ */
+export function CalcBoost({
+  id,
+  boost,
+  onChange,
+  effectiveOdds,
+  className,
+}: {
+  id: string
+  boost: { on: boolean; percent: string }
+  onChange: (boost: { on: boolean; percent: string }) => void
+  /** La quota dopo la maggiorazione; null quando non c'è o non cambia. */
+  effectiveOdds: number | null
+  className?: string
+}) {
+  return (
+    <div
+      className={cn('flex w-full flex-col gap-1', className)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={boost.on}
+          aria-label="Maggiorazione della quota"
+          onClick={() => onChange({ ...boost, on: !boost.on })}
+          className="group inline-flex items-center gap-2.5 text-left text-ds-ink"
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'relative h-6 w-11 flex-none rounded-full transition-colors group-focus-visible:shadow-ds-focus',
+              boost.on ? 'bg-ds-brand' : 'bg-ds-line-strong',
+            )}
+          >
+            <span
+              className={cn(
+                'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
+                boost.on && 'translate-x-5',
+              )}
+            />
+          </span>
+          <span className="text-sm font-semibold leading-5">
+            {boost.on ? 'Magg.' : 'Maggiorazione'}
+          </span>
+        </button>
+        {boost.on && (
+          <CalcNumberField
+            id={id}
+            ariaLabel="Maggiorazione in percentuale"
+            size="sm"
+            suffix="%"
+            value={boost.percent}
+            onChange={(percent) => onChange({ ...boost, percent })}
+            className="w-[84px] flex-none"
+          />
+        )}
+      </div>
+      {boost.on && effectiveOdds != null && (
+        <span className="ds-caption text-left text-ds-ink-muted">
+          Quota effettiva{' '}
+          <b className="font-semibold text-ds-ink">{formatBoostedOdds(effectiveOdds)}</b>
+        </span>
+      )}
     </div>
   )
 }

@@ -53,6 +53,14 @@ describe('catalog', () => {
     expect(isCalculatorSlug('target-fun-bonus')).toBe(false)
   })
 
+  it('gives the wide column only to the tools already redesigned', () => {
+    expect(CALCULATOR_TOOLS.filter((t) => t.wide).map((t) => t.slug)).toEqual([
+      'punta-banca',
+      'punta-punta',
+      'tri-punta',
+    ])
+  })
+
   it('leaves the save action out only where there is no bet to save', () => {
     expect([...CALCULATORS_WITHOUT_SAVE]).toEqual(['fun-bonus'])
   })

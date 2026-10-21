@@ -9,6 +9,7 @@ import {
   stakeBFromStakeARimborso,
 } from '@/lib/calculators/punta-punta'
 import { roundStake } from '@/lib/calculators/stake-step'
+import { partialCoverReturn } from '@/lib/calculators/partial-cover'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
@@ -23,22 +24,27 @@ import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
-import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import {
+  CalcFigure,
+  CalcImbalance,
+  CalcLayout,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcPartials,
+  CalcProfits,
+  OutcomeRow,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Slider } from '@/components/ui/slider'
-import { cn } from '@/lib/utils'
 
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
   const n = Number.parseFloat(s.replace(',', '.'))
   return Number.isFinite(n) ? n : null
-}
-
-function formatNum(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '—'
-  return n.toFixed(2)
 }
 
 function formatSigned(n: number): string {
@@ -209,8 +215,6 @@ export function PuntaPuntaCalculator() {
     quotaBNum > 0 &&
     stakeB != null
 
-  const showRimborsoColumn = rimborsoNum > 0
-
   const loadAccountsForHolder = useCallback((holderId: string) => loadHolderAccounts(holderId), [])
 
   const handleChangeHolderPuntaA = useCallback(
@@ -280,12 +284,23 @@ export function PuntaPuntaCalculator() {
   const realOutlay = (puntataANum ?? 0) + (effectiveStakeB ?? 0)
   const profitIfAWins =
     quotaANum != null && effectiveStakeB != null ? puntataEffettivaA * quotaANum - realOutlay : null
-  const profitIfBWins =
-    effectiveStakeB != null && quotaBNum != null
-      ? effectiveStakeB * quotaBNum - realOutlay + rimborsoNum
-      : null
   const returnA = quotaANum != null ? puntataEffettivaA * quotaANum : null
-  const returnB = effectiveStakeB != null && quotaBNum != null ? effectiveStakeB * quotaBNum : null
+  // Con le contropuntate parziali ogni pezzo della punta 2 vale alla quota a cui è stato giocato
+  // (§14.270): prima tutta la punta 2 andava alla quota iniziale.
+  const returnB =
+    effectiveStakeB == null || quotaBNum == null
+      ? null
+      : partialPuntaTotals != null
+        ? partialCoverReturn(
+            quotaBNum,
+            partialPuntas.map((p) => ({
+              amount: parseNum(p.amount),
+              newOdds: parseNum(p.newOdds),
+            })),
+            partialPuntaResults[partialPuntaResults.length - 1]?.newStake ?? null,
+          )
+        : effectiveStakeB * quotaBNum
+  const profitIfBWins = returnB != null ? returnB - realOutlay + rimborsoNum : null
 
   const guadagnoMinimo = useMemo(() => {
     if (profitIfAWins == null || profitIfBWins == null) return null
@@ -465,427 +480,151 @@ export function PuntaPuntaCalculator() {
     }
   }
 
+  const showCr = rimborsoNum > 0 && crPercent != null
+  const profitRows: OutcomeProfitRow[] =
+    showSummary &&
+    returnA != null &&
+    returnB != null &&
+    profitIfAWins != null &&
+    profitIfBWins != null
+      ? [
+          {
+            id: 'a',
+            esito: 'Se vince la punta 1',
+            legs: [
+              bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
+              -(effectiveStakeB ?? 0),
+            ],
+            rimborso: 0,
+            totale: profitIfAWins,
+          },
+          {
+            id: 'b',
+            esito: 'Se vince la punta 2',
+            legs: [
+              bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA,
+              returnB - (effectiveStakeB ?? 0),
+            ],
+            rimborso: rimborsoNum,
+            totale: profitIfBWins,
+          },
+        ]
+      : []
+
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Sezione input */}
-      <div className="border-b border-border bg-muted/40 p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="puntata-a">Puntata A</Label>
-            <div className="relative">
-              <Input
-                id="puntata-a"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={puntataA}
-                onChange={(e) => setPuntataA(e.target.value)}
-                className="pr-8"
+    <div className="flex flex-col gap-8">
+      <CalculatorRating
+        label={showCr ? 'CR' : 'Rating'}
+        value={showCr ? crPercent : showSummary ? rating : null}
+      />
+
+      <CalcLayout
+        outcomes={
+          <>
+            <OutcomeRow
+              title="Punta 1"
+              odds={
+                <CalcNumberField
+                  id="quota-a"
+                  ariaLabel="Quota della punta 1"
+                  size="sm"
+                  value={quotaA}
+                  onChange={setQuotaA}
+                />
+              }
+              figure={
+                <CalcFigure
+                  label="Puntata"
+                  live
+                  value={amount(puntataEffettivaA > 0 ? puntataEffettivaA : null)}
+                />
+              }
+            />
+            <OutcomeRow
+              title="Punta 2"
+              odds={
+                <CalcNumberField
+                  id="quota-b"
+                  ariaLabel="Quota della punta 2"
+                  size="sm"
+                  value={quotaB}
+                  onChange={setQuotaB}
+                />
+              }
+              figure={<CalcFigure label="Copertura" live value={amount(stakeB)} />}
+            />
+
+            {stakeB != null && (
+              <CalcPartials
+                idPrefix="partial"
+                title="Contropuntata parziale"
+                amountLabel="Già puntato"
+                oddsLabel="Nuova quota punta 2"
+                addLabel="Aggiungi contropuntata parziale"
+                entries={partialPuntas}
+                results={partialPuntaResults}
+                figures={(r) => [{ label: 'Nuova punta 2', value: amount(r?.newStake) }]}
+                total={
+                  hasValidPartialPuntas && partialPuntaTotals != null ? (
+                    <>
+                      Punta 2 in tutto{' '}
+                      <b className="ds-num text-ds-ink">{amount(partialPuntaTotals.totalStakeB)}</b>
+                    </>
+                  ) : undefined
+                }
+                onAdd={addPartialPunta}
+                onRemove={removePartialPunta}
+                onChange={updatePartialPunta}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quota-a">Quota Punta A</Label>
-            <div className="relative">
-              <Input
-                id="quota-a"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                value={quotaA}
-                onChange={(e) => setQuotaA(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="quota-b">Quota Punta B</Label>
-            <div className="relative">
-              <Input
-                id="quota-b"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                value={quotaB}
-                onChange={(e) => setQuotaB(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bonus">Saldo bonus (opz.)</Label>
-            <div className="relative">
-              <Input
+            )}
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="puntata-a"
+              label="Puntata reale"
+              size="lg"
+              suffix="€"
+              value={puntataA}
+              onChange={setPuntataA}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
                 id="bonus"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
+                label="Puntata bonus"
+                suffix="€"
                 value={bonus}
-                onChange={(e) => setBonus(e.target.value)}
-                className="pr-8"
+                onChange={setBonus}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rimborso">Valore rimborso</Label>
-            <div className="relative">
-              <Input
+              <CalcNumberField
                 id="rimborso"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
+                label="Rimborso"
+                suffix="€"
                 value={rimborso}
-                onChange={(e) => setRimborso(e.target.value)}
-                className="pr-8"
+                onChange={setRimborso}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
             </div>
-          </div>
-        </div>
-      </div>
+            <CalcImbalance
+              label="Sbilancia la copertura"
+              value={imbalancePercent}
+              onChange={setImbalance}
+            />
+          </>
+        }
+      />
 
-      {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="border-b border-border p-4">
-        <Label className="mb-2 block">Sbilanciamento della Puntata B</Label>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">−30%</span>
-          <Slider
-            value={[imbalance]}
-            onValueChange={([v]) => setImbalance(v ?? 0)}
-            min={-30}
-            max={30}
-            step={0.2}
-            className="flex-1"
-          />
-          <span className="text-xs text-muted-foreground">+30%</span>
-        </div>
-        <p className="mt-1 text-center text-xs text-muted-foreground">
-          {imbalance === 0
-            ? 'Standard (0%)'
-            : imbalance > 0
-              ? `+${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`
-              : `${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`}
-        </p>
-      </div>
-
-      {/* Riepilogo */}
-      {showSummary && guadagnoMinimo != null && (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {bonusNum > 0 && rimborsoNum > 0
-              ? 'BONUS + RIMBORSO \u2022 '
-              : bonusNum > 0
-                ? 'BONUS \u2022 '
-                : rimborsoNum > 0
-                  ? 'RIMBORSO \u2022 '
-                  : ''}
-            Riepilogo
-          </div>
-          <div className="space-y-2 p-4 text-sm">
-            <p>
-              {rimborsoNum > 0 && crPercent != null
-                ? `CR%: ${crPercent.toFixed(2)}%`
-                : `Rating: ${rating != null ? rating.toFixed(2) : '\u2014'}%`}
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">
-                {formatNum(puntataEffettivaA)} €
-              </span>
-              {bonusNum > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (di cui {formatNum(bonusNum)} € bonus)
-                </span>
-              )}{' '}
-              a quota <span className="font-mono">{formatNum(quotaANum)}</span> sul Book A.
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">{formatNum(stakeB)} €</span> a
-              quota <span className="font-mono">{formatNum(quotaBNum)}</span> sul Book B.
-            </p>
-            {hasValidPartialPuntas && partialPuntaTotals != null && (
-              <p>
-                <span className="font-medium text-primary">Nuova Puntata B totale:</span>{' '}
-                <span className="font-mono text-primary">
-                  {formatNum(partialPuntaTotals.totalStakeB)} €
-                </span>
-              </p>
-            )}
-            <p>
-              Il guadagno minimo sarà{' '}
-              <span
-                className={cn(
-                  'font-mono',
-                  guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
-                )}
-              >
-                {formatSigned(guadagnoMinimo)} €
-              </span>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tabella dei profitti */}
-      {showSummary &&
-        returnA != null &&
-        returnB != null &&
-        profitIfAWins != null &&
-        profitIfBWins != null && (
-          <div className="border-b border-border bg-card">
-            <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-              {bonusNum > 0 && rimborsoNum > 0
-                ? 'BONUS + RIMBORSO \u2022 '
-                : bonusNum > 0
-                  ? 'BONUS \u2022 '
-                  : rimborsoNum > 0
-                    ? 'RIMBORSO \u2022 '
-                    : ''}
-              Tabella dei profitti
-            </div>
-
-            {/* Layout a card solo su mobile (< sm) */}
-            <div className="block space-y-3 p-4 sm:hidden">
-              <div className="rounded-xl border border-border bg-accent p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book A:</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book A</span>
-                    <span className="text-primary">
-                      {formatSigned(
-                        bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
-                      )}{' '}
-                      €
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book B</span>
-                    <span className="text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))} €
-                    </span>
-                  </div>
-                  {showRimborsoColumn && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-muted-foreground">{formatSigned(0)} €</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span className="text-foreground">Totale</span>
-                    <span className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}>
-                      = {formatSigned(profitIfAWins)} €
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-xl border border-border bg-accent p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book B:</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book A</span>
-                    <span className="text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)} €
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book B</span>
-                    <span className="text-primary">
-                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))} €
-                    </span>
-                  </div>
-                  {showRimborsoColumn && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-primary">{formatSigned(rimborsoNum)} €</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span className="text-foreground">Totale</span>
-                    <span className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}>
-                      = {formatSigned(profitIfBWins)} €
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabella da sm in su */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full whitespace-nowrap text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[40%] p-3 text-left font-normal'
-                          : 'w-[50%] p-3 text-left font-normal'
-                      }
-                    ></th>
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[14%] p-3 text-right font-normal'
-                          : 'w-[16%] p-3 text-right font-normal'
-                      }
-                    >
-                      Book A
-                    </th>
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[14%] p-3 text-right font-normal'
-                          : 'w-[16%] p-3 text-right font-normal'
-                      }
-                    >
-                      Book B
-                    </th>
-                    {showRimborsoColumn && (
-                      <th className="w-[14%] p-3 text-right font-normal">Rimborso</th>
-                    )}
-                    <th className="w-[18%] min-w-[5.5rem] p-3 text-right font-normal">Totale</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-border bg-accent transition-colors hover:bg-accent">
-                    <td className="p-3">Se vinci sul Book A:</td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned(
-                        bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
-                      )}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))}
-                    </td>
-                    {showRimborsoColumn && (
-                      <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
-                    )}
-                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
-                      <span
-                        className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(profitIfAWins)} €
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="bg-accent transition-colors hover:bg-accent">
-                    <td className="p-3">Se vinci sul Book B:</td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
-                    </td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))}
-                    </td>
-                    {showRimborsoColumn && (
-                      <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
-                    )}
-                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
-                      <span
-                        className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(profitIfBWins)} €
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-      {/* Contropuntata parziale (multi-step) */}
-      {stakeB != null && (
-        <div className="border-b border-border p-4">
-          <div className="space-y-3">
-            {partialPuntas.map((pp, i) => {
-              const result = partialPuntaResults[i] ?? null
-              return (
-                <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
-                      Contropuntata parziale {partialPuntas.length > 1 ? `#${i + 1}` : ''}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => removePartialPunta(i)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-amount-${i}`} className="text-xs sm:text-sm">
-                        Già puntato €
-                      </Label>
-                      <Input
-                        id={`partial-amount-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.amount}
-                        onChange={(e) => updatePartialPunta(i, 'amount', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-odds-${i}`} className="text-xs sm:text-sm">
-                        Nuova quota punta B
-                      </Label>
-                      <Input
-                        id={`partial-odds-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.newOdds}
-                        onChange={(e) => updatePartialPunta(i, 'newOdds', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                  </div>
-                  {result != null && (
-                    <div className="mt-3 rounded-lg bg-background/60 p-2.5">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                        Nuova puntata B
-                      </p>
-                      <p className="font-mono text-sm font-semibold text-primary">
-                        {formatNum(result.newStake)} €
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {partialPuntas.length < 6 && (
-              <button
-                type="button"
-                onClick={addPartialPunta}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
-              >
-                <span className="text-base leading-none">+</span>
-                Contropuntata parziale
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <CalcProfits
+        outlay={showSummary ? realOutlay : null}
+        minGain={showSummary ? guadagnoMinimo : null}
+      >
+        <CalcOutcomeTable
+          legLabels={['Punta 1', 'Punta 2']}
+          rows={profitRows}
+          stake={puntataANum ?? 0}
+          emptyText="Il risultato compare quando la puntata e le quote delle due punte sono compilate e valide."
+        />
+      </CalcProfits>
 
       <CalculatorSaveAction onClick={handleOpenModal} disabled={!showSummary} />
 

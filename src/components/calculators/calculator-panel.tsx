@@ -9,6 +9,7 @@ import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
 import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { CALCULATORS_WITHOUT_SAVE, type CalculatorTool } from '@/lib/calculators/catalog'
+import { formatRating } from '@/lib/landing-format'
 import { cn } from '@/lib/utils'
 
 /**
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils'
  */
 
 const SaveSlotContext = React.createContext<HTMLElement | null>(null)
+const RatingSlotContext = React.createContext<HTMLElement | null>(null)
 
 /** Classe del ponte shadcn → ds-* in globals.css. */
 const BRIDGE_CLASS = 'ds-calc-bridge'
@@ -59,6 +61,7 @@ export function CalculatorPanel({
   children: React.ReactNode
 }) {
   const [saveSlot, setSaveSlot] = React.useState<HTMLElement | null>(null)
+  const [ratingSlot, setRatingSlot] = React.useState<HTMLElement | null>(null)
   const backRef = React.useRef<HTMLButtonElement>(null)
   const onCloseRef = React.useRef(onClose)
   React.useEffect(() => {
@@ -105,7 +108,8 @@ export function CalculatorPanel({
               className={cn(dsButtonClass('ghost', 'sm'), 'shrink-0 px-2')}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
-              Calcolatori
+              {/* Sul telefono solo la freccia: lo spazio va al nome e al rating. */}
+              <span className="sr-only sm:not-sr-only">Calcolatori</span>
             </button>
             <span className="h-6 w-px shrink-0 bg-ds-line" aria-hidden />
             <span className="flex min-w-0 items-center gap-2.5">
@@ -116,19 +120,31 @@ export function CalculatorPanel({
               {admin && <AdminBadge className="hidden sm:inline-flex" />}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Chiudi il calcolatore"
-            className={cn(dsButtonClass('ghost', 'sm'), 'w-8 shrink-0 px-0')}
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+          <div className="flex shrink-0 items-center gap-4">
+            <div ref={setRatingSlot} className="contents" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Chiudi il calcolatore"
+              className={cn(dsButtonClass('ghost', 'sm'), 'w-8 shrink-0 px-0')}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
 
       <SaveSlotContext.Provider value={saveSlot}>
-        <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">{children}</div>
+        <RatingSlotContext.Provider value={ratingSlot}>
+          <div
+            className={cn(
+              'mx-auto w-full px-4 py-8 sm:px-6',
+              tool.wide ? 'max-w-[1200px]' : 'max-w-3xl',
+            )}
+          >
+            {children}
+          </div>
+        </RatingSlotContext.Provider>
       </SaveSlotContext.Provider>
 
       <div className="sticky bottom-0 mt-auto border-t border-ds-line bg-ds-surface">
@@ -149,6 +165,39 @@ export function AdminBadge({ className }: { className?: string }) {
       <Lock className="h-3 w-3" aria-hidden />
       Solo admin
     </DsBadge>
+  )
+}
+
+/**
+ * Il rating (o il CR% con il rimborso) nella testata del pannello, a destra prima della X. Da 100 %
+ * in su è il badge in profit del design, sotto è la cifra in ink; senza valore «—». `plain`
+ * mostra sempre la cifra: per i rating che non misurano la resa (in punta-banca è bancata su
+ * puntata, e 100 % non vuol dire guadagno).
+ */
+export function CalculatorRating({
+  label,
+  value,
+  plain,
+}: {
+  label: string
+  value: number | null
+  plain?: boolean
+}) {
+  const slot = React.useContext(RatingSlotContext)
+  if (!slot) return null
+  const shown = value != null && Number.isFinite(value)
+  return createPortal(
+    <span className="ds-body-sm inline-flex items-center gap-1.5 whitespace-nowrap text-ds-ink-muted">
+      {label}{' '}
+      {shown && !plain && value >= 100 ? (
+        <DsBadge tone="profit" className="text-[13px] font-semibold tabular-nums tracking-normal">
+          {formatRating(value)}
+        </DsBadge>
+      ) : (
+        <span className="ds-num text-ds-ink">{shown ? formatRating(value) : '—'}</span>
+      )}
+    </span>,
+    slot,
   )
 }
 

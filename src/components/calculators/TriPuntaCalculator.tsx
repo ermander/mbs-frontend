@@ -2,13 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Loader2, Send, X } from 'lucide-react'
+import { Loader2, Send, X } from 'lucide-react'
 import {
   ratingPercent,
   stakeBCFromStakeA,
   stakeBCFromStakeARimborso,
 } from '@/lib/calculators/tri-punta'
 import { roundStake } from '@/lib/calculators/stake-step'
+import { partialCoverReturn } from '@/lib/calculators/partial-cover'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { type CreateBetLegPayload } from '@/services/api/profit-tracker-client'
@@ -23,30 +24,27 @@ import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
-import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import {
+  CalcFigure,
+  CalcImbalance,
+  CalcLayout,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcPartials,
+  CalcProfits,
+  OutcomeRow,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Slider } from '@/components/ui/slider'
-import { cn } from '@/lib/utils'
-
-const TIPOLOGIE = ['NORMALE'] as const
 
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
   const n = Number.parseFloat(s.replace(',', '.'))
   return Number.isFinite(n) ? n : null
-}
-
-function formatNum(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '—'
-  return n.toFixed(2)
 }
 
 function formatSigned(n: number): string {
@@ -78,7 +76,6 @@ export function TriPuntaCalculator() {
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
 
-  const [tipologia, setTipologia] = useState<(typeof TIPOLOGIE)[number]>('NORMALE')
   const [puntataA, setPuntataA] = useState('')
   const [quotaA, setQuotaA] = useState('')
   const [quotaB, setQuotaB] = useState('')
@@ -268,8 +265,6 @@ export function TriPuntaCalculator() {
       return null
     return ratingPercent(quotaANum, quotaBNum, quotaCNum)
   }, [quotaANum, quotaBNum, quotaCNum])
-
-  const showRimborsoColumn = rimborsoNum > 0
 
   const showSummary =
     puntataEffettivaA > 0 &&
@@ -604,17 +599,39 @@ export function TriPuntaCalculator() {
     quotaANum != null && effectiveStakeB != null && effectiveStakeC != null
       ? puntataEffettivaA * quotaANum - realOutlay
       : null
-  const profitIfBWins =
-    effectiveStakeB != null && quotaBNum != null && effectiveStakeC != null
-      ? effectiveStakeB * quotaBNum - realOutlay + rimborsoNum
-      : null
-  const profitIfCWins =
-    effectiveStakeC != null && quotaCNum != null && effectiveStakeB != null
-      ? effectiveStakeC * quotaCNum - realOutlay + rimborsoNum
-      : null
   const returnA = quotaANum != null ? puntataEffettivaA * quotaANum : null
-  const returnB = effectiveStakeB != null && quotaBNum != null ? effectiveStakeB * quotaBNum : null
-  const returnC = effectiveStakeC != null && quotaCNum != null ? effectiveStakeC * quotaCNum : null
+  // Con le contropuntate parziali ogni pezzo della punta 2 o 3 vale alla quota a cui è stato
+  // giocato (§14.270): prima tutta la punta andava alla quota iniziale.
+  const returnB =
+    effectiveStakeB == null || quotaBNum == null
+      ? null
+      : partialPuntaTotalsB != null
+        ? partialCoverReturn(
+            quotaBNum,
+            partialPuntasB.map((p) => ({
+              amount: parseNum(p.amount),
+              newOdds: parseNum(p.newOdds),
+            })),
+            partialPuntaResultsB[partialPuntaResultsB.length - 1]?.newStake ?? null,
+          )
+        : effectiveStakeB * quotaBNum
+  const returnC =
+    effectiveStakeC == null || quotaCNum == null
+      ? null
+      : partialPuntaTotalsC != null
+        ? partialCoverReturn(
+            quotaCNum,
+            partialPuntasC.map((p) => ({
+              amount: parseNum(p.amount),
+              newOdds: parseNum(p.newOdds),
+            })),
+            partialPuntaResultsC[partialPuntaResultsC.length - 1]?.newStake ?? null,
+          )
+        : effectiveStakeC * quotaCNum
+  const profitIfBWins =
+    returnB != null && effectiveStakeC != null ? returnB - realOutlay + rimborsoNum : null
+  const profitIfCWins =
+    returnC != null && effectiveStakeB != null ? returnC - realOutlay + rimborsoNum : null
 
   const guadagnoMinimo = useMemo(() => {
     if (profitIfAWins == null || profitIfBWins == null || profitIfCWins == null) return null
@@ -655,655 +672,197 @@ export function TriPuntaCalculator() {
     guadagnoMinimo,
   ])
 
+  const showCr = rimborsoNum > 0 && crPercent != null
+  const stakeALoss = bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA
+  const profitRows: OutcomeProfitRow[] =
+    showSummary &&
+    returnA != null &&
+    profitIfAWins != null &&
+    profitIfBWins != null &&
+    profitIfCWins != null
+      ? [
+          {
+            id: 'a',
+            esito: 'Se vince la punta 1',
+            legs: [
+              bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
+              -(effectiveStakeB ?? 0),
+              -(effectiveStakeC ?? 0),
+            ],
+            rimborso: 0,
+            totale: profitIfAWins,
+          },
+          {
+            id: 'b',
+            esito: 'Se vince la punta 2',
+            legs: [stakeALoss, (returnB ?? 0) - (effectiveStakeB ?? 0), -(effectiveStakeC ?? 0)],
+            rimborso: rimborsoNum,
+            totale: profitIfBWins,
+          },
+          {
+            id: 'c',
+            esito: 'Se vince la punta 3',
+            legs: [stakeALoss, -(effectiveStakeB ?? 0), (returnC ?? 0) - (effectiveStakeC ?? 0)],
+            rimborso: rimborsoNum,
+            totale: profitIfCWins,
+          },
+        ]
+      : []
+
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Barra superiore */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="tipologia" className="text-sm text-muted-foreground">
-            Tipologia
-          </Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                id="tipologia"
-                variant="secondary"
-                size="sm"
-                className="min-w-[10rem] justify-between"
-              >
-                {tipologia}
-                <ChevronDown className="h-4 w-4 opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {TIPOLOGIE.map((t) => (
-                <DropdownMenuItem key={t} onSelect={() => setTipologia(t)}>
-                  {t}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+    <div className="flex flex-col gap-8">
+      <CalculatorRating
+        label={showCr ? 'CR' : 'Rating'}
+        value={showCr ? crPercent : showSummary ? rating : null}
+      />
 
-      {/* Sezione input */}
-      <div className="border-b border-border bg-muted/40 p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="puntata-a">Puntata A</Label>
-            <div className="relative">
-              <Input
-                id="puntata-a"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={puntataA}
-                onChange={(e) => setPuntataA(e.target.value)}
-                className="pr-8"
+      <CalcLayout
+        outcomes={
+          <>
+            <OutcomeRow
+              title="Punta 1"
+              odds={
+                <CalcNumberField
+                  id="quota-a"
+                  ariaLabel="Quota della punta 1"
+                  size="sm"
+                  value={quotaA}
+                  onChange={setQuotaA}
+                />
+              }
+              figure={
+                <CalcFigure
+                  label="Puntata"
+                  live
+                  value={amount(puntataEffettivaA > 0 ? puntataEffettivaA : null)}
+                />
+              }
+            />
+            <OutcomeRow
+              title="Punta 2"
+              odds={
+                <CalcNumberField
+                  id="quota-b"
+                  ariaLabel="Quota della punta 2"
+                  size="sm"
+                  value={quotaB}
+                  onChange={setQuotaB}
+                />
+              }
+              figure={<CalcFigure label="Copertura" live value={amount(stakeB)} />}
+            />
+            <OutcomeRow
+              title="Punta 3"
+              odds={
+                <CalcNumberField
+                  id="quota-c"
+                  ariaLabel="Quota della punta 3"
+                  size="sm"
+                  value={quotaC}
+                  onChange={setQuotaC}
+                />
+              }
+              figure={<CalcFigure label="Copertura" live value={amount(stakeC)} />}
+            />
+
+            {stakeB != null && (
+              <CalcPartials
+                idPrefix="partial-b"
+                title="Contropuntata parziale su punta 2"
+                amountLabel="Già puntato"
+                oddsLabel="Nuova quota punta 2"
+                addLabel="Contropuntata parziale su punta 2"
+                entries={partialPuntasB}
+                results={partialPuntaResultsB}
+                figures={(r) => [{ label: 'Nuova punta 2', value: amount(r?.newStake) }]}
+                total={
+                  hasValidPartialPuntasB && partialPuntaTotalsB != null ? (
+                    <>
+                      Punta 2 in tutto{' '}
+                      <b className="ds-num text-ds-ink">
+                        {amount(partialPuntaTotalsB.totalStakeB)}
+                      </b>
+                    </>
+                  ) : undefined
+                }
+                onAdd={addPartialPuntaB}
+                onRemove={removePartialPuntaB}
+                onChange={updatePartialPuntaB}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                &euro;
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quota-a">Quota Punta A</Label>
-            <div className="relative">
-              <Input
-                id="quota-a"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                value={quotaA}
-                onChange={(e) => setQuotaA(e.target.value)}
-                className="pr-8"
+            )}
+            {stakeC != null && (
+              <CalcPartials
+                idPrefix="partial-c"
+                title="Contropuntata parziale su punta 3"
+                amountLabel="Già puntato"
+                oddsLabel="Nuova quota punta 3"
+                addLabel="Contropuntata parziale su punta 3"
+                entries={partialPuntasC}
+                results={partialPuntaResultsC}
+                figures={(r) => [{ label: 'Nuova punta 3', value: amount(r?.newStake) }]}
+                total={
+                  hasValidPartialPuntasC && partialPuntaTotalsC != null ? (
+                    <>
+                      Punta 3 in tutto{' '}
+                      <b className="ds-num text-ds-ink">
+                        {amount(partialPuntaTotalsC.totalStakeC)}
+                      </b>
+                    </>
+                  ) : undefined
+                }
+                onAdd={addPartialPuntaC}
+                onRemove={removePartialPuntaC}
+                onChange={updatePartialPuntaC}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quota-b">Quota Punta B</Label>
-            <div className="relative">
-              <Input
-                id="quota-b"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                value={quotaB}
-                onChange={(e) => setQuotaB(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="quota-c">Quota Punta C</Label>
-            <div className="relative">
-              <Input
-                id="quota-c"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                placeholder="0"
-                value={quotaC}
-                onChange={(e) => setQuotaC(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bonus">Saldo bonus (opz.)</Label>
-            <div className="relative">
-              <Input
+            )}
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="puntata-a"
+              label="Puntata reale"
+              size="lg"
+              suffix="€"
+              value={puntataA}
+              onChange={setPuntataA}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
                 id="bonus"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
+                label="Puntata bonus"
+                suffix="€"
                 value={bonus}
-                onChange={(e) => setBonus(e.target.value)}
-                className="pr-8"
+                onChange={setBonus}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                &euro;
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rimborso">Valore rimborso</Label>
-            <div className="relative">
-              <Input
+              <CalcNumberField
                 id="rimborso"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
+                label="Rimborso"
+                suffix="€"
                 value={rimborso}
-                onChange={(e) => setRimborso(e.target.value)}
-                className="pr-8"
+                onChange={setRimborso}
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                &euro;
-              </span>
             </div>
-          </div>
-        </div>
-      </div>
+            <CalcImbalance
+              label="Sbilancia le coperture"
+              value={imbalancePercent}
+              onChange={setImbalance}
+            />
+          </>
+        }
+      />
 
-      {/* Slider Sbilanciamento (-30% … +30%) */}
-      <div className="border-b border-border p-4">
-        <Label className="mb-2 block">Sbilanciamento delle Puntate B e C</Label>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">&minus;30%</span>
-          <Slider
-            value={[imbalance]}
-            onValueChange={([v]) => setImbalance(v ?? 0)}
-            min={-30}
-            max={30}
-            step={0.2}
-            className="flex-1"
-          />
-          <span className="text-xs text-muted-foreground">+30%</span>
-        </div>
-        <p className="mt-1 text-center text-xs text-muted-foreground">
-          {imbalance === 0
-            ? 'Standard (0%)'
-            : imbalance > 0
-              ? `+${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`
-              : `${Number.isInteger(imbalance) ? imbalance : imbalance.toFixed(1)}%`}
-        </p>
-      </div>
-
-      {/* Riepilogo */}
-      {showSummary && (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {bonusNum > 0 && rimborsoNum > 0
-              ? 'BONUS + RIMBORSO \u2022 '
-              : bonusNum > 0
-                ? 'BONUS \u2022 '
-                : rimborsoNum > 0
-                  ? 'RIMBORSO \u2022 '
-                  : ''}
-            Riepilogo
-          </div>
-          <div className="space-y-2 p-4 text-sm">
-            <p>
-              {rimborsoNum > 0 && crPercent != null
-                ? `CR%: ${crPercent.toFixed(2)}%`
-                : `Rating: ${rating != null ? rating.toFixed(2) : '\u2014'}%`}
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">
-                {formatNum(puntataEffettivaA)} &euro;
-              </span>
-              {bonusNum > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (di cui {formatNum(bonusNum)} &euro; bonus)
-                </span>
-              )}{' '}
-              a quota <span className="font-mono">{formatNum(quotaANum)}</span> sul Book A.
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">{formatNum(stakeB)} &euro;</span>{' '}
-              a quota <span className="font-mono">{formatNum(quotaBNum)}</span> sul Book B.
-            </p>
-            {hasValidPartialPuntasB && partialPuntaTotalsB != null && (
-              <p>
-                <span className="font-medium text-primary">Nuova Puntata B totale:</span>{' '}
-                <span className="font-mono text-primary">
-                  {formatNum(partialPuntaTotalsB.totalStakeB)} &euro;
-                </span>
-              </p>
-            )}
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">{formatNum(stakeC)} &euro;</span>{' '}
-              a quota <span className="font-mono">{formatNum(quotaCNum)}</span> sul Book C.
-            </p>
-            {hasValidPartialPuntasC && partialPuntaTotalsC != null && (
-              <p>
-                <span className="font-medium text-primary">Nuova Puntata C totale:</span>{' '}
-                <span className="font-mono text-primary">
-                  {formatNum(partialPuntaTotalsC.totalStakeC)} &euro;
-                </span>
-              </p>
-            )}
-            {guadagnoMinimo != null && (
-              <p>
-                Il guadagno minimo sar&agrave;{' '}
-                <span
-                  className={cn(
-                    'font-mono',
-                    guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
-                  )}
-                >
-                  {formatSigned(guadagnoMinimo)} &euro;
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Tabella dei profitti */}
-      {showSummary &&
-        returnA != null &&
-        returnB != null &&
-        returnC != null &&
-        profitIfAWins != null &&
-        profitIfBWins != null &&
-        profitIfCWins != null && (
-          <div className="border-b border-border bg-card">
-            <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-              {bonusNum > 0 && rimborsoNum > 0
-                ? 'BONUS + RIMBORSO \u2022 '
-                : bonusNum > 0
-                  ? 'BONUS \u2022 '
-                  : rimborsoNum > 0
-                    ? 'RIMBORSO \u2022 '
-                    : ''}
-              Tabella dei profitti
-            </div>
-
-            {/* Layout a card solo su mobile (< sm) */}
-            <div className="block space-y-3 p-4 sm:hidden">
-              {/* Card: Se vinci sul Book A */}
-              <div className="rounded-xl border border-border bg-accent p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book A:</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book A</span>
-                    <span className="text-primary">
-                      {formatSigned(
-                        bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
-                      )}{' '}
-                      &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book B</span>
-                    <span className="text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))} &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book C</span>
-                    <span className="text-destructive">
-                      {formatSigned(-(effectiveStakeC ?? 0))} &euro;
-                    </span>
-                  </div>
-                  {showRimborsoColumn && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-muted-foreground">{formatSigned(0)} &euro;</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span className="text-foreground">Totale</span>
-                    <span className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}>
-                      = {formatSigned(profitIfAWins)} &euro;
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Card: Se vinci sul Book B */}
-              <div className="rounded-xl border border-border bg-accent p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book B:</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book A</span>
-                    <span className="text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)} &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book B</span>
-                    <span className="text-primary">
-                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))} &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book C</span>
-                    <span className="text-destructive">
-                      {formatSigned(-(effectiveStakeC ?? 0))} &euro;
-                    </span>
-                  </div>
-                  {showRimborsoColumn && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-primary">{formatSigned(rimborsoNum)} &euro;</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span className="text-foreground">Totale</span>
-                    <span className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}>
-                      = {formatSigned(profitIfBWins)} &euro;
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Card: Se vinci sul Book C */}
-              <div className="rounded-xl border border-border bg-accent p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Se vinci sul Book C:</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book A</span>
-                    <span className="text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)} &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book B</span>
-                    <span className="text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))} &euro;
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Book C</span>
-                    <span className="text-primary">
-                      {formatSigned((returnC ?? 0) - (effectiveStakeC ?? 0))} &euro;
-                    </span>
-                  </div>
-                  {showRimborsoColumn && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Rimborso</span>
-                      <span className="text-primary">{formatSigned(rimborsoNum)} &euro;</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-t border-border pt-2 font-medium">
-                    <span className="text-foreground">Totale</span>
-                    <span className={cn(profitIfCWins >= 0 ? 'text-primary' : 'text-destructive')}>
-                      = {formatSigned(profitIfCWins)} &euro;
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tabella da sm in su */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full whitespace-nowrap text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[30%] p-3 text-left font-normal'
-                          : 'w-[36%] p-3 text-left font-normal'
-                      }
-                    ></th>
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[12%] p-3 text-right font-normal'
-                          : 'w-[13%] p-3 text-right font-normal'
-                      }
-                    >
-                      Book A
-                    </th>
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[12%] p-3 text-right font-normal'
-                          : 'w-[13%] p-3 text-right font-normal'
-                      }
-                    >
-                      Book B
-                    </th>
-                    <th
-                      className={
-                        showRimborsoColumn
-                          ? 'w-[12%] p-3 text-right font-normal'
-                          : 'w-[13%] p-3 text-right font-normal'
-                      }
-                    >
-                      Book C
-                    </th>
-                    {showRimborsoColumn && (
-                      <th className="w-[12%] p-3 text-right font-normal">Rimborso</th>
-                    )}
-                    <th className="w-[18%] min-w-[5.5rem] p-3 text-right font-normal">Totale</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-border bg-accent transition-colors hover:bg-accent">
-                    <td className="p-3">Se vinci sul Book A:</td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned(
-                        bonusNum > 0 ? returnA - (puntataANum ?? 0) : returnA - puntataEffettivaA,
-                      )}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(effectiveStakeC ?? 0))}
-                    </td>
-                    {showRimborsoColumn && (
-                      <td className="p-3 text-right text-muted-foreground">{formatSigned(0)}</td>
-                    )}
-                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
-                      <span
-                        className={cn(profitIfAWins >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(profitIfAWins)} &euro;
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-border bg-accent transition-colors hover:bg-accent">
-                    <td className="p-3">Se vinci sul Book B:</td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
-                    </td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned((returnB ?? 0) - (effectiveStakeB ?? 0))}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(effectiveStakeC ?? 0))}
-                    </td>
-                    {showRimborsoColumn && (
-                      <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
-                    )}
-                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
-                      <span
-                        className={cn(profitIfBWins >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(profitIfBWins)} &euro;
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="bg-accent transition-colors hover:bg-accent">
-                    <td className="p-3">Se vinci sul Book C:</td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA)}
-                    </td>
-                    <td className="p-3 text-right text-destructive">
-                      {formatSigned(-(effectiveStakeB ?? 0))}
-                    </td>
-                    <td className="p-3 text-right text-primary">
-                      {formatSigned((returnC ?? 0) - (effectiveStakeC ?? 0))}
-                    </td>
-                    {showRimborsoColumn && (
-                      <td className="p-3 text-right text-primary">{formatSigned(rimborsoNum)}</td>
-                    )}
-                    <td className="min-w-[5.5rem] whitespace-nowrap p-3 text-right">
-                      <span
-                        className={cn(profitIfCWins >= 0 ? 'text-primary' : 'text-destructive')}
-                      >
-                        = {formatSigned(profitIfCWins)} &euro;
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-      {/* Contropuntata parziale B (multi-step) */}
-      {stakeB != null && (
-        <div className="border-b border-border p-4">
-          <div className="space-y-3">
-            {partialPuntasB.map((pp, i) => {
-              const result = partialPuntaResultsB[i] ?? null
-              return (
-                <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
-                      Contropuntata parziale B {partialPuntasB.length > 1 ? `#${i + 1}` : ''}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => removePartialPuntaB(i)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-b-amount-${i}`} className="text-xs sm:text-sm">
-                        Gi&agrave; puntato &euro;
-                      </Label>
-                      <Input
-                        id={`partial-b-amount-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.amount}
-                        onChange={(e) => updatePartialPuntaB(i, 'amount', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-b-odds-${i}`} className="text-xs sm:text-sm">
-                        Nuova quota punta B
-                      </Label>
-                      <Input
-                        id={`partial-b-odds-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.newOdds}
-                        onChange={(e) => updatePartialPuntaB(i, 'newOdds', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                  </div>
-                  {result != null && (
-                    <div className="mt-3 rounded-lg bg-background/60 p-2.5">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                        Nuova puntata B
-                      </p>
-                      <p className="font-mono text-sm font-semibold text-primary">
-                        {formatNum(result.newStake)} &euro;
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {partialPuntasB.length < 6 && (
-              <button
-                type="button"
-                onClick={addPartialPuntaB}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
-              >
-                <span className="text-base leading-none">+</span>
-                Contropuntata parziale B
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Contropuntata parziale C (multi-step) */}
-      {stakeC != null && (
-        <div className="border-b border-border p-4">
-          <div className="space-y-3">
-            {partialPuntasC.map((pp, i) => {
-              const result = partialPuntaResultsC[i] ?? null
-              return (
-                <div key={i} className="rounded-xl border border-border bg-muted/10 p-3 sm:p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
-                      Contropuntata parziale C {partialPuntasC.length > 1 ? `#${i + 1}` : ''}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => removePartialPuntaC(i)}
-                      className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-c-amount-${i}`} className="text-xs sm:text-sm">
-                        Gi&agrave; puntato &euro;
-                      </Label>
-                      <Input
-                        id={`partial-c-amount-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.amount}
-                        onChange={(e) => updatePartialPuntaC(i, 'amount', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`partial-c-odds-${i}`} className="text-xs sm:text-sm">
-                        Nuova quota punta C
-                      </Label>
-                      <Input
-                        id={`partial-c-odds-${i}`}
-                        type="number"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={pp.newOdds}
-                        onChange={(e) => updatePartialPuntaC(i, 'newOdds', e.target.value)}
-                        className="h-8 sm:h-9"
-                      />
-                    </div>
-                  </div>
-                  {result != null && (
-                    <div className="mt-3 rounded-lg bg-background/60 p-2.5">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                        Nuova puntata C
-                      </p>
-                      <p className="font-mono text-sm font-semibold text-primary">
-                        {formatNum(result.newStake)} &euro;
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {partialPuntasC.length < 6 && (
-              <button
-                type="button"
-                onClick={addPartialPuntaC}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
-              >
-                <span className="text-base leading-none">+</span>
-                Contropuntata parziale C
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <CalcProfits
+        outlay={showSummary ? realOutlay : null}
+        minGain={showSummary ? guadagnoMinimo : null}
+      >
+        <CalcOutcomeTable
+          legLabels={['Punta 1', 'Punta 2', 'Punta 3']}
+          rows={profitRows}
+          stake={puntataANum ?? 0}
+          emptyText="Il risultato compare quando la puntata e le quote delle tre punte sono compilate e valide."
+        />
+      </CalcProfits>
 
       <CalculatorSaveAction onClick={handleOpenModal} disabled={!showSummary} />
 

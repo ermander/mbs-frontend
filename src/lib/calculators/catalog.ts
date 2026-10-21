@@ -36,6 +36,11 @@ export interface CalculatorTool {
   icon: CalculatorIcon
   /** Se presente, la tessera è visibile solo a chi ha quel ruolo (§14.220), «expand» compreso. */
   requiresRole?: UserRole
+  /**
+   * Interno già rifatto sul design (§14.268 in poi): il pannello gli dà la colonna da 1200px.
+   * Gli altri restano nella colonna da 768px del §14.267.
+   */
+  wide?: true
 }
 
 export const CALCULATOR_GROUPS: ReadonlyArray<{ id: CalculatorGroupId; name: string }> = [
@@ -44,9 +49,9 @@ export const CALCULATOR_GROUPS: ReadonlyArray<{ id: CalculatorGroupId; name: str
 ]
 
 export const CALCULATOR_TOOLS: ReadonlyArray<CalculatorTool> = [
-  { slug: 'punta-banca', group: 'sport', name: 'Punta-Banca', icon: 'scale' },
-  { slug: 'punta-punta', group: 'sport', name: 'Punta-Punta', icon: 'arrows' },
-  { slug: 'tri-punta', group: 'sport', name: 'Tri-Punta', icon: 'triangle' },
+  { slug: 'punta-banca', group: 'sport', name: 'Punta-Banca', icon: 'scale', wide: true },
+  { slug: 'punta-punta', group: 'sport', name: 'Punta-Punta', icon: 'arrows', wide: true },
+  { slug: 'tri-punta', group: 'sport', name: 'Tri-Punta', icon: 'triangle', wide: true },
   { slug: 'multipla', group: 'sport', name: 'Multipla', icon: 'layers' },
   {
     slug: 'risultato-goal',

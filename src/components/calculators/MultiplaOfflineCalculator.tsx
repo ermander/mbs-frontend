@@ -6,7 +6,7 @@ import { multiplaLayStakes } from '@/lib/calculators/multipla'
 import { MARKET_OPTIONS, formatMercatoString, isTeamScopedMarket } from '@/lib/calculators/markets'
 import { MultiplaOfflineSaveModal } from '@/components/calculators/MultiplaOfflineSaveModal'
 import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
-import { Button } from '@/components/ui/button'
+import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SearchableSelect } from '@/components/ui/searchable-select'
@@ -574,7 +574,7 @@ export function MultiplaOfflineCalculator() {
                         'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                         ev.type === 'punta-banca'
                           ? 'bg-accent text-primary'
-                          : 'bg-amber-500/15 text-amber-400',
+                          : 'bg-ds-warning-soft text-ds-warning',
                       )}
                     >
                       {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
@@ -639,7 +639,7 @@ export function MultiplaOfflineCalculator() {
                             'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
                             ev.type === 'punta-banca'
                               ? 'bg-accent text-primary'
-                              : 'bg-amber-500/15 text-amber-400',
+                              : 'bg-ds-warning-soft text-ds-warning',
                           )}
                         >
                           {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
@@ -703,12 +703,7 @@ export function MultiplaOfflineCalculator() {
         </div>
       )}
 
-      {/* Bottone Salva */}
-      <div className="flex flex-col items-center gap-2 p-4">
-        <Button onClick={() => setSaveModalOpen(true)} variant="default" disabled={!canSave}>
-          Invia al Profit Tracker
-        </Button>
-      </div>
+      <CalculatorSaveAction onClick={() => setSaveModalOpen(true)} disabled={!canSave} />
 
       <MultiplaOfflineSaveModal
         open={saveModalOpen}

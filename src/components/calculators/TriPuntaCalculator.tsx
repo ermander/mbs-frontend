@@ -23,6 +23,7 @@ import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory, Holder } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
+import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -1304,12 +1305,7 @@ export function TriPuntaCalculator() {
         </div>
       )}
 
-      {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
-        <Button onClick={handleOpenModal} variant="default" disabled={!showSummary}>
-          Invia al Profit Tracker
-        </Button>
-      </div>
+      <CalculatorSaveAction onClick={handleOpenModal} disabled={!showSummary} />
 
       {/* Modale: Assegna collaboratori e dati evento */}
       <Dialog
@@ -1504,7 +1500,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaA && accountsPuntaA.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                      <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
                         Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>
@@ -1561,7 +1557,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaB && accountsPuntaB.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                      <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
                         Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>
@@ -1618,7 +1614,7 @@ export function TriPuntaCalculator() {
                       portalContainer={dropdownPortalEl}
                     />
                     {holderIdPuntaC && accountsPuntaC.length === 0 && (
-                      <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                      <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
                         Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                         Profit Tracker &rarr; Conti.
                       </p>

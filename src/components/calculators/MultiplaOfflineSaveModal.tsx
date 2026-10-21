@@ -382,7 +382,7 @@ export function MultiplaOfflineSaveModal({
                     portalContainer={dropdownPortalEl}
                   />
                   {holderIdPunta && accountsPunta.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                    <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
                       Nessun conto punta disponibile per questo collaboratore. Aggiungine uno in
                       Profit Tracker → Conti.
                     </p>
@@ -445,7 +445,7 @@ export function MultiplaOfflineSaveModal({
                     portalContainer={dropdownPortalEl}
                   />
                   {holderIdBanca && accountsBanca.length === 0 && (
-                    <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+                    <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
                       Nessun conto exchange disponibile per questo collaboratore. Aggiungine uno in
                       Profit Tracker → Conti.
                     </p>

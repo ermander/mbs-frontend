@@ -31,6 +31,7 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
+import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -428,12 +429,7 @@ export function BaccaratCalculator() {
         </div>
       )}
 
-      {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
-        <Button onClick={handleOpenModal} variant="default" disabled={!result.showSummary}>
-          Invia al Profit Tracker
-        </Button>
-      </div>
+      <CalculatorSaveAction onClick={handleOpenModal} disabled={!result.showSummary} />
 
       {/* Modale: collaboratori e conti di Player e Banco */}
       <Dialog

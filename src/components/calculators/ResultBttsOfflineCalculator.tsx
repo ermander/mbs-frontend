@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { Input } from '@/components/ui/input'
 import {
   DecimalField,
@@ -222,17 +222,13 @@ export function ResultBttsOfflineCalculator() {
         </div>
       )}
 
-      <Button
-        variant="success"
-        className="w-full"
+      <CalculatorSaveAction
         onClick={() => {
           setSaveTick((tick) => tick + 1)
           setSaveOpen(true)
         }}
         disabled={saveLegs == null}
-      >
-        Invia scommessa al Profit Tracker
-      </Button>
+      />
 
       {saveLegs && puntataNum != null && (
         <ResultBttsOfflineSaveModal

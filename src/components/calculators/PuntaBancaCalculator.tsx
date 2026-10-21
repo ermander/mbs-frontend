@@ -11,7 +11,7 @@ import {
 } from '@/lib/calculators/punta-banca'
 import { roundStake } from '@/lib/calculators/stake-step'
 import { PuntaBancaSaveModal } from '@/components/calculators/PuntaBancaSaveModal'
-import { Button } from '@/components/ui/button'
+import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -783,16 +783,7 @@ export function PuntaBancaCalculator() {
           </div>
         )}
 
-      {/* Invia al Profit Tracker */}
-      <div className="flex flex-col items-center gap-2 p-4">
-        <Button
-          onClick={() => setSaveModalOpen(true)}
-          variant="default"
-          disabled={!canOpenSaveModal}
-        >
-          Invia al Profit Tracker
-        </Button>
-      </div>
+      <CalculatorSaveAction onClick={() => setSaveModalOpen(true)} disabled={!canOpenSaveModal} />
 
       <PuntaBancaSaveModal
         open={saveModalOpen}

@@ -110,7 +110,7 @@ export function LegAccounts({
           portalContainer={portalContainer}
         />
         {holderId && accounts.length === 0 && (
-          <p className="rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+          <p className="rounded-md bg-ds-warning-soft px-3 py-2 text-xs text-ds-warning">
             Nessun conto disponibile per questo collaboratore. Aggiungine uno in Profit Tracker →
             Conti.
           </p>

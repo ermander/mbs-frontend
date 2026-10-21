@@ -298,6 +298,39 @@
   --ow-shadow-card: inset 0 0 0 1px var(--ds-line);
 }
 
+/* Ponte dei calcolatori (§14.267): i colori shadcn dei calcolatori passano sulla palette chiara
+   ds-*. La classe sta sul pannello a schermo intero, così il calcolatore è chiaro dal primo
+   disegno (senza la transizione da scuro dei campi), e sull'<html> finché il pannello è aperto,
+   per i dialoghi di salvataggio e i menu che finiscono in portal nel body. Stessi valori di :root
+   qui sopra, in HSL perché shadcn li usa come hsl(var(--x)). */
+.ds-calc-bridge {
+  color-scheme: light;
+  --background: 0 0% 100%; /* surface-raised */
+  --foreground: 153 14% 12%; /* ink */
+  --card: 0 0% 100%;
+  --card-foreground: 153 14% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 153 14% 12%;
+  --primary: 162 67% 18%; /* brand */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 42 27% 90%; /* surface-sunken */
+  --secondary-foreground: 153 14% 12%;
+  --muted: 42 27% 90%;
+  --muted-foreground: 144 5% 38%; /* ink-muted */
+  --accent: 142 37% 90%; /* brand-soft */
+  --accent-foreground: 153 14% 12%;
+  --destructive: 3 71% 41%; /* loss */
+  --destructive-foreground: 0 0% 100%;
+  --border: 41 21% 85%; /* line */
+  --input: 44 9% 50%; /* line-strong: il bordo dei campi */
+  --ring: 162 67% 18%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 42 27% 90%;
+  --surface-3: 42 27% 90%;
+  --glass-bg: rgba(27, 36, 32, 0.03);
+  --glass-border: var(--ds-line);
+}
+
 /* Stili di testo del design (tokens.json): 400 per la prosa, 600 per titoli, etichette e numeri;
    il 700 non esiste. Il display scala sotto lg. Il font shorthand azzera il peso 500 e il tracking
    negativo che i titoli prendono dal layer base dell'area autenticata. */

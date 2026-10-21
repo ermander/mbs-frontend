@@ -3,9 +3,11 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Scale, ArrowLeftRight, Triangle, Layers, Dices, CircleDot, Gift, Goal } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
-import { CalculatorCard } from '@/components/calculators/calculator-card'
+import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
+import { AdminBadge, CalculatorPanel } from '@/components/calculators/calculator-panel'
+import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
 import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
 import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
@@ -15,140 +17,143 @@ import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
 import { FunBonusCalculator } from '@/components/calculators/FunBonusCalculator'
 import { ResultBttsOfflineCalculator } from '@/components/calculators/ResultBttsOfflineCalculator'
 import { useAuthStore } from '@/stores/auth-store'
-import { hasRole } from '@/lib/tools'
-import type { UserRole } from '@/services/api/auth-client'
+import {
+  calculatorGroups,
+  openCalculator,
+  type CalculatorSlug,
+  type CalculatorTool,
+} from '@/lib/calculators/catalog'
+import { cn } from '@/lib/utils'
 
-type Slug =
-  | 'punta-banca'
-  | 'punta-punta'
-  | 'tri-punta'
-  | 'multipla'
-  | 'baccarat'
-  | 'roulette'
-  | 'fun-bonus'
-  | 'risultato-goal'
+const RENDER: Record<CalculatorSlug, () => React.ReactNode> = {
+  'punta-banca': () => <PuntaBancaCalculator />,
+  'punta-punta': () => <PuntaPuntaCalculator />,
+  'tri-punta': () => <TriPuntaCalculator />,
+  multipla: () => <MultiplaOfflineCalculator />,
+  // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per gli admin.
+  'risultato-goal': () => <ResultBttsOfflineCalculator />,
+  baccarat: () => <BaccaratCalculator />,
+  roulette: () => <RouletteCalculator />,
+  'fun-bonus': () => <FunBonusCalculator />,
+}
 
-const CALCS: Array<{
-  slug: Slug
-  title: string
-  description: string
-  icon: typeof Scale
-  /** Se presente, la card è visibile solo agli utenti con quel ruolo (§14.220). */
-  requiresRole?: UserRole
-  render: () => React.ReactNode
-}> = [
-  {
-    slug: 'punta-banca',
-    title: 'Punta-Banca',
-    description:
-      'Copri una punta con una banca (lay). Calcola la puntata di copertura e il guadagno minimo.',
-    icon: Scale,
-    render: () => <PuntaBancaCalculator />,
-  },
-  {
-    slug: 'punta-punta',
-    title: 'Punta-Punta',
-    description: 'Due punte su esiti opposti. Calcola ripartizione e profitto.',
-    icon: ArrowLeftRight,
-    render: () => <PuntaPuntaCalculator />,
-  },
-  {
-    slug: 'tri-punta',
-    title: 'Tri-Punta',
-    description: 'Copertura a tre vie: ripartisci lo stake sui 3 esiti.',
-    icon: Triangle,
-    render: () => <TriPuntaCalculator />,
-  },
-  {
-    slug: 'multipla',
-    title: 'Multipla',
-    description: 'Calcolatore per scommesse multiple offline.',
-    icon: Layers,
-    render: () => <MultiplaOfflineCalculator />,
-  },
-  {
-    slug: 'baccarat',
-    title: 'Baccarat',
-    description:
-      "Player su un conto, Banco (commissione 5%) sull'altro. Calcola la copertura e il guadagno minimo, anche con bonus o rimborso.",
-    icon: Dices,
-    render: () => <BaccaratCalculator />,
-  },
-  {
-    slug: 'roulette',
-    title: 'Roulette europea',
-    description:
-      'Rosso/Nero o dozzine più lo 0 su conti diversi, con o senza la partage. Calcola le coperture e il guadagno minimo, anche con bonus o rimborso.',
-    icon: CircleDot,
-    render: () => <RouletteCalculator />,
-  },
-  {
-    slug: 'fun-bonus',
-    title: 'Target fun bonus',
-    description:
-      'Bonus, rollover, contribuzione del gioco, RTP e già giocato: il saldo minimo con cui passare a spin bassi per finire il rollover.',
-    icon: Gift,
-    render: () => <FunBonusCalculator />,
-  },
-  {
-    // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per gli admin.
-    slug: 'risultato-goal',
-    title: 'Risultato + Goal (offline)',
-    description:
-      'Le cinque quote di 1X2 + Goal/NoGoal dentro lo stesso bookmaker inserite a mano: puntata su un esito, coperture sugli altri, lo 0-0 (X & NoGoal) rimborsato dal bookmaker. Solo admin.',
-    icon: Goal,
-    requiresRole: 'ADMIN_ROLE',
-    render: () => <ResultBttsOfflineCalculator />,
-  },
-]
-
+/**
+ * Indice dei calcolatori dal design «OddWise Calcolatori» di Claude Design (§14.267): tessere
+ * compatte divise in Sport e Casinò sul tema chiaro ds-*; una tessera apre il calcolatore a
+ * schermo intero. Il calcolatore aperto sta in `?expand=<slug>` come prima, così i link delle
+ * guide e di /calcolatori/<slug> continuano ad aprirlo.
+ */
 function CalcolatoriDashboard() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const expandedSlug = searchParams.get('expand') as Slug | null
-  const user = useAuthStore((s) => s.user)
-  // §14.220: le card riservate a un ruolo spariscono per gli altri, «expand» compreso.
-  const calcs = CALCS.filter((calc) => hasRole(user, calc.requiresRole))
+  const role = useAuthStore((s) => s.user?.role)
+  const groups = calculatorGroups(role)
+  // §14.220: le tessere riservate a un ruolo spariscono per gli altri, «expand» compreso.
+  const open = openCalculator(searchParams.get('expand'), role)
 
-  const handleToggle = React.useCallback(
-    (slug: Slug) => {
+  const lastOpened = React.useRef<CalculatorSlug | null>(null)
+  const tiles = React.useRef(new Map<CalculatorSlug, HTMLButtonElement>())
+
+  const setExpand = React.useCallback(
+    (slug: CalculatorSlug | null) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (expandedSlug === slug) {
-        params.delete('expand')
-      } else {
-        params.set('expand', slug)
-      }
+      if (slug) params.set('expand', slug)
+      else params.delete('expand')
       const query = params.toString()
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
     },
-    [router, pathname, searchParams, expandedSlug],
+    [router, pathname, searchParams],
   )
 
+  // Chiuso il pannello, il fuoco torna sulla tessera che l'aveva aperto.
+  const openSlug = open?.slug ?? null
+  React.useEffect(() => {
+    if (openSlug) {
+      lastOpened.current = openSlug
+    } else if (lastOpened.current) {
+      tiles.current.get(lastOpened.current)?.focus()
+      lastOpened.current = null
+    }
+  }, [openSlug])
+
   return (
-    <div className="mx-auto max-w-7xl space-y-6 py-2">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Calcolatori</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tutti i calcolatori in un unico posto. Espandi una card per vedere tutte le opzioni.
+    <div
+      className={cn(
+        dsSerif.variable,
+        dsSans.variable,
+        'ds-scope -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] md:-mx-8',
+      )}
+    >
+      {/* Sotto il pannello aperto l'indice esce dal tab e dai lettori di schermo. */}
+      <div
+        inert={open ? true : undefined}
+        className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-10 px-4 pb-16 pt-10 sm:px-6"
+      >
+        <h1 className="sr-only">Calcolatori</h1>
+
+        {groups.map((group) => (
+          <section key={group.id} className="flex flex-col gap-4">
+            <div className="flex items-baseline gap-3 border-b border-ds-line pb-3">
+              <h2 className="ds-heading m-0">{group.name}</h2>
+            </div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+              {group.tools.map((tool) => (
+                <CalculatorTile
+                  key={tool.slug}
+                  tool={tool}
+                  onOpen={() => setExpand(tool.slug)}
+                  buttonRef={(el) => {
+                    if (el) tiles.current.set(tool.slug, el)
+                    else tiles.current.delete(tool.slug)
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+
+        <p className="ds-caption mt-auto pt-6 text-ds-ink-muted">
+          Gioco vietato ai minori di 18 anni. Gioca responsabilmente.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {calcs.map((calc) => (
-          <CalculatorCard
-            key={calc.slug}
-            title={calc.title}
-            description={calc.description}
-            icon={calc.icon}
-            expanded={expandedSlug === calc.slug}
-            onToggle={() => handleToggle(calc.slug)}
-          >
-            {calc.render()}
-          </CalculatorCard>
-        ))}
-      </div>
+      {open && (
+        <CalculatorPanel key={open.slug} tool={open} onClose={() => setExpand(null)}>
+          {RENDER[open.slug]()}
+        </CalculatorPanel>
+      )}
     </div>
+  )
+}
+
+function CalculatorTile({
+  tool,
+  onOpen,
+  buttonRef,
+}: {
+  tool: CalculatorTool
+  onOpen: () => void
+  buttonRef: (el: HTMLButtonElement | null) => void
+}) {
+  const admin = Boolean(tool.requiresRole)
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      onClick={onOpen}
+      aria-label={`Apri ${tool.name}${admin ? ', solo admin' : ''}`}
+      className="flex min-h-16 appearance-none items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-left text-ds-ink shadow-ds-sm transition-[box-shadow,border-color] duration-150 hover:border-ds-line-strong hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-none"
+    >
+      <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-ds-sm bg-ds-brand-soft text-ds-brand">
+        <CalculatorIcon name={tool.icon} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+        <span className="ds-subheading max-w-full truncate">{tool.name}</span>
+        {admin && <AdminBadge />}
+      </span>
+      <ArrowRight className="h-5 w-5 flex-none text-ds-brand" aria-hidden />
+    </button>
   )
 }
 

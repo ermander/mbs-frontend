@@ -1,19 +1,11 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 
-const KNOWN_SLUGS = new Set([
-  'punta-banca',
-  'punta-punta',
-  'tri-punta',
-  'baccarat',
-  'roulette',
-  'fun-bonus',
-  'risultato-goal',
-])
+import { isCalculatorSlug } from '@/lib/calculators/catalog'
 
 export default function CalcolatoriSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = React.use(params)
-  if (KNOWN_SLUGS.has(slug)) {
+  if (isCalculatorSlug(slug)) {
     redirect(`/calcolatori?expand=${slug}`)
   }
   redirect('/calcolatori')

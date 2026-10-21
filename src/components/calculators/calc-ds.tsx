@@ -1,12 +1,12 @@
 'use client'
 
 import * as React from 'react'
-import { Info, Minus, Plus, RefreshCw, X } from 'lucide-react'
+import { ChevronDown, Info, Lock, LockOpen, Minus, Plus, RefreshCw, X } from 'lucide-react'
 
 import { DsField, DsLabel } from '@/components/auth/ds-auth-primitives'
 import { DsMoney } from '@/components/landing/ds-data'
 import { dsButtonClass } from '@/components/landing/ds-primitives'
-import { formatMoney } from '@/lib/landing-format'
+import { formatMoney, formatOdds } from '@/lib/landing-format'
 import { cn } from '@/lib/utils'
 
 /**
@@ -186,6 +186,7 @@ export function CalcFigure({
   size = 'xl',
   align = 'right',
   live,
+  onDark,
   className,
 }: {
   label: string
@@ -193,11 +194,15 @@ export function CalcFigure({
   size?: 'xl' | 'md'
   align?: 'left' | 'right'
   live?: boolean
+  /** Su una riga scura (Rosso, Nero della roulette): didascalia chiara. */
+  onDark?: boolean
   className?: string
 }) {
   return (
     <div className={cn(align === 'right' ? 'text-right' : 'text-left', className)}>
-      <div className="ds-caption text-ds-ink-muted">{label}</div>
+      <div className={cn('ds-caption', onDark ? 'text-white/75' : 'text-ds-ink-muted')}>
+        {label}
+      </div>
       <div
         aria-live={live ? 'polite' : undefined}
         className={cn('whitespace-nowrap', size === 'xl' ? 'ds-num-xl' : 'ds-num')}
@@ -220,11 +225,14 @@ export function amount(value: number | null | undefined): string {
 export function CalcProfits({
   outlayLabel = 'Esborso totale',
   outlay,
+  gainLabel = 'Guadagno minimo',
   minGain,
   children,
 }: {
   outlayLabel?: string
   outlay: number | null
+  /** «Guadagno minimo», o il risultato che il calcolatore sa dare (la multipla). */
+  gainLabel?: string
   minGain: number | null
   children: React.ReactNode
 }) {
@@ -235,7 +243,7 @@ export function CalcProfits({
           Profitti
         </h2>
         <span className="ds-body-sm text-ds-ink-muted">
-          {outlayLabel} <b className="ds-num text-ds-ink">{amount(outlay)}</b> · Guadagno minimo{' '}
+          {outlayLabel} <b className="ds-num text-ds-ink">{amount(outlay)}</b> · {gainLabel}{' '}
           <b className="ds-num text-ds-ink">
             {minGain == null || !Number.isFinite(minGain) ? '—' : formatMoney(minGain)}
           </b>
@@ -568,6 +576,7 @@ function Yield({ total, stake }: { total: number | null; stake: number }) {
     return <span className="font-normal text-ds-ink-muted">—</span>
   }
   const pct = (total / stake) * 100
+  if (Math.abs(pct) < 0.005) return <span className="text-ds-ink-muted">0,00&nbsp;%</span>
   return (
     <span className={pct < 0 ? 'text-ds-loss' : 'text-ds-profit'}>
       {pct < 0 ? '−' : '+'}
@@ -629,4 +638,295 @@ export function CalcOutcomeTable({
     },
   ]
   return <CalcTable caption="Profitto per ciascun esito" columns={columns} rows={rows} />
+}
+
+/**
+ * Scelta fra poche voci con i Button del design: la scelta in primary, le altre in secondary
+ * (Player/Banco, il tavolo, la fiche minima). `columns` le mette in griglia.
+ */
+export function CalcChoice<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  columns,
+}: {
+  label: string
+  options: { value: T; label: string; disabled?: boolean }[]
+  value: T
+  onChange: (value: T) => void
+  columns?: number
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold leading-5 text-ds-ink">{label}</span>
+      <div
+        className={columns ? 'grid gap-1.5' : 'flex flex-wrap gap-2'}
+        style={columns ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
+      >
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={o.value === value}
+            disabled={o.disabled}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              dsButtonClass(o.value === value ? 'primary' : 'secondary', 'sm'),
+              columns && 'px-1',
+              'disabled:cursor-not-allowed disabled:opacity-40',
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Switch del design: binario da 44px, in brand quando è acceso, con la riga di aiuto sotto. */
+export function CalcSwitch({
+  label,
+  checked,
+  onChange,
+  disabled,
+  hint,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+  hint?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className="group inline-flex items-center gap-3 self-start text-left text-ds-ink disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span
+          aria-hidden
+          className={cn(
+            'relative h-6 w-11 flex-none rounded-full transition-colors group-focus-visible:shadow-ds-focus',
+            checked ? 'bg-ds-brand' : 'bg-ds-line-strong',
+          )}
+        >
+          <span
+            className={cn(
+              'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
+              checked && 'translate-x-5',
+            )}
+          />
+        </span>
+        <span className="text-sm font-semibold leading-5">{label}</span>
+      </button>
+      {hint && <p className="ds-body-sm m-0 text-ds-ink-muted">{hint}</p>}
+    </div>
+  )
+}
+
+const casinoTone = {
+  info: 'bg-ds-info-soft text-ds-ink',
+  loss: 'bg-ds-loss-soft text-ds-ink',
+  profit: 'bg-ds-profit-soft text-ds-ink',
+  red: 'bg-ds-loss text-white',
+  black: 'bg-[#2b302d] text-white',
+} as const
+
+/**
+ * Una riga d'esito dei calcolatori del casinò: ruolo (Puntata, Copertura) e nome, la quota fissa
+ * del tavolo in un riquadro e l'importo. Rosso e Nero della roulette sono righe piene.
+ */
+export function CasinoRow({
+  tone,
+  caption,
+  name,
+  odds,
+  figure,
+}: {
+  tone: keyof typeof casinoTone
+  caption: string
+  name: string
+  odds: number
+  figure: React.ReactNode
+}) {
+  const dark = tone === 'red' || tone === 'black'
+  return (
+    <div
+      className={cn(
+        'grid flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-ds-md border border-ds-line px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(110px,1fr)]',
+        casinoTone[tone],
+      )}
+    >
+      <div>
+        <div className={cn('ds-caption', dark ? 'text-white/75' : 'text-ds-ink-muted')}>
+          {caption}
+        </div>
+        <div className="ds-subheading">{name}</div>
+      </div>
+      <span className="ds-num rounded-ds-sm border border-ds-line bg-ds-surface-raised px-2.5 py-1.5 text-ds-ink">
+        {formatOdds(odds)}
+      </span>
+      <div className="col-span-2 sm:col-span-1">{figure}</div>
+    </div>
+  )
+}
+
+/**
+ * La copertura con il lucchetto: aperto mostra l'importo calcolato, chiuso diventa un campo dove
+ * scrivere quanto è stato giocato davvero, con il calcolato sotto.
+ */
+export function CalcLockableFigure({
+  id,
+  label,
+  amount: value,
+  rounded,
+  locked,
+  editValue,
+  onToggle,
+  onEdit,
+  onDark,
+}: {
+  id: string
+  label: string
+  amount: number | null
+  /** Il valore calcolato (arrotondato alla fiche), mostrato sotto quando è bloccata. */
+  rounded: number | null
+  locked: boolean
+  editValue: string
+  onToggle: () => void
+  onEdit: (value: string) => void
+  onDark?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-end gap-3">
+      {locked ? (
+        <div className="flex flex-col items-end gap-1">
+          <CalcNumberField
+            id={id}
+            ariaLabel={`${label}: importo giocato`}
+            size="sm"
+            suffix="€"
+            value={editValue}
+            onChange={onEdit}
+            className="w-32"
+          />
+          <span className={cn('ds-caption', onDark ? 'text-white/75' : 'text-ds-ink-muted')}>
+            calcolata {amount(rounded)}
+          </span>
+        </div>
+      ) : (
+        <CalcFigure label={label} live onDark={onDark} value={amount(value)} />
+      )}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={locked}
+        aria-label={locked ? 'Sblocca la copertura' : 'Blocca e modifica la copertura'}
+        title={locked ? 'Sblocca: torna al valore calcolato' : "Blocca: scrivi l'importo giocato"}
+        className={cn(
+          'inline-flex h-8 w-8 flex-none items-center justify-center rounded-ds-sm border transition-colors',
+          locked
+            ? 'border-ds-brand bg-ds-brand-soft text-ds-brand'
+            : 'border-ds-line-strong bg-ds-surface-raised text-ds-ink-muted hover:text-ds-ink',
+        )}
+      >
+        {locked ? (
+          <Lock className="h-4 w-4" aria-hidden />
+        ) : (
+          <LockOpen className="h-4 w-4" aria-hidden />
+        )}
+      </button>
+    </div>
+  )
+}
+
+const textControl =
+  'h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-none placeholder:text-ds-ink-faint'
+const controlBox =
+  'flex items-stretch rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised transition-[border-color,box-shadow] duration-150 focus-within:border-ds-brand focus-within:shadow-ds-focus'
+
+/** TextField del design per testo e date (nome evento, competizione, data e ora). */
+export function CalcTextField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  size = 'sm',
+  className,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  type?: 'text' | 'datetime-local'
+  size?: keyof typeof controlHeight
+  className?: string
+}) {
+  return (
+    <DsField className={className}>
+      <DsLabel htmlFor={id}>{label}</DsLabel>
+      <div className={cn(controlBox, controlHeight[size])}>
+        <input
+          id={id}
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(textControl, 'text-sm')}
+        />
+      </div>
+    </DsField>
+  )
+}
+
+/** Select nativo del design, con lo stesso contorno del TextField. */
+export function CalcSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  size = 'sm',
+  className,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+  size?: keyof typeof controlHeight
+  className?: string
+}) {
+  return (
+    <DsField className={className}>
+      <DsLabel htmlFor={id}>{label}</DsLabel>
+      <div className={cn(controlBox, controlHeight[size], 'relative')}>
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(textControl, 'appearance-none pr-8 text-sm')}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden
+          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-ink-muted"
+        />
+      </div>
+    </DsField>
+  )
 }

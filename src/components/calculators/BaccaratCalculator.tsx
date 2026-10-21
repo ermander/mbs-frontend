@@ -13,16 +13,12 @@ import {
   computeBaccarat,
   type BaccaratSide,
 } from '@/lib/calculators/engines/baccarat-engine'
-import { DEFAULT_CHIP } from '@/lib/calculators/engines/casino-common'
+import { CHIP_OPTIONS, DEFAULT_CHIP } from '@/lib/calculators/engines/casino-common'
 import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildBaccaratBet } from '@/lib/calculators/bet-payloads'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import {
-  AmountField,
-  ChipSelector,
   LegAccounts,
-  LockableAmount,
-  SegmentedControl,
   defaultEventoData,
   formatNum,
   formatSigned,
@@ -31,11 +27,23 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
-import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import {
+  CalcChoice,
+  CalcFigure,
+  CalcLayout,
+  CalcLockableFigure,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcProfits,
+  CasinoRow,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
+import { formatOdds } from '@/lib/landing-format'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
 
 /**
  * Calcolatore offline Baccarat: la puntata (reale + bonus) su Player o su
@@ -47,6 +55,10 @@ import { cn } from '@/lib/utils'
  */
 
 const SIDE_OPTIONS = BACCARAT_SIDES.map((s) => ({ value: s, label: BACCARAT_SIDE_LABELS[s] }))
+const CHIP_CHOICES = CHIP_OPTIONS.map((c) => ({
+  value: String(c),
+  label: c < 1 ? c.toFixed(2).replace('.', ',') : String(c),
+}))
 const QUOTA_PLAYER_LABEL = BACCARAT_PLAYER_ODDS.toFixed(2)
 const QUOTA_BANCO_LABEL = BACCARAT_BANCO_ODDS.toFixed(2)
 
@@ -103,15 +115,6 @@ export function BaccaratCalculator() {
   const coverLabel = BACCARAT_SIDE_LABELS[result.coverSide]
   const quotaPunta = result.puntaSide === 'player' ? QUOTA_PLAYER_LABEL : QUOTA_BANCO_LABEL
   const quotaCover = result.coverSide === 'player' ? QUOTA_PLAYER_LABEL : QUOTA_BANCO_LABEL
-  const showRimborsoColumn = rimborsoNum > 0
-  const modeLabel =
-    bonusNum > 0 && rimborsoNum > 0
-      ? 'BONUS + RIMBORSO • '
-      : bonusNum > 0
-        ? 'BONUS • '
-        : rimborsoNum > 0
-          ? 'RIMBORSO • '
-          : ''
 
   const handleChangeSide = (side: BaccaratSide) => {
     setPuntaSide(side)
@@ -217,217 +220,140 @@ export function BaccaratCalculator() {
     }
   }
 
-  const coverDiffers =
-    result.coverLocked &&
-    result.stakeCover != null &&
-    result.stakeCoverRounded != null &&
-    Math.abs(result.stakeCover - result.stakeCoverRounded) >= 0.005
+  const showCr = result.isRimborso && result.crPercent != null
+  const puntaLeg = result.legs.find((l) => l.isPunta)
+  const coverLeg = result.legs.find((l) => !l.isPunta)
+  const profitRows: OutcomeProfitRow[] = result.showSummary
+    ? [
+        ...result.outcomes.map((o) => ({
+          id: o.winner,
+          esito: o.label,
+          legs: o.byLeg,
+          rimborso: o.rimborso,
+          totale: o.profit,
+        })),
+        {
+          id: 'pareggio',
+          esito: 'Pareggio · mano nulla, si rigioca',
+          legs: result.legs.map(() => 0),
+          rimborso: 0,
+          totale: 0,
+        },
+      ]
+    : []
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Regole del tavolo */}
-      <div className="border-b border-border px-4 py-3 text-xs text-muted-foreground">
-        Player paga 1:1 (quota <span className="font-mono">{QUOTA_PLAYER_LABEL}</span>), Banco 1:1
-        meno la commissione del {BACCARAT_BANCO_COMMISSION_PERCENT}% (quota{' '}
-        <span className="font-mono">{QUOTA_BANCO_LABEL}</span>). La puntata va su un conto, la
-        copertura sull&apos;altro. Pareggio: mano nulla, le puntate tornano indietro e si rigioca.
-      </div>
+    <div className="flex flex-col gap-8">
+      <CalculatorRating
+        label={showCr ? 'CR' : 'Rating'}
+        value={showCr ? result.crPercent : result.showSummary ? result.rating : null}
+      />
 
-      {/* Sezione input */}
-      <div className="space-y-4 border-b border-border bg-muted/40 p-4">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <AmountField
-            id="baccarat-puntata"
-            label="Stake reale"
-            value={puntata}
-            onChange={setPuntata}
-          />
-          <AmountField id="baccarat-bonus" label="Stake bonus" value={bonus} onChange={setBonus} />
-          <AmountField
-            id="baccarat-rimborso"
-            label="Valore rimborso"
-            value={rimborso}
-            onChange={setRimborso}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-          <SegmentedControl
-            label="Puntata su"
-            options={SIDE_OPTIONS}
-            value={puntaSide}
-            onChange={handleChangeSide}
-          />
-          <ChipSelector value={chip} onChange={setChip} />
-        </div>
-      </div>
+      <CalcLayout
+        outcomes={
+          <>
+            {puntaLeg && (
+              <CasinoRow
+                tone="info"
+                caption="Puntata"
+                name={puntaLeg.label}
+                odds={puntaLeg.odds}
+                figure={
+                  <CalcFigure
+                    label="Puntata"
+                    live
+                    value={amount(result.puntataEffettiva > 0 ? result.puntataEffettiva : null)}
+                  />
+                }
+              />
+            )}
+            {coverLeg && (
+              <CasinoRow
+                tone="loss"
+                caption="Copertura"
+                name={coverLeg.label}
+                odds={coverLeg.odds}
+                figure={
+                  <CalcLockableFigure
+                    id="baccarat-cover"
+                    label="Copertura"
+                    amount={result.stakeCover}
+                    rounded={result.stakeCoverRounded}
+                    locked={coverLocked}
+                    editValue={coverEdit}
+                    onToggle={toggleCoverLock}
+                    onEdit={setCoverEdit}
+                  />
+                }
+              />
+            )}
+            <p className="ds-body-sm m-0 text-ds-ink-muted">
+              {puntaLabel} su un conto, {coverLabel} sull&apos;altro. Player paga 1:1 (quota{' '}
+              {formatOdds(BACCARAT_PLAYER_ODDS)}), Banco 1:1 meno la commissione del{' '}
+              {BACCARAT_BANCO_COMMISSION_PERCENT} % (quota {formatOdds(BACCARAT_BANCO_ODDS)}).
+              Pareggio: mano nulla, le puntate tornano indietro e si rigioca. Il rating è sul
+              risultato reale.
+            </p>
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="baccarat-puntata"
+              label="Puntata reale"
+              size="lg"
+              suffix="€"
+              value={puntata}
+              onChange={setPuntata}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
+                id="baccarat-bonus"
+                label="Puntata bonus"
+                suffix="€"
+                value={bonus}
+                onChange={setBonus}
+              />
+              <CalcNumberField
+                id="baccarat-rimborso"
+                label="Rimborso"
+                suffix="€"
+                value={rimborso}
+                onChange={setRimborso}
+              />
+            </div>
+            <CalcChoice
+              label="Puntata su"
+              options={SIDE_OPTIONS}
+              value={puntaSide}
+              onChange={handleChangeSide}
+            />
+            <CalcChoice
+              label="Fiche minima (€)"
+              options={CHIP_CHOICES}
+              value={String(chip)}
+              onChange={(v) => setChip(Number(v))}
+              columns={6}
+            />
+          </>
+        }
+      />
 
-      {/* Riepilogo */}
-      {result.showSummary && result.guadagnoMinimo != null ? (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {modeLabel}Riepilogo
-          </div>
-          <div className="space-y-2 p-4 text-sm">
-            <p>
-              {result.isRimborso && result.crPercent != null
-                ? `CR%: ${result.crPercent.toFixed(2)}%`
-                : `Rating: ${result.rating != null ? result.rating.toFixed(2) : '—'}%`}
-              <span className="text-muted-foreground"> (sul risultato reale)</span>
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">
-                {formatNum(result.puntataEffettiva)} €
-              </span>
-              {bonusNum > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (di cui {formatNum(bonusNum)} € bonus)
-                </span>
-              )}{' '}
-              su <span className="font-medium">{puntaLabel}</span> a quota{' '}
-              <span className="font-mono">{quotaPunta}</span>.
-            </p>
-            <p>
-              Copri con{' '}
-              <LockableAmount
-                id="baccarat-cover"
-                amount={result.stakeCover}
-                locked={coverLocked}
-                editValue={coverEdit}
-                onToggle={toggleCoverLock}
-                onEdit={setCoverEdit}
-              />{' '}
-              su <span className="font-medium">{coverLabel}</span> a quota{' '}
-              <span className="font-mono">{quotaCover}</span> sull&apos;altro conto.
-              {coverDiffers && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (calcolata: {formatNum(result.stakeCoverRounded)} €)
-                </span>
-              )}
-            </p>
-            <p>
-              Il guadagno minimo sarà{' '}
-              <span
-                className={cn(
-                  'font-mono',
-                  result.guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
-                )}
-              >
-                {formatSigned(result.guadagnoMinimo)} €
-              </span>
-            </p>
-          </div>
-        </div>
-      ) : coverLocked && result.stakeCoverRounded != null ? (
-        <div className="border-b border-border bg-card p-4 text-sm">
-          Copertura bloccata: scrivi l&apos;importo giocato su {coverLabel}{' '}
-          <LockableAmount
-            id="baccarat-cover"
-            amount={result.stakeCoverRounded}
-            locked={coverLocked}
-            editValue={coverEdit}
-            onToggle={toggleCoverLock}
-            onEdit={setCoverEdit}
-          />
-          <span className="text-muted-foreground">
-            {' '}
-            (calcolata: {formatNum(result.stakeCoverRounded)} €)
-          </span>
-        </div>
-      ) : null}
-
-      {/* Tabella dei profitti */}
-      {result.showSummary && (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {modeLabel}Tabella dei profitti
-          </div>
-          <div className="overflow-x-auto p-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs text-muted-foreground">
-                  <th className="p-2 text-left font-normal">Esito</th>
-                  {result.legs.map((leg) => (
-                    <th key={leg.side} className="whitespace-nowrap p-2 text-right font-normal">
-                      Conto {leg.label}
-                      {leg.isPunta ? '' : ' (copertura)'}
-                    </th>
-                  ))}
-                  {showRimborsoColumn && <th className="p-2 text-right font-normal">Rimborso</th>}
-                  <th className="p-2 text-right font-normal">Totale</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.outcomes.map((outcome) => (
-                  <tr key={outcome.winner} className="border-b border-border">
-                    <td className="whitespace-nowrap p-2 font-medium text-foreground">
-                      {outcome.label}
-                    </td>
-                    {outcome.byLeg.map((v, i) => (
-                      <td
-                        key={result.legs[i].side}
-                        className={cn(
-                          'whitespace-nowrap p-2 text-right font-mono',
-                          v != null && v > 0
-                            ? 'text-primary'
-                            : v != null && v < 0
-                              ? 'text-destructive'
-                              : 'text-muted-foreground',
-                        )}
-                      >
-                        {formatSigned(v)}
-                      </td>
-                    ))}
-                    {showRimborsoColumn && (
-                      <td
-                        className={cn(
-                          'whitespace-nowrap p-2 text-right font-mono',
-                          outcome.rimborso > 0 ? 'text-primary' : 'text-muted-foreground',
-                        )}
-                      >
-                        {formatSigned(outcome.rimborso)}
-                      </td>
-                    )}
-                    <td
-                      className={cn(
-                        'whitespace-nowrap p-2 text-right font-mono font-medium',
-                        outcome.profit != null && outcome.profit >= 0
-                          ? 'text-primary'
-                          : 'text-destructive',
-                      )}
-                    >
-                      = {formatSigned(outcome.profit)}
-                    </td>
-                  </tr>
-                ))}
-                <tr>
-                  <td className="p-2 text-muted-foreground">
-                    Pareggio <span className="text-xs">(mano nulla, si rigioca)</span>
-                  </td>
-                  {result.legs.map((leg) => (
-                    <td
-                      key={leg.side}
-                      className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground"
-                    >
-                      {formatSigned(0)}
-                    </td>
-                  ))}
-                  {showRimborsoColumn && (
-                    <td className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground">
-                      {formatSigned(0)}
-                    </td>
-                  )}
-                  <td className="whitespace-nowrap p-2 text-right font-mono text-muted-foreground">
-                    = {formatSigned(0)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <CalcProfits
+        outlay={result.showSummary ? puntataReale + (result.stakeCover ?? 0) : null}
+        minGain={result.showSummary ? result.guadagnoMinimo : null}
+      >
+        <CalcOutcomeTable
+          legLabels={result.legs.map((l) => l.label)}
+          rows={profitRows}
+          stake={puntataReale}
+          emptyText={
+            coverLocked && result.stakeCover == null
+              ? "Copertura bloccata: scrivi l'importo giocato o sblocca per tornare al valore calcolato."
+              : 'Il risultato compare quando la puntata è compilata.'
+          }
+        />
+      </CalcProfits>
 
       <CalculatorSaveAction onClick={handleOpenModal} disabled={!result.showSummary} />
 

@@ -1,15 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
-import { Input } from '@/components/ui/input'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import {
-  DecimalField,
-  ResultStat,
-  formatNum,
-  formatSigned,
-  profitClass,
-} from '@/components/strumenti/scanner-v2/calculator-shared'
+  CalcLayout,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcProfits,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
 import {
   ResultBttsOfflineSaveModal,
   type ResultBttsOfflineLeg,
@@ -21,6 +21,7 @@ import {
   RESULT_BTTS_MARKET_LABEL,
   RESULT_BTTS_ZERO_ZERO_LABEL,
 } from '@/lib/result-btts'
+import { formatOdds } from '@/lib/landing-format'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 
 /**
@@ -73,154 +74,144 @@ export function ResultBttsOfflineCalculator() {
       }))
     : null
 
+  const profitRows: OutcomeProfitRow[] = result.showSummary
+    ? [
+        ...RESULT_BTTS_COVERED_OUTCOMES.map((outcome, i) => ({
+          id: outcome.outcomeKey,
+          esito: `${i === puntaIndex ? 'Se vince la puntata · ' : 'Se vince '}${outcome.label}`,
+          legs: [result.legs[i].payout, result.totalOutlay != null ? -result.totalOutlay : null],
+          rimborso: 0,
+          totale: result.legs[i].profit,
+        })),
+        {
+          id: 'zero-zero',
+          esito: `Se finisce 0-0 (${RESULT_BTTS_ZERO_ZERO_LABEL}${
+            zeroZeroNum != null ? ` a ${formatOdds(zeroZeroNum)}` : ''
+          }) · non coperto, rimborso`,
+          legs: [null, result.totalOutlay != null ? -result.totalOutlay : null],
+          rimborso: result.totalOutlay ?? 0,
+          totale: 0,
+        },
+      ]
+    : []
+
+  const pick = (i: number) => setPuntaIndex(i)
+
   return (
-    <div className="space-y-5 p-4 sm:p-5">
-      <p className="text-xs text-muted-foreground">
-        Mercato <span className="font-medium text-foreground">{RESULT_BTTS_MARKET_LABEL}</span>{' '}
-        dentro lo stesso bookmaker: inserisci le quote dei cinque esiti coperti. Lo 0-0 (
-        {RESULT_BTTS_ZERO_ZERO_LABEL}) resta scoperto e il bookmaker rimborsa le puntate.
-      </p>
+    <div className="flex flex-col gap-8">
+      <CalculatorRating label="Rating" value={result.showSummary ? result.rating : null} />
 
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {RESULT_BTTS_COVERED_OUTCOMES.map((outcome, i) => {
-          const isPunta = i === puntaIndex
-          const legResult = result.legs[i]
-          return (
+      <CalcLayout
+        outcomes={
+          <>
             <div
-              key={outcome.outcomeKey}
-              className={cn(
-                'flex flex-col items-center rounded-lg border p-3 text-center',
-                isPunta ? 'border-primary/40 bg-primary/5' : 'border-border bg-card',
-              )}
+              role="radiogroup"
+              aria-label="Esito su cui puntare"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
             >
-              <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-muted-foreground">
-                {isPunta ? 'Puntata' : 'Copertura'}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{outcome.label}</p>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0"
-                value={quotes[i]}
-                onChange={(e) => {
-                  const value = sanitizeDecimal(e.target.value)
-                  setQuotes((prev) => prev.map((q, j) => (j === i ? value : q)))
-                }}
-                className="mt-3 h-9 w-full text-center font-mono text-base font-semibold"
-                aria-label={`Quota ${outcome.label}`}
-              />
-              <p className="mt-3 font-mono text-sm font-semibold tabular-nums text-foreground">
-                {formatNum(legResult?.stake ?? null)} €
-              </p>
-              {isPunta ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">puntata</p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPuntaIndex(i)}
-                  className="mt-1 text-[11px] text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
-                >
-                  Puntata qui
-                </button>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-border p-4">
-        <div className="flex flex-wrap items-end gap-4">
-          <DecimalField
-            id="rbo-calc-puntata"
-            label="Puntata €"
-            value={puntata}
-            onChange={setPuntata}
-            className="w-32"
-          />
-          <DecimalField
-            id="rbo-calc-zero-zero"
-            label={`Quota ${RESULT_BTTS_ZERO_ZERO_LABEL} (0-0), facoltativa`}
-            value={zeroZero}
-            onChange={setZeroZero}
-            className="w-56"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-2.5 sm:grid-cols-4">
-          <ResultStat
-            label="Esborso totale"
-            value={result.totalOutlay != null ? `€${formatNum(result.totalOutlay)}` : '—'}
-          />
-          <ResultStat label="Coperture" value={formatNum(coversTotal || null)} />
-          <ResultStat
-            label="Guadagno min"
-            value={result.guadagnoMinimo != null ? `€${formatNum(result.guadagnoMinimo)}` : '—'}
-            className={profitClass(result.guadagnoMinimo)}
-          />
-          <ResultStat
-            label="Rating"
-            value={result.rating != null ? `${formatNum(result.rating)}%` : '—'}
-          />
-        </div>
-      </div>
-
-      {result.showSummary && (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full whitespace-nowrap text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
-                <th className="px-4 py-2.5 text-left">Esito</th>
-                <th className="px-4 py-2.5 text-right">Incasso</th>
-                <th className="px-4 py-2.5 text-right">Esborso</th>
-                <th className="px-4 py-2.5 text-right">Totale</th>
-              </tr>
-            </thead>
-            <tbody>
               {RESULT_BTTS_COVERED_OUTCOMES.map((outcome, i) => {
-                const legResult = result.legs[i]
+                const isPunta = i === puntaIndex
                 return (
-                  <tr
-                    key={`profit-${outcome.outcomeKey}`}
-                    className={cn('border-b border-border/50', legResult.isPunta && 'bg-primary/5')}
+                  <div
+                    key={outcome.outcomeKey}
+                    role="radio"
+                    aria-checked={isPunta}
+                    aria-label={`Punta su ${outcome.label}`}
+                    tabIndex={0}
+                    onClick={() => pick(i)}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault()
+                        pick(i)
+                      }
+                    }}
+                    className={cn(
+                      'flex cursor-pointer flex-col items-center gap-2 rounded-ds-md border p-4 text-center transition-[border-color,box-shadow] duration-150 hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-none',
+                      isPunta
+                        ? 'border-ds-brand bg-ds-info-soft'
+                        : 'border-ds-line bg-ds-surface-raised',
+                    )}
                   >
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      vince <span className="font-medium text-foreground">{outcome.label}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-primary">
-                      {formatSigned(legResult.payout)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                      {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
-                    </td>
-                    <td
-                      className={cn(
-                        'px-4 py-2.5 text-right font-semibold',
-                        profitClass(legResult.profit),
-                      )}
-                    >
-                      {formatSigned(legResult.profit)} €
-                    </td>
-                  </tr>
+                    <span className="ds-label uppercase text-ds-ink-muted">
+                      {isPunta ? 'Puntata' : 'Copertura'}
+                    </span>
+                    <span className="ds-subheading">{outcome.label}</span>
+                    <div className="w-24" onClick={(e) => e.stopPropagation()}>
+                      <CalcNumberField
+                        id={`rbo-quota-${i}`}
+                        ariaLabel={`Quota ${outcome.label}`}
+                        size="sm"
+                        value={quotes[i]}
+                        onChange={(v) => {
+                          const value = sanitizeDecimal(v)
+                          setQuotes((prev) => prev.map((q, j) => (j === i ? value : q)))
+                        }}
+                      />
+                    </div>
+                    <div className="mt-auto">
+                      <div className="ds-caption text-ds-ink-muted">
+                        {isPunta ? 'Puntata' : 'Copertura'}
+                      </div>
+                      <div aria-live="polite" className="ds-num whitespace-nowrap">
+                        {amount(result.legs[i]?.stake ?? null)}
+                      </div>
+                    </div>
+                  </div>
                 )
               })}
-              <tr className="bg-muted/20">
-                <td className="whitespace-normal px-4 py-2.5 text-muted-foreground">
-                  finisce <span className="font-medium text-foreground">0-0</span> (
-                  {RESULT_BTTS_ZERO_ZERO_LABEL}
-                  {zeroZeroNum != null ? ` a ${formatNum(zeroZeroNum)}` : ''}): non coperto, il
-                  bookmaker rimborsa le puntate
-                </td>
-                <td className="px-4 py-2.5 text-right font-medium text-muted-foreground">—</td>
-                <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                  {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
-                </td>
-                <td className="px-4 py-2.5 text-right font-semibold text-muted-foreground">
-                  rimborso
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+            <p className="ds-body-sm m-0 text-ds-ink-muted">
+              Mercato <b className="font-semibold text-ds-ink">{RESULT_BTTS_MARKET_LABEL}</b> dentro
+              lo stesso bookmaker: le quote dei cinque esiti coperti, la puntata sull&apos;esito
+              scelto e le coperture sugli altri. Lo 0-0 ({RESULT_BTTS_ZERO_ZERO_LABEL}) resta
+              scoperto e il bookmaker rimborsa le puntate.
+            </p>
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="rbo-calc-puntata"
+              label="Puntata"
+              size="lg"
+              suffix="€"
+              value={puntata}
+              onChange={(v) => setPuntata(sanitizeDecimal(v))}
+            />
+            <CalcNumberField
+              id="rbo-calc-zero-zero"
+              label={`Quota ${RESULT_BTTS_ZERO_ZERO_LABEL} (0-0)`}
+              hint="Facoltativa, solo per ricordarla: lo 0-0 non si copre."
+              value={zeroZero}
+              onChange={(v) => setZeroZero(sanitizeDecimal(v))}
+            />
+            <div className="grid grid-cols-2 gap-3 border-t border-ds-line pt-4">
+              <div>
+                <div className="ds-caption text-ds-ink-muted">Esborso totale</div>
+                <div aria-live="polite" className="ds-num-xl">
+                  {amount(result.totalOutlay)}
+                </div>
+              </div>
+              <div>
+                <div className="ds-caption text-ds-ink-muted">Coperture</div>
+                <div aria-live="polite" className="ds-num-xl">
+                  {amount(coversTotal || null)}
+                </div>
+              </div>
+            </div>
+          </>
+        }
+      />
+
+      <CalcProfits outlay={result.totalOutlay} minGain={result.guadagnoMinimo}>
+        <CalcOutcomeTable
+          legLabels={['Incasso', 'Esborso']}
+          rows={profitRows}
+          stake={puntataNum ?? 0}
+          emptyText="Il risultato compare quando la puntata e le cinque quote sono compilate e valide."
+        />
+      </CalcProfits>
 
       <CalculatorSaveAction
         onClick={() => {

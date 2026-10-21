@@ -7,8 +7,21 @@ import { MARKET_OPTIONS, formatMercatoString, isTeamScopedMarket } from '@/lib/c
 import { MultiplaOfflineSaveModal } from '@/components/calculators/MultiplaOfflineSaveModal'
 import { TeamScopeToggle } from '@/components/calculators/team-scope-toggle'
 import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  CalcFigure,
+  CalcLayout,
+  CalcNote,
+  CalcNumberField,
+  CalcProfits,
+  CalcSelect,
+  CalcTable,
+  CalcTextField,
+  amount,
+  type CalcColumn,
+} from '@/components/calculators/calc-ds'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DsMoney } from '@/components/landing/ds-data'
+import { formatOdds } from '@/lib/landing-format'
 import { SearchableSelect } from '@/components/ui/searchable-select'
 import { cn } from '@/lib/utils'
 import type { OfflineMultiplaEvent } from '@/types/offline-multipla-event'
@@ -17,17 +30,6 @@ function parseNum(s: string): number | null {
   if (s.trim() === '') return null
   const n = Number.parseFloat(s.replace(',', '.'))
   return Number.isFinite(n) ? n : null
-}
-
-function formatNum(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return '—'
-  return n.toFixed(2)
-}
-
-function formatSigned(n: number): string {
-  if (!Number.isFinite(n)) return '—'
-  const v = n.toFixed(2)
-  return n >= 0 ? `+${v}` : v
 }
 
 function getDefaultDateTimeLocal(): string {
@@ -156,552 +158,346 @@ export function MultiplaOfflineCalculator() {
     })
   }
 
+  const typeLabel = (type: OfflineMultiplaEvent['type']) =>
+    type === 'punta-banca' ? 'Punta-Banca' : 'Punta-Punta'
+  const coverLabel = (type: OfflineMultiplaEvent['type']) =>
+    type === 'punta-banca' ? 'Bancata' : 'Punta 2'
+  const costLabel = (type: OfflineMultiplaEvent['type']) =>
+    type === 'punta-banca' ? 'Resp.' : 'Costo'
+  const oddsText = (s: string) => {
+    const n = parseNum(s)
+    return n != null ? formatOdds(n) : '—'
+  }
+
+  const summaryColumns: CalcColumn<{ id: string; ev: OfflineMultiplaEvent; i: number }>[] = [
+    {
+      key: 'evento',
+      label: 'Evento',
+      render: ({ ev, i }) => (
+        <span className="font-semibold text-ds-ink">{ev.eventName || `Evento ${i + 1}`}</span>
+      ),
+    },
+    { key: 'tipo', label: 'Tipo', render: ({ ev }) => typeLabel(ev.type) },
+    { key: 'qp', label: 'Quota punta', num: true, render: ({ ev }) => oddsText(ev.mainOdds) },
+    { key: 'qc', label: 'Quota cop.', num: true, render: ({ ev }) => oddsText(ev.coverOdds) },
+    {
+      key: 'stake',
+      label: 'Copertura',
+      num: true,
+      render: ({ i }) => amount(hedgeResults[i]?.hedgeStake ?? null),
+    },
+    {
+      key: 'cost',
+      label: 'Resp. / costo',
+      num: true,
+      render: ({ i }) => amount(hedgeResults[i]?.hedgeCost ?? null),
+    },
+  ]
+
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* Sezione Stake */}
-      <div className="border-b border-border bg-muted/40 p-4">
-        <p className="mb-3 font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
-          Stake Multipla
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="stake-reale">Puntata reale</Label>
-            <div className="relative">
-              <Input
-                id="stake-reale"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={stakeReale}
-                onChange={(e) => setStakeReale(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="stake-bonus">Puntata bonus</Label>
-            <div className="relative">
-              <Input
-                id="stake-bonus"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={stakeBonus}
-                onChange={(e) => setStakeBonus(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rimborso">Valore rimborso</Label>
-            <div className="relative">
-              <Input
-                id="rimborso"
-                type="number"
-                inputMode="decimal"
-                placeholder="0"
-                value={rimborso}
-                onChange={(e) => setRimborso(e.target.value)}
-                className="pr-8"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                €
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sezione Eventi */}
-      <div className="border-b border-border p-4">
-        <p className="mb-3 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
-          Selezioni Multipla
-        </p>
-        <div className="space-y-4">
-          {events.map((ev, index) => {
-            const isCollapsed = collapsedIds.has(ev.id)
-            const hr = hedgeResults[index]
-            const dateFormatted = ev.date
-              ? new Date(ev.date).toLocaleDateString('it-IT', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              : '—'
-
-            return (
-              <div key={ev.id} className="rounded-xl border border-border bg-muted/10">
-                {/* Header - sempre visibile, cliccabile per collassare */}
+    <div className="flex flex-col gap-8">
+      <CalcLayout
+        outcomes={
+          <>
+            {events.map((ev, index) => {
+              const isCollapsed = collapsedIds.has(ev.id)
+              const hr = hedgeResults[index]
+              const hasResult = hr != null && hr.hedgeStake > 0 && backStakeTotale > 0
+              const isPB = ev.type === 'punta-banca'
+              return (
                 <div
-                  className="flex cursor-pointer items-center justify-between gap-2 p-3 sm:p-4"
-                  onClick={() => toggleCollapse(ev.id)}
+                  key={ev.id}
+                  className="flex flex-col gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-5 py-4 shadow-ds-sm"
                 >
-                  <div className="flex items-center gap-2">
-                    {isCollapsed ? (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-semibold text-primary">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleCollapse(ev.id)}
+                      aria-expanded={!isCollapsed}
+                      aria-label={isCollapsed ? 'Espandi evento' : 'Comprimi evento'}
+                      className={cn(dsButtonClass('ghost', 'sm'), 'w-8 px-0')}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                    <span className="ds-label inline-flex h-7 w-7 items-center justify-center rounded-full bg-ds-brand-soft tracking-normal text-ds-brand">
                       {index + 1}
                     </span>
-                    <div
-                      className="flex rounded-md border border-border"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => updateEvent(ev.id, { type: 'punta-banca' })}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-medium transition-colors',
-                          ev.type === 'punta-banca'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        P-B
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateEvent(ev.id, { type: 'punta-punta' })}
-                        className={cn(
-                          'px-2.5 py-1 text-xs font-medium transition-colors',
-                          ev.type === 'punta-punta'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        P-P
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => moveEvent(index, 'up')}
-                      disabled={index === 0}
-                      className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveEvent(index, 'down')}
-                      disabled={index === events.length - 1}
-                      className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </button>
-                    {events.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => removeEvent(ev.id)}
-                        className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                    {isCollapsed ? (
+                      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <span className="ds-subheading truncate">
+                          {ev.eventName || `Evento ${index + 1}`}
+                        </span>
+                        <span className="ds-body-sm whitespace-nowrap tabular-nums text-ds-ink-muted">
+                          {typeLabel(ev.type)}
+                          {ev.market
+                            ? ` · ${formatMercatoString(ev.market, ev.marketScope)}`
+                            : ''}{' '}
+                          · {oddsText(ev.mainOdds)} / {oddsText(ev.coverOdds)}
+                          {isPB ? ` · ${ev.commissionPercent || 0} %` : ''}
+                        </span>
+                        <span className="ds-num ml-auto whitespace-nowrap">
+                          {coverLabel(ev.type)} {amount(hasResult ? hr.hedgeStake : null)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div role="group" aria-label="Tipo di copertura" className="flex gap-2">
+                        {(['punta-banca', 'punta-punta'] as const).map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            aria-pressed={ev.type === t}
+                            onClick={() => updateEvent(ev.id, { type: t })}
+                            className={dsButtonClass(ev.type === t ? 'primary' : 'secondary', 'sm')}
+                          >
+                            {typeLabel(t)}
+                          </button>
+                        ))}
+                      </div>
                     )}
-                  </div>
-                </div>
-
-                {/* Vista collassata - riepilogo su due righe */}
-                {isCollapsed && (
-                  <div className="border-t border-border/50 px-3 pb-3 sm:px-4 sm:pb-4">
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-[11px]">
-                        <thead>
-                          <tr className="text-muted-foreground">
-                            <th className="pb-1 pr-3 text-left font-normal">Evento</th>
-                            <th className="pb-1 pr-3 text-left font-normal">Data/ora</th>
-                            <th className="pb-1 pr-3 text-left font-normal">Mercato</th>
-                            <th className="pb-1 pr-3 text-right font-normal">Q. Punta</th>
-                            <th className="pb-1 pr-3 text-right font-normal">
-                              {ev.type === 'punta-banca' ? 'Q. Banca' : 'Q. Punta 2'}
-                            </th>
-                            <th className="pb-1 pr-3 text-right font-normal">Stake</th>
-                            <th className="pb-1 text-right font-normal">Resp.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="font-mono text-xs">
-                            <td className="pr-3 font-sans font-medium text-foreground">
-                              {ev.eventName || '—'}
-                            </td>
-                            <td className="whitespace-nowrap pr-3 text-muted-foreground">
-                              {dateFormatted}
-                            </td>
-                            <td className="pr-3 font-sans text-muted-foreground">
-                              {formatMercatoString(ev.market, ev.marketScope) || '—'}
-                            </td>
-                            <td className="pr-3 text-right">{formatNum(parseNum(ev.mainOdds))}</td>
-                            <td className="pr-3 text-right">{formatNum(parseNum(ev.coverOdds))}</td>
-                            <td className="pr-3 text-right text-destructive">
-                              {formatNum(hr?.hedgeStake ?? null)} €
-                            </td>
-                            <td className="text-right">{formatNum(hr?.hedgeCost ?? null)} €</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="ml-auto flex gap-1">
+                      <button
+                        type="button"
+                        aria-label="Sposta su"
+                        disabled={index === 0}
+                        onClick={() => moveEvent(index, 'up')}
+                        className={cn(dsButtonClass('ghost', 'sm'), 'w-8 px-0 disabled:opacity-40')}
+                      >
+                        <ArrowUp className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Sposta giù"
+                        disabled={index === events.length - 1}
+                        onClick={() => moveEvent(index, 'down')}
+                        className={cn(dsButtonClass('ghost', 'sm'), 'w-8 px-0 disabled:opacity-40')}
+                      >
+                        <ArrowDown className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Rimuovi evento"
+                        disabled={events.length <= 2}
+                        onClick={() => removeEvent(ev.id)}
+                        className={cn(dsButtonClass('ghost', 'sm'), 'w-8 px-0 disabled:opacity-40')}
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </button>
                     </div>
                   </div>
-                )}
 
-                {/* Vista espansa - form completo */}
-                {!isCollapsed && (
-                  <div className="border-t border-border/50 px-3 pb-3 sm:px-4 sm:pb-4">
-                    {/* Inputs evento */}
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      <div className="space-y-1 sm:col-span-2 lg:col-span-2">
-                        <Label htmlFor={`ev-name-${ev.id}`} className="text-xs">
-                          Nome evento
-                        </Label>
-                        <Input
+                  {!isCollapsed && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+                        <CalcTextField
                           id={`ev-name-${ev.id}`}
+                          label="Nome evento"
                           placeholder="Es. Roma - Milan"
                           value={ev.eventName}
-                          onChange={(e) => updateEvent(ev.id, { eventName: e.target.value })}
-                          className="h-8"
+                          onChange={(v) => updateEvent(ev.id, { eventName: v })}
+                          className="col-span-2 sm:col-span-3"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-date-${ev.id}`} className="text-xs">
-                          Data/ora
-                        </Label>
-                        <Input
+                        <CalcTextField
                           id={`ev-date-${ev.id}`}
+                          label="Data e ora"
                           type="datetime-local"
                           value={ev.date}
-                          onChange={(e) => updateEvent(ev.id, { date: e.target.value })}
-                          className="h-8"
+                          onChange={(v) => updateEvent(ev.id, { date: v })}
+                          className="col-span-2 sm:col-span-3"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-sport-${ev.id}`} className="text-xs">
-                          Sport
-                        </Label>
-                        <select
+                        <CalcSelect
                           id={`ev-sport-${ev.id}`}
+                          label="Sport"
+                          options={SPORTS}
                           value={ev.sport}
-                          onChange={(e) => updateEvent(ev.id, { sport: e.target.value })}
-                          className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          {SPORTS.map((s) => (
-                            <option key={s.value} value={s.value}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-comp-${ev.id}`} className="text-xs">
-                          Competizione
-                        </Label>
-                        <Input
+                          onChange={(v) => updateEvent(ev.id, { sport: v })}
+                          className="sm:col-span-2"
+                        />
+                        <CalcTextField
                           id={`ev-comp-${ev.id}`}
+                          label="Competizione"
                           placeholder="Es. Serie A"
                           value={ev.competition}
-                          onChange={(e) => updateEvent(ev.id, { competition: e.target.value })}
-                          className="h-8"
+                          onChange={(v) => updateEvent(ev.id, { competition: v })}
+                          className="sm:col-span-2"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-market-${ev.id}`} className="text-xs">
-                          Mercato
-                        </Label>
-                        <SearchableSelect
-                          id={`ev-market-${ev.id}`}
-                          placeholder="Seleziona"
-                          searchPlaceholder="Cerca mercato..."
-                          options={MARKET_OPTIONS}
-                          value={ev.market}
-                          onChange={(v) =>
-                            updateEvent(ev.id, {
-                              market: v,
-                              marketScope: isTeamScopedMarket(v) ? ev.marketScope || 'CASA' : '',
-                            })
-                          }
-                          className="[&>button]:h-8"
-                        />
-                      </div>
-                      {isTeamScopedMarket(ev.market) && (
-                        <div className="space-y-1">
-                          <Label className="text-xs">Squadra</Label>
-                          <TeamScopeToggle
-                            value={ev.marketScope}
-                            onChange={(s) => updateEvent(ev.id, { marketScope: s })}
-                            className="h-8 items-stretch"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Quote e commissione */}
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-main-${ev.id}`} className="text-xs">
-                          Quota Punta
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id={`ev-main-${ev.id}`}
-                            type="number"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={ev.mainOdds}
-                            onChange={(e) => updateEvent(ev.id, { mainOdds: e.target.value })}
-                            className="h-8 pr-6"
-                          />
-                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                            @
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-cover-${ev.id}`} className="text-xs">
-                          {ev.type === 'punta-banca' ? 'Quota Banca' : 'Quota Punta 2'}
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id={`ev-cover-${ev.id}`}
-                            type="number"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={ev.coverOdds}
-                            onChange={(e) => updateEvent(ev.id, { coverOdds: e.target.value })}
-                            className="h-8 pr-6"
-                          />
-                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                            @
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`ev-comm-${ev.id}`} className="text-xs">
-                          Commissione
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id={`ev-comm-${ev.id}`}
-                            type="number"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={ev.commissionPercent}
-                            onChange={(e) =>
-                              updateEvent(ev.id, { commissionPercent: e.target.value })
+                        <div className="col-span-2 flex min-w-0 flex-col gap-1">
+                          <label
+                            htmlFor={`ev-market-${ev.id}`}
+                            className="text-sm font-semibold leading-5 text-ds-ink"
+                          >
+                            Mercato
+                          </label>
+                          <SearchableSelect
+                            id={`ev-market-${ev.id}`}
+                            placeholder="Seleziona"
+                            searchPlaceholder="Cerca mercato..."
+                            options={MARKET_OPTIONS}
+                            value={ev.market}
+                            onChange={(v) =>
+                              updateEvent(ev.id, {
+                                market: v,
+                                marketScope: isTeamScopedMarket(v) ? ev.marketScope || 'CASA' : '',
+                              })
                             }
-                            className="h-8 pr-6"
+                            className="[&>button]:h-8"
                           />
-                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                            %
-                          </span>
+                        </div>
+                        {isTeamScopedMarket(ev.market) && (
+                          <div className="col-span-2 flex flex-col gap-1">
+                            <span className="text-sm font-semibold leading-5 text-ds-ink">
+                              Squadra
+                            </span>
+                            <TeamScopeToggle
+                              value={ev.marketScope}
+                              onChange={(sc) => updateEvent(ev.id, { marketScope: sc })}
+                              className="h-8 items-stretch"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 items-start gap-3 border-t border-ds-line pt-4 sm:grid-cols-[repeat(3,minmax(0,1fr))_minmax(150px,1.4fr)]">
+                        <CalcNumberField
+                          id={`ev-main-${ev.id}`}
+                          label="Quota punta"
+                          size="sm"
+                          value={ev.mainOdds}
+                          onChange={(v) => updateEvent(ev.id, { mainOdds: v })}
+                        />
+                        <CalcNumberField
+                          id={`ev-cover-${ev.id}`}
+                          label={isPB ? 'Quota banca' : 'Quota punta 2'}
+                          size="sm"
+                          value={ev.coverOdds}
+                          onChange={(v) => updateEvent(ev.id, { coverOdds: v })}
+                        />
+                        {isPB ? (
+                          <CalcNumberField
+                            id={`ev-comm-${ev.id}`}
+                            label="Commissione"
+                            size="sm"
+                            suffix="%"
+                            value={ev.commissionPercent}
+                            onChange={(v) => updateEvent(ev.id, { commissionPercent: v })}
+                          />
+                        ) : (
+                          <span className="hidden sm:block" />
+                        )}
+                        <div className="col-span-2 text-right sm:col-span-1">
+                          <div className="ds-caption text-ds-ink-muted">{coverLabel(ev.type)}</div>
+                          <div aria-live="polite" className="ds-num text-xl leading-7">
+                            {amount(hasResult ? hr.hedgeStake : null)}
+                          </div>
+                          <div className="ds-body-sm whitespace-nowrap tabular-nums text-ds-ink-muted">
+                            {costLabel(ev.type)} {amount(hasResult ? hr.hedgeCost : null)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Risultato hedge per questo evento */}
-                    {hr != null && hr.hedgeStake > 0 && backStakeTotale > 0 && (
-                      <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-background/60 p-2.5">
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                            {ev.type === 'punta-banca' ? 'Stake Banca' : 'Stake Punta 2'}
-                          </p>
-                          <p className="font-mono text-sm font-semibold text-destructive">
-                            {formatNum(hr.hedgeStake)} €
-                          </p>
-                        </div>
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                            {ev.type === 'punta-banca' ? 'Responsabilità' : 'Costo'}
-                          </p>
-                          <p className="font-mono text-sm font-semibold">
-                            {formatNum(hr.hedgeCost)} €
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-
-          {/* Bottone aggiungi evento */}
-          <button
-            type="button"
-            onClick={addEvent}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-primary"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Aggiungi evento
-          </button>
-        </div>
-      </div>
-
-      {/* Riepilogo Multipla */}
-      {showSummary && (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {stakeBonusNum > 0 && rimborsoNum > 0
-              ? 'BONUS + RIMBORSO • '
-              : stakeBonusNum > 0
-                ? 'BONUS • '
-                : rimborsoNum > 0
-                  ? 'RIMBORSO • '
-                  : ''}
-            Riepilogo Multipla
-          </div>
-
-          {/* Tabella riepilogo - card su mobile */}
-          <div className="block space-y-3 p-4 sm:hidden">
-            {events.map((ev, i) => {
-              const hr = hedgeResults[i]
-              return (
-                <div key={ev.id} className="rounded-xl border border-border bg-muted/30 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">
-                      {ev.eventName || `Evento ${i + 1}`}
-                    </p>
-                    <span
-                      className={cn(
-                        'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
-                        ev.type === 'punta-banca'
-                          ? 'bg-accent text-primary'
-                          : 'bg-ds-warning-soft text-ds-warning',
-                      )}
-                    >
-                      {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Quota Punta</span>
-                      <span className="font-mono">{formatNum(parseNum(ev.mainOdds))}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {ev.type === 'punta-banca' ? 'Quota Banca' : 'Quota Punta 2'}
-                      </span>
-                      <span className="font-mono">{formatNum(parseNum(ev.coverOdds))}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {ev.type === 'punta-banca' ? 'Stake Banca' : 'Stake Punta 2'}
-                      </span>
-                      <span className="font-mono text-destructive">
-                        {formatNum(hr?.hedgeStake ?? null)} €
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {ev.type === 'punta-banca' ? 'Responsabilità' : 'Costo'}
-                      </span>
-                      <span className="font-mono">{formatNum(hr?.hedgeCost ?? null)} €</span>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
               )
             })}
-          </div>
+            <div className="flex justify-center">
+              <button type="button" onClick={addEvent} className={dsButtonClass('secondary', 'md')}>
+                <Plus className="h-5 w-5" aria-hidden />
+                Aggiungi evento
+              </button>
+            </div>
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="stake-reale"
+              label="Puntata reale"
+              size="lg"
+              suffix="€"
+              value={stakeReale}
+              onChange={setStakeReale}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
+                id="stake-bonus"
+                label="Puntata bonus"
+                suffix="€"
+                value={stakeBonus}
+                onChange={setStakeBonus}
+              />
+              <CalcNumberField
+                id="rimborso"
+                label="Rimborso"
+                suffix="€"
+                value={rimborso}
+                onChange={setRimborso}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3 border-t border-ds-line pt-4">
+              <CalcFigure
+                label="Quota totale"
+                align="left"
+                live
+                value={showSummary ? formatOdds(totalBackOdds) : '—'}
+              />
+              <CalcFigure
+                label="Ritorno potenziale"
+                align="left"
+                live
+                value={amount(showSummary ? vincitaPotenziale : null)}
+              />
+            </div>
+          </>
+        }
+      />
 
-          {/* Tabella riepilogo - desktop */}
-          <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full whitespace-nowrap text-sm">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="p-3 text-left font-normal">Evento</th>
-                  <th className="p-3 text-center font-normal">Tipo</th>
-                  <th className="p-3 text-right font-normal">Q. Punta</th>
-                  <th className="p-3 text-right font-normal">Q. Cop.</th>
-                  <th className="p-3 text-right font-normal">Stake Cop.</th>
-                  <th className="p-3 text-right font-normal">Resp./Costo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((ev, i) => {
-                  const hr = hedgeResults[i]
-                  return (
-                    <tr
-                      key={ev.id}
-                      className="border-b border-border transition-colors hover:bg-accent"
-                    >
-                      <td className="p-3 font-medium">{ev.eventName || `Evento ${i + 1}`}</td>
-                      <td className="p-3 text-center">
-                        <span
-                          className={cn(
-                            'rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase',
-                            ev.type === 'punta-banca'
-                              ? 'bg-accent text-primary'
-                              : 'bg-ds-warning-soft text-ds-warning',
-                          )}
-                        >
-                          {ev.type === 'punta-banca' ? 'P-B' : 'P-P'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {formatNum(parseNum(ev.mainOdds))}
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {formatNum(parseNum(ev.coverOdds))}
-                      </td>
-                      <td className="p-3 text-right font-mono text-destructive">
-                        {formatNum(hr?.hedgeStake ?? null)} €
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {formatNum(hr?.hedgeCost ?? null)} €
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Totali */}
-          <div className="space-y-2 border-t border-border p-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Quota multipla totale</span>
-              <span className="font-mono font-semibold">{formatNum(totalBackOdds)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Stake totale (reale + bonus)</span>
-              <span className="font-mono">{formatNum(backStakeTotale)} €</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Vincita potenziale lorda</span>
-              <span className="font-mono text-primary">{formatNum(vincitaPotenziale)} €</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Costo totale copertura</span>
-              <span className="font-mono text-destructive">{formatNum(totalHedgeCost)} €</span>
-            </div>
-            {rimborsoNum > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Rimborso</span>
-                <span className="font-mono text-primary">{formatNum(rimborsoNum)} €</span>
+      <CalcProfits
+        outlayLabel="Costo coperture"
+        outlay={showSummary ? totalHedgeCost : null}
+        gainLabel="Profitto se vince la multipla"
+        minGain={showSummary ? profittoNetto : null}
+      >
+        {showSummary ? (
+          <div className="flex flex-col gap-4">
+            <CalcTable
+              caption="Coperture per evento"
+              columns={summaryColumns}
+              rows={events.map((ev, i) => ({ id: ev.id, ev, i }))}
+            />
+            <div className="rounded-ds-md border border-ds-line bg-ds-surface-raised px-5 py-1">
+              {[
+                ['Quota multipla totale', formatOdds(totalBackOdds)],
+                ['Puntata totale (reale + bonus)', amount(backStakeTotale)],
+                ['Vincita potenziale lorda', amount(vincitaPotenziale)],
+                ['Costo totale copertura', amount(totalHedgeCost)],
+                ...(rimborsoNum > 0 ? [['Rimborso', amount(rimborsoNum)]] : []),
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-baseline justify-between gap-4 border-b border-ds-line py-3"
+                >
+                  <span className="ds-body-sm text-ds-ink-muted">{label}</span>
+                  <span className="ds-num whitespace-nowrap">{value}</span>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between gap-4 py-3">
+                <span className="text-sm font-semibold text-ds-ink">
+                  Profitto netto (se tutti vincono)
+                </span>
+                <DsMoney value={profittoNetto} />
               </div>
-            )}
-            <div className="flex justify-between border-t border-border pt-2 font-medium">
-              <span className="text-foreground">Profitto netto (se tutti vincono)</span>
-              <span
-                className={cn(
-                  'font-mono',
-                  profittoNetto >= 0 ? 'text-primary' : 'text-destructive',
-                )}
-              >
-                {formatSigned(profittoNetto)} €
-              </span>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <CalcNote title="Servono puntata e quote">
+            Il risultato compare quando la puntata e le quote di punta e copertura di ogni evento
+            sono compilate e valide.
+          </CalcNote>
+        )}
+      </CalcProfits>
 
       <CalculatorSaveAction onClick={() => setSaveModalOpen(true)} disabled={!canSave} />
 

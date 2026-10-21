@@ -12,16 +12,12 @@ import {
   type RouletteLegKey,
   type RouletteMode,
 } from '@/lib/calculators/engines/roulette-engine'
-import { DEFAULT_CHIP } from '@/lib/calculators/engines/casino-common'
+import { CHIP_OPTIONS, DEFAULT_CHIP } from '@/lib/calculators/engines/casino-common'
 import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildRouletteBet } from '@/lib/calculators/bet-payloads'
 import { loadHolderAccounts } from '@/lib/calculators/load-accounts'
 import {
-  AmountField,
-  ChipSelector,
   LegAccounts,
-  LockableAmount,
-  SegmentedControl,
   defaultEventoData,
   formatNum,
   formatSigned,
@@ -30,12 +26,23 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
 import type { Account, BetCategory } from '@/types/profit-tracker'
 import { Button } from '@/components/ui/button'
-import { CalculatorSaveAction } from '@/components/calculators/calculator-panel'
-import { Checkbox } from '@/components/ui/checkbox'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import {
+  CalcChoice,
+  CalcFigure,
+  CalcLayout,
+  CalcLockableFigure,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcProfits,
+  CalcSwitch,
+  CasinoRow,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
 
 /**
  * Calcolatore offline Roulette europea: la puntata (reale + bonus) su Rosso,
@@ -46,6 +53,11 @@ import { cn } from '@/lib/utils'
  * salvataggio assegna un collaboratore e un conto a ogni gamba (tre sul
  * Rosso/Nero, quattro sulle dozzine).
  */
+
+const CHIP_CHOICES = CHIP_OPTIONS.map((c) => ({
+  value: String(c),
+  label: c < 1 ? c.toFixed(2).replace('.', ',') : String(c),
+}))
 
 const MODE_OPTIONS = (['rosso_nero', 'dozzine'] as RouletteMode[]).map((m) => ({
   value: m,
@@ -115,16 +127,7 @@ export function RouletteCalculator() {
   const puntaSpec = result.puntaSpec
   const covers = result.legs.filter((l) => !l.isPunta)
   const sideOptions = puntaOptions(mode).map((l) => ({ value: l.key, label: l.label }))
-  const showRimborsoColumn = rimborsoNum > 0
   const anyLockedEmpty = covers.some((l) => l.locked && l.stake == null)
-  const modeLabel =
-    bonusNum > 0 && rimborsoNum > 0
-      ? 'BONUS + RIMBORSO • '
-      : bonusNum > 0
-        ? 'BONUS • '
-        : rimborsoNum > 0
-          ? 'RIMBORSO • '
-          : ''
 
   const handleChangeMode = (m: RouletteMode) => {
     setMode(m)
@@ -233,230 +236,152 @@ export function RouletteCalculator() {
     }
   }
 
-  const coverLine = (leg: (typeof covers)[number]) => {
-    const differs =
-      leg.locked &&
-      leg.stake != null &&
-      leg.stakeRounded != null &&
-      Math.abs(leg.stake - leg.stakeRounded) >= 0.005
-    return (
-      <p key={leg.spec.key}>
-        Copri con{' '}
-        <LockableAmount
-          id={`roulette-cover-${leg.spec.key}`}
-          amount={leg.stake ?? leg.stakeRounded}
-          locked={leg.locked}
-          editValue={coverEdits[leg.spec.key] ?? ''}
-          onToggle={() => toggleCoverLock(leg.spec.key, leg.stakeRounded)}
-          onEdit={(v) => editCover(leg.spec.key, v)}
-        />{' '}
-        su <span className="font-medium">{leg.spec.label}</span> a quota{' '}
-        <span className="font-mono">{leg.spec.odds.toFixed(2)}</span> su un altro conto.
-        {differs && (
-          <span className="text-muted-foreground">
-            {' '}
-            (calcolata: {formatNum(leg.stakeRounded)} €)
-          </span>
-        )}
-      </p>
-    )
-  }
+  const showCr = result.isRimborso && result.crPercent != null
+  const profitRows: OutcomeProfitRow[] = result.showSummary
+    ? result.outcomes.map((o) => ({
+        id: o.spec.key,
+        esito: `Se esce ${o.spec.isZero ? 'lo 0' : o.spec.label}${
+          o.spec.isZero && result.partageEffective ? ' · la partage' : ''
+        }`,
+        legs: o.byLeg,
+        rimborso: o.rimborso,
+        totale: o.profit,
+      }))
+    : []
+  const rowTone = (key: RouletteLegKey) =>
+    key === 'rosso' ? 'red' : key === 'nero' ? 'black' : key === 'zero' ? 'profit' : 'info'
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Tavolo e regola */}
-      <div className="space-y-3 border-b border-border p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SegmentedControl
-            label="Tavolo"
-            options={MODE_OPTIONS}
-            value={mode}
-            onChange={handleChangeMode}
-          />
-          <SegmentedControl
-            label="Puntata su"
-            options={sideOptions}
-            value={puntaSpec.key}
-            onChange={handleChangePunta}
-          />
-        </div>
-        <div className="flex items-start gap-2">
-          <Checkbox
-            id="roulette-partage"
-            checked={partage}
-            disabled={!partageAvailable}
-            onChange={(e) => setPartage(e.target.checked)}
-            className="mt-0.5"
-          />
-          <div>
-            <Label htmlFor="roulette-partage" className="cursor-pointer">
-              Regola «la partage»
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              {partageAvailable
-                ? 'Quando esce lo 0, Rosso e Nero perdono solo metà della puntata.'
-                : 'Vale solo sulle puntate a pari chance: sulle dozzine lo 0 fa perdere tutto.'}
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {mode === 'rosso_nero'
-            ? 'Rosso e Nero pagano 1:1 (quota 2.00), lo 0 paga 35:1 (quota 36.00). Tre conti: Rosso, Nero e 0.'
-            : 'Ogni dozzina paga 2:1 (quota 3.00), lo 0 paga 35:1 (quota 36.00). Quattro conti: le tre dozzine e lo 0.'}
-        </p>
-      </div>
+    <div className="flex flex-col gap-8">
+      <CalculatorRating
+        label={showCr ? 'CR' : 'Rating'}
+        value={showCr ? result.crPercent : result.showSummary ? result.rating : null}
+      />
 
-      {/* Sezione input */}
-      <div className="space-y-4 border-b border-border bg-muted/40 p-4">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <AmountField
-            id="roulette-puntata"
-            label="Stake reale"
-            value={puntata}
-            onChange={setPuntata}
-          />
-          <AmountField id="roulette-bonus" label="Stake bonus" value={bonus} onChange={setBonus} />
-          <AmountField
-            id="roulette-rimborso"
-            label="Valore rimborso"
-            value={rimborso}
-            onChange={setRimborso}
-          />
-        </div>
-        <ChipSelector value={chip} onChange={setChip} />
-      </div>
+      <CalcLayout
+        outcomes={
+          <>
+            {result.legs.map((leg) => {
+              const tone = rowTone(leg.spec.key)
+              const dark = tone === 'red' || tone === 'black'
+              return (
+                <CasinoRow
+                  key={leg.spec.key}
+                  tone={tone}
+                  caption={leg.isPunta ? 'Puntata' : 'Copertura'}
+                  name={leg.spec.isZero ? 'Zero' : leg.spec.label}
+                  odds={leg.spec.odds}
+                  figure={
+                    leg.isPunta ? (
+                      <CalcFigure
+                        label="Puntata"
+                        live
+                        onDark={dark}
+                        value={amount(result.puntataEffettiva > 0 ? result.puntataEffettiva : null)}
+                      />
+                    ) : (
+                      <CalcLockableFigure
+                        id={`roulette-cover-${leg.spec.key}`}
+                        label="Copertura"
+                        amount={leg.stake ?? leg.stakeRounded}
+                        rounded={leg.stakeRounded}
+                        locked={leg.locked}
+                        editValue={coverEdits[leg.spec.key] ?? ''}
+                        onToggle={() => toggleCoverLock(leg.spec.key, leg.stakeRounded)}
+                        onEdit={(v) => editCover(leg.spec.key, v)}
+                        onDark={dark}
+                      />
+                    )
+                  }
+                />
+              )
+            })}
+            <p className="ds-body-sm m-0 text-ds-ink-muted">
+              {mode === 'rosso_nero'
+                ? 'Rosso e Nero pagano 1:1 (quota 2,00), lo 0 paga 35:1 (quota 36,00). Tre conti: Rosso, Nero e 0.'
+                : 'Ogni dozzina paga 2:1 (quota 3,00), lo 0 paga 35:1 (quota 36,00). Quattro conti: le tre dozzine e lo 0.'}{' '}
+              Il rating è sul risultato reale.
+            </p>
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="roulette-puntata"
+              label="Puntata reale"
+              size="lg"
+              suffix="€"
+              value={puntata}
+              onChange={setPuntata}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
+                id="roulette-bonus"
+                label="Puntata bonus"
+                suffix="€"
+                value={bonus}
+                onChange={setBonus}
+              />
+              <CalcNumberField
+                id="roulette-rimborso"
+                label="Rimborso"
+                suffix="€"
+                value={rimborso}
+                onChange={setRimborso}
+              />
+            </div>
+            <CalcChoice
+              label="Tavolo"
+              options={MODE_OPTIONS}
+              value={mode}
+              onChange={handleChangeMode}
+              columns={2}
+            />
+            <CalcChoice
+              label="Puntata su"
+              options={sideOptions}
+              value={puntaSpec.key}
+              onChange={handleChangePunta}
+            />
+            <div className="border-t border-ds-line pt-3">
+              <CalcSwitch
+                label="Regola «la partage»"
+                checked={partage}
+                disabled={!partageAvailable}
+                onChange={setPartage}
+                hint={
+                  partageAvailable
+                    ? 'Quando esce lo 0, Rosso e Nero perdono solo metà della puntata.'
+                    : 'Vale solo sulle puntate a pari chance: sulle dozzine lo 0 fa perdere tutto.'
+                }
+              />
+            </div>
+            <CalcChoice
+              label="Fiche minima (€)"
+              options={CHIP_CHOICES}
+              value={String(chip)}
+              onChange={(v) => setChip(Number(v))}
+              columns={6}
+            />
+          </>
+        }
+      />
 
-      {/* Riepilogo */}
-      {result.showSummary && result.guadagnoMinimo != null ? (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {modeLabel}Riepilogo
-          </div>
-          <div className="space-y-2 p-4 text-sm">
-            <p>
-              {result.isRimborso && result.crPercent != null
-                ? `CR%: ${result.crPercent.toFixed(2)}%`
-                : `Rating: ${result.rating != null ? result.rating.toFixed(2) : '—'}%`}
-              <span className="text-muted-foreground">
-                {' '}
-                (sul risultato reale{result.partageEffective ? ', con la partage' : ''})
-              </span>
-            </p>
-            <p>
-              Punta{' '}
-              <span className="font-mono font-medium text-primary">
-                {formatNum(result.puntataEffettiva)} €
-              </span>
-              {bonusNum > 0 && (
-                <span className="text-muted-foreground">
-                  {' '}
-                  (di cui {formatNum(bonusNum)} € bonus)
-                </span>
-              )}{' '}
-              su <span className="font-medium">{puntaSpec.label}</span> a quota{' '}
-              <span className="font-mono">{puntaSpec.odds.toFixed(2)}</span>.
-            </p>
-            {covers.map(coverLine)}
-            <p>
-              Il guadagno minimo sarà{' '}
-              <span
-                className={cn(
-                  'font-mono',
-                  result.guadagnoMinimo >= 0 ? 'text-primary' : 'text-destructive',
-                )}
-              >
-                {formatSigned(result.guadagnoMinimo)} €
-              </span>
-            </p>
-          </div>
-        </div>
-      ) : anyLockedEmpty ? (
-        <div className="space-y-2 border-b border-border bg-card p-4 text-sm">
-          <p className="text-muted-foreground">
-            Copertura bloccata: scrivi l&apos;importo giocato o sblocca per tornare al valore
-            calcolato.
-          </p>
-          {covers.map(coverLine)}
-        </div>
-      ) : null}
-
-      {/* Tabella dei profitti */}
-      {result.showSummary && (
-        <div className="border-b border-border bg-card">
-          <div className="border-b border-border bg-muted px-4 py-2 text-center text-sm font-medium text-foreground">
-            {modeLabel}Tabella dei profitti
-          </div>
-          <div className="overflow-x-auto p-4">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs text-muted-foreground">
-                  <th className="p-2 text-left font-normal">Esce</th>
-                  {result.legs.map((leg) => (
-                    <th key={leg.spec.key} className="whitespace-nowrap p-2 text-right font-normal">
-                      Conto {leg.spec.label}
-                      {leg.isPunta ? '' : ' (cop.)'}
-                    </th>
-                  ))}
-                  {showRimborsoColumn && <th className="p-2 text-right font-normal">Rimborso</th>}
-                  <th className="p-2 text-right font-normal">Totale</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.outcomes.map((outcome, k) => (
-                  <tr
-                    key={outcome.spec.key}
-                    className={cn(k < result.outcomes.length - 1 && 'border-b border-border')}
-                  >
-                    <td className="whitespace-nowrap p-2 font-medium text-foreground">
-                      {outcome.spec.label}
-                      {outcome.spec.isZero && result.partageEffective && (
-                        <span className="ml-1 text-xs font-normal text-muted-foreground">
-                          (la partage)
-                        </span>
-                      )}
-                    </td>
-                    {outcome.byLeg.map((v, i) => (
-                      <td
-                        key={result.legs[i].spec.key}
-                        className={cn(
-                          'whitespace-nowrap p-2 text-right font-mono',
-                          v != null && v > 0
-                            ? 'text-primary'
-                            : v != null && v < 0
-                              ? 'text-destructive'
-                              : 'text-muted-foreground',
-                        )}
-                      >
-                        {formatSigned(v)}
-                      </td>
-                    ))}
-                    {showRimborsoColumn && (
-                      <td
-                        className={cn(
-                          'whitespace-nowrap p-2 text-right font-mono',
-                          outcome.rimborso > 0 ? 'text-primary' : 'text-muted-foreground',
-                        )}
-                      >
-                        {formatSigned(outcome.rimborso)}
-                      </td>
-                    )}
-                    <td
-                      className={cn(
-                        'whitespace-nowrap p-2 text-right font-mono font-medium',
-                        outcome.profit != null && outcome.profit >= 0
-                          ? 'text-primary'
-                          : 'text-destructive',
-                      )}
-                    >
-                      = {formatSigned(outcome.profit)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <CalcProfits
+        outlay={result.showSummary ? puntataReale + (result.totalCovers ?? 0) : null}
+        minGain={result.showSummary ? result.guadagnoMinimo : null}
+      >
+        <CalcOutcomeTable
+          legLabels={result.legs.map((l) => l.spec.label)}
+          rows={profitRows}
+          stake={puntataReale}
+          emptyText={
+            anyLockedEmpty
+              ? "Copertura bloccata: scrivi l'importo giocato o sblocca per tornare al valore calcolato."
+              : 'Il risultato compare quando la puntata è compilata.'
+          }
+        />
+      </CalcProfits>
 
       <CalculatorSaveAction onClick={handleOpenModal} disabled={!result.showSummary} />
 

@@ -136,14 +136,7 @@ export function CalculatorPanel({
 
       <SaveSlotContext.Provider value={saveSlot}>
         <RatingSlotContext.Provider value={ratingSlot}>
-          <div
-            className={cn(
-              'mx-auto w-full px-4 py-8 sm:px-6',
-              tool.wide ? 'max-w-[1200px]' : 'max-w-3xl',
-            )}
-          >
-            {children}
-          </div>
+          <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6">{children}</div>
         </RatingSlotContext.Provider>
       </SaveSlotContext.Provider>
 

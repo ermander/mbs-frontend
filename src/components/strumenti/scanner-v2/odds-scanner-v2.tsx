@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getMatcherMeta, getMatcherResults } from '@/services/api/matcher-client'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { holdCalcBridge } from '@/components/calculators/calculator-panel'
@@ -18,7 +18,7 @@ import type { SharedAmounts } from '@/lib/matcher/quick-profit'
 import type { MatcherFilters, MatcherMeta, MatcherResult } from '@/types/matcher'
 import { multiplaEventKey, type MultiplaEvent } from '@/types/multipla-event'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
-import { MatcherCalculatorModal } from './matcher-calculator-modal'
+import { MatcherCalculatorPanel } from './matcher-calculator-panel'
 import {
   EMPTY_FILTERS,
   SHARED_AMOUNT_KEYS,
@@ -282,10 +282,23 @@ export function OddsScannerV2() {
     })
   }, [loadResults, loadMeta])
 
-  // The page is light (ds-*): the shadcn dialogs opened over it (calculator, accounts) take the
-  // same palette through the bridge of the calculators while they are open.
-  const dialogOpen = calculatorRow != null || multiplaSaveOpen
-  useEffect(() => (dialogOpen ? holdCalcBridge() : undefined), [dialogOpen])
+  // The page is light (ds-*): the accounts dialog of the multipla takes the same palette through
+  // the bridge of the calculators while it is open (the calculator panel holds its own).
+  useEffect(() => (multiplaSaveOpen ? holdCalcBridge() : undefined), [multiplaSaveOpen])
+
+  // The calculator opens full screen; on close the focus goes back where it was (the row button).
+  const focusBeforeCalculator = useRef<HTMLElement | null>(null)
+  const openCalculator = useCallback((row: MatcherResult) => {
+    focusBeforeCalculator.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setCalculatorRow(row)
+  }, [])
+  const closeCalculator = useCallback(() => {
+    setCalculatorRow(null)
+    const el = focusBeforeCalculator.current
+    focusBeforeCalculator.current = null
+    if (el?.isConnected) requestAnimationFrame(() => el.focus())
+  }, [])
   const commissionPercent = exchangeCommissionOf(meta) * 100
   const shared = useMemo<SharedAmounts>(
     () => ({
@@ -408,65 +421,70 @@ export function OddsScannerV2() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <ScannerV2FilterBar
-        filters={filters}
-        onChange={setFilters}
-        onReset={resetFilters}
-        onRefresh={refresh}
-        open={filtersOpen}
-        onOpenChange={openFilters}
-        meta={meta}
-        books={books}
-        exchanges={exchanges}
-        loading={loading}
-        now={now}
-        multiplaOpen={multiplaOpen}
-        onMultiplaOpenChange={openMultipla}
-      />
-      {multiplaOpen && (
-        <ScannerV2MultiplaPanel
-          params={multiplaParams}
-          onParamsChange={setMultiplaParam}
-          selected={multiplaEvents}
-          onRemove={removeMultiplaEvent}
-          onClear={clearMultipla}
-          onSave={() => {
-            setMultiplaError(null)
-            setMultiplaSavedBetId(null)
-            setMultiplaSaveOpen(true)
-          }}
+    <>
+      {/* Under the open calculator the page leaves the tab order and the screen readers. */}
+      <div inert={calculatorRow ? true : undefined} className="flex flex-col gap-4">
+        <ScannerV2FilterBar
+          filters={filters}
+          onChange={setFilters}
+          onReset={resetFilters}
+          onRefresh={refresh}
+          open={filtersOpen}
+          onOpenChange={openFilters}
+          meta={meta}
+          books={books}
+          exchanges={exchanges}
+          loading={loading}
+          now={now}
+          multiplaOpen={multiplaOpen}
+          onMultiplaOpenChange={openMultipla}
+        />
+        {multiplaOpen && (
+          <ScannerV2MultiplaPanel
+            params={multiplaParams}
+            onParamsChange={setMultiplaParam}
+            selected={multiplaEvents}
+            onRemove={removeMultiplaEvent}
+            onClear={clearMultipla}
+            onSave={() => {
+              setMultiplaError(null)
+              setMultiplaSavedBetId(null)
+              setMultiplaSaveOpen(true)
+            }}
+            shared={shared}
+            bonus={filters.bonus}
+            rimborso={filters.rimborso}
+            onAmountsChange={setFilters}
+            bookName={activeBookName}
+          />
+        )}
+        <ScannerV2Table
+          results={results}
+          meta={meta}
+          now={now}
           shared={shared}
-          bonus={filters.bonus}
-          rimborso={filters.rimborso}
-          onAmountsChange={setFilters}
-          bookName={activeBookName}
+          commissionPercent={commissionPercent}
+          loading={loading}
+          flash={flash}
+          activeKey={calculatorRow ? matcherRowKey(calculatorRow) : null}
+          page={page}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          onOpenCalculator={openCalculator}
+          onResetFilters={resetFilters}
+          multipla={multiplaSelection}
+        />
+      </div>
+      {calculatorRow && (
+        <MatcherCalculatorPanel
+          row={calculatorRow}
+          meta={meta}
+          defaults={{ stake: filters.stake, bonus: filters.bonus, rimborso: filters.rimborso }}
+          commissionPercent={commissionPercent}
+          onClose={closeCalculator}
         />
       )}
-      <ScannerV2Table
-        results={results}
-        meta={meta}
-        now={now}
-        shared={shared}
-        commissionPercent={commissionPercent}
-        loading={loading}
-        flash={flash}
-        activeKey={calculatorRow ? matcherRowKey(calculatorRow) : null}
-        page={page}
-        total={total}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
-        onOpenCalculator={setCalculatorRow}
-        onResetFilters={resetFilters}
-        multipla={multiplaSelection}
-      />
-      <MatcherCalculatorModal
-        row={calculatorRow}
-        meta={meta}
-        defaults={{ stake: filters.stake, bonus: filters.bonus, rimborso: filters.rimborso }}
-        commissionPercent={commissionPercent}
-        onClose={() => setCalculatorRow(null)}
-      />
       <AssignAccountsModal
         open={multiplaSaveOpen}
         onOpenChange={(open) => {
@@ -484,6 +502,6 @@ export function OddsScannerV2() {
           setMultiplaRows([])
         }}
       />
-    </div>
+    </>
   )
 }

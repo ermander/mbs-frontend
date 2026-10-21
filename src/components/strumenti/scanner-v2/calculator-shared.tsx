@@ -11,6 +11,11 @@ export function formatNum(n: number | null): string {
   return n.toFixed(2)
 }
 
+/** A number typed with the Italian comma, as the design fields show it (parseNum reads both). */
+export function decimalText(s: string): string {
+  return s.replace('.', ',')
+}
+
 export function formatSigned(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—'
   const v = n.toFixed(2)

@@ -1,11 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
+import {
+  CalcImbalance,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcPartials,
+  CalcProfits,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { computePuntaBanca } from '@/lib/calculators/engines/punta-banca-engine'
 import { parseNum } from '@/lib/calculators/engines/odds'
@@ -14,18 +19,12 @@ import { outcomeName } from '@/lib/matcher/format'
 import { shortBookmakerName } from '@/lib/bookmakers'
 import type { BetCategory } from '@/types/profit-tracker'
 import type { MatcherResult } from '@/types/matcher'
-import { cn, sanitizeDecimal } from '@/lib/utils'
+import { sanitizeDecimal } from '@/lib/utils'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
-import { BookmakerBadge } from './bookmaker-badge'
 import { BookmakerLink } from './leg-chip'
-import {
-  DecimalField,
-  ImbalanceSlider,
-  ResultStat,
-  formatNum,
-  formatSigned,
-  profitClass,
-} from './calculator-shared'
+import { decimalText, formatNum } from './calculator-shared'
+import { MatcherCalcLayout, MatcherCategoryChoice, MatcherLegCard } from './matcher-calc-parts'
+import { OmBookLogo } from './om-ds'
 
 export interface CalculatorDefaults {
   stake: string
@@ -43,10 +42,12 @@ interface PuntaBancaCalculatorViewProps {
 }
 
 /**
- * The Punta-Banca calculator of a back/lay row: the Oddsmatcher modal, fed by
- * the internal engine's legs (leg 1 = book BACK, leg 2 = exchange LAY) and by
- * the pure engine. Mounted fresh for every row (the parent keys it), so the
- * fields start from the row and the shared amounts without effects.
+ * The Punta-Banca calculator of a back/lay row, inside the full-screen panel of
+ * the Oddsmatcher (design of §14.273), fed by the internal engine's legs (leg 1 =
+ * book BACK, leg 2 = exchange LAY) and by the pure engine. Mounted fresh for
+ * every row (the parent keys it), so the fields start from the row and the
+ * shared amounts without effects. «Salva nel tracker» sits in the bar of the
+ * panel and opens the accounts dialog, as the old «Invia» button did.
  */
 export function PuntaBancaCalculatorView({
   row,
@@ -58,12 +59,12 @@ export function PuntaBancaCalculatorView({
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const [backLeg, layLeg] = row.legs
 
-  const [quotaPunta, setQuotaPunta] = useState(() => backLeg.odds.toFixed(2))
-  const [quotaBanca, setQuotaBanca] = useState(() => layLeg.odds.toFixed(2))
+  const [quotaPunta, setQuotaPunta] = useState(() => decimalText(backLeg.odds.toFixed(2)))
+  const [quotaBanca, setQuotaBanca] = useState(() => decimalText(layLeg.odds.toFixed(2)))
   const [puntata, setPuntata] = useState(defaults.stake)
   const [bonus, setBonus] = useState(defaults.bonus)
   const [rimborso, setRimborso] = useState(defaults.rimborso)
-  const [commissione, setCommissione] = useState(() => String(commissionPercent))
+  const [commissione, setCommissione] = useState(() => decimalText(String(commissionPercent)))
   const [imbalance, setImbalance] = useState(0)
   const [partialLays, setPartialLays] = useState<{ amount: string; newOdds: string }[]>([])
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
@@ -193,263 +194,180 @@ export function PuntaBancaCalculatorView({
   const effExchangeProfit = result.effExchangeProfit
   const bookWinBook = ((puntataNum ?? 0) + bonusNum) * (quotaPuntaNum ?? 0) - (puntataNum ?? 0)
 
+  // Esborso: il saldo reale puntato più la responsabilità in vigore sull'exchange.
+  const showProfits = result.showSummary && result.guadagnoMinimo != null
+  const esborso = showProfits ? (puntataNum ?? 0) + (effResponsabilita ?? 0) : null
+  const profitRows: OutcomeProfitRow[] = showProfits
+    ? [
+        {
+          id: 'punta',
+          esito: `Se vince la puntata su ${bookName}`,
+          legs: [bookWinBook, effResponsabilita != null ? -effResponsabilita : null],
+          rimborso: 0,
+          totale: result.totalSeVinciPuntata,
+        },
+        {
+          id: 'banca',
+          esito: `Se vince la bancata su ${exchangeName}`,
+          legs: [puntataNum != null ? -puntataNum : null, effExchangeProfit],
+          rimborso: result.isRimborso ? rimborsoNum : 0,
+          totale: result.totalSeVinciBancata,
+        },
+      ]
+    : []
+
   return (
-    <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
-      {/* PUNTA e BANCA */}
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-        <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-primary">
-                Punta
-              </p>
-              <span className="text-[10px] text-muted-foreground">
-                {event.mercato} · {selezione}
-              </span>
-            </div>
-            <BookmakerLink leg={backLeg}>
-              <BookmakerBadge slug={backLeg.bookmakerSlug} name={backLeg.bookmakerName} size="md" />
-            </BookmakerLink>
-          </div>
-          <Input
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            value={quotaPunta}
-            onChange={(e) => setQuotaPunta(sanitizeDecimal(e.target.value))}
-            className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
-            aria-label={`Quota punta su ${bookName}`}
-          />
-        </div>
-        <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-destructive">
-                Banca
-              </p>
-              <span className="text-[10px] text-muted-foreground">
-                {event.mercato} · {selezione}
-              </span>
-            </div>
-            <BookmakerLink leg={layLeg}>
-              <BookmakerBadge slug={layLeg.bookmakerSlug} name={layLeg.bookmakerName} size="md" />
-            </BookmakerLink>
-          </div>
-          <Input
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            value={quotaBanca}
-            onChange={(e) => setQuotaBanca(sanitizeDecimal(e.target.value))}
-            className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
-            aria-label={`Quota banca su ${exchangeName}`}
-          />
-        </div>
-      </div>
+    <div className="flex flex-col gap-8">
+      <CalculatorRating label="Rating" value={result.rating} />
 
-      {/* Importi e risultati */}
-      <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-          Importi e risultati
-        </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <DecimalField id="pb-puntata" label="Puntata €" value={puntata} onChange={setPuntata} />
-          <DecimalField id="pb-bonus" label="Bonus € (opz.)" value={bonus} onChange={setBonus} />
-          <DecimalField
-            id="pb-rimborso"
-            label="Rimborso € (opz.)"
-            value={rimborso}
-            onChange={setRimborso}
-          />
-          <DecimalField
-            id="pb-commissione"
-            label="Comm. %"
-            value={commissione}
-            onChange={setCommissione}
-            placeholder={String(commissionPercent)}
-          />
-        </div>
-        <ImbalanceSlider
-          value={imbalance}
-          onChange={setImbalance}
-          min={-20}
-          max={20}
-          step={0.5}
-          label="Sbilanciamento bancata"
-        />
-        <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5 sm:grid-cols-4">
-          <ResultStat label="Bancata" value={formatNum(result.layStake)} />
-          <ResultStat label="Rischio" value={formatNum(result.responsabilita)} />
-          <ResultStat
-            label="Guadagno min"
-            value={result.guadagnoMinimo != null ? `€${formatNum(result.guadagnoMinimo)}` : '—'}
-            className={profitClass(result.guadagnoMinimo)}
-          />
-          <ResultStat
-            label="Rating"
-            value={result.rating != null ? `${formatNum(result.rating)}%` : '—'}
-          />
-        </div>
-      </div>
-
-      {/* Bancata parziale */}
-      {result.layStake != null && (
-        <div className="space-y-3">
-          {partialLays.map((pl, i) => {
-            const step = result.partialLayResults[i] ?? null
-            return (
-              <div key={i} className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-                    Bancata parziale {partialLays.length > 1 ? `#${i + 1}` : ''}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setPartialLays((prev) => prev.filter((_, j) => j !== i))}
-                    className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Togli bancata parziale"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                  <DecimalField
-                    id={`pb-partial-amount-${i}`}
-                    label="Già bancato €"
-                    value={pl.amount}
-                    onChange={(v) => updatePartialLay(i, 'amount', v)}
+      <MatcherCalcLayout
+        legs={
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <MatcherLegCard
+                tone="info"
+                title={`Punta · ${selezione}`}
+                odds={
+                  <CalcNumberField
+                    id="pb-quota-punta"
+                    ariaLabel={`Quota punta su ${bookName}`}
+                    size="sm"
+                    value={quotaPunta}
+                    onChange={(v) => setQuotaPunta(sanitizeDecimal(v))}
                   />
-                  <DecimalField
-                    id={`pb-partial-odds-${i}`}
-                    label="Nuova quota banca"
-                    value={pl.newOdds}
-                    onChange={(v) => updatePartialLay(i, 'newOdds', v)}
-                  />
-                </div>
-                {step != null && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5">
-                    <ResultStat
-                      label="Nuova bancata"
-                      value={`€${formatNum(step.newLayStake)}`}
-                      className="text-destructive"
+                }
+                logo={
+                  <BookmakerLink leg={backLeg}>
+                    <OmBookLogo
+                      slug={backLeg.bookmakerSlug}
+                      name={backLeg.bookmakerName}
+                      size="lg"
                     />
-                    <ResultStat label="Nuova resp." value={`€${formatNum(step.newLiability)}`} />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-          {partialLays.length < 6 && (
-            <button
-              type="button"
-              onClick={() => setPartialLays((prev) => [...prev, { amount: '', newOdds: '' }])}
-              className="flex w-full items-center justify-center gap-1.5 rounded-ow-btn border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
-            >
-              <span className="text-base leading-none">+</span>
-              Bancata parziale
-            </button>
-          )}
-        </div>
-      )}
+                  </BookmakerLink>
+                }
+                figureLabel="Puntata"
+                figure={amount(result.puntataEffettiva > 0 ? result.puntataEffettiva : null)}
+              />
+              <MatcherLegCard
+                tone="loss"
+                title={`Banca · ${selezione}`}
+                odds={
+                  <CalcNumberField
+                    id="pb-quota-banca"
+                    ariaLabel={`Quota banca su ${exchangeName}`}
+                    size="sm"
+                    value={quotaBanca}
+                    onChange={(v) => setQuotaBanca(sanitizeDecimal(v))}
+                  />
+                }
+                logo={
+                  <BookmakerLink leg={layLeg}>
+                    <OmBookLogo slug={layLeg.bookmakerSlug} name={layLeg.bookmakerName} size="lg" />
+                  </BookmakerLink>
+                }
+                figureLabel="Bancata"
+                figure={amount(result.layStake)}
+                footer={
+                  <>
+                    <span>Responsabilità</span>
+                    <span className="ds-num whitespace-nowrap text-ds-ink">
+                      {amount(result.responsabilita)}
+                    </span>
+                  </>
+                }
+              />
+            </div>
 
-      {/* Profitti */}
-      {result.showSummary && result.guadagnoMinimo != null && (
-        <div className="rounded-ow-card border border-border">
-          <div className="bg-muted/30 px-4 py-2">
-            <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-              Profitti
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-[13px]">
-              <thead>
-                <tr className="border-b border-border bg-muted/20 text-xs font-medium text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left" />
-                  <th className="px-4 py-2.5 text-right">{bookName}</th>
-                  <th className="px-4 py-2.5 text-right">{exchangeName}</th>
-                  {result.isRimborso && <th className="px-4 py-2.5 text-right">Rimborso</th>}
-                  <th className="px-4 py-2.5 text-right">Totale</th>
-                  <th className="px-4 py-2.5 text-right">Rating</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border/50">
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    se vinci la puntata su {bookName}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-primary">
-                    {formatSigned(bookWinBook)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                    {formatSigned(effResponsabilita != null ? -effResponsabilita : null)}
-                  </td>
-                  {result.isRimborso && (
-                    <td className="px-4 py-2.5 text-right text-muted-foreground">—</td>
-                  )}
-                  <td
-                    className={cn(
-                      'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
-                      profitClass(result.totalSeVinciPuntata),
-                    )}
-                  >
-                    {formatSigned(result.totalSeVinciPuntata)} €
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-muted-foreground">
-                    {result.ratingSeVinciPuntata != null
-                      ? `${formatNum(result.ratingSeVinciPuntata)}%`
-                      : '—'}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    se vinci la bancata su {exchangeName}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                    {formatSigned(puntataNum != null ? -puntataNum : null)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-primary">
-                    {formatSigned(effExchangeProfit)}
-                  </td>
-                  {result.isRimborso && (
-                    <td className="px-4 py-2.5 text-right font-medium text-primary">
-                      {formatSigned(rimborsoNum)}
-                    </td>
-                  )}
-                  <td
-                    className={cn(
-                      'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
-                      profitClass(result.totalSeVinciBancata),
-                    )}
-                  >
-                    {formatSigned(result.totalSeVinciBancata)} €
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-muted-foreground">
-                    {result.ratingSeVinciBancata != null
-                      ? `${formatNum(result.ratingSeVinciBancata)}%`
-                      : '—'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+            {result.layStake != null && (
+              <CalcPartials
+                idPrefix="pb-partial"
+                title="Bancata parziale"
+                amountLabel="Già bancato"
+                oddsLabel="Nuova quota banca"
+                addLabel="Aggiungi bancata parziale"
+                entries={partialLays}
+                results={result.partialLayResults}
+                figures={(r) => [
+                  { label: 'Nuova bancata', value: amount(r?.newLayStake) },
+                  { label: 'Nuova resp.', value: amount(r?.newLiability) },
+                ]}
+                total={
+                  result.hasValidPartialLays && result.partialLayTotals != null ? (
+                    <>
+                      Nuova responsabilità{' '}
+                      <b className="ds-num text-ds-ink">
+                        {amount(result.partialLayTotals.totalLiability)}
+                      </b>
+                    </>
+                  ) : undefined
+                }
+                onAdd={() => setPartialLays((prev) => [...prev, { amount: '', newOdds: '' }])}
+                onRemove={(index) => setPartialLays((prev) => prev.filter((_, j) => j !== index))}
+                onChange={(index, field, value) =>
+                  updatePartialLay(index, field, sanitizeDecimal(value))
+                }
+              />
+            )}
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="pb-puntata"
+              label={`Puntata su ${selezione} · ${bookName}`}
+              size="lg"
+              suffix="€"
+              value={puntata}
+              onChange={(v) => setPuntata(sanitizeDecimal(v))}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
+                id="pb-bonus"
+                label="Puntata bonus"
+                suffix="€"
+                value={bonus}
+                onChange={(v) => setBonus(sanitizeDecimal(v))}
+              />
+              <CalcNumberField
+                id="pb-rimborso"
+                label="Rimborso"
+                suffix="€"
+                value={rimborso}
+                onChange={(v) => setRimborso(sanitizeDecimal(v))}
+              />
+            </div>
+            <CalcImbalance
+              label="Sbilancia la bancata"
+              value={imbalance}
+              onChange={setImbalance}
+              min={-20}
+              max={20}
+              leading={
+                <CalcNumberField
+                  id="pb-commissione"
+                  label="Commissione"
+                  suffix="%"
+                  placeholder={String(commissionPercent)}
+                  value={commissione}
+                  onChange={(v) => setCommissione(sanitizeDecimal(v))}
+                />
+              }
+            />
+            <MatcherCategoryChoice value={categoria} onChange={setCategoria} />
+          </>
+        }
+      />
 
-      {/* Footer */}
-      <div className="space-y-3 border-t border-border pt-4">
-        <BetCategorySelect value={categoria} onChange={setCategoria} />
-        <Button
-          className="w-full rounded-ow-btn"
-          onClick={() => setAssignOpen(true)}
-          disabled={!canSend}
-        >
-          Invia scommessa al Profit Tracker
-        </Button>
-        <p className="text-[11px] text-muted-foreground">
-          <Label className="sr-only">Nota</Label>
-          La giocata viene salvata come bozza con le quote e gli importi di questa finestra.
-        </p>
-      </div>
+      <CalcProfits outlay={esborso} minGain={showProfits ? result.guadagnoMinimo : null}>
+        <CalcOutcomeTable
+          legLabels={[bookName, exchangeName]}
+          rows={profitRows}
+          stake={puntataNum ?? 0}
+          emptyText="Il risultato compare quando la puntata e le quote di punta e banca sono compilate e valide."
+        />
+      </CalcProfits>
+
+      <CalculatorSaveAction onClick={() => setAssignOpen(true)} disabled={!canSend} />
 
       <AssignAccountsModal
         open={assignOpen}

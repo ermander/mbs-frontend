@@ -64,10 +64,19 @@ function lockPage() {
 export function CalculatorPanel({
   tool,
   onClose,
+  backLabel = 'Calcolatori',
+  title,
+  shortTitle,
   children,
 }: {
   tool: CalculatorTool
   onClose: () => void
+  /** La pagina a cui torna «‹»: l'oddsmatcher apre qui i suoi calcolatori (§14.273). */
+  backLabel?: string
+  /** Il nome nella testata, quando non è quello della tessera. */
+  title?: string
+  /** Il nome sul telefono, dove il titolo lungo si troncherebbe (senza icona). */
+  shortTitle?: string
   children: React.ReactNode
 }) {
   const [saveSlot, setSaveSlot] = React.useState<HTMLElement | null>(null)
@@ -100,7 +109,7 @@ export function CalculatorPanel({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={tool.name}
+      aria-label={title ?? tool.name}
       className={cn(
         dsSerif.variable,
         dsSans.variable,
@@ -119,14 +128,23 @@ export function CalculatorPanel({
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
               {/* Sul telefono solo la freccia: lo spazio va al nome e al rating. */}
-              <span className="sr-only sm:not-sr-only">Calcolatori</span>
+              <span className="sr-only sm:not-sr-only">{backLabel}</span>
             </button>
             <span className="h-6 w-px shrink-0 bg-ds-line" aria-hidden />
             <span className="flex min-w-0 items-center gap-2.5">
-              <span className="inline-flex text-ds-brand">
+              <span
+                className={cn('inline-flex text-ds-brand', shortTitle && 'hidden sm:inline-flex')}
+              >
                 <CalculatorIcon name={tool.icon} />
               </span>
-              <span className="ds-heading truncate">{tool.name}</span>
+              {shortTitle ? (
+                <span className="ds-heading truncate">
+                  <span className="sm:hidden">{shortTitle}</span>
+                  <span className="hidden sm:inline">{title ?? tool.name}</span>
+                </span>
+              ) : (
+                <span className="ds-heading truncate">{title ?? tool.name}</span>
+              )}
               {admin && <AdminBadge className="hidden sm:inline-flex" />}
             </span>
           </div>

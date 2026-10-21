@@ -1,9 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
+import {
+  CalcImbalance,
+  CalcNumberField,
+  CalcOutcomeTable,
+  CalcProfits,
+  amount,
+  type OutcomeProfitRow,
+} from '@/components/calculators/calc-ds'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { computeDutch } from '@/lib/calculators/engines/dutch-engine'
 import { grossOdds, parseNum } from '@/lib/calculators/engines/odds'
@@ -14,17 +20,11 @@ import type { BetCategory } from '@/types/profit-tracker'
 import type { MatcherMeta, MatcherResult } from '@/types/matcher'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
-import { BookmakerBadge } from './bookmaker-badge'
 import { BookmakerLink } from './leg-chip'
 import type { CalculatorDefaults } from './punta-banca-calculator-view'
-import {
-  DecimalField,
-  ImbalanceSlider,
-  ResultStat,
-  formatNum,
-  formatSigned,
-  profitClass,
-} from './calculator-shared'
+import { decimalText, formatNum } from './calculator-shared'
+import { MatcherCalcLayout, MatcherCategoryChoice, MatcherLegCard } from './matcher-calc-parts'
+import { OmBookLogo } from './om-ds'
 
 interface DutchCalculatorViewProps {
   row: MatcherResult
@@ -37,8 +37,9 @@ interface DutchCalculatorViewProps {
 }
 
 /**
- * The Punta-Punta / Tri-Punta calculator of a dutch row: the stake goes on one
- * leg (click «Puntata qui» on another to move it), the other legs are covers
+ * The Punta-Punta / Tri-Punta calculator of a dutch row, inside the full-screen
+ * panel of the Oddsmatcher (design of §14.273): the stake goes on one leg (a
+ * click on another card moves it), the other legs are covers
  * for the same profit whichever outcome wins. Exchange legs are shown at their
  * gross price and priced net of the commission underneath, like the matcher.
  */
@@ -59,14 +60,16 @@ export function DutchCalculatorView({
 
   const [quotes, setQuotes] = useState<string[]>(() =>
     row.legs.map((leg, i) =>
-      (exchangeFlags[i] ? grossOdds(leg.odds, commissionPercent) : leg.odds).toFixed(2),
+      decimalText(
+        (exchangeFlags[i] ? grossOdds(leg.odds, commissionPercent) : leg.odds).toFixed(2),
+      ),
     ),
   )
   const [puntaIndex, setPuntaIndex] = useState(0)
   const [puntata, setPuntata] = useState(defaults.stake)
   const [bonus, setBonus] = useState(defaults.bonus)
   const [rimborso, setRimborso] = useState(defaults.rimborso)
-  const [commissione, setCommissione] = useState(() => String(commissionPercent))
+  const [commissione, setCommissione] = useState(() => decimalText(String(commissionPercent)))
   const [imbalance, setImbalance] = useState(0)
   const [categoria, setCategoria] = useState<BetCategory>(() =>
     row.rating >= 100 ? 'surebet' : 'matched_betting',
@@ -111,7 +114,6 @@ export function DutchCalculatorView({
     ],
   )
 
-  const tones = ['primary', 'sky', 'sky'] as const
   const assignLegs: AssignLeg[] = useMemo(
     () =>
       row.legs.map((leg, i) => {
@@ -163,215 +165,148 @@ export function DutchCalculatorView({
     }
   }
 
-  const columns = row.legs.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+  const puntaLeg = row.legs[puntaIndex]
+  // One column per leg in «Profitti», named after the bookmaker (and the outcome when a book has two legs).
+  const legLabels = row.legs.map((leg) => {
+    const name = shortBookmakerName(leg.bookmakerName)
+    const twice = row.legs.filter((l) => shortBookmakerName(l.bookmakerName) === name).length > 1
+    return twice ? `${name} · ${outcomeName(leg)}` : name
+  })
+  // Each column is that leg's result: its payout less its cost when it wins, its cost when it
+  // loses (the real stake on the punta leg, the bonus is not money out). Their sum, plus the
+  // rimborso when a cover wins, is the engine's profit for that outcome.
+  const costOf = (k: number) =>
+    result.legs[k].isPunta ? (puntataNum ?? 0) : (result.legs[k].stake ?? 0)
+  const profitRows: OutcomeProfitRow[] = result.showSummary
+    ? row.legs.map((leg, i) => ({
+        id: `leg${i}`,
+        esito: `Se vince ${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`,
+        legs: row.legs.map((_, k) =>
+          k === i ? (result.legs[k].payout ?? 0) - costOf(k) : -costOf(k),
+        ),
+        rimborso: result.legs[i].isPunta ? 0 : rimborsoNum,
+        totale: result.legs[i].profit,
+      }))
+    : []
 
   return (
-    <div className="space-y-4 p-3 sm:space-y-5 sm:p-5">
-      {/* Legs */}
-      <div className={cn('grid gap-3 sm:gap-4', columns)}>
-        {row.legs.map((leg, i) => {
-          const isPunta = i === puntaIndex
-          const legResult = result.legs[i]
-          const tone = isPunta ? tones[0] : tones[1]
-          return (
+    <div className="flex flex-col gap-8">
+      <CalculatorRating label="Rating" value={result.rating} />
+
+      <MatcherCalcLayout
+        legs={
+          <>
             <div
-              key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
-              className="rounded-ow-card border border-border bg-card p-3 sm:p-4"
+              role="radiogroup"
+              aria-label="Gamba della puntata"
+              className={cn(
+                'grid gap-4',
+                row.legs.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
+              )}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p
-                    className={cn(
-                      'font-mono text-[11px] uppercase tracking-[0.02em]',
-                      tone === 'primary' ? 'text-primary' : 'text-sky-400',
-                    )}
-                  >
-                    {isPunta ? 'Puntata' : 'Copertura'} · {outcomeName(leg)}
-                  </p>
-                  {exchangeFlags[i] && (
-                    <p className="text-[10px] text-muted-foreground">
-                      exchange · netta{' '}
-                      {legResult?.netOdds != null ? legResult.netOdds.toFixed(3) : '—'}
-                    </p>
-                  )}
-                </div>
-                <BookmakerLink leg={leg}>
-                  <BookmakerBadge slug={leg.bookmakerSlug} name={leg.bookmakerName} size="md" />
-                </BookmakerLink>
-              </div>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0"
-                value={quotes[i]}
-                onChange={(e) => {
-                  const value = sanitizeDecimal(e.target.value)
-                  setQuotes((prev) => prev.map((q, j) => (j === i ? value : q)))
-                }}
-                className="mt-2 h-9 rounded-ow-btn font-mono text-base font-medium tabular-nums sm:h-10 sm:text-lg"
-                aria-label={`Quota ${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`}
-              />
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
-                    {isPunta ? 'Puntata' : 'Puntata copertura'}
-                  </p>
-                  <p className="font-mono text-sm font-medium tabular-nums">
-                    {formatNum(legResult?.stake ?? null)} €
-                  </p>
-                </div>
-                {!isPunta && (
-                  <button
-                    type="button"
-                    onClick={() => setPuntaIndex(i)}
-                    className="rounded-ow-btn border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    Puntata qui
-                  </button>
-                )}
-              </div>
+              {row.legs.map((leg, i) => {
+                const isPunta = i === puntaIndex
+                const legResult = result.legs[i]
+                return (
+                  <MatcherLegCard
+                    key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
+                    tone={isPunta ? 'info' : 'plain'}
+                    title={outcomeName(leg)}
+                    note={
+                      exchangeFlags[i]
+                        ? `exchange · netta ${legResult?.netOdds != null ? legResult.netOdds.toFixed(3).replace('.', ',') : '—'}`
+                        : undefined
+                    }
+                    odds={
+                      <CalcNumberField
+                        id={`dutch-quota-${i}`}
+                        ariaLabel={`Quota ${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`}
+                        size="sm"
+                        value={quotes[i]}
+                        onChange={(v) => {
+                          const value = sanitizeDecimal(v)
+                          setQuotes((prev) => prev.map((q, j) => (j === i ? value : q)))
+                        }}
+                      />
+                    }
+                    logo={
+                      <BookmakerLink leg={leg}>
+                        <OmBookLogo slug={leg.bookmakerSlug} name={leg.bookmakerName} size="lg" />
+                      </BookmakerLink>
+                    }
+                    figureLabel={isPunta ? 'Puntata' : 'Copertura'}
+                    figure={amount(legResult?.stake ?? null)}
+                    selectable
+                    selected={isPunta}
+                    onSelect={() => setPuntaIndex(i)}
+                  />
+                )
+              })}
             </div>
-          )
-        })}
-      </div>
-
-      {/* Importi e risultati */}
-      <div className="rounded-ow-card border border-border bg-card p-3 sm:p-4">
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-          Importi e risultati
-        </p>
-        <div
-          className={cn(
-            'grid grid-cols-2 gap-3 sm:gap-4',
-            hasExchangeLeg ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
-          )}
-        >
-          <DecimalField
-            id="dutch-puntata"
-            label="Puntata €"
-            value={puntata}
-            onChange={setPuntata}
-          />
-          <DecimalField id="dutch-bonus" label="Bonus € (opz.)" value={bonus} onChange={setBonus} />
-          <DecimalField
-            id="dutch-rimborso"
-            label="Rimborso € (opz.)"
-            value={rimborso}
-            onChange={setRimborso}
-          />
-          {hasExchangeLeg && (
-            <DecimalField
-              id="dutch-commissione"
-              label="Comm. exchange %"
-              value={commissione}
-              onChange={setCommissione}
-              placeholder={String(commissionPercent)}
-            />
-          )}
-        </div>
-        <ImbalanceSlider
-          value={imbalance}
-          onChange={setImbalance}
-          min={-30}
-          max={30}
-          step={1}
-          label="Sbilanciamento coperture"
-        />
-        <div className="mt-3 grid grid-cols-2 gap-2 rounded-ow-btn bg-muted/40 p-2.5 sm:grid-cols-4">
-          <ResultStat
-            label="Esborso totale"
-            value={result.totalOutlay != null ? `€${formatNum(result.totalOutlay)}` : '—'}
-          />
-          <ResultStat
-            label="Coperture"
-            value={formatNum(
-              result.legs.filter((l) => !l.isPunta).reduce((s, l) => s + (l.stake ?? 0), 0) || null,
-            )}
-          />
-          <ResultStat
-            label="Guadagno min"
-            value={result.guadagnoMinimo != null ? `€${formatNum(result.guadagnoMinimo)}` : '—'}
-            className={profitClass(result.guadagnoMinimo)}
-          />
-          <ResultStat
-            label="Rating"
-            value={result.rating != null ? `${formatNum(result.rating)}%` : '—'}
-          />
-        </div>
-      </div>
-
-      {/* Profitti per esito */}
-      {result.showSummary && (
-        <div className="rounded-ow-card border border-border">
-          <div className="bg-muted/30 px-4 py-2">
-            <p className="font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-              Profitti
+            <p className="ds-body-sm m-0 text-ds-ink-muted">
+              La puntata va sulla scheda evidenziata, le altre la coprono: tocca una scheda per
+              spostarla.
             </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-[13px]">
-              <thead>
-                <tr className="border-b border-border bg-muted/20 text-xs font-medium text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left">Esito</th>
-                  <th className="px-4 py-2.5 text-right">Incasso</th>
-                  <th className="px-4 py-2.5 text-right">Esborso</th>
-                  {rimborsoNum > 0 && <th className="px-4 py-2.5 text-right">Rimborso</th>}
-                  <th className="px-4 py-2.5 text-right">Totale</th>
-                </tr>
-              </thead>
-              <tbody>
-                {row.legs.map((leg, i) => {
-                  const legResult = result.legs[i]
-                  return (
-                    <tr key={`profit-${i}`} className="border-b border-border/50">
-                      <td className="px-4 py-2.5 text-muted-foreground">
-                        vince{' '}
-                        <span className="font-medium text-foreground">{outcomeName(leg)}</span> su{' '}
-                        {shortBookmakerName(leg.bookmakerName)}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-primary">
-                        {formatSigned(legResult.payout)}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-destructive">
-                        {formatSigned(result.totalOutlay != null ? -result.totalOutlay : null)}
-                      </td>
-                      {rimborsoNum > 0 && (
-                        <td className="px-4 py-2.5 text-right font-medium text-primary">
-                          {legResult.isPunta ? '—' : formatSigned(rimborsoNum)}
-                        </td>
-                      )}
-                      <td
-                        className={cn(
-                          'px-4 py-2.5 text-right font-mono font-medium tabular-nums',
-                          profitClass(legResult.profit),
-                        )}
-                      >
-                        {formatSigned(legResult.profit)} €
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        inputs={
+          <>
+            <CalcNumberField
+              id="dutch-puntata"
+              label={`Puntata su ${outcomeName(puntaLeg)} · ${shortBookmakerName(puntaLeg.bookmakerName)}`}
+              size="lg"
+              suffix="€"
+              value={puntata}
+              onChange={(v) => setPuntata(sanitizeDecimal(v))}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <CalcNumberField
+                id="dutch-bonus"
+                label="Puntata bonus"
+                suffix="€"
+                value={bonus}
+                onChange={(v) => setBonus(sanitizeDecimal(v))}
+              />
+              <CalcNumberField
+                id="dutch-rimborso"
+                label="Rimborso"
+                suffix="€"
+                value={rimborso}
+                onChange={(v) => setRimborso(sanitizeDecimal(v))}
+              />
+            </div>
+            <CalcImbalance
+              label={row.legs.length === 3 ? 'Sbilancia le coperture' : 'Sbilancia la copertura'}
+              value={imbalance}
+              onChange={setImbalance}
+              leading={
+                hasExchangeLeg ? (
+                  <CalcNumberField
+                    id="dutch-commissione"
+                    label="Commissione"
+                    suffix="%"
+                    placeholder={String(commissionPercent)}
+                    value={commissione}
+                    onChange={(v) => setCommissione(sanitizeDecimal(v))}
+                  />
+                ) : undefined
+              }
+            />
+            <MatcherCategoryChoice value={categoria} onChange={setCategoria} />
+          </>
+        }
+      />
 
-      {/* Footer */}
-      <div className="space-y-3 border-t border-border pt-4">
-        <BetCategorySelect value={categoria} onChange={setCategoria} />
-        <Button
-          className="w-full rounded-ow-btn"
-          onClick={() => setAssignOpen(true)}
-          disabled={!result.showSummary}
-        >
-          Invia scommessa al Profit Tracker
-        </Button>
-        <p className="text-[11px] text-muted-foreground">
-          La giocata viene salvata come bozza: una gamba per ogni puntata, con la commissione sulle
-          gambe exchange.
-        </p>
-      </div>
+      <CalcProfits outlay={result.totalOutlay} minGain={result.guadagnoMinimo}>
+        <CalcOutcomeTable
+          legLabels={legLabels}
+          rows={profitRows}
+          stake={result.totalOutlay ?? 0}
+          emptyText="Il risultato compare quando la puntata e tutte le quote sono compilate e valide."
+        />
+      </CalcProfits>
+
+      <CalculatorSaveAction onClick={() => setAssignOpen(true)} disabled={!result.showSummary} />
 
       <AssignAccountsModal
         open={assignOpen}

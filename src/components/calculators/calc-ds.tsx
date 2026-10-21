@@ -393,16 +393,20 @@ export function OutcomeRow({
   )
 }
 
-/** «Sbilancia …» del design: stepper da −30 a +30 % e il pulsante che lo azzera. */
+/** «Sbilancia …» del design: stepper da −30 a +30 % (o fra `min` e `max`) e il pulsante che lo azzera. */
 export function CalcImbalance({
   label,
   value,
   onChange,
   leading,
+  min = -30,
+  max = 30,
 }: {
   label: string
   value: number
   onChange: (value: number) => void
+  min?: number
+  max?: number
   /** Un campo prima dello stepper sulla stessa riga (la commissione in punta-banca). */
   leading?: React.ReactNode
 }) {
@@ -418,8 +422,8 @@ export function CalcImbalance({
         id="sbilanciamento"
         label={label}
         value={value}
-        min={-30}
-        max={30}
+        min={min}
+        max={max}
         unit="%"
         onChange={onChange}
       />

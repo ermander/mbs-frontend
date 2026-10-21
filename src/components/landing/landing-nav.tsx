@@ -7,19 +7,13 @@ import { Menu, X } from 'lucide-react'
 
 import { BRAND, LANDING_NAV_LINKS, LANDING_ROUTES, isCurrentSection } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
-import { DsButton, DsContainer, DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
-
-/**
- * Voce della barra: 500 in ink-muted, ink al passaggio; la sezione in cui si è (le offerte,
- * §14.259) in ink a 600 con la riga brand da 2px sotto, come la voce attiva della Navbar.
- */
-function linkClass(active: boolean) {
-  return cn(
-    'flex h-16 items-center rounded-ds-sm px-3 font-medium text-ds-ink-muted transition-[color,box-shadow] hover:text-ds-ink',
-    active && 'rounded-none font-semibold text-ds-ink shadow-[inset_0_-2px_0_var(--ds-brand)]',
-    dsFocusRing,
-  )
-}
+import {
+  DsButton,
+  DsContainer,
+  DsWordmark,
+  dsFocusRing,
+  dsNavLinkClass,
+} from '@/components/landing/ds-primitives'
 
 /**
  * La Navbar del design: 64px su surface-raised con hairline sotto, marchio, cinque voci e due
@@ -50,7 +44,7 @@ export function LandingNav() {
                   <Link
                     href={link.href}
                     aria-current={active ? 'page' : undefined}
-                    className={linkClass(active)}
+                    className={dsNavLinkClass(active)}
                   >
                     {link.label}
                   </Link>

@@ -63,7 +63,8 @@ export interface AuthNavItem {
 /**
  * Un gruppo di pagine. Nella barra in alto `display: 'links'` mette ogni voce direttamente
  * nella barra, `'menu'` le raccoglie in una tendina con l'etichetta del gruppo; nel cassetto
- * mobile ogni gruppo è un'intestazione seguita dalle sue voci.
+ * mobile le voci dei gruppi `links` stanno in colonna senza intestazione, quelle dei gruppi
+ * `menu` sotto l'etichetta del gruppo.
  */
 export interface AuthNavSection {
   label: string
@@ -73,12 +74,19 @@ export interface AuthNavSection {
   requiresRole?: UserRole
 }
 
+/**
+ * Le voci della Navbar del design (§14.275): Guide · Offerte · Oddsmatcher · Calcolatori ·
+ * Tracker · Forum, con Risultato + Goal dopo l'Oddsmatcher per chi è abilitato e il Backoffice
+ * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker.
+ */
 export const authNavSections: AuthNavSection[] = [
   {
-    label: 'Strumenti',
+    label: 'Sezioni',
     display: 'links',
     items: [
-      { label: 'Odds Scanner', href: '/odds-scanner', icon: Radar },
+      { label: 'Guide', href: '/guide', icon: BookOpen },
+      { label: 'Offerte', href: '/offerte', icon: Gift },
+      { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
       {
         label: 'Risultato + Goal',
@@ -90,7 +98,7 @@ export const authNavSections: AuthNavSection[] = [
     ],
   },
   {
-    label: 'Profit Tracker',
+    label: 'Tracker',
     display: 'menu',
     items: [
       { label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
@@ -103,13 +111,9 @@ export const authNavSections: AuthNavSection[] = [
     ],
   },
   {
-    label: 'Altro',
-    display: 'menu',
-    items: [
-      { label: 'Offerte', href: '/offerte', icon: Gift },
-      { label: 'Guide', href: '/guide', icon: BookOpen },
-      { label: 'Forum', href: '/forum', icon: MessageSquare },
-    ],
+    label: 'Community',
+    display: 'links',
+    items: [{ label: 'Forum', href: '/forum', icon: MessageSquare }],
   },
   {
     label: 'Backoffice',

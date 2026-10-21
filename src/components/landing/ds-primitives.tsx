@@ -12,6 +12,18 @@ import { cn } from '@/lib/utils'
 /** Anello di fuoco del design: due anelli (superficie e brand) al posto dell'outline. */
 export const dsFocusRing = 'focus-visible:outline-none focus-visible:shadow-ds-focus'
 
+/**
+ * Voce della Navbar del design: 64px, 500 in ink-muted, ink al passaggio; quella attiva in ink a
+ * 600 con la riga brand da 2px sotto. La usano la barra pubblica e quella dell'area autenticata.
+ */
+export function dsNavLinkClass(active: boolean) {
+  return cn(
+    'flex h-16 items-center rounded-ds-sm px-3 font-medium text-ds-ink-muted transition-[color,box-shadow] hover:text-ds-ink',
+    active && 'rounded-none font-semibold text-ds-ink shadow-[inset_0_-2px_0_var(--ds-brand)]',
+    dsFocusRing,
+  )
+}
+
 /** Colonna della pagina: 1200px con 24px di margine interno (20px sul telefono). */
 export function DsContainer({
   className,

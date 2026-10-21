@@ -35,8 +35,9 @@
     /* Grammatica OddWise: lg 8px (card piccole, menu), md 6px (pulsanti, input), sm 4px (badge). */
     --radius: 0.5rem;
     /* Altezza della barra di navigazione dell'area autenticata (components/topnav): le pagine
-       che dimensionano le tabelle sull'altezza della finestra la sottraggono. */
-    --topnav-h: 3.5rem;
+       che dimensionano le tabelle sull'altezza della finestra la sottraggono. 64px come la Navbar
+       del design (§14.275). */
+    --topnav-h: 4rem;
 
     --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);

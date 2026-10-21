@@ -7,6 +7,7 @@ import { ChevronDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { isActiveHref, type AuthNavItem, type AuthNavSection } from '@/lib/nav-config'
+import { dsNavLinkClass } from '@/components/landing/ds-primitives'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,14 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useNavSections } from './use-nav-sections'
 import { useHoverMenu } from './use-hover-menu'
-
-/** Voce della barra: 13px grigia, si accende in bianco/nero con un fondo leggero quando è attiva. */
-const entryClass = cn(
-  'flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] transition-colors',
-  'text-muted-foreground hover:bg-accent hover:text-foreground',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-)
-const activeClass = 'bg-accent font-medium text-foreground'
+import { topnavMenuItem, topnavMenuPanel } from './topnav-ds'
 
 interface TopnavDesktopNavProps {
   className?: string
@@ -34,18 +28,22 @@ export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="Navigazione principale" className={cn('items-center gap-0.5', className)}>
-      {sections.map((section) => (
-        <React.Fragment key={section.label}>
-          {section.display === 'links' ? (
+    <nav aria-label="Principale" className={className}>
+      <ul className="flex h-full items-center gap-1">
+        {sections.map((section) =>
+          section.display === 'links' ? (
             section.items.map((item) => (
-              <TopnavLink key={item.href} item={item} active={isActiveHref(pathname, item.href)} />
+              <li key={item.href}>
+                <TopnavLink item={item} active={isActiveHref(pathname, item.href)} />
+              </li>
             ))
           ) : (
-            <TopnavMenu section={section} pathname={pathname} />
-          )}
-        </React.Fragment>
-      ))}
+            <li key={section.label}>
+              <TopnavMenu section={section} pathname={pathname} />
+            </li>
+          ),
+        )}
+      </ul>
     </nav>
   )
 }
@@ -55,7 +53,7 @@ function TopnavLink({ item, active }: { item: AuthNavItem; active: boolean }) {
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
-      className={cn(entryClass, active && activeClass)}
+      className={cn(dsNavLinkClass(active), 'whitespace-nowrap')}
     >
       {item.label}
     </Link>
@@ -72,19 +70,24 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
         <DropdownMenuTrigger
           {...triggerProps}
           className={cn(
-            entryClass,
-            'group data-[state=open]:bg-accent data-[state=open]:text-foreground',
-            active && activeClass,
+            dsNavLinkClass(active),
+            'group gap-1 whitespace-nowrap data-[state=open]:text-ds-ink',
           )}
         >
           {section.label}
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          <ChevronDown
+            aria-hidden
+            className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180"
+          />
         </DropdownMenuTrigger>
         <DropdownMenuContent
           {...hoverProps}
           align="start"
-          sideOffset={6}
-          className="max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-[13rem] overflow-y-auto rounded-xl"
+          sideOffset={4}
+          className={cn(
+            topnavMenuPanel,
+            'max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-[14rem] overflow-y-auto',
+          )}
         >
           {section.items.map((item) => {
             const itemActive = isActiveHref(pathname, item.href)
@@ -93,20 +96,14 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
               <DropdownMenuItem
                 key={item.href}
                 asChild
-                className={cn(
-                  'rounded-lg text-[13px]',
-                  itemActive && 'bg-accent/60 text-foreground',
-                )}
+                className={cn(topnavMenuItem, itemActive && 'bg-ds-brand-soft font-semibold')}
               >
-                <Link
-                  href={item.href}
-                  aria-current={itemActive ? 'page' : undefined}
-                  className="flex items-center gap-2"
-                >
+                <Link href={item.href} aria-current={itemActive ? 'page' : undefined}>
                   <Icon
+                    aria-hidden
                     className={cn(
-                      'h-4 w-4 shrink-0 text-muted-foreground',
-                      itemActive && 'text-foreground',
+                      'h-4 w-4 shrink-0 text-ds-ink-muted',
+                      itemActive && 'text-ds-brand',
                     )}
                   />
                   <span>{item.label}</span>

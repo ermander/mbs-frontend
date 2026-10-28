@@ -199,6 +199,8 @@ interface ProfitTrackerState {
         BetLeg,
         | 'eventoData'
         | 'eventoNome'
+        | 'mercato'
+        | 'selezione'
         | 'stake'
         | 'quota'
         | 'quotaRiferimento'

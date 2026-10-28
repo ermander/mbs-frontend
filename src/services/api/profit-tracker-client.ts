@@ -504,6 +504,8 @@ export async function updateBetLeg(
       BetLeg,
       | 'eventoData'
       | 'eventoNome'
+      | 'mercato'
+      | 'selezione'
       | 'stake'
       | 'quota'
       | 'quotaRiferimento'

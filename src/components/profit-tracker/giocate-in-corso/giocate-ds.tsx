@@ -155,6 +155,10 @@ export function GTextField({
   prefix,
   suffix,
   error,
+  hint,
+  disabled,
+  onBlur,
+  onEnter,
   className,
 }: {
   id: string
@@ -170,9 +174,16 @@ export function GTextField({
   prefix?: React.ReactNode
   suffix?: string
   error?: string
+  /** Testo in ink-muted sotto il campo, al posto dell'errore quando non ce n'è. */
+  hint?: string
+  disabled?: boolean
+  onBlur?: () => void
+  /** Invio nel campo (la nota del riepilogo si salva così). */
+  onEnter?: () => void
   className?: string
 }) {
   const errorId = `${id}-error`
+  const hintId = `${id}-hint`
   return (
     <div className={cn('flex min-w-0 flex-col gap-1', className)}>
       {label && (
@@ -197,14 +208,18 @@ export function GTextField({
           placeholder={placeholder}
           aria-label={label ? undefined : ariaLabel}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={error ? errorId : hint ? hintId : undefined}
           inputMode={numeric ? 'decimal' : undefined}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={onEnter ? (e) => e.key === 'Enter' && onEnter() : undefined}
           className={cn(
             'min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-none placeholder:text-ds-ink-faint',
             size === 'sm' ? 'text-sm' : 'text-base',
             numeric && 'text-right font-semibold tabular-nums',
             prefix && 'pl-2',
+            disabled && 'cursor-not-allowed text-ds-ink-muted',
           )}
         />
         {suffix && (
@@ -213,7 +228,15 @@ export function GTextField({
           </span>
         )}
       </div>
-      {error && <FieldError id={errorId}>{error}</FieldError>}
+      {error ? (
+        <FieldError id={errorId}>{error}</FieldError>
+      ) : (
+        hint && (
+          <p id={hintId} className="m-0 text-sm leading-5 text-ds-ink-muted">
+            {hint}
+          </p>
+        )
+      )}
     </div>
   )
 }
@@ -234,6 +257,7 @@ export function GSelect({
   options,
   size = 'md',
   error,
+  disabled,
   className,
 }: {
   id: string
@@ -244,6 +268,7 @@ export function GSelect({
   options: GOption[]
   size?: keyof typeof controlHeight
   error?: string
+  disabled?: boolean
   className?: string
 }) {
   const errorId = `${id}-error`
@@ -264,10 +289,12 @@ export function GSelect({
           aria-label={label ? undefined : ariaLabel}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
             'min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pl-3 pr-8 text-ds-ink outline-none',
             size === 'sm' ? 'text-sm' : 'text-base',
+            disabled && 'cursor-not-allowed text-ds-ink-muted',
           )}
         >
           {options.map((o) => (

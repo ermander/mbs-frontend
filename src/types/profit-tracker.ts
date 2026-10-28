@@ -142,6 +142,20 @@ export interface OngoingBetLegSummary {
   eventi: string[]
 }
 
+/** L'esito di una giocata archiviata: rimborsata se tutte le gambe sono annullate. */
+export type ArchivedBetEsito = 'profit' | 'loss' | 'void'
+
+/** Una riga della lista delle archiviate (§14.298), con i totali calcolati dal backend. */
+export interface ArchivedBet extends OngoingBet {
+  /** Somma dei movimenti delle gambe, come «Guadagno» nel dettaglio. */
+  profitto: number
+  esito: ArchivedBetEsito
+  /** Null per le archiviate da un backend prima della migrazione 0024. */
+  archiviataAt: string | null
+  /** Nessuna gamba in corso, vinta o persa: il backend la lascia eliminare. */
+  eliminabile: boolean
+}
+
 export type BetLegRealizedLedgerEntryType = 'settlement_delta' | 'account_transfer'
 
 export interface BetLegRealizedLedgerMetadata {

@@ -9,6 +9,7 @@ import type {
   ActivityFeedFilters,
   ActivityFeedResult,
   ActivityFeedSummary,
+  ArchivedBet,
   BetCategory,
   BetLeg,
   BetLegRealizedLedgerListFilters,
@@ -484,6 +485,40 @@ export interface CreateBetLegPayload {
 export async function getBets(params?: GetBetsParams): Promise<OngoingBet[]> {
   const response = await apiClient.get<OngoingBet[]>('/profit-tracker/bets', {
     params: params ?? {},
+  })
+  return response.data
+}
+
+export interface ArchivedBetListParams {
+  page: number
+  limit: number
+  q?: string
+  sport?: string
+  accountId?: string
+  modalitaSaldo?: string
+  esito?: string
+  tag?: string
+  tipo?: string
+  dal?: string
+  al?: string
+  sort?: 'evento' | 'archiviazione' | 'profitto'
+}
+
+export interface ArchivedBetPage {
+  items: ArchivedBet[]
+  total: number
+  /** La pagina servita: il backend porta all'ultima una pagina oltre la fine. */
+  page: number
+  limit: number
+}
+
+/** Una pagina di giocate archiviate, filtrata e ordinata dal backend (§14.298). */
+export async function getArchivedBetsPage(params: ArchivedBetListParams): Promise<ArchivedBetPage> {
+  const query = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== ''),
+  )
+  const response = await apiClient.get<ArchivedBetPage>('/profit-tracker/bets', {
+    params: { archiviata: true, ...query },
   })
   return response.data
 }

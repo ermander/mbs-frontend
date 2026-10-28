@@ -18,6 +18,15 @@ export const STATO_LABEL: Record<BetStatus, string> = {
   annullato: 'Annullato',
 }
 
+/** Tinta del selettore di stato, come i colori della pagina di prima sui token ds-*. */
+export const STATO_TONE: Record<BetStatus, 'neutral' | 'warning' | 'profit' | 'loss' | 'info'> = {
+  bozza: 'neutral',
+  in_corso: 'warning',
+  vinto: 'profit',
+  perso: 'loss',
+  annullato: 'info',
+}
+
 export const TIPO_BONUS_LABEL: Record<BetLeg['tipoBonus'], string> = {
   none: 'Nessuno',
   bonus: 'Bonus',
@@ -66,7 +75,10 @@ export function legRisk(leg: BetLeg): number {
 }
 
 export interface BetSummary {
-  /** Somma dei rischi senza la punta principale, come il riepilogo di prima. */
+  /**
+   * Somma dei rischi delle gambe in corso, punta compresa (lo stesso «rischio/resp.» delle
+   * righe): le bozze non sono ancora giocate e le liquidate non rischiano più.
+   */
   totalRischio: number
   totalMovimento: number
   /** Almeno una gamba liquidata: il guadagno ha senso. */
@@ -76,9 +88,10 @@ export interface BetSummary {
 }
 
 export function betSummary(legs: BetLeg[]): BetSummary {
-  const main = legs.find((l) => l.metodo === 'punta')
   return {
-    totalRischio: legs.filter((l) => l.id !== main?.id).reduce((s, l) => s + (l.rischio ?? 0), 0),
+    totalRischio: legs
+      .filter((l) => l.statoEvento === 'in_corso')
+      .reduce((s, l) => s + legRisk(l), 0),
     totalMovimento: legs.reduce((s, l) => s + l.movimento, 0),
     anyClosed: legs.some((l) => FINAL_STATES.has(l.statoEvento)),
     allClosed: legs.length > 0 && legs.every((l) => FINAL_STATES.has(l.statoEvento)),

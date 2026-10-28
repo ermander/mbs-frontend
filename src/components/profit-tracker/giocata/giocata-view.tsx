@@ -25,6 +25,7 @@ import { getErrorMessage } from '@/lib/error-utils'
 import {
   FINAL_STATES,
   STATO_LABEL,
+  STATO_TONE,
   TIPO_BONUS_LABEL,
   betSummary,
   isMultiplaLegs,
@@ -451,6 +452,7 @@ export function GiocataView({ betId }: { betId: string }) {
         size="sm"
         options={STATO_OPTIONS}
         value={l.statoEvento}
+        tone={STATO_TONE[l.statoEvento]}
         onChange={(v) => void changeStato(l, v as BetStatus)}
         className="w-[124px]"
       />

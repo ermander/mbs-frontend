@@ -241,6 +241,16 @@ export function GTextField({
   )
 }
 
+/** Tinta del select quando il valore porta uno stato (es. lo stato evento della gamba). */
+export type GSelectTone = 'neutral' | 'warning' | 'profit' | 'loss' | 'info'
+
+const selectTone: Record<Exclude<GSelectTone, 'neutral'>, string> = {
+  warning: 'border-transparent bg-ds-warning-soft text-ds-warning',
+  profit: 'border-transparent bg-ds-profit-soft text-ds-profit',
+  loss: 'border-transparent bg-ds-loss-soft text-ds-loss',
+  info: 'border-transparent bg-ds-info-soft text-ds-info',
+}
+
 export interface GOption {
   value: string
   label: string
@@ -258,6 +268,7 @@ export function GSelect({
   size = 'md',
   error,
   disabled,
+  tone = 'neutral',
   className,
 }: {
   id: string
@@ -269,9 +280,11 @@ export function GSelect({
   size?: keyof typeof controlHeight
   error?: string
   disabled?: boolean
+  tone?: GSelectTone
   className?: string
 }) {
   const errorId = `${id}-error`
+  const tinted = !error && tone !== 'neutral'
   return (
     <div className={cn('flex min-w-0 flex-col gap-1', className)}>
       {label && <FieldLabel htmlFor={id}>{label}</FieldLabel>}
@@ -280,7 +293,7 @@ export function GSelect({
           controlBox,
           controlHeight[size],
           'relative',
-          error ? 'border-ds-loss' : 'border-ds-line-strong',
+          error ? 'border-ds-loss' : tinted ? selectTone[tone] : 'border-ds-line-strong',
         )}
       >
         <select
@@ -292,7 +305,8 @@ export function GSelect({
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            'min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pl-3 pr-8 text-ds-ink outline-none',
+            'min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pl-3 pr-8 outline-none',
+            tinted ? 'font-medium text-inherit' : 'text-ds-ink',
             size === 'sm' ? 'text-sm' : 'text-base',
             disabled && 'cursor-not-allowed text-ds-ink-muted',
           )}
@@ -305,7 +319,10 @@ export function GSelect({
         </select>
         <ChevronDown
           aria-hidden
-          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-ink-muted"
+          className={cn(
+            'pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2',
+            !tinted && 'text-ds-ink-muted',
+          )}
         />
       </div>
       {error && <FieldError id={errorId}>{error}</FieldError>}

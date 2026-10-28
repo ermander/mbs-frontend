@@ -96,18 +96,29 @@ describe('sortLegs e isMultiplaLegs', () => {
 })
 
 describe('riepilogo', () => {
-  it('rischio senza la punta principale, guadagno dai movimenti', () => {
+  it('rischio delle sole gambe in corso, guadagno dai movimenti', () => {
     const legs = [
       leg({ id: 'p', rischio: 100 }),
       leg({ id: 'b', metodo: 'banca', rischio: 115, statoEvento: 'vinto', movimento: 95.5 }),
     ]
     expect(betSummary(legs)).toEqual({
-      totalRischio: 115,
+      totalRischio: 0,
       totalMovimento: 95.5,
       anyClosed: true,
       allClosed: false,
       hasLegsInCorso: false,
     })
+  })
+  it('la punta in corso entra nel rischio, anche senza coperture', () => {
+    expect(betSummary([leg({ rischio: 0, stake: 10, statoEvento: 'in_corso' })]).totalRischio).toBe(
+      10,
+    )
+    const legs = [
+      leg({ id: 'p', rischio: 0, stake: 10, statoEvento: 'in_corso' }),
+      leg({ id: 'b', metodo: 'banca', rischio: 34, statoEvento: 'in_corso' }),
+      leg({ id: 'c', metodo: 'banca', rischio: 20 }),
+    ]
+    expect(betSummary(legs).totalRischio).toBe(44)
   })
   it('la punta senza rischio rischia la puntata', () => {
     expect(legRisk(leg({ rischio: 0, stake: 40 }))).toBe(40)

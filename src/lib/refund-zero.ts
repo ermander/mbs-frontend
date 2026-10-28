@@ -9,8 +9,8 @@ import type { RefundZeroLine, RefundZeroRow } from '@/types/refund-zero'
  */
 
 export const DEFAULT_REFUND_ZERO_STAKE = 100
-/** Percent, as typed: «2» = 2 %. */
-export const DEFAULT_REFUND_ZERO_COMMISSION_PCT = 2
+/** Percent, as typed («2» = 2 %). Sportmarket charges none (§14.299). */
+export const DEFAULT_REFUND_ZERO_COMMISSION_PCT = 0
 
 export function refundZeroRowKey(
   row: Pick<RefundZeroRow, 'eventId' | 'market' | 'backBookmaker' | 'layBookmaker'>,

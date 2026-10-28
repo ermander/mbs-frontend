@@ -13,9 +13,9 @@ export const DEFAULT_REFUND_ZERO_STAKE = 100
 export const DEFAULT_REFUND_ZERO_COMMISSION_PCT = 2
 
 export function refundZeroRowKey(
-  row: Pick<RefundZeroRow, 'eventId' | 'backBookmaker' | 'layBookmaker'>,
+  row: Pick<RefundZeroRow, 'eventId' | 'market' | 'backBookmaker' | 'layBookmaker'>,
 ): string {
-  return `${row.eventId}|${row.backBookmaker.slug}|${row.layBookmaker.slug}`
+  return `${row.eventId}|${row.market}|${row.backBookmaker.slug}|${row.layBookmaker.slug}`
 }
 
 /** Age in seconds of the oldest price of the best line. */

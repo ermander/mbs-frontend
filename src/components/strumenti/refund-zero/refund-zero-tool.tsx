@@ -85,12 +85,21 @@ export function RefundZeroTool() {
     }
     if (debounced.search) q.search = debounced.search
     if (filters.onlyPositive) q.min_profit = 0.01
+    if (filters.market) q.market = filters.market
     const from = localDayBounds(filters.startFrom)
     const to = localDayBounds(filters.startTo)
     if (from) q.start_time_from = from.from
     if (to) q.start_time_to = to.to
     return q
-  }, [page, filters.sortBy, filters.onlyPositive, filters.startFrom, filters.startTo, debounced])
+  }, [
+    page,
+    filters.sortBy,
+    filters.market,
+    filters.onlyPositive,
+    filters.startFrom,
+    filters.startTo,
+    debounced,
+  ])
 
   const loadKey = `${JSON.stringify(query)}#${refreshTick}`
   useEffect(() => {

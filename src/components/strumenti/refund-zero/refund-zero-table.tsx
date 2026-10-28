@@ -124,7 +124,7 @@ function LineDetail({ line, row }: { line: RefundZeroLine; row: RefundZeroRow })
       </div>
       <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2">
         <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Banca 0-0 · {row.layBookmaker.name}
+          Banca {row.zeroZero.lay.label} · {row.layBookmaker.name}
         </div>
         <div className="mt-1 font-mono tabular-nums">
           {formatEuro(line.zeroLayStake)} @ {row.zeroZero.lay.odds.toFixed(2)}
@@ -149,7 +149,8 @@ function LineDetail({ line, row }: { line: RefundZeroLine; row: RefundZeroRow })
         </span>
         {row.zeroZero.back && (
           <span>
-            0-0 a {row.backBookmaker.name}: {row.zeroZero.back.odds.toFixed(2)} (riferimento)
+            {row.zeroZero.back.label} a {row.backBookmaker.name}:{' '}
+            {row.zeroZero.back.odds.toFixed(2)} (riferimento)
           </span>
         )}
       </div>
@@ -238,7 +239,7 @@ export function RefundZeroTable({
                           </span>
                         </div>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {row.competitionName} · {formatKickoff(row.startTime)}
+                          {row.competitionName} · {formatKickoff(row.startTime)} · {row.marketLabel}
                         </p>
                       </div>
                       <span className={profitBadge(row.best.profit)}>
@@ -355,6 +356,9 @@ export function RefundZeroTable({
                             competition={row.competitionName}
                           />
                           <span>{row.competitionName}</span>
+                          <span className="rounded border border-border px-1 text-[10px] uppercase tracking-wide">
+                            {row.marketLabel}
+                          </span>
                         </div>
                       </td>
                       <td
@@ -391,7 +395,11 @@ export function RefundZeroTable({
                         </BookmakerLink>
                       </td>
                       <td className="whitespace-nowrap px-2 py-2">
-                        <PriceChip label="0-0" odds={row.zeroZero.lay.odds} side="lay" />
+                        <PriceChip
+                          label={row.zeroZero.lay.label}
+                          odds={row.zeroZero.lay.odds}
+                          side="lay"
+                        />
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-right font-mono text-xs tabular-nums">
                         <div title="Bancata sul risultato">{formatEuro(row.best.layStake)}</div>

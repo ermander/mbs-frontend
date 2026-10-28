@@ -34,10 +34,11 @@ describe('refund-zero helpers', () => {
     expect(
       refundZeroRowKey({
         eventId: 'ev',
+        market: 'result_btts',
         backBookmaker: { id: 'a', slug: 'bet365', name: 'Bet365', eventUrl: null },
         layBookmaker: { id: 'b', slug: 'sportmarket', name: 'Sportmarket', eventUrl: null },
       }),
-    ).toBe('ev|bet365|sportmarket')
+    ).toBe('ev|result_btts|bet365|sportmarket')
     expect(
       refundZeroRowAge(
         { lastSeenAt: '2026-10-28T11:58:00.000Z' },

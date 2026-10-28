@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { ageLabel, ageSeconds, formatClock } from '@/lib/matcher/format'
 import { dayOptions } from '@/lib/result-btts'
 import { DEFAULT_REFUND_ZERO_COMMISSION_PCT, DEFAULT_REFUND_ZERO_STAKE } from '@/lib/refund-zero'
-import type { RefundZeroMeta } from '@/types/refund-zero'
+import type { RefundZeroMarket, RefundZeroMeta } from '@/types/refund-zero'
 
 /**
  * The filters of «Rimborso 0-0» (§14.288): the stake and the exchange
@@ -24,6 +24,8 @@ export interface RefundZeroUiFilters {
   startFrom: string
   startTo: string
   sortBy: 'profit' | 'start_time'
+  /** «» = both markets (§14.294). */
+  market: '' | RefundZeroMarket
   /** Only the rows whose best line is at a profit. */
   onlyPositive: boolean
 }
@@ -35,6 +37,7 @@ export const EMPTY_REFUND_ZERO_FILTERS: RefundZeroUiFilters = {
   startFrom: '',
   startTo: '',
   sortBy: 'profit',
+  market: '',
   onlyPositive: false,
 }
 
@@ -156,6 +159,37 @@ export function RefundZeroFilterBar({
           options={days}
           onChange={(startTo) => onChange({ startTo })}
         />
+        <div className="space-y-1">
+          <Label htmlFor="rz-market" className="text-[11px] text-muted-foreground">
+            Mercato
+          </Label>
+          <select
+            id="rz-market"
+            value={filters.market}
+            onChange={(e) =>
+              onChange({
+                market:
+                  e.target.value === 'result_btts' || e.target.value === 'correct_score'
+                    ? e.target.value
+                    : '',
+              })
+            }
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="">Tutti</option>
+            {(
+              meta?.markets ?? [
+                { key: 'result_btts', label: 'Risultato + Goal', results: 0 },
+                { key: 'correct_score', label: 'Risultato esatto', results: 0 },
+              ]
+            ).map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+                {meta ? ` (${m.results})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-1">
           <Label htmlFor="rz-sort" className="text-[11px] text-muted-foreground">
             Ordina per

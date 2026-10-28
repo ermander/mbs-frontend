@@ -11,7 +11,7 @@ export default function RimborsoZeroPage() {
       <ToolAuthGuard tool="result_btts">
         <ToolPageShell
           toolName="Rimborso 0-0"
-          description="Risultato esatto: punta un risultato a bet365, banca lo stesso risultato e banca lo 0-0 su Sportmarket. Lo 0-0 lo rimborsa il bookmaker: il profitto è lo stesso qualunque sia il risultato."
+          description="Punta un esito di Risultato + Goal o un Risultato esatto a bet365, banca lo stesso esito e banca lo 0-0 su Sportmarket. Lo 0-0 lo rimborsa il bookmaker: il profitto è lo stesso qualunque sia il risultato."
         >
           <RefundZeroTool />
         </ToolPageShell>

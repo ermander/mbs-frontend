@@ -5,6 +5,9 @@
  * backend (resources/odds-collection/tools/refund-zero.service.ts).
  */
 
+/** The two markets of the tool (§14.294): the bookmaker's own refund market and the Correct Score. */
+export type RefundZeroMarket = 'result_btts' | 'correct_score'
+
 export interface RefundZeroPrice {
   odds: number
   label: string
@@ -42,6 +45,9 @@ export interface RefundZeroBookmaker {
 
 export interface RefundZeroRow {
   eventId: string
+  /** The market the backed outcome belongs to. */
+  market: RefundZeroMarket
+  marketLabel: string
   homeName: string | null
   awayName: string | null
   /** ISO kickoff. */
@@ -58,7 +64,8 @@ export interface RefundZeroRow {
   best: RefundZeroLine
   /** Every score both sides price, best first. */
   lines: RefundZeroLine[]
-  zeroZero: { lay: RefundZeroPrice; back: RefundZeroPrice | null }
+  /** The lay of the 0-0 (the lowest between «0-0» of the Correct Score and «X & NG»), and the bookmaker's 0-0 on this market for information. */
+  zeroZero: { lay: RefundZeroPrice & { market: RefundZeroMarket }; back: RefundZeroPrice | null }
   /** ISO: the oldest of the three prices of the best line. */
   lastSeenAt: string
   staleAfterSeconds: number
@@ -79,6 +86,7 @@ export interface RefundZeroMeta {
   commission: number
   backBookmakers: Array<{ slug: string; name: string }>
   layBookmakers: Array<{ slug: string; name: string }>
+  markets: Array<{ key: RefundZeroMarket; label: string; results: number }>
   competitions: RefundZeroCompetition[]
 }
 
@@ -96,6 +104,7 @@ export interface RefundZeroFilters {
   stake?: number
   /** 0.02 = 2 % (the backend also reads «2» as 2 %). */
   commission?: number
+  market?: RefundZeroMarket
   /** Profit in money on the best line. */
   min_profit?: number
   /** ISO bounds on the kickoff: the page sends whole local days. */

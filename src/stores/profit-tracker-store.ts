@@ -25,6 +25,7 @@ import type {
   CreateBetPayload,
   GetAccountsParams,
   GetHoldersParams,
+  QuickBetListParams,
   UpdateHolderPayload,
   UpdateWalletPayload,
 } from '@/services/api/profit-tracker-client'
@@ -50,7 +51,7 @@ import {
   getHolders as apiGetHolders,
   getPaymentMethods as apiGetPaymentMethods,
   getMovementCategories as apiGetMovementCategories,
-  getQuickBets as apiGetQuickBets,
+  getQuickBetsPage as apiGetQuickBetsPage,
   getWallets as apiGetWallets,
   getReminders as apiGetReminders,
   createReminder as apiCreateReminder,
@@ -103,7 +104,10 @@ interface ProfitTrackerState {
   isLoadingOngoingBets: boolean
   ongoingBetsError?: string
   isSavingOngoingBet: boolean
+  /** La pagina di giocate rapide caricata per ultima (§14.293) e il totale dei filtri. */
   quickBets: QuickBet[]
+  quickBetsTotal: number
+  quickBetsPage: number
   isLoadingQuickBets: boolean
   quickBetsError?: string
   isSavingQuickBet: boolean
@@ -131,7 +135,7 @@ interface ProfitTrackerState {
 
   fetchHolders: (params?: GetHoldersParams) => Promise<void>
   fetchAllHolders: () => Promise<void>
-  fetchQuickBets: () => Promise<void>
+  fetchQuickBets: (params: QuickBetListParams) => Promise<void>
   addHolder: (holder: Omit<Holder, 'id'>) => Promise<void>
   updateHolder: (id: string, patch: UpdateHolderPayload) => Promise<void>
   fetchAllBooks: () => Promise<void>
@@ -264,6 +268,9 @@ function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+/** Numero dell'ultima richiesta di giocate rapide, per scartare le risposte superate. */
+let quickBetsRequestSeq = 0
+
 export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
   const initialHolders: Holder[] = []
   const initialBooks: Book[] = []
@@ -304,6 +311,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     ongoingBetsError: undefined,
     isSavingOngoingBet: false,
     quickBets: initialQuickBets,
+    quickBetsTotal: 0,
+    quickBetsPage: 1,
     isLoadingQuickBets: false,
     quickBetsError: undefined,
     isSavingQuickBet: false,
@@ -840,12 +849,22 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       }
     },
 
-    fetchQuickBets: async () => {
+    fetchQuickBets: async (params) => {
+      // Vince l'ultima richiesta: una risposta più lenta di una pagina già chiesta dopo si scarta.
+      const seq = ++quickBetsRequestSeq
       set(() => ({ isLoadingQuickBets: true, quickBetsError: undefined }))
       try {
-        const list = await apiGetQuickBets()
-        set(() => ({ quickBets: list, isLoadingQuickBets: false, quickBetsError: undefined }))
+        const res = await apiGetQuickBetsPage(params)
+        if (seq !== quickBetsRequestSeq) return
+        set(() => ({
+          quickBets: res.items,
+          quickBetsTotal: res.total,
+          quickBetsPage: res.page,
+          isLoadingQuickBets: false,
+          quickBetsError: undefined,
+        }))
       } catch (err: unknown) {
+        if (seq !== quickBetsRequestSeq) return
         const message = getErrorMessage(err) || 'Errore nel caricamento delle giocate rapide'
         set(() => ({ isLoadingQuickBets: false, quickBetsError: message }))
       }
@@ -862,9 +881,9 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           tag: bet.tag,
           nota: bet.nota,
         })
+        // La pagina la ricarica chi ha salvato: la giocata nuova può stare su un'altra pagina.
         set((state) => ({
           ...state,
-          quickBets: [created, ...state.quickBets],
           accounts: state.accounts.map((a) =>
             a.id === created.accountId
               ? { ...a, saldoAttuale: a.saldoAttuale + created.movimento }
@@ -923,6 +942,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         await apiDeleteQuickBet(id)
         set((state) => ({
           quickBets: state.quickBets.filter((b) => b.id !== id),
+          quickBetsTotal: Math.max(0, state.quickBetsTotal - 1),
           accounts: bet
             ? state.accounts.map((a) =>
                 a.id === bet.accountId ? { ...a, saldoAttuale: a.saldoAttuale - bet.movimento } : a,

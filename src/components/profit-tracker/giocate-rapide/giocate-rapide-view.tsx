@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeftRight, Filter, ListChecks, Plus, Search, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -25,7 +25,6 @@ import { bookLogoSlug } from '@/lib/profit-tracker/ongoing-bets'
 import {
   EMPTY_QUICK_FILTERS,
   NO_TAG,
-  filterQuickBets,
   quickMethodLabel,
   registeredLabel,
   type QuickBetFilters,
@@ -39,11 +38,15 @@ import type { QuickBet } from '@/types/profit-tracker'
  * Giocate rapide dal design «OddWise Giocate rapide» di Claude Design: testata con «Nuova giocata
  * rapida», ricerca, Filtri, Ordina per, filtri attivi, tabella con tag in riga, Inverti ed
  * Elimina (schede sul telefono), paginazione, avvisi con «Annulla» e conferma dell'eliminazione.
+ * Filtri, ricerca, ordinamento e pagine li fa il backend (§14.293): la vista chiede una pagina
+ * alla volta e la richiede dopo ogni modifica.
  */
 
 const NOTICE_MS = 7000
 const FLASH_MS = 1500
 const PAGE_SIZES = [10, 25, 50]
+/** La ricerca parte quando si smette di scrivere. */
+const SEARCH_DEBOUNCE_MS = 300
 
 const SORT_OPTIONS = [
   { value: 'data', label: 'Data registrazione' },
@@ -59,7 +62,9 @@ const ymdToDmy = (v: string) => v.split('-').reverse().join('/')
 const money = (n: number) => formatMoney(n, { sign: true })
 
 export function GiocateRapideView() {
-  const quickBets = useProfitTrackerStore((s) => s.quickBets)
+  const pageRows = useProfitTrackerStore((s) => s.quickBets)
+  const total = useProfitTrackerStore((s) => s.quickBetsTotal)
+  const servedPage = useProfitTrackerStore((s) => s.quickBetsPage)
   const isLoading = useProfitTrackerStore((s) => s.isLoadingQuickBets)
   const loadError = useProfitTrackerStore((s) => s.quickBetsError)
   const tags = useProfitTrackerStore((s) => s.tags)
@@ -70,6 +75,8 @@ export function GiocateRapideView() {
   const { accountInfo, accountOptions } = useAccountInfo()
 
   const [q, setQ] = useState('')
+  const [searched, setSearched] = useState('')
+  const [reload, setReload] = useState(0)
   const [sort, setSort] = useState<QuickBetSort>('data')
   const [filters, setFilters] = useState<QuickBetFilters>(EMPTY_QUICK_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
@@ -82,9 +89,33 @@ export function GiocateRapideView() {
   const [flashId, setFlashId] = useState<string | null>(null)
 
   useEffect(() => {
-    void fetchQuickBets()
     void fetchTags()
-  }, [fetchQuickBets, fetchTags])
+  }, [fetchTags])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearched(q.trim())
+      setPage(0)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [q])
+
+  useEffect(() => {
+    void fetchQuickBets({
+      page: page + 1,
+      limit: pageSize,
+      q: searched,
+      accountId: filters.accountId,
+      method: filters.metodo,
+      tag: filters.tag,
+      dal: filters.dal,
+      al: filters.al,
+      sort,
+    })
+  }, [fetchQuickBets, page, pageSize, searched, filters, sort, reload])
+
+  /** Richiede la pagina: dopo una modifica righe e totale possono cambiare. */
+  const refresh = () => setReload((n) => n + 1)
 
   // L'avviso se ne va da solo dopo 7 s, il lampo della riga dopo 1,5 s.
   useEffect(() => {
@@ -98,14 +129,8 @@ export function GiocateRapideView() {
     return () => clearTimeout(t)
   }, [flashId])
 
-  const rows = useMemo(
-    () => filterQuickBets(quickBets, q, filters, sort, (id) => accountInfo(id).label),
-    [quickBets, q, filters, sort, accountInfo],
-  )
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
-  // Una pagina che non esiste più (filtri, eliminazioni) diventa l'ultima.
-  const shownPage = Math.min(page, pages - 1)
-  const pageRows = rows.slice(shownPage * pageSize, (shownPage + 1) * pageSize)
+  // Il backend serve l'ultima pagina al posto di una che non esiste più (filtri, eliminazioni).
+  const shownPage = Math.max(0, servedPage - 1)
 
   const tagOptions = [
     { value: '', label: 'Nessun tag' },
@@ -118,6 +143,7 @@ export function GiocateRapideView() {
   }
   const resetAll = () => {
     setQ('')
+    setSearched('')
     setFilters(EMPTY_QUICK_FILTERS)
     setPage(0)
   }
@@ -136,6 +162,8 @@ export function GiocateRapideView() {
   if (filters.dal) active.push({ key: 'dal', label: 'Dal', value: ymdToDmy(filters.dal) })
   if (filters.al) active.push({ key: 'al', label: 'Al', value: ymdToDmy(filters.al) })
   const hasAnyFilter = active.length > 0 || q.trim() !== ''
+  // Quello che il backend ha davvero filtrato, per gli stati vuoti.
+  const filtered = active.length > 0 || searched !== ''
 
   const where = (bet: QuickBet) => `su ${accountInfo(bet.accountId).label}`
 
@@ -145,6 +173,7 @@ export function GiocateRapideView() {
     const was = bet.movimento
     try {
       await updateQuickBet(bet.id, { movimento: -was })
+      refresh()
       setFlashId(bet.id)
       setNotice({
         title: 'Movimento invertito',
@@ -154,9 +183,11 @@ export function GiocateRapideView() {
             label: 'Annulla',
             onClick: () => {
               setNotice(null)
-              void updateQuickBet(bet.id, { movimento: was }).catch((err) =>
-                toast.error(getErrorMessage(err) ?? 'Impossibile rimettere il movimento.'),
-              )
+              void updateQuickBet(bet.id, { movimento: was })
+                .then(refresh)
+                .catch((err) =>
+                  toast.error(getErrorMessage(err) ?? 'Impossibile rimettere il movimento.'),
+                )
             },
           },
         ],
@@ -167,9 +198,9 @@ export function GiocateRapideView() {
   }
 
   const handleTag = (bet: QuickBet, value: string) =>
-    void updateQuickBet(bet.id, { tag: value || null }).catch((err) =>
-      toast.error(getErrorMessage(err) ?? 'Impossibile cambiare il tag.'),
-    )
+    void updateQuickBet(bet.id, { tag: value || null })
+      .then(refresh)
+      .catch((err) => toast.error(getErrorMessage(err) ?? 'Impossibile cambiare il tag.'))
 
   const confirmDelete = async () => {
     const bet = toDelete
@@ -177,6 +208,7 @@ export function GiocateRapideView() {
     setDeleting(true)
     try {
       await removeQuickBet(bet.id)
+      refresh()
       setToDelete(null)
       setNotice({
         title: 'Giocata eliminata',
@@ -199,6 +231,7 @@ export function GiocateRapideView() {
         : names.join(' e ')
     setSort('data')
     setPage(0)
+    refresh()
     setFlashId(first.id)
     setNotice({
       title: created.length === 1 ? 'Giocata salvata' : `${created.length} giocate salvate`,
@@ -208,9 +241,11 @@ export function GiocateRapideView() {
           label: 'Annulla',
           onClick: () => {
             setNotice(null)
-            void Promise.all(created.map((b) => removeQuickBet(b.id))).catch((err) =>
-              toast.error(getErrorMessage(err) ?? 'Impossibile togliere le giocate salvate.'),
-            )
+            void Promise.all(created.map((b) => removeQuickBet(b.id)))
+              .catch((err) =>
+                toast.error(getErrorMessage(err) ?? 'Impossibile togliere le giocate salvate.'),
+              )
+              .finally(refresh)
           },
         },
       ],
@@ -293,8 +328,8 @@ export function GiocateRapideView() {
     </button>
   )
 
-  const isEmptyAll = !isLoading && quickBets.length === 0
-  const isEmptyFiltered = !isEmptyAll && quickBets.length > 0 && rows.length === 0
+  const isEmptyAll = !isLoading && total === 0 && !filtered
+  const isEmptyFiltered = !isLoading && total === 0 && filtered
 
   return (
     <>
@@ -320,10 +355,7 @@ export function GiocateRapideView() {
             type="search"
             placeholder="Cerca conto, metodo o nota"
             value={q}
-            onChange={(v) => {
-              setQ(v)
-              setPage(0)
-            }}
+            onChange={setQ}
             prefix={<Search className="h-5 w-5" aria-hidden />}
             className="w-full sm:w-[280px]"
           />
@@ -435,7 +467,7 @@ export function GiocateRapideView() {
         </div>
       )}
 
-      {isLoading && quickBets.length === 0 && (
+      {isLoading && pageRows.length === 0 && (
         <p className="ds-body-sm m-0 text-ds-ink-muted">Caricamento giocate…</p>
       )}
       {isEmptyAll && !loadError && (
@@ -459,7 +491,7 @@ export function GiocateRapideView() {
         />
       )}
 
-      {rows.length > 0 && (
+      {pageRows.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="hidden overflow-x-auto rounded-ds-md border border-ds-line bg-ds-surface-raised md:block">
             <table className="w-full border-collapse">
@@ -555,8 +587,8 @@ export function GiocateRapideView() {
           <OmPagination
             page={shownPage}
             pageSize={pageSize}
-            total={rows.length}
-            unit={rows.length === 1 ? 'giocata' : 'giocate'}
+            total={total}
+            unit={total === 1 ? 'giocata' : 'giocate'}
             onChange={setPage}
           >
             <span className="flex items-center gap-2.5">

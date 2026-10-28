@@ -364,11 +364,29 @@ export async function updateWalletMovement(
   return response.data
 }
 
-export interface GetQuickBetsParams {
+/**
+ * Una pagina di giocate rapide (§14.293): filtri, ricerca e ordinamento li applica il backend.
+ * `page` parte da 1; `tag` vale '__none__' per le giocate senza tag; `dal`/`al` sono giorni
+ * «2026-10-21» compresi.
+ */
+export interface QuickBetListParams {
+  page: number
+  limit: number
+  q?: string
   accountId?: string
-  fromDate?: string
-  toDate?: string
   method?: string
+  tag?: string
+  dal?: string
+  al?: string
+  sort?: 'data' | 'alto' | 'basso'
+}
+
+export interface QuickBetPage {
+  items: QuickBet[]
+  total: number
+  /** La pagina servita: il backend porta all'ultima una pagina oltre la fine. */
+  page: number
+  limit: number
 }
 
 export interface CreateQuickBetPayload {
@@ -386,9 +404,13 @@ export interface UpdateQuickBetPayload {
   nota?: string | null
 }
 
-export async function getQuickBets(params?: GetQuickBetsParams): Promise<QuickBet[]> {
-  const response = await apiClient.get<QuickBet[]>('/profit-tracker/quick-bets', {
-    params: params ?? {},
+export async function getQuickBetsPage(params: QuickBetListParams): Promise<QuickBetPage> {
+  // Solo i filtri valorizzati: una stringa vuota non è un filtro.
+  const query = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== ''),
+  )
+  const response = await apiClient.get<QuickBetPage>('/profit-tracker/quick-bets', {
+    params: query,
   })
   return response.data
 }

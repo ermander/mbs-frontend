@@ -3,7 +3,8 @@ import type { QuickBet } from '@/types/profit-tracker'
 
 /**
  * Giocate rapide dal design «OddWise Giocate rapide»: nome del metodo, importo scritto
- * all'italiana, data di registrazione, filtri e ordinamento della lista.
+ * all'italiana, data di registrazione e filtri. Filtri, ricerca e ordinamento li applica il
+ * backend sulla rotta paginata (§14.293).
  */
 
 const METHOD_LABEL: Record<string, string> = Object.fromEntries(
@@ -30,7 +31,7 @@ export function parseMovimento(text: string): number | null {
 
 const p2 = (n: number) => String(n).padStart(2, '0')
 
-/** Il giorno locale «2026-10-28» di una data ISO, quello che si confronta coi filtri dal/al. */
+/** Il giorno locale «2026-10-28» di una data ISO (il «Registrata il» della modale). */
 export function localYmd(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
@@ -62,24 +63,6 @@ export function registeredLabel(bet: Pick<QuickBet, 'dataRegistrazione' | 'creat
   }
 }
 
-function timeOf(value?: string) {
-  const t = value ? new Date(value).getTime() : Number.NaN
-  return Number.isNaN(t) ? 0 : t
-}
-
-/**
- * Più recente prima: data di registrazione, poi orario di inserimento, poi id. È lo stesso
- * criterio dell'ORDER BY del backend, così l'elenco non cambia ordine tra una giocata appena
- * salvata e il ricaricamento della pagina.
- */
-export function compareNewestFirst(a: QuickBet, b: QuickBet): number {
-  return (
-    timeOf(b.dataRegistrazione) - timeOf(a.dataRegistrazione) ||
-    timeOf(b.createdAt) - timeOf(a.createdAt) ||
-    b.id.localeCompare(a.id)
-  )
-}
-
 /** Il valore del filtro Tag per le giocate senza tag. */
 export const NO_TAG = '__none__'
 
@@ -101,38 +84,3 @@ export const EMPTY_QUICK_FILTERS: QuickBetFilters = {
 }
 
 export type QuickBetSort = 'data' | 'alto' | 'basso'
-
-/**
- * Ricerca (tutte le parole, su conto, metodo, nota e tag), filtri e ordinamento: «data» è il più
- * recente prima, «alto»/«basso» il movimento, a pari importo il più recente prima.
- */
-export function filterQuickBets(
-  list: QuickBet[],
-  q: string,
-  f: QuickBetFilters,
-  sort: QuickBetSort,
-  accountLabel: (accountId: string) => string,
-): QuickBet[] {
-  const words = q.toLowerCase().split(/\s+/).filter(Boolean)
-  const rows = list.filter((b) => {
-    if (f.accountId && b.accountId !== f.accountId) return false
-    if (f.metodo && b.quickMethod !== f.metodo) return false
-    if (f.tag === NO_TAG ? !!b.tag : f.tag && (b.tag ?? '') !== f.tag) return false
-    const day = localYmd(b.dataRegistrazione)
-    if (f.dal && day < f.dal) return false
-    if (f.al && day > f.al) return false
-    if (words.length === 0) return true
-    const hay = [accountLabel(b.accountId), quickMethodLabel(b.quickMethod), b.nota, b.tag]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return words.every((w) => hay.includes(w))
-  })
-  const cmp =
-    sort === 'alto'
-      ? (a: QuickBet, b: QuickBet) => b.movimento - a.movimento || compareNewestFirst(a, b)
-      : sort === 'basso'
-        ? (a: QuickBet, b: QuickBet) => a.movimento - b.movimento || compareNewestFirst(a, b)
-        : compareNewestFirst
-  return rows.sort(cmp)
-}

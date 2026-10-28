@@ -4,26 +4,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Scale, Wallet, Loader2, Banknote, Lock, Hourglass } from 'lucide-react'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
+import { ProfitTrendChart } from '@/components/profit-tracker/dashboard/profit-trend-chart'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import {
   getUnifiedProfitSummary,
   getPuntateInCorsoTotale,
-  getBetLegRealizedLedger,
 } from '@/services/api/profit-tracker-client'
-import type {
-  BetLegRealizedLedgerSummaryResult,
-  BetLegRealizedLedgerEntry,
-} from '@/types/profit-tracker'
-
-const SPORT_ICON: Record<string, string> = {
-  calcio: '⚽',
-  tennis: '🎾',
-  basket: '🏀',
-  altro: '•',
-}
-function getSportIcon(sport: string) {
-  return SPORT_ICON[sport?.toLowerCase()] ?? '•'
-}
+import type { BetLegRealizedLedgerSummaryResult } from '@/types/profit-tracker'
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
@@ -37,35 +24,31 @@ export default function ProfitTrackerDashboardPage() {
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const fetchWallets = useProfitTrackerStore((s) => s.fetchWallets)
-  const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
-  const fetchOngoingBets = useProfitTrackerStore((s) => s.fetchOngoingBets)
 
   const [ledgerSummary, setLedgerSummary] = useState<BetLegRealizedLedgerSummaryResult | null>(null)
-  const [recentLedgerEntries, setRecentLedgerEntries] = useState<BetLegRealizedLedgerEntry[]>([])
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true)
   const [puntateInCorsoValue, setPuntateInCorsoValue] = useState(0)
 
   useEffect(() => {
     void fetchAllAccounts()
     void fetchWallets()
-    void fetchOngoingBets()
 
     const fromDate = `${CURRENT_YEAR}-01-01T00:00:00Z`
     const toDate = `${CURRENT_YEAR}-12-31T23:59:59Z`
 
     Promise.all([
       getUnifiedProfitSummary({ granularity: 'month', fromDate, toDate }),
-      getBetLegRealizedLedger({ limit: 5, page: 1 }),
       getPuntateInCorsoTotale(),
     ])
-      .then(([summary, ledgerList, puntate]) => {
+      .then(([summary, puntate]) => {
         setLedgerSummary(summary)
-        setRecentLedgerEntries(ledgerList.items)
         setPuntateInCorsoValue(puntate.totale)
       })
       .catch((err) => {
         console.error('Dashboard data fetch error:', err)
       })
-  }, [fetchAllAccounts, fetchWallets, fetchOngoingBets])
+      .finally(() => setIsLoadingSummary(false))
+  }, [fetchAllAccounts, fetchWallets])
 
   const bilancio = useMemo(() => {
     const saldoBookmakers = allAccounts.reduce((sum, a) => sum + a.saldoAttuale, 0)
@@ -112,27 +95,10 @@ export default function ProfitTrackerDashboardPage() {
     return { totaleAnno, mediaMensile, meseAttuale }
   }, [ledgerSummary])
 
-  const monthlyTrend = useMemo(() => {
-    const result = new Array(12).fill(0) as number[]
-    if (!ledgerSummary) return result
-
-    for (const bucket of ledgerSummary.buckets) {
-      const date = new Date(bucket.periodStart)
-      if (date.getFullYear() === CURRENT_YEAR) {
-        result[date.getMonth()] = bucket.total
-      }
-    }
-    return result
-  }, [ledgerSummary])
-
-  const activeOngoingBets = useMemo(() => ongoingBets.filter((b) => !b.archiviata), [ongoingBets])
-
-  const trendMax = Math.max(...monthlyTrend.map(Math.abs), 1)
-
   return (
     <ProfitTrackerPageShell
       sectionTitle="Dashboard"
-      sectionDescription="Quadro sintetico di saldi, performance e attività recenti."
+      sectionDescription="Quadro sintetico di saldi e performance."
     >
       <div className="space-y-4">
         <h2 className="font-mono text-sm font-medium uppercase tracking-[0.02em] text-muted-foreground">
@@ -263,105 +229,11 @@ export default function ProfitTrackerDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr,1fr] lg:gap-6">
-        <div className="min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-foreground">Trend guadagni {CURRENT_YEAR}</p>
-            <p className="text-xs text-muted-foreground">Profitto mensile realizzato</p>
-          </div>
-          <div className="mt-2 h-40 rounded-md bg-muted/40 p-3 sm:h-48">
-            <div className="flex h-full items-end gap-1">
-              {monthlyTrend.map((value, index) => {
-                const barHeight = (Math.abs(value) / trendMax) * 80
-                const isNegative = value < 0
-                return (
-                  <div key={index} className="flex h-full flex-1 flex-col items-center justify-end">
-                    <div
-                      className={`w-full max-w-3 rounded-full ${isNegative ? 'bg-destructive/70' : 'bg-primary/70'}`}
-                      style={{ height: `${Math.max(barHeight, value !== 0 ? 5 : 2)}%` }}
-                      title={formatCurrency(value)}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-            <div className="mt-2 flex justify-between gap-0.5 overflow-hidden text-[9px] text-muted-foreground sm:text-[10px]">
-              <span>Gen</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>Mag</span>
-              <span>Giu</span>
-              <span>Lug</span>
-              <span>Ago</span>
-              <span>Set</span>
-              <span>Ott</span>
-              <span>Nov</span>
-              <span>Dic</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="min-w-0 space-y-4">
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="text-sm font-medium text-foreground">Giocate in corso</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Riepilogo rapido delle giocate ancora aperte.
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {activeOngoingBets.slice(0, 3).map((bet) => (
-                <li
-                  key={bet.id}
-                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2"
-                >
-                  <span className="truncate text-foreground">{bet.eventoNome}</span>
-                  <span className="text-base" aria-label={bet.sport}>
-                    {getSportIcon(bet.sport)}
-                  </span>
-                </li>
-              ))}
-              {activeOngoingBets.length === 0 && (
-                <li className="text-xs text-muted-foreground">
-                  Nessuna giocata in corso registrata al momento.
-                </li>
-              )}
-            </ul>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="text-sm font-medium text-foreground">Ultime transazioni</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ultimi profitti/perdite realizzati.
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {recentLedgerEntries.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2"
-                >
-                  <span className="truncate text-foreground">
-                    {new Date(entry.recordedAt).toLocaleDateString('it-IT')}
-                  </span>
-                  <span
-                    className={
-                      entry.amount >= 0
-                        ? 'font-mono text-xs font-medium text-emerald-400'
-                        : 'font-mono text-xs font-medium text-destructive'
-                    }
-                  >
-                    {formatCurrency(entry.amount)}
-                  </span>
-                </li>
-              ))}
-              {recentLedgerEntries.length === 0 && (
-                <li className="text-xs text-muted-foreground">
-                  Non ci sono ancora movimenti registrati.
-                </li>
-              )}
-            </ul>
-          </div>
-        </div>
-      </div>
+      <ProfitTrendChart
+        year={CURRENT_YEAR}
+        buckets={ledgerSummary?.buckets ?? []}
+        isLoading={isLoadingSummary}
+      />
     </ProfitTrackerPageShell>
   )
 }

@@ -94,6 +94,13 @@ export const authNavSections: AuthNavSection[] = [
         icon: Goal,
         requiresTool: 'result_btts',
       },
+      // §14.288: the same promotion on the Correct Score, three legs with Sportmarket; same tool switch.
+      {
+        label: 'Rimborso 0-0',
+        href: '/rimborso-zero',
+        icon: Goal,
+        requiresTool: 'result_btts',
+      },
       { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
     ],
   },
@@ -220,5 +227,6 @@ export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
   { label: 'RISULTATO + GOAL', href: '/risultato-goal', requiresTool: 'result_btts' },
+  { label: 'RIMBORSO 0-0', href: '/rimborso-zero', requiresTool: 'result_btts' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

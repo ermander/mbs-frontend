@@ -18,6 +18,7 @@ describe('visibleNavSections', () => {
       'Offerte',
       'Oddsmatcher',
       'Risultato + Goal',
+      'Rimborso 0-0',
       'Calcolatori',
     ])
     expect(sections[1][1]).toHaveLength(7)
@@ -30,6 +31,8 @@ describe('visibleNavSections', () => {
     const sections = outline({ role: 'USER_ROLE', tools: ['result_btts'] })
     expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
     expect(sections[0][1]).toContain('Risultato + Goal')
+    // §14.288: the same switch opens «Rimborso 0-0».
+    expect(sections[0][1]).toContain('Rimborso 0-0')
   })
   it('a plain user sees neither; so does a missing user', () => {
     for (const user of [{ role: 'USER_ROLE' as const, tools: [] }, null, undefined]) {
@@ -40,7 +43,7 @@ describe('visibleNavSections', () => {
   })
   it('does not mutate the config', () => {
     visibleNavSections({ role: 'USER_ROLE', tools: [] })
-    expect(authNavSections[0].items).toHaveLength(5)
+    expect(authNavSections[0].items).toHaveLength(6)
   })
 })
 

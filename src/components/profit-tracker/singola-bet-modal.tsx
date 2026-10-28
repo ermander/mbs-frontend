@@ -2,25 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+  DsModal,
+  GSelect,
+  GTabs,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { sanitizeDecimal } from '@/lib/utils'
-import { BetCategorySelect } from '@/components/profit-tracker/bet-category-select'
-import type { BetBonusType, BetCategory, ModalitaSaldo, SportType } from '@/types/profit-tracker'
+import { cn, sanitizeDecimal } from '@/lib/utils'
+import type {
+  BetBonusType,
+  BetCategory,
+  ModalitaSaldo,
+  OngoingBet,
+  SportType,
+} from '@/types/profit-tracker'
 
 interface SingolaBetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** La giocata appena salvata, per l'avviso e il lampo della riga. */
+  onSaved?: (bet: OngoingBet) => void
 }
 
 const SPORT_OPTIONS: { value: SportType; label: string }[] = [
@@ -38,28 +41,22 @@ const TIPO_STAKE_OPTIONS: { value: BetBonusType; label: string }[] = [
 ]
 
 const STAKE_LABEL: Record<BetBonusType, string> = {
-  none: 'Stake reale (€)',
-  bonus: 'Valore stake bonus (€)',
-  rimborso: 'Valore stake rimborso (€)',
-  freebet: 'Valore stake freebet (€)',
+  none: 'Importo reale',
+  bonus: 'Importo bonus',
+  rimborso: 'Importo rimborso',
+  freebet: 'Importo freebet',
 }
+
+const CATEGORY_ITEMS: { value: BetCategory; label: string }[] = [
+  { value: 'matched_betting', label: 'Matched betting' },
+  { value: 'surebet', label: 'Surebet' },
+  { value: 'valuebet', label: 'Valuebet' },
+]
 
 function modalitaSaldoFromTipoBonus(tipoBonus: BetBonusType): ModalitaSaldo {
   if (tipoBonus === 'bonus' || tipoBonus === 'freebet') return 'bonus'
   if (tipoBonus === 'rimborso') return 'rimborso'
   return 'reale'
-}
-
-function getDefaultEventDateTimeLocal(): string {
-  const now = new Date()
-  const withMinutes = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    now.getHours(),
-    now.getMinutes(),
-  )
-  return withMinutes.toISOString().slice(0, 16)
 }
 
 function parseNum(s: string): number | null {
@@ -68,7 +65,12 @@ function parseNum(s: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
+/**
+ * «Nuova giocata singola» dal design (§14.281): Evento (sport, squadre, data e ora, mercato,
+ * selezione) e Scommessa (categoria a schede, conto, modalità saldo, quota, importo,
+ * descrizione). Stessa giocata salvata di prima: una gamba punta in bozza sul conto scelto.
+ */
+export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModalProps) {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
   const allBooks = useProfitTrackerStore((s) => s.allBooks)
   const allHolders = useProfitTrackerStore((s) => s.allHolders)
@@ -79,7 +81,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
 
   const [sport, setSport] = useState<SportType>('calcio')
   const [eventoNome, setEventoNome] = useState('')
-  const [eventoDataLocal, setEventoDataLocal] = useState(getDefaultEventDateTimeLocal)
+  const [eventoDataLocal, setEventoDataLocal] = useState('')
   const [mercato, setMercato] = useState('')
   const [selezione, setSelezione] = useState('')
   const [accountId, setAccountId] = useState('')
@@ -88,14 +90,14 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [stake, setStake] = useState('')
   const [nota, setNota] = useState('')
-  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+  const [tried, setTried] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const resetState = useCallback(() => {
     setSport('calcio')
     setEventoNome('')
-    setEventoDataLocal(getDefaultEventDateTimeLocal())
+    setEventoDataLocal('')
     setMercato('')
     setSelezione('')
     setAccountId('')
@@ -104,46 +106,70 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
     setCategoria('matched_betting')
     setStake('')
     setNota('')
+    setTried(false)
     setIsSaving(false)
     setError(null)
   }, [])
 
   useEffect(() => {
-    if (!open) {
-      resetState()
-      return
-    }
+    if (!open) return
     void fetchAllAccounts()
     void fetchAllBooks()
     void fetchAllHolders()
-  }, [open, fetchAllAccounts, fetchAllBooks, fetchAllHolders, resetState])
+  }, [open, fetchAllAccounts, fetchAllBooks, fetchAllHolders])
+
+  const close = useCallback(() => {
+    resetState()
+    onOpenChange(false)
+  }, [resetState, onOpenChange])
 
   const accountOptions = useMemo(
     () =>
-      allAccounts.map((a) => {
-        const book = allBooks.find((b) => b.id === a.bookId)
-        const holder = allHolders.find((h) => h.id === a.holderId)
-        const label = book && holder ? `${book.nome} (${holder.nome})` : a.nome
-        return { value: a.id, label }
-      }),
+      allAccounts
+        .map((a) => {
+          const book = allBooks.find((b) => b.id === a.bookId)
+          const holder = allHolders.find((h) => h.id === a.holderId)
+          const label = book && holder ? `${book.nome} · ${holder.nome}` : a.nome
+          return { value: a.id, label }
+        })
+        .sort((x, y) => x.label.localeCompare(y.label, 'it')),
     [allAccounts, allBooks, allHolders],
   )
 
   const stakeNum = parseNum(stake)
   const quotaNum = parseNum(quota)
 
-  const canSave = useMemo(() => {
-    if (!eventoNome.trim()) return false
-    if (!mercato.trim()) return false
-    if (!eventoDataLocal) return false
-    if (!accountId) return false
-    if (stakeNum == null || stakeNum <= 0) return false
-    if (quotaNum == null || quotaNum <= 1) return false
-    return true
-  }, [eventoNome, mercato, eventoDataLocal, accountId, stakeNum, quotaNum])
+  // Gli errori compaiono dopo il primo «Salva»; quota e importo anche appena scritti.
+  const errors = {
+    evento: tried && !eventoNome.trim() ? "Scrivi il nome dell'evento" : undefined,
+    data: tried && !eventoDataLocal ? "Indica data e ora dell'evento" : undefined,
+    mercato:
+      tried && !mercato.trim() ? 'Indica il mercato, ad esempio 1X2 o Over/Under' : undefined,
+    conto: tried && !accountId ? 'Scegli il conto su cui hai giocato' : undefined,
+    quota:
+      (quota !== '' || tried) && (quotaNum == null || quotaNum <= 1)
+        ? 'Serve una quota sopra 1'
+        : undefined,
+    stake:
+      (stake !== '' || tried) && (stakeNum == null || stakeNum <= 0)
+        ? 'Serve un importo sopra 0 €'
+        : undefined,
+  }
+  const canSave =
+    !!eventoNome.trim() &&
+    !!mercato.trim() &&
+    !!eventoDataLocal &&
+    !!accountId &&
+    stakeNum != null &&
+    stakeNum > 0 &&
+    quotaNum != null &&
+    quotaNum > 1
 
-  const handleSave = useCallback(async () => {
-    if (!canSave || stakeNum == null || quotaNum == null) return
+  const handleSave = async () => {
+    if (!canSave || stakeNum == null || quotaNum == null) {
+      setTried(true)
+      return
+    }
     setIsSaving(true)
     setError(null)
     try {
@@ -152,7 +178,7 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
         eventoData: eventoDataIso,
         categoria,
         sport,
-        eventoNome,
+        eventoNome: eventoNome.trim(),
         modalitaSaldo: modalitaSaldoFromTipoBonus(tipoBonus),
         accountId,
         tag: undefined as string | undefined,
@@ -162,9 +188,9 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
       const legPayload = {
         eventoData: eventoDataIso,
         sport,
-        eventoNome,
+        eventoNome: eventoNome.trim(),
         competizione: 'N/D',
-        mercato,
+        mercato: mercato.trim(),
         selezione: selezione.trim() ? selezione.trim() : undefined,
         metodo: 'punta' as const,
         tipoBonus,
@@ -179,178 +205,161 @@ export function SingolaBetModal({ open, onOpenChange }: SingolaBetModalProps) {
         posizione: 0,
       }
 
-      await saveOngoingBetFromCalculator(betPayload, [legPayload])
-      resetState()
-      onOpenChange(false)
+      const bet = await saveOngoingBetFromCalculator(betPayload, [legPayload])
+      close()
+      onSaved?.(bet)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel salvataggio della giocata')
-    } finally {
       setIsSaving(false)
     }
-  }, [
-    canSave,
-    stakeNum,
-    quotaNum,
-    eventoDataLocal,
-    sport,
-    eventoNome,
-    tipoBonus,
-    categoria,
-    accountId,
-    nota,
-    mercato,
-    selezione,
-    saveOngoingBetFromCalculator,
-    resetState,
-    onOpenChange,
-  ])
+  }
+
+  const sectionLabel = 'ds-label m-0 uppercase text-ds-ink-muted'
 
   return (
-    <Dialog
+    <DsModal
       open={open}
-      onOpenChange={(next) => {
-        if (!next) resetState()
-        onOpenChange(next)
-      }}
-    >
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
-        <div
-          ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-[9998]"
-          aria-hidden
-        />
-        <DialogHeader>
-          <DialogTitle>Nuova giocata singola</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <SearchableSelect
-            id="singola-sport"
-            label="Sport"
-            options={SPORT_OPTIONS}
-            value={sport}
-            onChange={(v) => setSport(v as SportType)}
-            allowEmpty={false}
-            size="sm"
-            portalContainer={dropdownPortalEl}
-          />
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-evento">Squadra / evento</Label>
-            <Input
-              id="singola-evento"
-              value={eventoNome}
-              onChange={(e) => setEventoNome(e.target.value)}
-              placeholder="Es. Juventus - Milan"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-data">Data e ora disputa</Label>
-            <Input
-              id="singola-data"
-              type="datetime-local"
-              value={eventoDataLocal}
-              onChange={(e) => setEventoDataLocal(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-mercato">Mercato</Label>
-            <Input
-              id="singola-mercato"
-              value={mercato}
-              onChange={(e) => setMercato(e.target.value)}
-              placeholder="Es. Esito finale 1X2"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-selezione">Selezione (opzionale)</Label>
-            <Input
-              id="singola-selezione"
-              value={selezione}
-              onChange={(e) => setSelezione(e.target.value)}
-              placeholder="Es. Over 2.5"
-            />
-          </div>
-
-          <BetCategorySelect value={categoria} onChange={setCategoria} />
-
-          <SearchableSelect
-            id="singola-conto"
-            label="Conto"
-            placeholder="Seleziona conto"
-            searchPlaceholder="Cerca conto..."
-            options={accountOptions}
-            value={accountId}
-            onChange={setAccountId}
-            allowEmpty={false}
-            size="sm"
-            portalContainer={dropdownPortalEl}
-          />
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-quota">Quota</Label>
-            <Input
-              id="singola-quota"
-              type="text"
-              inputMode="decimal"
-              value={quota}
-              onChange={(e) => setQuota(sanitizeDecimal(e.target.value))}
-              placeholder="Es. 1.85"
-            />
-          </div>
-
-          <SearchableSelect
-            id="singola-tipo-stake"
-            label="Tipo di stake"
-            options={TIPO_STAKE_OPTIONS}
-            value={tipoBonus}
-            onChange={(v) => setTipoBonus(v as BetBonusType)}
-            allowEmpty={false}
-            size="sm"
-            portalContainer={dropdownPortalEl}
-          />
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-stake">{STAKE_LABEL[tipoBonus]}</Label>
-            <Input
-              id="singola-stake"
-              type="text"
-              inputMode="decimal"
-              value={stake}
-              onChange={(e) => setStake(sanitizeDecimal(e.target.value))}
-              placeholder="Es. 50"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="singola-nota">Descrizione (opzionale)</Label>
-            <textarea
-              id="singola-nota"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              placeholder="Note sulla giocata, motivazione del value bet, ecc."
-            />
-          </div>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
+      onOpenChange={(next) => (next ? onOpenChange(true) : close())}
+      title="Nuova giocata singola"
+      description="Una sola scommessa su un conto: evento, mercato, quota e importo."
+      size="lg"
+      footer={
+        <>
+          <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={close}
             disabled={isSaving}
+            className={dsButtonClass('ghost', 'md')}
           >
             Annulla
-          </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={!canSave || isSaving}>
-            {isSaving ? 'Salvataggio...' : 'Salva'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+          >
+            {isSaving ? 'Salvataggio…' : 'Salva la giocata'}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <p className={sectionLabel}>Evento</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1.2fr)]">
+            <GSelect
+              id="singola-sport"
+              label="Sport"
+              options={SPORT_OPTIONS}
+              value={sport}
+              onChange={(v) => setSport(v as SportType)}
+            />
+            <GTextField
+              id="singola-evento"
+              label="Squadra o evento"
+              placeholder="Es. Juventus – Milan"
+              value={eventoNome}
+              onChange={setEventoNome}
+              error={errors.evento}
+            />
+            <GTextField
+              id="singola-data"
+              label="Data e ora dell'evento"
+              type="datetime-local"
+              value={eventoDataLocal}
+              onChange={setEventoDataLocal}
+              error={errors.data}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <GTextField
+              id="singola-mercato"
+              label="Mercato"
+              placeholder="Es. Esito finale 1X2"
+              value={mercato}
+              onChange={setMercato}
+              error={errors.mercato}
+            />
+            <GTextField
+              id="singola-selezione"
+              label="Selezione"
+              optional
+              placeholder="Es. Over 2,5"
+              value={selezione}
+              onChange={setSelezione}
+            />
+          </div>
+        </div>
+
+        <div className="h-px bg-ds-line" />
+
+        <div className="flex flex-col gap-2">
+          <p className={sectionLabel}>Scommessa</p>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold leading-5 text-ds-ink">Categoria</span>
+            <GTabs
+              label="Categoria"
+              items={CATEGORY_ITEMS}
+              value={categoria}
+              onChange={setCategoria}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.9fr)]">
+            <GSelect
+              id="singola-conto"
+              label="Conto"
+              options={[{ value: '', label: 'Scegli un conto', disabled: true }, ...accountOptions]}
+              value={accountId}
+              onChange={setAccountId}
+              error={errors.conto}
+            />
+            <GSelect
+              id="singola-tipo-stake"
+              label="Modalità saldo"
+              options={TIPO_STAKE_OPTIONS}
+              value={tipoBonus}
+              onChange={(v) => setTipoBonus(v as BetBonusType)}
+            />
+            <GTextField
+              id="singola-quota"
+              label="Quota"
+              numeric
+              placeholder="Es. 1,85"
+              value={quota}
+              onChange={(v) => setQuota(sanitizeDecimal(v))}
+              error={errors.quota}
+            />
+            <GTextField
+              id="singola-stake"
+              label={STAKE_LABEL[tipoBonus]}
+              numeric
+              suffix="€"
+              placeholder="Es. 50"
+              value={stake}
+              onChange={(v) => setStake(sanitizeDecimal(v))}
+              error={errors.stake}
+            />
+          </div>
+          <GTextField
+            id="singola-nota"
+            label="Descrizione"
+            optional
+            placeholder="Note sulla giocata, motivazione della valuebet, limiti da verificare"
+            value={nota}
+            onChange={setNota}
+          />
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="ds-body-sm m-0 rounded-ds-sm bg-ds-loss-soft px-3 py-2 text-ds-loss"
+          >
+            {error}
+          </p>
+        )}
+      </div>
+    </DsModal>
   )
 }

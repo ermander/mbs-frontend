@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { getErrorCode, getErrorMessage, getResponseDataCode } from '@/lib/error-utils'
+import { legSummary } from '@/lib/profit-tracker/ongoing-bets'
 import type {
   Account,
   AccountMovement,
@@ -688,7 +689,13 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       const eventoNotificato = legs.some(
         (l) => l.eventoNotificato && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'),
       )
-      const enrichedBet = { ...bet, hasOpenLegs, eventoNotificato }
+      // Il riepilogo della lista (§14.281) rifatto dalle gambe appena lette.
+      const enrichedBet = {
+        ...bet,
+        hasOpenLegs,
+        eventoNotificato,
+        riepilogoGambe: legSummary(legs),
+      }
       set((state) => {
         const hasBet = state.ongoingBets.some((b) => b.id === betId)
         const ongoingBets = hasBet
@@ -708,13 +715,18 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       try {
         const bet = await apiCreateBet(betPayload)
         const legs = await apiCreateBetLegs(bet.id, { legs: legsPayload })
+        const withSummary = {
+          ...bet,
+          hasOpenLegs: legs.some((l) => l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'),
+          riepilogoGambe: legSummary(legs),
+        }
         set((state) => ({
-          ongoingBets: [...state.ongoingBets, bet],
+          ongoingBets: [...state.ongoingBets, withSummary],
           betLegs: [...state.betLegs, ...legs],
           isSavingOngoingBet: false,
           ongoingBetsError: undefined,
         }))
-        return bet
+        return withSummary
       } catch (err: unknown) {
         const message = getErrorMessage(err) || 'Errore nel salvataggio della giocata'
         set(() => ({
@@ -733,8 +745,14 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
     updateOngoingBet: async (id, patch) => {
       try {
         const updated = await apiUpdateBet(id, patch)
+        // La PATCH risponde con la sola riga della giocata: gambe aperte e riepilogo delle
+        // gambe (§14.281) li sa solo la lista, e una modifica della giocata non li cambia.
         set((state) => ({
-          ongoingBets: state.ongoingBets.map((b) => (b.id === id ? updated : b)),
+          ongoingBets: state.ongoingBets.map((b) =>
+            b.id === id
+              ? { ...updated, hasOpenLegs: b.hasOpenLegs, riepilogoGambe: b.riepilogoGambe }
+              : b,
+          ),
         }))
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'aggiornamento della giocata"

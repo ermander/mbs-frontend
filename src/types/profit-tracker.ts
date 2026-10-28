@@ -130,6 +130,16 @@ export interface OngoingBet {
   statoEvento: BetStatus
   archiviata?: boolean
   createdAt: string
+  /** Dalla lista (§14.281): prima gamba ed eventi delle gambe senza doppioni. */
+  riepilogoGambe?: OngoingBetLegSummary
+}
+
+export interface OngoingBetLegSummary {
+  competizione: string | null
+  mercato: string | null
+  selezione: string | null
+  quota: number | null
+  eventi: string[]
 }
 
 export type BetLegRealizedLedgerEntryType = 'settlement_delta' | 'account_transfer'

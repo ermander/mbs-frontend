@@ -467,18 +467,25 @@ export function OmEmptyState({
 
 const countFormat = new Intl.NumberFormat('it-IT')
 
-/** Pagination del design: «1–50 di 1.234 combinazioni» a sinistra, Indietro/Avanti a destra. */
+/**
+ * Pagination del design: «1–50 di 1.234 combinazioni» a sinistra, Indietro/Avanti a destra; in
+ * mezzo, se c'è, il controllo delle righe per pagina.
+ */
 export function OmPagination({
   page,
   pageSize,
   total,
   onChange,
+  unit = 'combinazioni',
+  children,
 }: {
   /** Da zero. */
   page: number
   pageSize: number
   total: number
   onChange: (page: number) => void
+  unit?: string
+  children?: React.ReactNode
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const start = total === 0 ? 0 : page * pageSize + 1
@@ -489,10 +496,10 @@ export function OmPagination({
       className="ds-body-sm flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 tabular-nums text-ds-ink-muted"
     >
       <span>
-        {countFormat.format(start)}–{countFormat.format(end)} di {countFormat.format(total)}{' '}
-        combinazioni
+        {countFormat.format(start)}–{countFormat.format(end)} di {countFormat.format(total)} {unit}
       </span>
-      <span className="flex items-center gap-3">
+      <span className="flex flex-wrap items-center gap-3">
+        {children}
         <button
           type="button"
           onClick={() => onChange(Math.max(0, page - 1))}

@@ -219,10 +219,12 @@ interface ProfitTrackerState {
   removeBetLeg: (betId: string, legId: string) => Promise<void>
   addBetLegs: (betId: string, legs: CreateBetLegPayload[]) => Promise<BetLeg[]>
 
-  addQuickBet: (bet: Omit<QuickBet, 'id'>) => Promise<void>
+  /** Restituisce la giocata creata; su errore imposta quickBetError e rilancia. */
+  addQuickBet: (bet: Omit<QuickBet, 'id'>) => Promise<QuickBet>
+  /** null svuota tag e nota, undefined li lascia; su errore imposta quickBetError e rilancia. */
   updateQuickBet: (
     id: string,
-    patch: Partial<Pick<QuickBet, 'movimento' | 'tag' | 'nota'>>,
+    patch: { movimento?: number; tag?: string | null; nota?: string | null },
   ) => Promise<void>
   removeQuickBet: (id: string) => Promise<void>
 
@@ -876,9 +878,11 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
           isSavingQuickBet: false,
           quickBetError: undefined,
         }))
+        return created
       } catch (err: unknown) {
         const message = getErrorMessage(err) || 'Errore nel salvataggio della giocata rapida'
         set((s) => ({ ...s, isSavingQuickBet: false, quickBetError: message }))
+        throw err
       }
     },
 
@@ -909,6 +913,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'aggiornamento della giocata rapida"
         set((s) => ({ ...s, quickBetError: message }))
+        throw err
       }
     },
 
@@ -932,6 +937,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
       } catch (err: unknown) {
         const message = getErrorMessage(err) || "Errore nell'eliminazione della giocata rapida"
         set((s) => ({ ...s, quickBetError: message }))
+        throw err
       }
     },
 

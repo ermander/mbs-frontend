@@ -123,7 +123,8 @@ describe('offerBadge', () => {
       tone: 'warning',
       label: 'Scade tra 2 giorni',
     })
-    expect(offerBadge(offer({ expiresInDays: 1 })).label).toBe('Scade tra 1 giorno')
+    expect(offerBadge(offer({ expiresInDays: 1 })).label).toBe('Scade domani')
+    expect(offerBadge(offer({ expiresInDays: 0 })).label).toBe('Scade oggi')
     expect(offerBadge(offer({ isNew: true }))).toEqual({ tone: 'accent', label: 'Nuova' })
     expect(offerBadge(offer({}))).toEqual({ tone: 'brand', label: 'Attiva' })
   })

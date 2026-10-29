@@ -191,7 +191,8 @@ describe('dalla carta dell’API alla pagina pubblica', () => {
   it('in scadenza solo negli ultimi tre giorni', () => {
     expect(offerBadge(offerFromCard(card)).label).toBe('Attiva')
     expect(offerBadge(offerFromCard({ ...card, daysLeft: 3 })).label).toBe('Scade tra 3 giorni')
-    expect(offerBadge(offerFromCard({ ...card, daysLeft: 0 })).label).toBe('Scade tra 0 giorni')
+    expect(offerBadge(offerFromCard({ ...card, daysLeft: 1 })).label).toBe('Scade domani')
+    expect(offerBadge(offerFromCard({ ...card, daysLeft: 0 })).label).toBe('Scade oggi')
   })
 
   it('scaduta con la data, o forzata senza data', () => {

@@ -252,7 +252,9 @@ export function GiocateInCorsoView() {
         // senza, il backend la rimetteva a matched_betting e il Report
         // rendicontava il clone nella categoria sbagliata.
         categoria: original.categoria,
-        tag: null,
+        // Anche il tag libero della giocata segue l'originale (le gambe lo
+        // copiavano già): prima la copia nasceva senza tag.
+        tag: original.tag ?? null,
         nota: original.nota ?? null,
       }
       const legsPayload = legs.map((leg) => ({

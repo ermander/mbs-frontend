@@ -17,6 +17,9 @@ import { cn } from '@/lib/utils'
 
 /* ---------- Menu a tendina ---------- */
 
+/** Altezza del pannello con ricerca, elenco pieno e piede: sotto questo spazio si apre in su. */
+const FLOAT_PANEL_HEIGHT = 330
+
 export interface OmOption {
   value: string
   label: string
@@ -32,7 +35,9 @@ export interface OmOption {
  * Il menu del design: un pulsante con il valore scelto (e il numero delle voci quando sono più di
  * una) che apre un pannello con la ricerca, l'elenco con le spunte e «Azzera»/«Fatto». Con
  * `single` le voci sono radio: una scelta, «Azzera» torna a «tutti». Si chiude con un clic fuori,
- * con Esc (il fuoco torna sul pulsante) e con «Fatto».
+ * con Esc (il fuoco torna sul pulsante) e con «Fatto». Con `floating` il pannello è `fixed` sul
+ * pulsante e si apre verso l'alto se sotto non c'è posto: nei DsModal non resta tagliato dallo
+ * scorrimento del modal.
  */
 export function OmDropdown({
   id,
@@ -47,6 +52,7 @@ export function OmDropdown({
   panelWidth = 280,
   emptyText = 'Nessun risultato. Prova con un altro nome.',
   disabled,
+  floating,
   className,
 }: {
   id: string
@@ -62,9 +68,11 @@ export function OmDropdown({
   panelWidth?: number
   emptyText?: string
   disabled?: boolean
+  floating?: boolean
   className?: string
 }) {
   const [open, setOpen] = React.useState(false)
+  const [floatPos, setFloatPos] = React.useState<React.CSSProperties | null>(null)
   const [query, setQuery] = React.useState('')
   const rootRef = React.useRef<HTMLDivElement>(null)
   const buttonRef = React.useRef<HTMLButtonElement>(null)
@@ -74,6 +82,33 @@ export function OmDropdown({
     setQuery('')
     if (focusButton) buttonRef.current?.focus()
   }, [])
+
+  const placeFloating = React.useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const below = window.innerHeight - rect.bottom
+    const up = below < FLOAT_PANEL_HEIGHT && rect.top > below
+    setFloatPos({
+      position: 'fixed',
+      left: Math.max(16, Math.min(rect.left, window.innerWidth - panelWidth - 16)),
+      ...(up ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
+    })
+  }, [panelWidth])
+
+  const openPanel = () => {
+    if (floating) placeFloating()
+    setOpen(true)
+  }
+
+  React.useEffect(() => {
+    if (!open || !floating) return
+    window.addEventListener('scroll', placeFloating, true)
+    window.addEventListener('resize', placeFloating)
+    return () => {
+      window.removeEventListener('scroll', placeFloating, true)
+      window.removeEventListener('resize', placeFloating)
+    }
+  }, [open, floating, placeFloating])
 
   React.useEffect(() => {
     if (!open) return
@@ -128,7 +163,7 @@ export function OmDropdown({
         aria-expanded={open}
         aria-haspopup="true"
         aria-labelledby={`${id}-label ${id}`}
-        onClick={() => (open ? close(false) : setOpen(true))}
+        onClick={() => (open ? close(false) : openPanel())}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-ds-sm border bg-ds-surface-raised text-left text-ds-ink transition-[border-color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-50',
           size === 'sm' ? 'ds-body-sm h-8 pl-2.5 pr-2' : 'ds-body h-10 pl-3 pr-2.5',
@@ -149,8 +184,11 @@ export function OmDropdown({
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-30 mt-1 max-w-[calc(100vw-32px)] rounded-ds-md border border-ds-line bg-ds-surface-raised p-2 shadow-ds-md"
-          style={{ width: panelWidth }}
+          className={cn(
+            'z-30 max-w-[calc(100vw-32px)] rounded-ds-md border border-ds-line bg-ds-surface-raised p-2 shadow-ds-md',
+            !floating && 'absolute left-0 top-full mt-1',
+          )}
+          style={{ width: panelWidth, ...(floating ? floatPos : undefined) }}
         >
           {searchable && (
             <div className="flex h-8 items-center gap-2 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-2.5 focus-within:border-ds-brand">

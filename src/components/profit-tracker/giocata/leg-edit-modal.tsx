@@ -6,10 +6,12 @@ import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
 import {
   DsModal,
+  FieldError,
   GSelect,
   GTextField,
   type GOption,
 } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { OmDropdown } from '@/components/strumenti/scanner-v2/om-ds'
 import {
   TIPO_BONUS_LABEL,
   isMultiplaMarkerLeg,
@@ -32,7 +34,8 @@ const money = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximum
 
 /**
  * «Modifica gamba» dal design (§14.283): evento e data, mercato e selezione, conto, tipo bonus,
- * quote, importo, commissione con la responsabilità sotto. Il metodo si legge, non si cambia.
+ * quote, importo, commissione con la responsabilità sotto. Il conto è il menu con la ricerca di
+ * «Giocata rapida». Il metodo si legge, non si cambia.
  * Il modulo nasce dalla gamba a ogni apertura (il componente si rimonta con la chiave della
  * gamba); al salvataggio passa solo i campi cambiati.
  */
@@ -169,14 +172,22 @@ export function LegEditModal({
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <GSelect
-            id="gamba-conto"
-            label="Conto"
-            options={options}
-            value={form.accountId}
-            onChange={(v) => set('accountId', v)}
-            error={errors.accountId}
-          />
+          <div className="flex min-w-0 flex-col gap-1">
+            <OmDropdown
+              id="gamba-conto"
+              label="Conto"
+              allLabel="Scegli un conto"
+              single
+              panelWidth={300}
+              emptyText="Nessun conto con questo nome."
+              options={options}
+              selected={form.accountId ? [form.accountId] : []}
+              onChange={(next) => set('accountId', next[0] ?? '')}
+              floating
+              className="gap-1"
+            />
+            {errors.accountId && <FieldError id="gamba-conto-error">{errors.accountId}</FieldError>}
+          </div>
           {isBanca ? (
             <GTextField
               id="gamba-commissione"

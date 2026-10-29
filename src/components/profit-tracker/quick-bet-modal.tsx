@@ -290,6 +290,7 @@ export function QuickBetModal({ open, onOpenChange, onSaved }: QuickBetModalProp
                 options={accountOptions}
                 selected={accountId ? [accountId] : []}
                 onChange={(next) => setAccountId(next[0] ?? '')}
+                floating
               />
               {errors.conto && <ErrorLine>{errors.conto}</ErrorLine>}
             </div>

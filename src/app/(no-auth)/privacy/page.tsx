@@ -6,11 +6,14 @@ import { SiteShell } from '@/components/landing/site-shell'
 // Informativa sulla privacy (ADAPTER_STATUS §14.250).
 //
 // Il testo descrive solo quello che il codice fa davvero (verificato il
-// 2026-10-18): registrazione con nome, cognome, email e password;
-// accesso con Google (email, nome, identificativo dell'account Google);
-// dati del Profit Tracker; notifiche Telegram facoltative; log del
-// server; nessun analytics né script di terze parti; bandiere scaricate
-// dal browser da flagcdn.com; sito e API dietro il proxy di Cloudflare.
+// 2026-10-18, cancellazione dell'account aggiornata il 2026-10-30):
+// registrazione con nome, cognome, email e password; accesso con Google
+// (email, nome, identificativo dell'account Google); dati del Profit
+// Tracker; notifiche Telegram facoltative; log del server; nessun
+// analytics né script di terze parti; bandiere scaricate dal browser da
+// flagcdn.com; sito e API dietro il proxy di Cloudflare; cancellazione
+// dell'account fatta dall'utente stesso dalla pagina del profilo
+// (§14.251), con eliminazione immediata di tutti i dati collegati.
 //
 // PLACEHOLDER DA COMPILARE (l'utente), tutti nella sezione «Titolare»:
 //   TITOLARE_NOME       → nome o ragione sociale del titolare
@@ -62,8 +65,7 @@ const SECTIONS: readonly LegalSection[] = [
         </p>
         <p>
           Per qualsiasi richiesta sui tuoi dati personali, compreso l&apos;esercizio dei diritti
-          descritti più avanti e la cancellazione dell&apos;account, puoi scrivere a{' '}
-          <Placeholder>{TITOLARE_EMAIL}</Placeholder>.
+          descritti più avanti, puoi scrivere a <Placeholder>{TITOLARE_EMAIL}</Placeholder>.
         </p>
       </>
     ),
@@ -201,11 +203,11 @@ const SECTIONS: readonly LegalSection[] = [
       <ul className="list-disc space-y-3 pl-5">
         <li>
           <Term>Dati dell&apos;account e del servizio</Term> (profilo, dati del Profit Tracker,
-          collegamento Telegram): finché il tuo account esiste. Puoi chiedere la cancellazione
-          dell&apos;account scrivendo al titolare ai recapiti della sezione{' '}
-          <DsTextLink href="#titolare">Titolare del trattamento</DsTextLink>: eliminiamo
-          l&apos;account e, con esso, tutti i dati collegati entro un mese dalla richiesta (art. 12
-          GDPR).
+          collegamento Telegram): finché il tuo account esiste. Puoi eliminare l&apos;account da
+          solo, in qualsiasi momento, dalla sezione «Elimina account» della{' '}
+          <DsTextLink href="/account/profilo">pagina del profilo</DsTextLink>: l&apos;account e
+          tutti i dati collegati vengono cancellati immediatamente e in modo definitivo, senza
+          bisogno di una richiesta al titolare.
         </li>
         <li>
           <Term>Log tecnici del server</Term>: per il tempo strettamente necessario alle finalità di
@@ -228,8 +230,10 @@ const SECTIONS: readonly LegalSection[] = [
           In qualità di interessato hai il diritto di accedere ai tuoi dati, di chiederne la
           rettifica o la cancellazione, la limitazione del trattamento e la portabilità, e di
           opporti al trattamento basato sul legittimo interesse (artt. 15-21 GDPR). Nome, username,
-          email e password puoi modificarli da solo nella pagina del profilo; per il resto scrivi al
-          titolare ai recapiti della sezione{' '}
+          email e password puoi modificarli da solo nella{' '}
+          <DsTextLink href="/account/profilo">pagina del profilo</DsTextLink>, e dalla stessa pagina
+          puoi eliminare l&apos;account con tutti i dati collegati (art. 17 GDPR); per il resto
+          scrivi al titolare ai recapiti della sezione{' '}
           <DsTextLink href="#titolare">Titolare del trattamento</DsTextLink>: rispondiamo entro un
           mese.
         </p>
@@ -292,7 +296,7 @@ const SECTIONS: readonly LegalSection[] = [
 export default function PrivacyPage() {
   return (
     <SiteShell>
-      <LegalPage title="Informativa sulla privacy" updated="18 ottobre 2026" sections={SECTIONS} />
+      <LegalPage title="Informativa sulla privacy" updated="30 ottobre 2026" sections={SECTIONS} />
     </SiteShell>
   )
 }

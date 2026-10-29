@@ -244,10 +244,10 @@ export function LegEditModal({
                 : undefined
             }
           />
-          {form.tipoBonus === 'bonus' && !isBanca && (
+          {(form.tipoBonus === 'bonus' || form.tipoBonus === 'freebet') && !isBanca && (
             <GTextField
               id="gamba-bonus"
-              label="Bonus"
+              label={TIPO_BONUS_LABEL[form.tipoBonus]}
               numeric
               suffix="€"
               value={form.bonusValore}

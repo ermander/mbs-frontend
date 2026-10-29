@@ -153,6 +153,9 @@ export function ScannerV2FilterBar({
   onMultiplaOpenChange,
 }: ScannerV2FilterBarProps) {
   const activeCount = countActiveFilters(filters)
+  // Until the meta answers the lists are empty: the panel says so instead of «Nessun risultato»
+  // (the meta took ~30 s in production before §14.306, the user read it as a broken search).
+  const loadingText = meta ? undefined : 'Elenco in caricamento…'
   const bookName = (slug: string, list: MatcherBookmaker[]) =>
     shortBookmakerName(list.find((b) => b.slug === slug)?.name ?? slug)
   const namesOf = (slugs: string[], list: MatcherBookmaker[]) =>
@@ -290,6 +293,7 @@ export function ScannerV2FilterBar({
           selected={filters.books}
           onChange={(next) => onChange({ books: next })}
           panelWidth={220}
+          emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
         <OmDropdown
@@ -300,6 +304,7 @@ export function ScannerV2FilterBar({
           selected={filters.coverBooks}
           onChange={(next) => onChange({ coverBooks: next })}
           panelWidth={220}
+          emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
         <CalcNumberField
@@ -375,6 +380,7 @@ export function ScannerV2FilterBar({
               single
               searchable={sportOpts.length > 6}
               options={sportOpts}
+              emptyText={loadingText}
               selected={filters.sport ? [filters.sport] : []}
               onChange={(next) => {
                 const sport = next[0] ?? ''
@@ -394,6 +400,7 @@ export function ScannerV2FilterBar({
               size="sm"
               single
               options={nationOpts}
+              emptyText={loadingText}
               selected={filters.nation ? [filters.nation] : []}
               onChange={(next) => {
                 const nation = next[0] ?? ''
@@ -422,7 +429,7 @@ export function ScannerV2FilterBar({
                 options={competitionOpts}
                 selected={filters.competitionIds}
                 onChange={(next) => onChange({ competitionIds: next })}
-                emptyText="Nessuna competizione con questo nome o nazione."
+                emptyText={loadingText ?? 'Nessuna competizione con questo nome o nazione.'}
               />
             </div>
             <CalcTextField
@@ -473,7 +480,7 @@ export function ScannerV2FilterBar({
               options={bookOptions(exchanges)}
               selected={filters.exchanges}
               onChange={(next) => onChange({ exchanges: next })}
-              emptyText="Nessun exchange nel deposito"
+              emptyText={loadingText ?? 'Nessun exchange nel deposito'}
             />
             <span className="hidden lg:block" aria-hidden />
             <CalcNumberField

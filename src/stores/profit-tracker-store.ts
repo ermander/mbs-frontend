@@ -356,7 +356,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         const { items } = await apiGetHolders({ limit: 5000 })
         set(() => ({ allHolders: items }))
       } catch {
-        set(() => ({ allHolders: [] }))
+        // §14.307: una lettura fallita (deploy, rete, Cloudflare) tiene l'ultima lista buona.
+        // Svuotarla toglieva l'intestatario da tutte le gambe fino al reload.
       } finally {
         set(() => ({ isLoadingAllHolders: false }))
       }
@@ -399,7 +400,7 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         const { items } = await apiGetBooks({ limit: 5000 })
         set(() => ({ allBooks: items }))
       } catch {
-        set(() => ({ allBooks: [] }))
+        // §14.307: come fetchAllHolders, l'ultima lista buona resta.
       }
     },
     fetchBooks: async (params) => {
@@ -549,7 +550,8 @@ export const useProfitTrackerStore = create<ProfitTrackerState>((set, _get) => {
         const { items } = await apiGetAccounts({ limit: 5000 })
         set(() => ({ allAccounts: items }))
       } catch {
-        set(() => ({ allAccounts: [] }))
+        // §14.307: come fetchAllHolders, l'ultima lista buona resta (la colonna Conto
+        // delle gambe la legge da qui a ogni render).
       }
     },
     addAccount: async ({ holderId, bookId, descrizione, stato }) => {

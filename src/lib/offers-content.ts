@@ -32,7 +32,7 @@ export interface Offer {
   profit: number | null
   difficulty: OfferDifficulty
   isNew?: boolean
-  /** Giorni alla scadenza, per il badge «Scade tra N giorni». */
+  /** Giorni alla scadenza, per il badge «Scade oggi / domani / tra N giorni». */
   expiresInDays?: number
   /** Data di scadenza (AAAA-MM-GG) di un'offerta già scaduta: la carta va fra le «Scadute». */
   expiredOn?: string
@@ -164,12 +164,21 @@ export interface OfferBadge {
   label: string
 }
 
+/**
+ * «Scade oggi» / «Scade domani» / «Scade tra N giorni»: la scadenza è una data senza orario
+ * (vale fino a mezzanotte italiana), quindi niente «tra 0 giorni» né un'ora inventata.
+ */
+export function expiresInLabel(days: number): string {
+  if (days <= 0) return 'Scade oggi'
+  if (days === 1) return 'Scade domani'
+  return `Scade tra ${days} giorni`
+}
+
 /** Lo stato sulla carta: scaduta, in scadenza, nuova, altrimenti attiva (nell'ordine del design). */
 export function offerBadge(offer: Offer): OfferBadge {
   if (isExpired(offer)) return { tone: 'loss', label: 'Scaduta' }
   if (offer.expiresInDays !== undefined) {
-    const days = offer.expiresInDays
-    return { tone: 'warning', label: `Scade tra ${days} ${days === 1 ? 'giorno' : 'giorni'}` }
+    return { tone: 'warning', label: expiresInLabel(offer.expiresInDays) }
   }
   if (offer.isNew) return { tone: 'accent', label: 'Nuova' }
   return { tone: 'brand', label: 'Attiva' }

@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { isUnauthenticatedError } from '@/lib/auth-session'
 
 // Server-side (Node) needs an absolute URL to reach the backend; browser uses /api (rewritten by Next.js).
 const baseURL =
@@ -75,8 +76,11 @@ if (typeof window !== 'undefined') {
         await doRefresh()
         originalRequest._retry = true
         return apiClient(originalRequest)
-      } catch {
-        onRefreshFailure?.()
+      } catch (refreshError) {
+        // Only a 401 from /auth/refresh means the session is really gone (expired or
+        // revoked refresh token). A network error or a 5xx while the backend restarts
+        // for a deploy leaves the cookies valid: the request fails, the user stays in.
+        if (isUnauthenticatedError(refreshError)) onRefreshFailure?.()
         return Promise.reject(error)
       }
     },

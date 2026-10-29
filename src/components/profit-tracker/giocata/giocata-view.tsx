@@ -436,7 +436,7 @@ export function GiocataView({ betId }: { betId: string }) {
         {l.metodo === 'banca'
           ? `resp. ${eur.format(l.rischio ?? 0)} €`
           : (l.bonusValore ?? 0) > 0
-            ? `bonus ${eur.format(l.bonusValore ?? 0)} €`
+            ? `${l.tipoBonus === 'freebet' ? 'freebet' : 'bonus'} ${eur.format(l.bonusValore ?? 0)} €`
             : (l.rimborsoValore ?? 0) > 0
               ? `rimb. ${eur.format(l.rimborsoValore ?? 0)} €`
               : `rischio ${eur.format(legRisk(l))} €`}

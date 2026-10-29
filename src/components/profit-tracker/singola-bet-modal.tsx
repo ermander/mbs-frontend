@@ -40,11 +40,17 @@ const TIPO_STAKE_OPTIONS: { value: BetBonusType; label: string }[] = [
   { value: 'freebet', label: 'Freebet' },
 ]
 
-const STAKE_LABEL: Record<BetBonusType, string> = {
-  none: 'Importo reale',
+/** L'importo che non è saldo reale: bonus e freebet vanno in `bonusValore`, il rimborso in `rimborsoValore`. */
+const VALORE_LABEL: Record<Exclude<BetBonusType, 'none'>, string> = {
   bonus: 'Importo bonus',
   rimborso: 'Importo rimborso',
   freebet: 'Importo freebet',
+}
+
+const VALORE_HINT: Record<Exclude<BetBonusType, 'none'>, string> = {
+  bonus: 'Saldo bonus giocato insieme al reale: metti 0 € nel reale se hai usato solo il bonus.',
+  rimborso: 'Quanto ti viene rimborsato se la scommessa perde.',
+  freebet: 'Valore della freebet: metti 0 € nel reale se hai giocato solo quella.',
 }
 
 const CATEGORY_ITEMS: { value: BetCategory; label: string }[] = [
@@ -69,6 +75,8 @@ function parseNum(s: string): number | null {
  * «Nuova giocata singola» dal design (§14.281): Evento (sport, squadre, data e ora, mercato,
  * selezione) e Scommessa (categoria a schede, conto, modalità saldo, quota, importo,
  * descrizione). Stessa giocata salvata di prima: una gamba punta in bozza sul conto scelto.
+ * Con bonus, freebet o rimborso si scrivono due importi: il reale giocato (anche 0 €) e il
+ * valore del bonus, della freebet o del rimborso, che la gamba tiene separato dal reale.
  */
 export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModalProps) {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
@@ -88,7 +96,8 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
   const [quota, setQuota] = useState('')
   const [tipoBonus, setTipoBonus] = useState<BetBonusType>('none')
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
-  const [stake, setStake] = useState('')
+  const [stakeReale, setStakeReale] = useState('')
+  const [valore, setValore] = useState('')
   const [nota, setNota] = useState('')
   const [tried, setTried] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -104,7 +113,8 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
     setQuota('')
     setTipoBonus('none')
     setCategoria('matched_betting')
-    setStake('')
+    setStakeReale('')
+    setValore('')
     setNota('')
     setTried(false)
     setIsSaving(false)
@@ -136,10 +146,17 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
     [allAccounts, allBooks, allHolders],
   )
 
-  const stakeNum = parseNum(stake)
   const quotaNum = parseNum(quota)
+  // Con un saldo diverso dal reale il campo reale può restare vuoto: vale 0 €.
+  const realeNum = tipoBonus === 'none' ? parseNum(stakeReale) : (parseNum(stakeReale) ?? 0)
+  const valoreNum = tipoBonus === 'none' ? 0 : parseNum(valore)
+  // Reale e rimborso si giocano con soldi veri: il reale deve esserci. Bonus e freebet possono
+  // essere giocati da soli, ma il loro importo deve esserci.
+  const realeMin = tipoBonus === 'none' || tipoBonus === 'rimborso' ? 0 : -1
+  const realeOk = realeNum != null && realeNum > realeMin
+  const valoreOk = tipoBonus === 'none' || (valoreNum != null && valoreNum > 0)
 
-  // Gli errori compaiono dopo il primo «Salva»; quota e importo anche appena scritti.
+  // Gli errori compaiono dopo il primo «Salva»; quota e importi anche appena scritti.
   const errors = {
     evento: tried && !eventoNome.trim() ? "Scrivi il nome dell'evento" : undefined,
     data: tried && !eventoDataLocal ? "Indica data e ora dell'evento" : undefined,
@@ -150,23 +167,26 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
       (quota !== '' || tried) && (quotaNum == null || quotaNum <= 1)
         ? 'Serve una quota sopra 1'
         : undefined,
-    stake:
-      (stake !== '' || tried) && (stakeNum == null || stakeNum <= 0)
-        ? 'Serve un importo sopra 0 €'
+    reale:
+      (stakeReale !== '' || tried) && !realeOk
+        ? realeMin === 0
+          ? 'Serve un importo sopra 0 €'
+          : 'Serve un importo da 0 € in su'
         : undefined,
+    valore: (valore !== '' || tried) && !valoreOk ? 'Serve un importo sopra 0 €' : undefined,
   }
   const canSave =
     !!eventoNome.trim() &&
     !!mercato.trim() &&
     !!eventoDataLocal &&
     !!accountId &&
-    stakeNum != null &&
-    stakeNum > 0 &&
+    realeOk &&
+    valoreOk &&
     quotaNum != null &&
     quotaNum > 1
 
   const handleSave = async () => {
-    if (!canSave || stakeNum == null || quotaNum == null) {
+    if (!canSave || realeNum == null || quotaNum == null) {
       setTried(true)
       return
     }
@@ -195,9 +215,14 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
         metodo: 'punta' as const,
         tipoBonus,
         accountId,
-        stake: stakeNum,
+        // Solo il reale nella puntata (§14.115): bonus e freebet in bonusValore, il rimborso in
+        // rimborsoValore, come fanno i calcolatori.
+        stake: realeNum,
         quota: quotaNum,
         rischio: 0,
+        bonusValore:
+          (tipoBonus === 'bonus' || tipoBonus === 'freebet') && valoreNum ? valoreNum : undefined,
+        rimborsoValore: tipoBonus === 'rimborso' && valoreNum ? valoreNum : undefined,
         commissionePercentuale: 0,
         movimento: 0,
         statoEvento: 'bozza',
@@ -332,15 +357,30 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
             />
             <GTextField
               id="singola-stake"
-              label={STAKE_LABEL[tipoBonus]}
+              label="Importo reale"
               numeric
               suffix="€"
-              placeholder="Es. 50"
-              value={stake}
-              onChange={(v) => setStake(sanitizeDecimal(v))}
-              error={errors.stake}
+              placeholder={tipoBonus === 'none' ? 'Es. 50' : 'Es. 0'}
+              value={stakeReale}
+              onChange={(v) => setStakeReale(sanitizeDecimal(v))}
+              error={errors.reale}
             />
           </div>
+          {tipoBonus !== 'none' && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <GTextField
+                id="singola-valore"
+                label={VALORE_LABEL[tipoBonus]}
+                numeric
+                suffix="€"
+                placeholder="Es. 50"
+                value={valore}
+                onChange={(v) => setValore(sanitizeDecimal(v))}
+                error={errors.valore}
+                hint={VALORE_HINT[tipoBonus]}
+              />
+            </div>
+          )}
           <GTextField
             id="singola-nota"
             label="Descrizione"

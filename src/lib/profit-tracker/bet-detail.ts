@@ -196,7 +196,10 @@ export function legFormErrors(leg: BetLeg, f: LegForm, multipla: boolean): LegFo
     const c = parseDecimal(f.commissione)
     if (c == null || c < 0 || c > 100) e.commissione = 'La commissione va da 0 a 100 %'
   }
-  if (f.tipoBonus === 'bonus' && (parseDecimal(f.bonusValore) ?? 0) < 0)
+  if (
+    (f.tipoBonus === 'bonus' || f.tipoBonus === 'freebet') &&
+    (parseDecimal(f.bonusValore) ?? 0) < 0
+  )
     e.bonusValore = 'Importo non valido'
   if (f.tipoBonus === 'rimborso' && (parseDecimal(f.rimborsoValore) ?? 0) < 0)
     e.rimborsoValore = 'Importo non valido'
@@ -208,8 +211,9 @@ const changed = (a: number | null | undefined, b: number | null | undefined) =>
 
 /**
  * Solo i campi cambiati, con le regole della pagina di prima: la punta che cambia puntata
- * aggiorna anche il rischio; un tipo bonus diverso da «bonus»/«rimborso» azzera il valore
- * corrispondente; il metodo non si tocca.
+ * aggiorna anche il rischio; un tipo bonus diverso da «bonus»/«freebet» azzera il bonus
+ * (la freebet vive in bonusValore, come la liquida il backend) e uno diverso da «rimborso»
+ * azzera il rimborso; il metodo non si tocca.
  */
 export function legFormPatch(leg: BetLeg, f: LegForm): LegPatch {
   const p: LegPatch = {}
@@ -237,7 +241,7 @@ export function legFormPatch(leg: BetLeg, f: LegForm): LegPatch {
     const c = parseDecimal(f.commissione)
     if (c != null && changed(c, leg.commissionePercentuale)) p.commissionePercentuale = c
   }
-  const bonus = tipo === 'bonus' ? (parseDecimal(f.bonusValore) ?? 0) : 0
+  const bonus = tipo === 'bonus' || tipo === 'freebet' ? (parseDecimal(f.bonusValore) ?? 0) : 0
   if (changed(bonus, leg.bonusValore)) p.bonusValore = bonus
   const rimborso = tipo === 'rimborso' ? (parseDecimal(f.rimborsoValore) ?? 0) : 0
   if (changed(rimborso, leg.rimborsoValore)) p.rimborsoValore = rimborso

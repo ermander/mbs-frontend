@@ -148,6 +148,17 @@ describe('modale Modifica gamba', () => {
       bonusValore: 0,
     })
   })
+  it('la freebet tiene il valore in bonusValore: cambiarlo entra, passare a reale lo azzera', () => {
+    const l = leg({ tipoBonus: 'freebet', bonusValore: 10, stake: 0 })
+    expect(legFormPatch(l, { ...legToForm(l), bonusValore: '25' })).toEqual({ bonusValore: 25 })
+    expect(legFormPatch(l, { ...legToForm(l), tipoBonus: 'none' })).toEqual({
+      tipoBonus: 'none',
+      bonusValore: 0,
+    })
+    expect(legFormErrors(l, { ...legToForm(l), bonusValore: '-1' }, false).bonusValore).toBe(
+      'Importo non valido',
+    )
+  })
   it('il metodo e la commissione della punta non entrano', () => {
     const l = leg({})
     expect(legFormPatch(l, { ...legToForm(l), commissione: '5' })).toEqual({})

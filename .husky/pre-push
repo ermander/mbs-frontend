@@ -1,2 +1,1 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# Nessun controllo prima del push: hook volutamente vuoto, come con husky 8.

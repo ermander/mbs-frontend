@@ -20,7 +20,7 @@ const RENEWAL_WINDOW_MS = 10_000
  * Cosa mostrano /offerte e /offerte/[id] quando la lettura fatta dal server di Next non è andata
  * (§14.315). Un 401 non è un guasto: le rotte vogliono la sessione e l'access_token dura 15
  * minuti, quindi chi torna sulla pagina dopo un po' arriva qui con il solo refresh_token valido.
- * Si rende solo dentro OffersAccess, cioè con un utente entrato: rinnova i cookie con
+ * Si rende solo nel layout di (auth) (§14.324), cioè con un utente entrato: rinnova i cookie con
  * POST /auth/refresh e fa rileggere la pagina al server (router.refresh), che ora passa. Se il
  * rinnovo risponde 401 la sessione è davvero finita: si esce come fa la guard. Per ogni altro
  * stato (503, rete) l'avviso di sempre.

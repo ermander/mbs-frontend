@@ -138,11 +138,16 @@ export function PuntaBancaSaveModal({
     setExchangeHolderIds(new Set())
   }, [])
 
+  // Alla chiusura il modulo si azzera durante il render, confrontando open con il valore
+  // precedente (react-hooks/set-state-in-effect).
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (!open) resetState()
+  }
+
   useEffect(() => {
-    if (!open) {
-      resetState()
-      return
-    }
+    if (!open) return
 
     const loadBasics = async () => {
       setIsLoadingBasics(true)
@@ -193,7 +198,6 @@ export function PuntaBancaSaveModal({
     fetchAllAccounts,
     isMultiConto,
     mercato,
-    resetState,
     holders,
     books,
   ])

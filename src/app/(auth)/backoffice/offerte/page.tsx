@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 import { getErrorMessage } from '@/lib/error-utils'
@@ -35,21 +35,14 @@ export default function BackofficeOffersPage() {
   const [type, setType] = useState<'all' | OfferType>('all')
   const [visibility, setVisibility] = useState<'all' | OfferVisibility>('all')
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      setOffers(await getBackofficeOffers())
-    } catch {
-      setError('Errore nel caricamento delle offerte.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // Lo stato cambia solo nei callback della promise; loading parte già a true
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
-    void load()
-  }, [load])
+    getBackofficeOffers()
+      .then((data) => setOffers(data))
+      .catch(() => setError('Errore nel caricamento delle offerte.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const changeVisibility = async (offer: OfferAdmin, next: OfferVisibility) => {
     setError(null)

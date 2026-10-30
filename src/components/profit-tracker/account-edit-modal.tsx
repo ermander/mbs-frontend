@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import {
   Dialog,
@@ -30,13 +30,24 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
 
-  useEffect(() => {
-    if (!open) return
-    setStato(account.stato)
-    setDescrizione(account.descrizione ?? '')
-    setBloccato(account.bloccato === true)
-    setError(undefined)
-  }, [open, account.stato, account.descrizione, account.bloccato])
+  // All'apertura, o se il conto cambia mentre è aperta, il modulo riparte dai valori del conto:
+  // durante il render, confrontando con l'ultimo valore visto (react-hooks/set-state-in-effect).
+  const syncKey = JSON.stringify([
+    open,
+    account.stato,
+    account.descrizione ?? '',
+    account.bloccato === true,
+  ])
+  const [syncedKey, setSyncedKey] = useState(syncKey)
+  if (syncKey !== syncedKey) {
+    setSyncedKey(syncKey)
+    if (open) {
+      setStato(account.stato)
+      setDescrizione(account.descrizione ?? '')
+      setBloccato(account.bloccato === true)
+      setError(undefined)
+    }
+  }
 
   const handleClose = (nextOpen: boolean) => {
     if (!nextOpen || !isSaving) {

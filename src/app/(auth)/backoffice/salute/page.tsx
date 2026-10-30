@@ -142,17 +142,19 @@ export default function BackofficeSalutePage() {
   const [loading, setLoading] = useState(true)
   const [clock, setClock] = useState(() => Date.now())
 
-  const load = useCallback(async () => {
-    try {
-      const data = await getOddsHealth(24)
-      setReport(data)
-      setError(null)
-    } catch {
-      setError('Errore nel caricamento dello stato di salute.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // Lo stato cambia solo nei callback della promise, così l'effetto può chiamarlo
+  // (react-hooks/set-state-in-effect).
+  const load = useCallback(
+    () =>
+      getOddsHealth(24)
+        .then((data) => {
+          setReport(data)
+          setError(null)
+        })
+        .catch(() => setError('Errore nel caricamento dello stato di salute.'))
+        .finally(() => setLoading(false)),
+    [],
+  )
 
   useEffect(() => {
     void load()

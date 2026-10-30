@@ -53,24 +53,31 @@ export default function SportMappingsPage() {
   // Filter
   const [filterBookmaker, setFilterBookmaker] = useState<string>('all')
 
+  // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
+  // com'è (loading parte già a true), i salvataggi passano da loadData, che riaccende il
+  // caricamento prima di ripartire (react-hooks/set-state-in-effect).
+  const fetchData = useCallback(
+    () =>
+      Promise.all([getSportMappings(), getCanonicalSports(), getScrapers()])
+        .then(([m, s, b]) => {
+          setMappings(m)
+          setSports(s)
+          setBookmakers(b)
+        })
+        .catch(() => setError('Errore nel caricamento dei dati.'))
+        .finally(() => setLoading(false)),
+    [],
+  )
+
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      const [m, s, b] = await Promise.all([getSportMappings(), getCanonicalSports(), getScrapers()])
-      setMappings(m)
-      setSports(s)
-      setBookmakers(b)
-    } catch {
-      setError('Errore nel caricamento dei dati.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    await fetchData()
+  }, [fetchData])
 
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    void fetchData()
+  }, [fetchData])
 
   // Group mappings by sport name
   const groupedBySport = mappings.reduce<Record<string, SportMapping[]>>((acc, m) => {

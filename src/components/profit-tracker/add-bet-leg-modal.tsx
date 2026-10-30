@@ -68,9 +68,13 @@ export function AddBetLegModal({
   const [tag, setTag] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
+  // All'apertura, o se la giocata cambia mentre è aperta, i campi ripartono: durante il render,
+  // confrontando con l'ultimo valore visto (react-hooks/set-state-in-effect); i conti si
+  // ricaricano nell'effetto.
+  const [synced, setSynced] = useState({ open, bet })
+  if (synced.open !== open || synced.bet !== bet) {
+    setSynced({ open, bet })
     if (open) {
-      void fetchAllAccounts()
       if (bet) {
         setEventoData(bet.eventoData.slice(0, 16))
         setEventoNome(bet.eventoNome)
@@ -88,7 +92,11 @@ export function AddBetLegModal({
       setCommissionePercentuale('0')
       setTag('')
     }
-  }, [open, bet, fetchAllAccounts])
+  }
+
+  useEffect(() => {
+    if (open) void fetchAllAccounts()
+  }, [open, fetchAllAccounts])
 
   const effectiveAccountId =
     accountId && filteredAccounts.some((a) => a.id === accountId)

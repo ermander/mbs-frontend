@@ -357,13 +357,9 @@ export default function ReportPage() {
   const [chartMode, setChartMode] = useState<ChartMode>('netto')
 
   const [report, setReport] = useState<ProfitReportResult | null>(null)
-  const [isLoadingReport, setIsLoadingReport] = useState(true)
-  const [reportError, setReportError] = useState<string | null>(null)
 
   const [detailItems, setDetailItems] = useState<ProfitReportDetailItem[]>([])
   const [detailTotal, setDetailTotal] = useState(0)
-  const [detailPage, setDetailPage] = useState(1)
-  const [isLoadingDetail, setIsLoadingDetail] = useState(true)
 
   useEffect(() => {
     void fetchAllAccounts()
@@ -383,19 +379,27 @@ export default function ReportPage() {
     [year, holderId, accountId, categoria],
   )
 
+  // Caricamento ed errore sono derivati: il report in mano è «per» certi filtri, e finché non
+  // sono quelli correnti si sta caricando. Lo stato cambia solo nei callback della promise
+  // (react-hooks/set-state-in-effect).
+  const [reportState, setReportState] = useState<{
+    filters: typeof baseFilters
+    error: string | null
+  } | null>(null)
+  const isLoadingReport = reportState?.filters !== baseFilters
+  const reportError = reportState?.filters === baseFilters ? reportState.error : null
+
   useEffect(() => {
     let cancelled = false
-    setIsLoadingReport(true)
-    setReportError(null)
     getProfitReport(baseFilters)
       .then((result) => {
-        if (!cancelled) setReport(result)
+        if (cancelled) return
+        setReport(result)
+        setReportState({ filters: baseFilters, error: null })
       })
       .catch(() => {
-        if (!cancelled) setReportError('Errore nel caricamento del report')
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingReport(false)
+        if (!cancelled)
+          setReportState({ filters: baseFilters, error: 'Errore nel caricamento del report' })
       })
     return () => {
       cancelled = true
@@ -412,13 +416,27 @@ export default function ReportPage() {
     }
   }, [baseFilters, selectedMonth, year])
 
-  useEffect(() => {
-    setDetailPage(1)
-  }, [detailFilters])
+  // La pagina del dettaglio vale per i filtri con cui è stata scelta: con altri filtri si
+  // riparte da 1, senza un effetto che la azzeri (react-hooks/set-state-in-effect).
+  const [detailPageState, setDetailPageState] = useState<{
+    filters: typeof detailFilters
+    page: number
+  } | null>(null)
+  const detailPage = detailPageState?.filters === detailFilters ? detailPageState.page : 1
+  const goToDetailPage = (page: number) => setDetailPageState({ filters: detailFilters, page })
+
+  // Il dettaglio in mano è «per» filtri e pagina: finché non sono quelli correnti si sta caricando.
+  const [detailLoaded, setDetailLoaded] = useState<{
+    filters: typeof detailFilters
+    page: number
+  } | null>(null)
+  const isLoadingDetail =
+    detailLoaded == null ||
+    detailLoaded.filters !== detailFilters ||
+    detailLoaded.page !== detailPage
 
   useEffect(() => {
     let cancelled = false
-    setIsLoadingDetail(true)
     getProfitReportDetail({ ...detailFilters, page: detailPage, limit: DETAIL_PAGE_SIZE })
       .then((result) => {
         if (cancelled) return
@@ -431,7 +449,7 @@ export default function ReportPage() {
         setDetailTotal(0)
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingDetail(false)
+        if (!cancelled) setDetailLoaded({ filters: detailFilters, page: detailPage })
       })
     return () => {
       cancelled = true
@@ -978,7 +996,7 @@ export default function ReportPage() {
               variant="outline"
               size="sm"
               disabled={detailPage <= 1 || isLoadingDetail}
-              onClick={() => setDetailPage((p) => Math.max(1, p - 1))}
+              onClick={() => goToDetailPage(Math.max(1, detailPage - 1))}
             >
               Precedente
             </Button>
@@ -989,7 +1007,7 @@ export default function ReportPage() {
               variant="outline"
               size="sm"
               disabled={detailPage >= totalDetailPages || isLoadingDetail}
-              onClick={() => setDetailPage((p) => Math.min(totalDetailPages, p + 1))}
+              onClick={() => goToDetailPage(Math.min(totalDetailPages, detailPage + 1))}
             >
               Successiva
             </Button>

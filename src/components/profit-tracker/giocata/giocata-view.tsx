@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { notFound, useRouter } from 'next/navigation'
 import { Archive, ArchiveRestore, ChevronLeft, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -112,7 +112,9 @@ export function GiocataView({ betId }: { betId: string }) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<GNoticeData | null>(null)
   const [flashId, setFlashId] = useState<string | null>(null)
-  const navigatingAway = useRef(false)
+  // Durante l'eliminazione la giocata sparisce dallo store prima del router.push: è stato, non
+  // ref, perché decide il render (react-hooks/refs).
+  const [navigatingAway, setNavigatingAway] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -176,7 +178,7 @@ export function GiocataView({ betId }: { betId: string }) {
     [allAccounts, books, accountInfo],
   )
 
-  if (!navigatingAway.current && (loadError || (!loading && !bet))) notFound()
+  if (!navigatingAway && (loadError || (!loading && !bet))) notFound()
   if (loading || !bet) {
     return <p className="ds-body-sm m-0 text-ds-ink-muted">Caricamento della giocata…</p>
   }
@@ -228,11 +230,11 @@ export function GiocataView({ betId }: { betId: string }) {
   const deleteBet = async () => {
     setBusy(true)
     try {
-      navigatingAway.current = true
+      setNavigatingAway(true)
       await removeOngoingBet(bet.id)
       router.push(BACK_HREF)
     } catch (err) {
-      navigatingAway.current = false
+      setNavigatingAway(false)
       setBusy(false)
       fail(err, 'Impossibile eliminare la giocata.')
     }

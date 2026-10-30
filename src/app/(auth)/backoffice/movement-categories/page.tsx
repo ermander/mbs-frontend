@@ -57,21 +57,27 @@ export default function BackofficeMovementCategoriesPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
+  // com'è (loading parte già a true), i salvataggi passano da loadCategories, che riaccende il
+  // caricamento prima di ripartire (react-hooks/set-state-in-effect).
+  const fetchCategories = useCallback(
+    () =>
+      getGlobalMovementCategories()
+        .then((data) => setCategories(data))
+        .catch(() => setError('Errore nel caricamento delle categorie.'))
+        .finally(() => setLoading(false)),
+    [],
+  )
+
   const loadCategories = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      setCategories(await getGlobalMovementCategories())
-    } catch {
-      setError('Errore nel caricamento delle categorie.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    await fetchCategories()
+  }, [fetchCategories])
 
   useEffect(() => {
-    void loadCategories()
-  }, [loadCategories])
+    void fetchCategories()
+  }, [fetchCategories])
 
   const openCreateForm = () => {
     setEditing(null)

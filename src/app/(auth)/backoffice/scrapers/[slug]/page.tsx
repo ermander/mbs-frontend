@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'next/navigation'
 import { Container } from '@/components/ui/container'
 import { Tabs } from '@/components/ui/tabs'
@@ -53,27 +53,36 @@ export default function ScraperDetailPage() {
 
   const [activeTab, setActiveTab] = useState<'config' | 'data'>('config')
   const [summary, setSummary] = useState<BookmakerSummaryDto | null>(null)
-  const [summaryLoading, setSummaryLoading] = useState(true)
-  const [summaryError, setSummaryError] = useState<string | null>(null)
-
-  const loadSummary = useCallback(async () => {
-    if (!slug) return
-    setSummaryLoading(true)
-    setSummaryError(null)
-    try {
-      const data = await getBookmakerSummary(slug)
-      setSummary(data)
-    } catch (err) {
-      setSummaryError(extractMessage(err, 'Errore nel caricamento del bookmaker.'))
-      setSummary(null)
-    } finally {
-      setSummaryLoading(false)
-    }
-  }, [slug])
+  // Il caricamento è derivato: il riepilogo in mano è «per» uno slug, e finché non è quello
+  // corrente si sta caricando. Lo stato cambia nei callback della promise, e una risposta
+  // arrivata dopo un cambio di slug viene ignorata (react-hooks/set-state-in-effect).
+  const [summaryState, setSummaryState] = useState<{ slug: string; error: string | null } | null>(
+    null,
+  )
+  const summaryLoading = summaryState?.slug !== slug
+  const summaryError = summaryState?.slug === slug ? summaryState.error : null
 
   useEffect(() => {
-    void loadSummary()
-  }, [loadSummary])
+    if (!slug) return
+    let cancelled = false
+    getBookmakerSummary(slug)
+      .then((data) => {
+        if (cancelled) return
+        setSummary(data)
+        setSummaryState({ slug, error: null })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setSummary(null)
+        setSummaryState({
+          slug,
+          error: extractMessage(err, 'Errore nel caricamento del bookmaker.'),
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
 
   const enabledSportsLabel = useMemo(() => {
     if (!summary) return ''
@@ -321,9 +330,14 @@ function ScrapedDataTree({ slug }: { slug: string }) {
   const [refreshCounter, setRefreshCounter] = useState(0)
   const [competitions, setCompetitions] = useState<CompetitionDrilldownItemDto[] | null>(null)
   const [totals, setTotals] = useState<CompetitionListTotalsDto | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // I dati in mano sono «per» una richiesta (slug, conclusi, query, contatore di Aggiorna): il
+  // caricamento, pieno o di ricerca, e l'errore sono derivati dal confronto con quella corrente
+  // (react-hooks/set-state-in-effect).
+  const [loaded, setLoaded] = useState<{
+    key: string
+    refresh: number
+    error: string | null
+  } | null>(null)
 
   const [filterSport, setFilterSport] = useState('')
   const [filterCountry, setFilterCountry] = useState('')
@@ -348,38 +362,40 @@ function ScrapedDataTree({ slug }: { slug: string }) {
   // Includes debouncedFilterName so toggling the query refreshes per-node state cleanly.
   const nodeResetKey = `${String(includePast)}_${refreshCounter}_${debouncedFilterName}`
 
-  const doLoad = useCallback(
-    async (mode: 'full' | 'search') => {
-      if (mode === 'search') setSearchLoading(true)
-      else setLoading(true)
-      setError(null)
-      try {
-        const qToSend = trimmedQuery.length >= SEARCH_MIN_LENGTH ? trimmedQuery : undefined
-        const data = await getScrapedCompetitions(slug, includePast, qToSend)
+  // Initial load + reload on includePast / refresh / query change.
+  // "full" (nothing on screen yet, or Aggiorna) blanks the tree; "search" (typing in the
+  // search field, includePast) keeps the tree currently on screen.
+  const requestKey = `${slug}|${String(includePast)}|${refreshCounter}|${trimmedQuery}`
+  const stale = loaded?.key !== requestKey
+  const loading = stale && (competitions === null || loaded?.refresh !== refreshCounter)
+  const searchLoading = stale && !loading
+  const error = loaded != null && !stale ? loaded.error : null
+
+  useEffect(() => {
+    let cancelled = false
+    const qToSend = trimmedQuery.length >= SEARCH_MIN_LENGTH ? trimmedQuery : undefined
+    getScrapedCompetitions(slug, includePast, qToSend)
+      .then((data) => {
+        if (cancelled) return
         setCompetitions(data.competitions)
         setTotals(data.totals)
-      } catch (err) {
-        setError(extractMessage(err, 'Errore nel caricamento delle competizioni.'))
-      } finally {
-        if (mode === 'search') setSearchLoading(false)
-        else setLoading(false)
-      }
-    },
-    [slug, includePast, trimmedQuery],
-  )
-
-  // Initial load + reload on includePast / refresh / query change.
-  // We pick "full" vs "search" so that typing in the search field doesn't blank
-  // out the tree currently on screen.
-  const isInitial = competitions === null
-  useEffect(() => {
-    void doLoad(isInitial ? 'full' : 'search')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doLoad])
+        setLoaded({ key: requestKey, refresh: refreshCounter, error: null })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setLoaded({
+          key: requestKey,
+          refresh: refreshCounter,
+          error: extractMessage(err, 'Errore nel caricamento delle competizioni.'),
+        })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slug, includePast, trimmedQuery, refreshCounter, requestKey])
 
   const handleRefresh = () => {
     setRefreshCounter((c) => c + 1)
-    void doLoad('full')
   }
 
   const availableSports = useMemo(

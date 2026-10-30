@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import {
   getScrapers,
@@ -47,26 +47,17 @@ export default function BackofficeScrapersPage() {
   const [noteDraft, setNoteDraft] = useState('')
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [scrapersData, globalData] = await Promise.all([
-        getScrapers(),
-        getGlobalScrapingStatus(),
-      ])
-      setScrapers(scrapersData)
-      setGlobalStatus(globalData)
-    } catch {
-      setError('Errore nel caricamento dei dati.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // Lo stato cambia solo nei callback della promise; loading parte già a true
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    Promise.all([getScrapers(), getGlobalScrapingStatus()])
+      .then(([scrapersData, globalData]) => {
+        setScrapers(scrapersData)
+        setGlobalStatus(globalData)
+      })
+      .catch(() => setError('Errore nel caricamento dei dati.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const handleGlobalToggle = async () => {
     if (!globalStatus) return

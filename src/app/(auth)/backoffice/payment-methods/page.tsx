@@ -34,21 +34,27 @@ export default function BackofficePaymentMethodsPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
+  // com'è (loading parte già a true), i salvataggi passano da loadMethods, che riaccende il
+  // caricamento prima di ripartire (react-hooks/set-state-in-effect).
+  const fetchMethods = useCallback(
+    () =>
+      getGlobalPaymentMethods()
+        .then((data) => setMethods(data))
+        .catch(() => setError('Errore nel caricamento dei metodi di pagamento.'))
+        .finally(() => setLoading(false)),
+    [],
+  )
+
   const loadMethods = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      setMethods(await getGlobalPaymentMethods())
-    } catch {
-      setError('Errore nel caricamento dei metodi di pagamento.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    await fetchMethods()
+  }, [fetchMethods])
 
   useEffect(() => {
-    void loadMethods()
-  }, [loadMethods])
+    void fetchMethods()
+  }, [fetchMethods])
 
   const openCreateForm = () => {
     setEditing(null)

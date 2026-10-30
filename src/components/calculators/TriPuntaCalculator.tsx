@@ -664,33 +664,20 @@ export function TriPuntaCalculator() {
       ? (guadagnoMinimo / rimborsoNum) * 100
       : null
 
-  const canSave = useMemo(() => {
-    if (!eventoNome.trim()) return false
-    if (!accountIdPuntaA || !accountIdPuntaB || !accountIdPuntaC) return false
-    if (
-      puntataEffettivaA <= 0 ||
-      quotaANum == null ||
-      quotaBNum == null ||
-      quotaCNum == null ||
-      stakeB == null ||
-      stakeC == null ||
-      guadagnoMinimo == null
-    )
-      return false
-    return true
-  }, [
-    eventoNome,
-    accountIdPuntaA,
-    accountIdPuntaB,
-    accountIdPuntaC,
-    puntataEffettivaA,
-    quotaANum,
-    quotaBNum,
-    quotaCNum,
-    stakeB,
-    stakeC,
-    guadagnoMinimo,
-  ])
+  // Un booleano non ha bisogno di useMemo, e il compilatore di React non riusciva a
+  // conservarla (react-hooks/preserve-manual-memoization).
+  const canSave =
+    eventoNome.trim() !== '' &&
+    accountIdPuntaA !== '' &&
+    accountIdPuntaB !== '' &&
+    accountIdPuntaC !== '' &&
+    puntataEffettivaA > 0 &&
+    quotaANum != null &&
+    quotaBNum != null &&
+    quotaCNum != null &&
+    stakeB != null &&
+    stakeC != null &&
+    guadagnoMinimo != null
 
   const showCr = rimborsoNum > 0 && crPercent != null
   const stakeALoss = bonusNum > 0 ? -(puntataANum ?? 0) : -puntataEffettivaA

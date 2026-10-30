@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 import {
   Dialog,
@@ -35,14 +35,18 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
   const holderName =
     wallet != null ? (holders.find((h) => h.id === wallet.holderId)?.nome ?? '—') : ''
 
-  useEffect(() => {
+  // All'apertura, o se il wallet cambia mentre è aperta, il modulo riparte dai valori del wallet:
+  // durante il render, confrontando con l'ultimo valore visto (react-hooks/set-state-in-effect).
+  const [synced, setSynced] = useState({ open, wallet })
+  if (synced.open !== open || synced.wallet !== wallet) {
+    setSynced({ open, wallet })
     if (open && wallet) {
       setDescrizione(wallet.descrizione ?? '')
       setStato(wallet.stato)
       setBloccato(wallet.bloccato === true)
       setError(null)
     }
-  }, [open, wallet])
+  }
 
   const handleSave = async () => {
     if (!wallet) return

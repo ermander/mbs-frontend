@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { useAuthStore } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
-import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
+import { rememberPostAuthDestination } from '@/lib/auth-redirects'
 import { LANDING_ROUTES } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
 import { dsFocusRing } from '@/components/landing/ds-primitives'
@@ -23,6 +23,10 @@ import {
   DsInput,
   DsLabel,
 } from '@/components/auth/ds-auth-primitives'
+import {
+  browserSessionStorage,
+  usePostAuthDestination,
+} from '@/components/auth/post-auth-destination'
 
 const WRONG_CREDENTIALS = 'Email o password non corretti. Riprova o recupera la password.'
 const GENERIC_ERROR = "Errore durante l'accesso. Riprova."
@@ -46,10 +50,14 @@ const inlineLink = cn(
  * password a 48px, «Mostra la password» come casella (al posto dell'occhio) accanto a «Password
  * dimenticata?», Callout warning «Accesso non riuscito» sull'errore, «Accedi» primary con la
  * freccia. La logica è quella di prima: loginSchema, authClient.login, utente nello store e
- * router.push verso POST_AUTH_REDIRECT.
+ * router.push verso la destinazione: `redirectTo` se la pagina la passa, altrimenti il `?next=`
+ * validato o POST_AUTH_REDIRECT (§14.326). «Continua con Google» mette da parte la stessa
+ * destinazione in sessionStorage, che /accesso-google riprende al ritorno.
  */
-export function DsLoginForm({ redirectTo = POST_AUTH_REDIRECT }: { redirectTo?: string }) {
+export function DsLoginForm({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter()
+  const nextDestination = usePostAuthDestination()
+  const destination = redirectTo ?? nextDestination
   const setUser = useAuthStore((s) => s.setUser)
   const [formError, setFormError] = React.useState('')
   const [showPassword, setShowPassword] = React.useState(false)
@@ -69,12 +77,12 @@ export function DsLoginForm({ redirectTo = POST_AUTH_REDIRECT }: { redirectTo?: 
       try {
         const response = await authClient.login({ email: data.email, password: data.password })
         setUser(response.user)
-        router.push(redirectTo)
+        router.push(destination)
       } catch (err) {
         setFormError(loginErrorMessage(err))
       }
     },
-    [router, setUser, redirectTo],
+    [router, setUser, destination],
   )
 
   return (
@@ -88,7 +96,9 @@ export function DsLoginForm({ redirectTo = POST_AUTH_REDIRECT }: { redirectTo?: 
       </p>
 
       <div className="mt-8 flex max-w-[440px] flex-col gap-5">
-        <DsGoogleSignInButton />
+        <DsGoogleSignInButton
+          onClick={() => rememberPostAuthDestination(browserSessionStorage(), destination)}
+        />
         <DsDivider />
       </div>
 

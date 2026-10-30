@@ -70,14 +70,6 @@ const GROUP_ORDER: Record<OfferType, readonly (string | null)[]> = {
 
 export const ALL_BOOKS = 'all'
 
-/**
- * §14.315: elenco e dettaglio delle offerte sono per chi ha un account. OffersAccess li avvolge
- * nella guard dell'area autenticata, che rimanda al login chi non è entrato, e le due rotte del
- * backend (GET /offers, GET /offers/:slug) rispondono 401 senza sessione. Con false le pagine
- * tornano pubbliche come al §14.259-14.260 (ma il backend va riaperto a parte).
- */
-export const OFFERS_LOGIN_REQUIRED: boolean = true
-
 /** Il tipo dal parametro ?tipo= della pagina (link «indietro» del dettaglio); il benvenuto se manca o è sconosciuto. */
 export function parseOfferType(value: string | string[] | undefined): OfferType {
   const v = Array.isArray(value) ? value[0] : value

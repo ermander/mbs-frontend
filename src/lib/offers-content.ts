@@ -13,8 +13,8 @@ import type { OfferDifficulty, OfferType } from '@/types/offers'
  * Deviazioni dal design: il filtro si chiama «Sito di scommesse» e non «Bookmaker», e la parola
  * sparisce anche dalla descrizione del benvenuto e dalle note (regola del brand, come sulla
  * landing); gli stati personali («Completata», «In corso», l'interruttore
- * «Nascondi completate» e il pulsante «Completata») restano fuori finché la pagina è pubblica e
- * non c'è dove salvarli.
+ * «Nascondi completate» e il pulsante «Completata») restano fuori: dal §14.315 le pagine sono
+ * dietro login, ma non c'è ancora dove salvarli.
  */
 
 export type { OfferDifficulty, OfferType }
@@ -71,11 +71,12 @@ const GROUP_ORDER: Record<OfferType, readonly (string | null)[]> = {
 export const ALL_BOOKS = 'all'
 
 /**
- * Oggi elenco e dettaglio delle offerte sono pubblici (§14.259-14.260). Per riservarli a chi ha un
- * account basta true: OffersAccess li avvolge nella guard dell'area autenticata, che rimanda al
- * login chi non è entrato.
+ * §14.315: elenco e dettaglio delle offerte sono per chi ha un account. OffersAccess li avvolge
+ * nella guard dell'area autenticata, che rimanda al login chi non è entrato, e le due rotte del
+ * backend (GET /offers, GET /offers/:slug) rispondono 401 senza sessione. Con false le pagine
+ * tornano pubbliche come al §14.259-14.260 (ma il backend va riaperto a parte).
  */
-export const OFFERS_LOGIN_REQUIRED: boolean = false
+export const OFFERS_LOGIN_REQUIRED: boolean = true
 
 /** Il tipo dal parametro ?tipo= della pagina (link «indietro» del dettaglio); il benvenuto se manca o è sconosciuto. */
 export function parseOfferType(value: string | string[] | undefined): OfferType {
@@ -113,6 +114,8 @@ export const OFFERS_COPY = {
   emptyAction: 'Mostra tutte',
   responsibleGaming: 'Gioco vietato ai minori di 18 anni. Gioca responsabilmente.',
   loadError: 'Non riusciamo a caricare le offerte in questo momento. Riprova tra qualche minuto.',
+  /** §14.315: mentre OffersLoadError rinnova la sessione e fa rileggere la pagina. */
+  loading: 'Carico le offerte…',
 } as const
 
 export function isExpired(offer: Offer): boolean {

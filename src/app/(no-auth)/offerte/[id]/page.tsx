@@ -7,8 +7,8 @@ import { OFFERS_COPY } from '@/lib/offers-content'
 import { DsContainer } from '@/components/landing/ds-primitives'
 import { SiteShell } from '@/components/landing/site-shell'
 import { OfferDetail } from '@/components/offers/offer-detail'
-import { DsCallout } from '@/components/offers/offer-parts'
 import { OffersAccess } from '@/components/offers/offers-access'
+import { OffersLoadError } from '@/components/offers/offers-load-error'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -22,6 +22,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
  * Dettaglio di un'offerta (§14.260): l'offerta pubblicata e la sua guida dal database (§14.263).
  * 404 (la pagina del guscio pubblico) se lo slug non c'è o l'offerta è bozza o nascosta; se il
  * backend non risponde, un avviso. La data «Aggiornata il» è il giorno di updatedAt a Roma.
+ * Dal §14.315 solo per chi è entrato (OffersAccess); senza sessione il backend risponde 401 per
+ * qualunque slug, quindi chi non è entrato non scopre nemmeno quali slug esistono.
  */
 export default async function OffertaPage({ params }: Params) {
   const result = await fetchPublishedOffer((await params).id)
@@ -37,9 +39,7 @@ export default async function OffertaPage({ params }: Params) {
           />
         ) : (
           <DsContainer className="pb-24 pt-10">
-            <DsCallout tone="warning">
-              <p>{OFFERS_COPY.loadError}</p>
-            </DsCallout>
+            <OffersLoadError status={result.status} />
           </DsContainer>
         )}
       </SiteShell>

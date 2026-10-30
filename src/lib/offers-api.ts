@@ -4,14 +4,14 @@ import { cookies } from 'next/headers'
 import type { OfferCardApi, OfferDetailApi } from '@/types/offers'
 
 /**
- * Le letture pubbliche delle offerte (backend §14.261) fatte dal server di Next per le pagine
- * /offerte e /offerte/[id] (§14.263): il contenuto arriva già nella pagina e il titolo del
- * dettaglio viene dal database. Lo stesso indirizzo dei rewrite di next.config.ts: in sviluppo il
- * mock (MOCK_API_URL), in produzione il container del backend sulla rete di docker compose.
+ * Le letture delle offerte (backend §14.261) fatte dal server di Next per le pagine /offerte e
+ * /offerte/[id] (§14.263): il contenuto arriva già nella pagina e il titolo del dettaglio viene
+ * dal database. Lo stesso indirizzo dei rewrite di next.config.ts: in sviluppo il mock
+ * (MOCK_API_URL), in produzione il container del backend sulla rete di docker compose.
  *
- * I cookie della richiesta vengono girati al backend: oggi le due rotte sono pubbliche, ma il
- * giorno in cui le pagine vanno dietro login (OFFERS_LOGIN_REQUIRED) e le rotte prendono
- * `authenticated`, la lettura funziona già con la sessione dell'utente.
+ * I cookie della richiesta vengono girati al backend, che dal §14.315 vuole la sessione
+ * (`authenticated`): senza cookie o con l'access_token scaduto risponde 401, e la pagina lo
+ * passa a OffersLoadError, che rinnova la sessione e rilegge invece di mostrare un errore.
  */
 
 function apiBaseUrl(): string {

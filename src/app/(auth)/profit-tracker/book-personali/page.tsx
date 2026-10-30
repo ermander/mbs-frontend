@@ -70,9 +70,10 @@ function BooksSection() {
     [fetchBooks, filterNome, filterDescrizione],
   )
 
+  // Al montaggio page è già 1: il reset nell'effetto era un setState sincrono inutile
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
     fetchBooks({ page: 1, limit: PAGE_SIZE }).catch(() => {})
-    setPage(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

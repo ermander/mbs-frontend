@@ -184,10 +184,9 @@ export default function WalletsPage() {
 
   const safePage = Math.min(Math.max(1, page), maxPage)
 
-  const saldoTotale = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
-  const inAttesaTotale = wallets.reduce((sum, w) => sum + w.inAttesa, 0)
-  const saldoTotaleFormatted = formatEuro(saldoTotale)
   // Il catalogo può essere caricato dopo i wallet: i nomi dei metodi vengono dai wallet stessi.
+  // Sta prima delle somme su wallets: dopo, il compilatore di React non conservava la
+  // memoizzazione (react-hooks/preserve-manual-memoization).
   const methodOptions = useMemo(() => {
     const byId = new Map<string, string>()
     for (const m of paymentMethods) byId.set(m.id, m.nome)
@@ -196,6 +195,10 @@ export default function WalletsPage() {
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [paymentMethods, wallets])
+
+  const saldoTotale = wallets.reduce((sum, w) => sum + w.saldoAttuale, 0)
+  const inAttesaTotale = wallets.reduce((sum, w) => sum + w.inAttesa, 0)
+  const saldoTotaleFormatted = formatEuro(saldoTotale)
 
   return (
     <ProfitTrackerPageShell

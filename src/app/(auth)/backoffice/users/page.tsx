@@ -30,22 +30,14 @@ export default function BackofficeUsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await getBackofficeUsers()
-      setUsers(data)
-    } catch {
-      setError('Errore nel caricamento degli utenti.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // Lo stato cambia solo nei callback della promise; loading parte già a true
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
-    void loadUsers()
-  }, [loadUsers])
+    getBackofficeUsers()
+      .then((data) => setUsers(data))
+      .catch(() => setError('Errore nel caricamento degli utenti.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   // §14.122: «Risultato + Goal» acceso o spento per un utente; la riga torna dal backend.
   const toggleResultBtts = useCallback(async (user: BackofficeUser, enabled: boolean) => {

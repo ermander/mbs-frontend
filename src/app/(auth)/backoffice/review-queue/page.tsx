@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import {
   getReviewQueue,
@@ -72,7 +72,7 @@ export default function ReviewQueuePage() {
   const [budget, setBudget] = useState<ProviderBudget | null>(null)
   const [status, setStatus] = useState<ReviewQueueStatus>('pending')
   const [offset, setOffset] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [reloadTick, setReloadTick] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [actionState, setActionState] = useState<
     Record<string, 'attaching' | 'rejecting' | undefined>
@@ -82,28 +82,44 @@ export default function ReviewQueuePage() {
   const [syncType, setSyncType] = useState<'catalog' | 'fixtures' | 'status'>('fixtures')
   const [syncing, setSyncing] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [queue, queueStats, providerBudget] = await Promise.all([
-        getReviewQueue({ status, limit: PAGE_SIZE, offset }),
-        getReviewQueueStats(),
-        getProviderBudget(),
-      ])
-      setItems(queue.items)
-      setStats(queueStats)
-      setBudget(providerBudget)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Errore caricamento coda di review')
-    } finally {
-      setLoading(false)
-    }
-  }, [status, offset])
+  // La richiesta corrente: filtro, pagina e un contatore che «Aggiorna» e le azioni fanno salire
+  // per ricaricare. Il caricamento è derivato: i dati in mano sono «per» una richiesta, e finché
+  // non è quella corrente si sta caricando. Lo stato cambia nei callback della promise, e una
+  // risposta arrivata dopo un cambio di richiesta viene ignorata (react-hooks/set-state-in-effect).
+  const request = useMemo(
+    () => ({ status, offset, tick: reloadTick }),
+    [status, offset, reloadTick],
+  )
+  const [loadedRequest, setLoadedRequest] = useState<typeof request | null>(null)
+  const loading = loadedRequest !== request
+
+  const load = useCallback(() => setReloadTick((t) => t + 1), [])
 
   useEffect(() => {
-    load()
-  }, [load])
+    let cancelled = false
+    Promise.all([
+      getReviewQueue({ status: request.status, limit: PAGE_SIZE, offset: request.offset }),
+      getReviewQueueStats(),
+      getProviderBudget(),
+    ])
+      .then(([queue, queueStats, providerBudget]) => {
+        if (cancelled) return
+        setItems(queue.items)
+        setStats(queueStats)
+        setBudget(providerBudget)
+        setError(null)
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : 'Errore caricamento coda di review')
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedRequest(request)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [request])
 
   const handleAttach = async (id: string) => {
     const eventId = eventIdInputs[id]?.trim()
@@ -114,7 +130,7 @@ export default function ReviewQueuePage() {
     setActionState((s) => ({ ...s, [id]: 'attaching' }))
     try {
       await attachReviewQueueItem(id, eventId)
-      await load()
+      load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore attach')
     } finally {
@@ -126,7 +142,7 @@ export default function ReviewQueuePage() {
     setActionState((s) => ({ ...s, [id]: 'rejecting' }))
     try {
       await rejectReviewQueueItem(id)
-      await load()
+      load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore reject')
     } finally {
@@ -139,7 +155,7 @@ export default function ReviewQueuePage() {
     setError(null)
     try {
       await triggerProviderSync(syncSport, syncType)
-      await load()
+      load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sync')
     } finally {
@@ -237,7 +253,7 @@ export default function ReviewQueuePage() {
         </button>
       </div>
 
-      {error && (
+      {!loading && error && (
         <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
           {error}
         </div>

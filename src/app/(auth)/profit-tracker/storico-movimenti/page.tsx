@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
@@ -104,7 +104,6 @@ export default function StoricoMovimentiPage() {
   const [payingId, setPayingId] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<ActivityFeedSummary | null>(null)
   const limit = 25
 
@@ -135,39 +134,56 @@ export default function StoricoMovimentiPage() {
     [wallets],
   )
 
-  const sharedFilters = {
-    source: sourceFilter || undefined,
-    stato: statoFilter || undefined,
-    accountId: accountFilter || undefined,
-    walletId: walletFilter || undefined,
-    categoria: categoriaFilter || undefined,
-    fromDate: fromDate || undefined,
-    toDate: toDate || undefined,
-  }
+  const sharedFilters = useMemo(
+    () => ({
+      source: sourceFilter || undefined,
+      stato: statoFilter || undefined,
+      accountId: accountFilter || undefined,
+      walletId: walletFilter || undefined,
+      categoria: categoriaFilter || undefined,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+    }),
+    [sourceFilter, statoFilter, accountFilter, walletFilter, categoriaFilter, fromDate, toDate],
+  )
 
-  const loadData = useCallback(
-    async (pageNum: number) => {
-      setLoading(true)
-      try {
-        const [feedResult, summaryResult] = await Promise.all([
-          getActivityFeed({
-            page: pageNum,
-            limit,
-            ...sharedFilters,
-          }),
-          getActivityFeedSummary(sharedFilters),
-        ])
+  // I movimenti in mano sono «per» certi filtri: finché non sono quelli correnti si sta
+  // caricando; le ricariche esplicite (pagina, prelievo pagato) alzano reloading. Lo stato
+  // cambia solo nei callback della promise (react-hooks/set-state-in-effect).
+  const [loadedFilters, setLoadedFilters] = useState<typeof sharedFilters | null>(null)
+  const [reloading, setReloading] = useState(false)
+  const loading = reloading || loadedFilters !== sharedFilters
+
+  const fetchPage = useCallback(
+    (pageNum: number) =>
+      Promise.all([
+        getActivityFeed({
+          page: pageNum,
+          limit,
+          ...sharedFilters,
+        }),
+        getActivityFeedSummary(sharedFilters),
+      ]).then(([feedResult, summaryResult]) => {
         setItems(feedResult.items)
         setTotal(feedResult.total)
         setPage(feedResult.page)
         setSummary(summaryResult)
+      }),
+    [sharedFilters],
+  )
+
+  const loadData = useCallback(
+    async (pageNum: number) => {
+      setReloading(true)
+      try {
+        await fetchPage(pageNum)
       } catch {
         // Silent fail, empty state shown
       } finally {
-        setLoading(false)
+        setReloading(false)
       }
     },
-    [sourceFilter, statoFilter, accountFilter, walletFilter, categoriaFilter, fromDate, toDate],
+    [fetchPage],
   )
 
   // §14.109: un prelievo in attesa si segna pagato anche da qui; poi si ricarica la pagina corrente.
@@ -191,8 +207,18 @@ export default function StoricoMovimentiPage() {
   }, [fetchAllAccounts, fetchWallets, fetchMovementCategories])
 
   useEffect(() => {
-    void loadData(1)
-  }, [loadData])
+    let cancelled = false
+    fetchPage(1)
+      .catch(() => {
+        // Silent fail, empty state shown
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedFilters(sharedFilters)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [fetchPage, sharedFilters])
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
 

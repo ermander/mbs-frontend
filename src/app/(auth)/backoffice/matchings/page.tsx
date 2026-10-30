@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Container } from '@/components/ui/container'
 import { getMatchings, getEventBookmakers } from '@/services/api/odds-collection-client'
 import {
@@ -64,8 +64,6 @@ function formatDate(iso: string) {
 export default function MatchingsPage() {
   const [matchings, setMatchings] = useState<EventMatching[]>([])
   const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Filters
   const [bookmaker, setBookmaker] = useState('')
@@ -93,30 +91,42 @@ export default function MatchingsPage() {
       .catch(() => {})
   }, [])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await getMatchings({
-        limit: PAGE_SIZE,
-        offset,
-        bookmaker: bookmaker || undefined,
-        match_status: matchStatus || undefined,
-        match_method: matchMethod || undefined,
-        sport: sport || undefined,
-      })
-      setMatchings(data.matchings)
-      setTotal(data.total)
-    } catch {
-      setError('Errore nel caricamento dei matchings.')
-    } finally {
-      setLoading(false)
-    }
-  }, [offset, bookmaker, matchStatus, matchMethod, sport])
+  const query = useMemo(
+    () => ({
+      limit: PAGE_SIZE,
+      offset,
+      bookmaker: bookmaker || undefined,
+      match_status: matchStatus || undefined,
+      match_method: matchMethod || undefined,
+      sport: sport || undefined,
+    }),
+    [offset, bookmaker, matchStatus, matchMethod, sport],
+  )
+
+  // Il caricamento è derivato: la tabella in mano è «per» una query, e finché non è quella
+  // corrente si sta caricando; l'errore vale solo per la query corrente. Lo stato cambia nei
+  // callback della promise, e una risposta arrivata dopo un cambio di filtri viene ignorata
+  // (react-hooks/set-state-in-effect).
+  const [loaded, setLoaded] = useState<{ query: typeof query; error: string | null } | null>(null)
+  const loading = loaded?.query !== query
+  const error = loaded?.query === query ? loaded.error : null
 
   useEffect(() => {
-    void loadData()
-  }, [loadData])
+    let cancelled = false
+    getMatchings(query)
+      .then((data) => {
+        if (cancelled) return
+        setMatchings(data.matchings)
+        setTotal(data.total)
+        setLoaded({ query, error: null })
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded({ query, error: 'Errore nel caricamento dei matchings.' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [query])
 
   // Reset offset when filters change
   const handleFilterChange = (setter: (v: string) => void) => (value: string) => {

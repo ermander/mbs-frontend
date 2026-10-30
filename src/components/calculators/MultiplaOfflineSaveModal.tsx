@@ -85,11 +85,16 @@ export function MultiplaOfflineSaveModal({
     setExchangeHolderIds(new Set())
   }, [])
 
+  // Alla chiusura il modulo si azzera durante il render, confrontando open con il valore
+  // precedente (react-hooks/set-state-in-effect).
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (!open) resetState()
+  }
+
   useEffect(() => {
-    if (!open) {
-      resetState()
-      return
-    }
+    if (!open) return
 
     const loadBasics = async () => {
       setIsLoadingBasics(true)
@@ -121,7 +126,7 @@ export function MultiplaOfflineSaveModal({
     }
 
     void loadBasics()
-  }, [open, holders.length, books.length, fetchHolders, fetchAllBooks, resetState, holders, books])
+  }, [open, holders.length, books.length, fetchHolders, fetchAllBooks, holders, books])
 
   const loadAccountsForHolder = useCallback(
     (holderId: string, forExchange: boolean) =>

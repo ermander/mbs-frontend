@@ -39,22 +39,27 @@ export default function BackofficeBooksPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
+  // com'è (loading parte già a true), i salvataggi passano da loadBooks, che riaccende il
+  // caricamento prima di ripartire (react-hooks/set-state-in-effect).
+  const fetchBooks = useCallback(
+    () =>
+      getGlobalBooks()
+        .then((data) => setBooks(data))
+        .catch(() => setError('Errore nel caricamento dei bookmaker.'))
+        .finally(() => setLoading(false)),
+    [],
+  )
+
   const loadBooks = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      const data = await getGlobalBooks()
-      setBooks(data)
-    } catch {
-      setError('Errore nel caricamento dei bookmaker.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    await fetchBooks()
+  }, [fetchBooks])
 
   useEffect(() => {
-    void loadBooks()
-  }, [loadBooks])
+    void fetchBooks()
+  }, [fetchBooks])
 
   const openCreateForm = () => {
     setEditingBook(null)

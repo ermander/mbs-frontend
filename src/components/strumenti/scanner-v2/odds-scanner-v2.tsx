@@ -74,7 +74,10 @@ export function OddsScannerV2() {
   const [results, setResults] = useState<MatcherResult[]>([])
   const [meta, setMeta] = useState<MatcherMeta | null>(null)
   const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  // I risultati in mano sono «per» una query: finché non è quella corrente si sta caricando;
+  // «Aggiorna» alza refreshing (react-hooks/set-state-in-effect).
+  const [loadedQuery, setLoadedQuery] = useState<MatcherFilters | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [calculatorRow, setCalculatorRow] = useState<MatcherResult | null>(null)
   const [flash, setFlash] = useState(false)
   const now = useNow(5_000)
@@ -230,57 +233,74 @@ export function OddsScannerV2() {
     multiplaParams.dataFine,
   ])
 
-  const loadMeta = useCallback(async () => {
-    try {
-      const m = await getMatcherMeta()
-      setMeta(m)
-      // A selected competition that left the results (its rows purged) leaves the
-      // filter too: the dropdown could not show it any more.
-      if (m.competitions) {
-        const known = new Set(m.competitions.map((c) => c.id))
-        setFiltersState((prev) =>
-          prev.competitionIds.every((id) => known.has(id))
-            ? prev
-            : { ...prev, competitionIds: prev.competitionIds.filter((id) => known.has(id)) },
-        )
-      }
-    } catch {
-      /* ignore: meta is non-critical */
-    }
-  }, [])
+  const loading = refreshing || loadedQuery !== query
 
-  const loadResults = useCallback(async (): Promise<boolean> => {
-    setLoading(true)
-    let ok = false
-    try {
-      const res = await getMatcherResults(query)
-      setResults(res.results)
-      setTotal(res.total)
-      ok = true
-    } catch {
-      /* ignore: the user can retry with «Aggiorna» */
-    }
-    setLoading(false)
-    return ok
-  }, [query])
+  // State changes only in promise callbacks, so the effects can call these as they are
+  // (react-hooks/set-state-in-effect).
+  const loadMeta = useCallback(
+    () =>
+      getMatcherMeta()
+        .then((m) => {
+          setMeta(m)
+          // A selected competition that left the results (its rows purged) leaves the
+          // filter too: the dropdown could not show it any more.
+          if (m.competitions) {
+            const known = new Set(m.competitions.map((c) => c.id))
+            setFiltersState((prev) =>
+              prev.competitionIds.every((id) => known.has(id))
+                ? prev
+                : { ...prev, competitionIds: prev.competitionIds.filter((id) => known.has(id)) },
+            )
+          }
+        })
+        .catch(() => {
+          /* ignore: meta is non-critical */
+        }),
+    [],
+  )
+
+  const applyResults = useCallback((res: Awaited<ReturnType<typeof getMatcherResults>>) => {
+    setResults(res.results)
+    setTotal(res.total)
+  }, [])
 
   useEffect(() => {
     void loadMeta()
   }, [loadMeta])
 
+  // A response that lands after the query changed is ignored.
   useEffect(() => {
-    void loadResults()
-  }, [loadResults])
+    let cancelled = false
+    getMatcherResults(query)
+      .then((res) => {
+        if (!cancelled) applyResults(res)
+      })
+      .catch(() => {
+        /* ignore: the user can retry with «Aggiorna» */
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedQuery(query)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [query, applyResults])
 
   // «Aggiorna»: same query, filters as they are right now; the table flashes when it worked.
   const refresh = useCallback(() => {
     void loadMeta()
-    void loadResults().then((ok) => {
-      if (!ok) return
-      setFlash(true)
-      setTimeout(() => setFlash(false), FLASH_MS)
-    })
-  }, [loadResults, loadMeta])
+    setRefreshing(true)
+    getMatcherResults(query)
+      .then((res) => {
+        applyResults(res)
+        setFlash(true)
+        setTimeout(() => setFlash(false), FLASH_MS)
+      })
+      .catch(() => {
+        /* ignore: the user can retry with «Aggiorna» */
+      })
+      .finally(() => setRefreshing(false))
+  }, [query, applyResults, loadMeta])
 
   // The page is light (ds-*): the accounts dialog of the multipla takes the same palette through
   // the bridge of the calculators while it is open (the calculator panel holds its own).

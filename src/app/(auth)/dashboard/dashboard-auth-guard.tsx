@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react'
 import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
 import { bootstrapRetryDelayMs, isUnauthenticatedError } from '@/lib/auth-session'
+import { loginHref } from '@/lib/auth-redirects'
 import { AuthButton, AuthMessage } from '@/components/auth/auth-primitives'
+import { currentLocation } from '@/components/auth/post-auth-destination'
 
 /**
  * Guard of every `(auth)` page: with `isLoggedIn` persisted it reads /auth/me (the axios
@@ -13,6 +15,8 @@ import { AuthButton, AuthMessage } from '@/components/auth/auth-primitives'
  * refresh sends the user to /login: a network error or a 5xx (the backend is restarting
  * for a deploy) keeps the user in and retries on its own with a growing wait, with a
  * message and a «Riprova» button meanwhile. Before, any failure cleared the session.
+ * Both ways out carry `?next=` with the page being left (§14.326), so the login brings the
+ * user back there instead of the dashboard.
  */
 export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -31,7 +35,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
     if (!isHydrated) return
     if (user || isBootstrapping) return
     if (!isLoggedIn) {
-      router.replace('/login')
+      router.replace(loginHref(currentLocation()))
       return
     }
     let cancelled = false
@@ -44,9 +48,10 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
       } catch (error) {
         if (isUnauthenticatedError(error)) {
           clearUser()
-          router.replace('/login')
+          const href = loginHref(currentLocation())
+          router.replace(href)
           if (typeof window !== 'undefined') {
-            window.location.href = '/login'
+            window.location.href = href
           }
         } else {
           console.error('[DashboardAuthGuard] /me failed, retrying', error)

@@ -3,10 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { loginHref } from '@/lib/auth-redirects'
 import { isUnauthenticatedError } from '@/lib/auth-session'
 import { OFFERS_COPY } from '@/lib/offers-content'
 import { authClient } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { currentLocation } from '@/components/auth/post-auth-destination'
 import { DsCallout } from '@/components/offers/offer-parts'
 
 /**
@@ -22,8 +24,9 @@ const RENEWAL_WINDOW_MS = 10_000
  * minuti, quindi chi torna sulla pagina dopo un po' arriva qui con il solo refresh_token valido.
  * Si rende solo nel layout di (auth) (§14.324), cioè con un utente entrato: rinnova i cookie con
  * POST /auth/refresh e fa rileggere la pagina al server (router.refresh), che ora passa. Se il
- * rinnovo risponde 401 la sessione è davvero finita: si esce come fa la guard. Per ogni altro
- * stato (503, rete) l'avviso di sempre.
+ * rinnovo risponde 401 la sessione è davvero finita: si esce come fa la guard, con il `?next=`
+ * dell'offerta (§14.326) per tornarci dopo il login. Per ogni altro stato (503, rete) l'avviso
+ * di sempre.
  */
 export function OffersLoadError({ status }: { status: number | null }) {
   const router = useRouter()
@@ -49,7 +52,7 @@ export function OffersLoadError({ status }: { status: number | null }) {
         if (cancelled) return
         if (isUnauthenticatedError(error)) {
           clearUser()
-          router.replace('/login')
+          router.replace(loginHref(currentLocation()))
           return
         }
         setRenewalFailed(true)

@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { authClient } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
-import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
+import { takePostAuthDestination } from '@/lib/auth-redirects'
 import { AuthHeader } from '@/components/auth/auth-header'
 import { AuthMessage } from '@/components/auth/auth-primitives'
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { LandingButton } from '@/components/landing/landing-primitives'
+import { browserSessionStorage } from '@/components/auth/post-auth-destination'
 
 /** I codici che il backend mette in ?error= quando una gamba del giro con Google fallisce. */
 const ERROR_MESSAGES: Record<string, string> = {
@@ -27,7 +28,9 @@ const ERROR_MESSAGES: Record<string, string> = {
  * /accesso-google (§14.246): dove il backend riporta il browser alla fine del giro con Google.
  * Senza errore i cookie di sessione sono già impostati: si legge /auth/me, si mette l'utente
  * nello store (che persiste `isLoggedIn`, quello che DashboardAuthGuard controlla) e si va
- * alla dashboard. Con ?error= si spiega e si offre di riprovare o di accedere con la password.
+ * alla pagina che il login aveva messo da parte in sessionStorage (il `?next=` della guard,
+ * §14.326) o alla dashboard. Con ?error= si spiega e si offre di riprovare o di accedere con
+ * la password.
  */
 export function GoogleCallbackClient() {
   const router = useRouter()
@@ -44,7 +47,7 @@ export function GoogleCallbackClient() {
       .then(({ user }) => {
         if (cancelled) return
         setUser(user)
-        router.replace(POST_AUTH_REDIRECT)
+        router.replace(takePostAuthDestination(browserSessionStorage()))
       })
       .catch(() => {
         if (!cancelled) setMeFailed(true)

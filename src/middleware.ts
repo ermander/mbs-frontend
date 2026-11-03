@@ -1,48 +1,48 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+// Sta in src/ e non alla radice: Next cerca il file del middleware (o proxy) allo stesso
+// livello di app/, cioè in src/ per questo progetto (§14.329). Alla radice `next build` lo
+// compilava lo stesso, ma `next dev` non lo instradava mai senza un src/middleware.ts.
+import { NextRequest, NextResponse } from 'next/server'
 
-const AUTH_PAGES = ['/login', '/registrazione']
+function generateNonce() {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return btoa(String.fromCharCode(...bytes))
+}
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const hasAccessToken = request.cookies.has('access_token')
-
-  if (hasAccessToken && AUTH_PAGES.includes(pathname)) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+export function middleware(req: NextRequest) {
+  const nonce = generateNonce()
 
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' blob: data: https://flagcdn.com`,
-    `font-src 'self'`,
-    `connect-src 'self'`,
-    `frame-ancestors 'none'`,
+    `img-src 'self' data: blob: https://flagcdn.com`,
+    `font-src 'self' data:`,
+    `connect-src 'self' https://api.matched-betting-system.com`,
     `base-uri 'self'`,
     `form-action 'self'`,
+    `frame-ancestors 'none'`,
+    `object-src 'none'`,
+    `upgrade-insecure-requests`,
   ].join('; ')
 
-  const response = NextResponse.next()
-  response.headers.set('x-nonce', nonce)
-  response.headers.set('Content-Security-Policy', csp)
+  // Pass nonce via request headers so Next.js can read it and apply it to script tags
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
 
-  return response
+  const res = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
+  res.headers.set('Content-Security-Policy', csp)
+
+  return res
 }
 
+// Applica a tutte le route “page”, escludendo asset statici
 export const config = {
-  matcher: [
-    '/login',
-    '/registrazione',
-    /*
-     * Match all request paths except:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

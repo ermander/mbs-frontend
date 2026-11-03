@@ -5,6 +5,21 @@ on:
     branches:
       - master
 
+# One run of this workflow at a time (backend ADAPTER_STATUS §14.324, «Trovato
+# per strada: deploy»): two close pushes used to run in parallel, each pushing
+# `:latest` and doing `compose pull && up -d`, and the run that FINISHED last
+# won in prod, not the last commit. The group is on the whole workflow, not on
+# the `deploy` job alone: `:latest` is written by `build`, so serializing only
+# the deploy would still let the older image be the one pulled. With
+# `cancel-in-progress: false` a run is never aborted half-way: the newer push
+# waits its turn (GitHub keeps one running and one pending run per group; a
+# third push replaces the pending one), so the newest commit always ends up
+# deployed. The flock on /srv/mbs-infra/.deploy.lock below still serializes
+# this workflow against the backend one on the host.
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: ghcr.io/ermander/mbs-frontend
 

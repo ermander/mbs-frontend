@@ -61,7 +61,7 @@ const dataTheme =
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Reading headers forces dynamic rendering so Next.js injects the per-request
-  // nonce (from middleware x-nonce header) into its generated <script> tags.
+  // nonce (from the proxy x-nonce header) into its generated <script> tags.
   await headers()
   return (
     <html

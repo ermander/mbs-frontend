@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
-          // CSP is set dynamically by middleware.ts (with per-request nonce)
+          // CSP is set dynamically by src/proxy.ts (with per-request nonce)
         ],
       },
     ]

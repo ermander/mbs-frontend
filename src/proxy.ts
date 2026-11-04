@@ -1,6 +1,7 @@
-// Sta in src/ e non alla radice: Next cerca il file del middleware (o proxy) allo stesso
-// livello di app/, cioè in src/ per questo progetto (§14.329). Alla radice `next build` lo
-// compilava lo stesso, ma `next dev` non lo instradava mai senza un src/middleware.ts.
+// Sta in src/ e non alla radice: Next cerca il file del proxy allo stesso livello di app/, cioè
+// in src/ per questo progetto (§14.329). Alla radice `next build` lo compilava lo stesso, ma
+// `next dev` non lo instradava mai. Da Next 16 si chiama proxy.ts ed esporta `proxy` (il nome
+// middleware è deprecato); gira sul runtime Node, non più su quello edge.
 import { NextRequest, NextResponse } from 'next/server'
 
 function generateNonce() {
@@ -9,7 +10,7 @@ function generateNonce() {
   return btoa(String.fromCharCode(...bytes))
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const nonce = generateNonce()
 
   const csp = [

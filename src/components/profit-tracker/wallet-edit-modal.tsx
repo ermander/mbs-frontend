@@ -107,7 +107,7 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
                 <Label htmlFor="wallet-edit-desc">Descrizione</Label>
                 <textarea
                   id="wallet-edit-desc"
-                  className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
                   value={descrizione}
                   onChange={(e) => setDescrizione(e.target.value)}
                   placeholder="Opzionale"

@@ -171,10 +171,10 @@ export function AssignAccountsModal({
     >
       <DialogContent className="max-w-md gap-0 rounded-ow-card p-0" showClose={true}>
         {/* Portal container per dropdown SearchableSelect dentro la modale */}
-        <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-[9998]" aria-hidden />
+        <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-9998" aria-hidden />
         {savedBetId ? (
           <>
-            <div className="px-6 pb-4 pt-6">
+            <div className="px-6 pt-6 pb-4">
               <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Giocata salvata
               </DialogTitle>
@@ -205,7 +205,7 @@ export function AssignAccountsModal({
           </>
         ) : (
           <>
-            <div className="px-6 pb-1 pt-6">
+            <div className="px-6 pt-6 pb-1">
               <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Assegna collaboratori
               </DialogTitle>
@@ -229,7 +229,7 @@ export function AssignAccountsModal({
                       <div>
                         <Label
                           className={cn(
-                            'font-mono text-[11px] uppercase tracking-[0.02em]',
+                            'font-mono text-[11px] tracking-[0.02em] uppercase',
                             tone.label,
                           )}
                         >

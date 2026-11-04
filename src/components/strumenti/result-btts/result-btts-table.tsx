@@ -66,7 +66,7 @@ function LastSeenCell({ row, now }: { row: ResultBttsRow; now: number }) {
   const age = resultBttsRowAge(row, now)
   return (
     <span
-      className="inline-block whitespace-nowrap text-xs tabular-nums"
+      className="inline-block text-xs whitespace-nowrap tabular-nums"
       title={`Quota vista meno di recente fra le cinque: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
       aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
     >
@@ -83,7 +83,7 @@ function LegChip({ label, odds }: { label: string; odds: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1">
       <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="font-mono text-xs font-semibold tabular-nums text-sky-300">
+      <span className="font-mono text-xs font-semibold text-sky-300 tabular-nums">
         {odds.toFixed(2)}
       </span>
     </span>
@@ -189,14 +189,14 @@ export function ResultBttsTable({
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden max-h-[calc(100dvh-16rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
+      <div className="hidden max-h-[calc(100dvh-16rem-var(--topnav-h))] min-h-80 overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[960px] text-sm">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-            <tr className="bg-muted/50 text-left font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Data</th>
+            <tr className="bg-muted/50 text-left font-mono text-[11px] tracking-[0.02em] text-muted-foreground uppercase">
+              <th className="px-3 py-2 font-medium whitespace-nowrap">Data</th>
               <th className="px-2 py-2 text-center font-medium">Sport</th>
               <th className="px-3 py-2 font-medium">Evento</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Book</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">Book</th>
               <th
                 className="px-2 py-2 font-medium"
                 title="Le cinque gambe coperte: ogni risultato tranne lo 0-0"
@@ -204,7 +204,7 @@ export function ResultBttsTable({
                 Gambe coperte
               </th>
               <th
-                className="whitespace-nowrap px-2 py-2 text-center font-medium"
+                className="px-2 py-2 text-center font-medium whitespace-nowrap"
                 title="Lo 0-0: non coperto, rimborsato dal bookmaker"
               >
                 0-0 (rimb.)
@@ -234,7 +234,7 @@ export function ResultBttsTable({
                     className="cursor-pointer border-b border-border transition-colors hover:bg-accent/60"
                     onClick={() => onOpenCalculator(row)}
                   >
-                    <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
+                    <td className="px-3 py-2 text-xs whitespace-nowrap tabular-nums">
                       <div className="text-foreground">{formatKickoffDate(row.startTime)}</div>
                       <div className="text-muted-foreground">
                         h. {formatKickoffTime(row.startTime)}
@@ -250,7 +250,7 @@ export function ResultBttsTable({
                       )}
                     </td>
                     <td className="min-w-[200px] px-3 py-2">
-                      <div className="whitespace-nowrap font-medium">
+                      <div className="font-medium whitespace-nowrap">
                         {row.homeName} – {row.awayName}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -262,7 +262,7 @@ export function ResultBttsTable({
                         <span>{row.competitionName}</span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <BookmakerLink leg={row}>
                         <BookmakerBadge
                           slug={row.bookmakerSlug}
@@ -278,7 +278,7 @@ export function ResultBttsTable({
                         ))}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-center">
+                    <td className="px-2 py-2 text-center whitespace-nowrap">
                       <ZeroZeroChip row={row} />
                     </td>
                     <td className="px-3 py-2 text-right">

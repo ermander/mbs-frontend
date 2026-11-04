@@ -64,12 +64,12 @@ export function CalcNumberField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-right font-semibold tabular-nums outline-none placeholder:font-normal placeholder:text-ds-ink-faint"
+          className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-right font-semibold tabular-nums outline-hidden placeholder:font-normal placeholder:text-ds-ink-faint"
         />
         {suffix && (
           <span
             aria-hidden
-            className="flex items-center whitespace-nowrap border-l border-ds-line px-3 text-sm font-medium text-ds-ink-muted"
+            className="flex items-center border-l border-ds-line px-3 text-sm font-medium whitespace-nowrap text-ds-ink-muted"
           >
             {suffix}
           </span>
@@ -159,7 +159,7 @@ export function CalcStepper({
             if (e.key === 'Enter') commit()
           }}
           className={cn(
-            'min-w-0 flex-1 border-x border-ds-line bg-transparent text-center font-semibold tabular-nums text-ds-ink outline-none',
+            'min-w-0 flex-1 border-x border-ds-line bg-transparent text-center font-semibold text-ds-ink tabular-nums outline-hidden',
             size === 'sm' ? 'w-[52px] text-sm' : 'w-16',
           )}
         />
@@ -240,7 +240,7 @@ export function CalcProfits({
   return (
     <section aria-labelledby="calc-profits-title">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-ds-line pb-2">
-        <h2 id="calc-profits-title" className="ds-label m-0 uppercase text-ds-ink-muted">
+        <h2 id="calc-profits-title" className="ds-label m-0 text-ds-ink-muted uppercase">
           Profitti
         </h2>
         <span className="ds-body-sm text-ds-ink-muted">
@@ -299,7 +299,7 @@ export function CalcTable<Row extends { id: string }>({
                 key={c.key}
                 scope="col"
                 className={cn(
-                  'ds-label whitespace-nowrap bg-ds-surface-sunken p-3 uppercase text-ds-ink-muted first:pl-4 last:pr-4',
+                  'ds-label bg-ds-surface-sunken p-3 whitespace-nowrap text-ds-ink-muted uppercase first:pl-4 last:pr-4',
                   c.num ? 'text-right' : 'text-left',
                 )}
               >
@@ -316,7 +316,7 @@ export function CalcTable<Row extends { id: string }>({
                   key={c.key}
                   className={cn(
                     'border-t border-ds-line p-3 align-middle first:pl-4 last:pr-4',
-                    c.num && 'whitespace-nowrap text-right font-semibold tabular-nums',
+                    c.num && 'text-right font-semibold whitespace-nowrap tabular-nums',
                   )}
                 >
                   {c.render(row)}
@@ -385,7 +385,7 @@ export function OutcomeRow({
       {odds}
       <div className="col-span-2 sm:col-span-1">{figure}</div>
       {aside && (
-        <div className="col-span-2 flex items-center border-t border-ds-line pt-3 sm:col-span-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+        <div className="col-span-2 flex items-center border-t border-ds-line pt-3 sm:col-span-1 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4">
           {aside}
         </div>
       )}
@@ -491,7 +491,7 @@ export function CalcPartials<Result>({
             className="flex flex-col gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised px-5 py-4"
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="ds-label uppercase text-ds-ink-muted">
+              <span className="ds-label text-ds-ink-muted uppercase">
                 {title}
                 {entries.length > 1 ? ` ${i + 1}` : ''}
               </span>
@@ -664,7 +664,7 @@ export function CalcChoice<T extends string>({
 }) {
   return (
     <div role="group" aria-label={label} className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold leading-5 text-ds-ink">{label}</span>
+      <span className="text-sm leading-5 font-semibold text-ds-ink">{label}</span>
       <div
         className={columns ? 'grid gap-1.5' : 'flex flex-wrap gap-2'}
         style={columns ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
@@ -723,12 +723,12 @@ export function CalcSwitch({
         >
           <span
             className={cn(
-              'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
+              'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
               checked && 'translate-x-5',
             )}
           />
         </span>
-        <span className="text-sm font-semibold leading-5">{label}</span>
+        <span className="text-sm leading-5 font-semibold">{label}</span>
       </button>
       {hint && <p className="ds-body-sm m-0 text-ds-ink-muted">{hint}</p>}
     </div>
@@ -777,12 +777,12 @@ export function CalcBoost({
           >
             <span
               className={cn(
-                'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
+                'absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-ds-surface-raised shadow-ds-sm transition-transform',
                 boost.on && 'translate-x-5',
               )}
             />
           </span>
-          <span className="text-sm font-semibold leading-5">
+          <span className="text-sm leading-5 font-semibold">
             {boost.on ? 'Magg.' : 'Maggiorazione'}
           </span>
         </button>
@@ -925,7 +925,7 @@ export function CalcLockableFigure({
 }
 
 const textControl =
-  'h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-none placeholder:text-ds-ink-faint'
+  'h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-hidden placeholder:text-ds-ink-faint'
 const controlBox =
   'flex items-stretch rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised transition-[border-color,box-shadow] duration-150 focus-within:border-ds-brand focus-within:shadow-ds-focus'
 
@@ -1002,7 +1002,7 @@ export function CalcSelect({
         </select>
         <ChevronDown
           aria-hidden
-          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-ink-muted"
+          className="pointer-events-none absolute top-1/2 right-2.5 h-4 w-4 -translate-y-1/2 text-ds-ink-muted"
         />
       </div>
     </DsField>

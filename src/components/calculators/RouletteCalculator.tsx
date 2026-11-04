@@ -396,12 +396,12 @@ export function RouletteCalculator() {
         <DialogContent className="max-h-[85vh] max-w-lg gap-0 overflow-y-auto p-0" showClose={true}>
           <div
             ref={setDropdownPortalEl}
-            className="pointer-events-none fixed inset-0 z-[9998]"
+            className="pointer-events-none fixed inset-0 z-9998"
             aria-hidden
           />
           {savedBetId ? (
             <>
-              <div className="px-6 pb-4 pt-6">
+              <div className="px-6 pt-6 pb-4">
                 <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                   Giocata salvata
                 </DialogTitle>
@@ -438,7 +438,7 @@ export function RouletteCalculator() {
             </>
           ) : (
             <>
-              <div className="px-6 pb-1 pt-6">
+              <div className="px-6 pt-6 pb-1">
                 <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                   Salva giocata Roulette
                 </DialogTitle>

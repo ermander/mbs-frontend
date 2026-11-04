@@ -15,10 +15,10 @@ export default function OddsScannerPage() {
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope ds-calc-bridge -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] md:-mx-8',
+        'ds-scope ds-calc-bridge -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light md:-mx-8',
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-4 px-4 pb-16 pt-6 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-4 px-4 pt-6 pb-16 sm:px-6">
         <h1 className="sr-only">Oddsmatcher</h1>
         <OddsScannerV2 />
         <p className="ds-caption mt-auto pt-6 text-ds-ink-muted">

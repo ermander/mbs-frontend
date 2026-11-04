@@ -12,7 +12,7 @@ import { DsButton, DsCard, DsContainer } from '@/components/landing/ds-primitive
 export function HeroSection() {
   const { estimate } = HERO
   return (
-    <section id="top" className="pb-12 pt-12 lg:pb-16 lg:pt-24">
+    <section id="top" className="pt-12 pb-12 lg:pt-24 lg:pb-16">
       <DsContainer className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-16">
         <div>
           <h1 className="ds-display-xl">
@@ -40,13 +40,13 @@ export function HeroSection() {
         <DsCard size="lg" title={estimate.title}>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="ds-label uppercase text-ds-ink-muted">{estimate.profitLabel}</span>
+              <span className="ds-label text-ds-ink-muted uppercase">{estimate.profitLabel}</span>
               <div className="mt-1">
                 <DsMoney value={estimate.profit} size="xl" />
               </div>
             </div>
             <div>
-              <span className="ds-label uppercase text-ds-ink-muted">{estimate.timeLabel}</span>
+              <span className="ds-label text-ds-ink-muted uppercase">{estimate.timeLabel}</span>
               <div className="ds-num-xl mt-1">{estimate.time}</div>
             </div>
           </div>

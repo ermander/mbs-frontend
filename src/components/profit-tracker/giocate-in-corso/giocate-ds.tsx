@@ -21,10 +21,10 @@ export function GiocateDsShell({ children }: { children: React.ReactNode }) {
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope ds-calc-bridge -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] md:-mx-8',
+        'ds-scope ds-calc-bridge -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light md:-mx-8',
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-4 pb-16 pt-8 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-4 pt-8 pb-16 sm:px-6">
         {children}
         <p className="ds-caption mt-auto pt-6 text-ds-ink-muted">
           Gioco vietato ai minori di 18 anni. Gioca responsabilmente.
@@ -69,15 +69,15 @@ export function DsModal({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1b2420a6] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1b2420a6] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           className={cn(
             dsSerif.variable,
             dsSans.variable,
             // Centrato con inset e margini automatici, non con translate: senza transform un
             // menu `fixed` dentro il modal (OmDropdown floating) esce dal suo scorrimento.
-            'ds-scope fixed inset-0 z-50 m-auto flex h-fit max-h-[calc(100vh-48px)] w-[calc(100vw-32px)] flex-col gap-5 overflow-y-auto rounded-ds-lg border border-ds-line bg-ds-surface-raised p-6 font-ds-sans text-base leading-6 text-ds-ink shadow-ds-lg [color-scheme:light]',
-            'duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            'ds-scope fixed inset-0 z-50 m-auto flex h-fit max-h-[calc(100vh-48px)] w-[calc(100vw-32px)] flex-col gap-5 overflow-y-auto rounded-ds-lg border border-ds-line bg-ds-surface-raised p-6 font-ds-sans text-base leading-6 text-ds-ink scheme-light shadow-ds-lg',
+            'duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
             size === 'lg' ? 'max-w-[720px]' : 'max-w-[480px]',
           )}
           {...(description ? {} : { 'aria-describedby': undefined })}
@@ -123,7 +123,7 @@ function FieldLabel({
   children: React.ReactNode
 }) {
   return (
-    <label htmlFor={htmlFor} className="text-sm font-semibold leading-5 text-ds-ink">
+    <label htmlFor={htmlFor} className="text-sm leading-5 font-semibold text-ds-ink">
       {children}
       {optional && <span className="ml-1 font-normal text-ds-ink-muted">(facoltativo)</span>}
     </label>
@@ -217,7 +217,7 @@ export function GTextField({
           onBlur={onBlur}
           onKeyDown={onEnter ? (e) => e.key === 'Enter' && onEnter() : undefined}
           className={cn(
-            'min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-none placeholder:text-ds-ink-faint',
+            'min-w-0 flex-1 border-0 bg-transparent px-3 text-ds-ink outline-hidden placeholder:text-ds-ink-faint',
             size === 'sm' ? 'text-sm' : 'text-base',
             numeric && 'text-right font-semibold tabular-nums',
             prefix && 'pl-2',
@@ -307,7 +307,7 @@ export function GSelect({
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            'min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pl-3 pr-8 outline-none',
+            'min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-8 pl-3 outline-hidden',
             tinted ? 'font-medium text-inherit' : 'text-ds-ink',
             size === 'sm' ? 'text-sm' : 'text-base',
             disabled && 'cursor-not-allowed text-ds-ink-muted',
@@ -322,7 +322,7 @@ export function GSelect({
         <ChevronDown
           aria-hidden
           className={cn(
-            'pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2',
+            'pointer-events-none absolute top-1/2 right-2.5 h-4 w-4 -translate-y-1/2',
             !tinted && 'text-ds-ink-muted',
           )}
         />
@@ -380,7 +380,7 @@ export function GTabs<T extends string>({
             onClick={() => onChange(it.value)}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
-              '-mb-px inline-flex items-center gap-2 whitespace-nowrap px-4 py-3 font-semibold transition-colors',
+              '-mb-px inline-flex items-center gap-2 px-4 py-3 font-semibold whitespace-nowrap transition-colors',
               dsFocusRing,
               selected
                 ? 'text-ds-brand shadow-[inset_0_-2px_0_var(--ds-brand)]'
@@ -421,7 +421,7 @@ export function GNotice({ notice, onDismiss }: { notice: GNoticeData; onDismiss:
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 left-1/2 z-[60] flex w-max max-w-[min(640px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised py-2.5 pl-4 pr-2.5 text-ds-ink shadow-ds-md"
+      className="fixed bottom-6 left-1/2 z-60 flex w-max max-w-[min(640px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised py-2.5 pr-2.5 pl-4 text-ds-ink shadow-ds-md"
     >
       <CircleCheck className="h-5 w-5 flex-none text-ds-brand" aria-hidden />
       <span className="ds-body-sm min-w-0">

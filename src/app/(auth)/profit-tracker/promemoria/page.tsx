@@ -131,14 +131,14 @@ export default function PromemoriaPage() {
         </Button>
       </div>
 
-      <div className="block space-y-4 sm:hidden">
+      <div className="space-y-4 block sm:hidden">
         {isLoadingReminders && (
-          <div className="rounded-xl border border-border bg-card/70 px-3 py-4 text-center text-xs text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 px-3 py-4 text-center text-xs text-muted-foreground shadow-xs">
             Caricamento promemoria in corso...
           </div>
         )}
         {!isLoadingReminders && filteredReminders.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 px-3 py-6 text-center text-xs text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 px-3 py-6 text-center text-xs text-muted-foreground shadow-xs">
             Nessun promemoria {filterStatus !== 'tutti' ? `con stato ${filterStatus}` : ''}.
           </div>
         )}
@@ -156,7 +156,7 @@ export default function PromemoriaPage() {
             return (
               <div
                 key={rem.id}
-                className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+                className="rounded-xl border border-border bg-card/70 p-4 shadow-xs"
               >
                 <div className="grid gap-2 text-xs">
                   <div className="flex justify-between gap-2">
@@ -230,10 +230,10 @@ export default function PromemoriaPage() {
           })}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Scadenza</th>
               <th className="px-3 py-2 text-left">Conto</th>
               <th className="px-3 py-2 text-left">Descrizione</th>

@@ -89,7 +89,7 @@ export function MatcherLegCard({
         'flex flex-col items-center gap-3 rounded-ds-md border p-5 text-center transition-[border-color,box-shadow] duration-150',
         cardTone[tone],
         selectable &&
-          'cursor-pointer hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-none',
+          'cursor-pointer hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-hidden',
         selected ? 'border-ds-brand shadow-[inset_0_0_0_1px_var(--ds-brand)]' : 'border-ds-line',
       )}
     >

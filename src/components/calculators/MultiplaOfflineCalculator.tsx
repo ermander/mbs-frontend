@@ -231,7 +231,7 @@ export function MultiplaOfflineCalculator() {
                         <span className="ds-subheading truncate">
                           {ev.eventName || `Evento ${index + 1}`}
                         </span>
-                        <span className="ds-body-sm whitespace-nowrap tabular-nums text-ds-ink-muted">
+                        <span className="ds-body-sm whitespace-nowrap text-ds-ink-muted tabular-nums">
                           {typeLabel(ev.type)}
                           {ev.market
                             ? ` · ${formatMercatoString(ev.market, ev.marketScope)}`
@@ -327,7 +327,7 @@ export function MultiplaOfflineCalculator() {
                         <div className="col-span-2 flex min-w-0 flex-col gap-1">
                           <label
                             htmlFor={`ev-market-${ev.id}`}
-                            className="text-sm font-semibold leading-5 text-ds-ink"
+                            className="text-sm leading-5 font-semibold text-ds-ink"
                           >
                             Mercato
                           </label>
@@ -348,7 +348,7 @@ export function MultiplaOfflineCalculator() {
                         </div>
                         {isTeamScopedMarket(ev.market) && (
                           <div className="col-span-2 flex flex-col gap-1">
-                            <span className="text-sm font-semibold leading-5 text-ds-ink">
+                            <span className="text-sm leading-5 font-semibold text-ds-ink">
                               Squadra
                             </span>
                             <TeamScopeToggle
@@ -392,7 +392,7 @@ export function MultiplaOfflineCalculator() {
                           <div aria-live="polite" className="ds-num text-xl leading-7">
                             {amount(hasResult ? hr.hedgeStake : null)}
                           </div>
-                          <div className="ds-body-sm whitespace-nowrap tabular-nums text-ds-ink-muted">
+                          <div className="ds-body-sm whitespace-nowrap text-ds-ink-muted tabular-nums">
                             {costLabel(ev.type)} {amount(hasResult ? hr.hedgeCost : null)}
                           </div>
                         </div>

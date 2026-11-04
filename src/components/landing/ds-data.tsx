@@ -31,7 +31,7 @@ export function DsBadge({
     <span
       title={title}
       className={cn(
-        'inline-flex h-[22px] items-center gap-1 whitespace-nowrap rounded-full px-2 text-xs font-medium leading-4 tracking-[0.02em]',
+        'inline-flex h-[22px] items-center gap-1 rounded-full px-2 text-xs leading-4 font-medium tracking-[0.02em] whitespace-nowrap',
         badgeTone[tone],
         className,
       )}
@@ -64,7 +64,7 @@ export function DsMoney({
   return (
     <span
       className={cn(
-        'whitespace-nowrap font-semibold tabular-nums',
+        'font-semibold whitespace-nowrap tabular-nums',
         moneySize[size],
         tone,
         className,
@@ -88,7 +88,7 @@ export function DsRatingBadge({ value, className }: { value: number; className?:
     <DsBadge
       tone={ratingTone(value)}
       title="Rating"
-      className={cn('text-[13px] font-semibold tabular-nums tracking-normal', className)}
+      className={cn('text-[13px] font-semibold tracking-normal tabular-nums', className)}
     >
       {formatRating(value)}
     </DsBadge>

@@ -8,12 +8,7 @@ import { apiClient } from './client'
 // =====================================================================
 
 export type OdEventStatus =
-  | 'scheduled'
-  | 'live'
-  | 'closed'
-  | 'cancelled'
-  | 'postponed'
-  | 'rescheduled'
+  'scheduled' | 'live' | 'closed' | 'cancelled' | 'postponed' | 'rescheduled'
 
 export const OD_EVENT_STATUSES: readonly OdEventStatus[] = [
   'scheduled',
@@ -84,7 +79,12 @@ export interface ProviderScheduleSummaryDto {
     whitelistedLeaguesEnabled: number
   }
   futureByStatus: ProviderStatusCountDto[]
-  budget: { date: string; callsUsed: number; planDailyLimit: number; lastCallAt: string | null } | null
+  budget: {
+    date: string
+    callsUsed: number
+    planDailyLimit: number
+    lastCallAt: string | null
+  } | null
   lastRuns: ProviderSyncRunDto[]
 }
 

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 /** I campi dell'editor delle offerte (§14.262), sui componenti ui del backoffice. */
 
 const controlClass =
-  'w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20'
+  'w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/20'
 
 /** Un riquadro del modulo con titolo e, se serve, una riga di spiegazione. */
 export function EditorSection({

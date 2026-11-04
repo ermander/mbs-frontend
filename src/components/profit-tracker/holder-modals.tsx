@@ -63,7 +63,7 @@ export function HolderCreateModal({ open, onOpenChange }: HolderCreateModalProps
             <Label htmlFor="holder-desc">Descrizione (opzionale)</Label>
             <textarea
               id="holder-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
               value={descrizione}
               onChange={(e) => setDescrizione(e.target.value)}
             />
@@ -148,7 +148,7 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
               id="holder-edit-nome"
               value={holder.nome}
               disabled
-              className="cursor-default select-none bg-muted/60"
+              className="cursor-default bg-muted/60 select-none"
             />
             <p className="text-[11px] text-muted-foreground">
               Il nome del collaboratore non può essere modificato dopo la creazione.
@@ -158,7 +158,7 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
             <Label htmlFor="holder-edit-desc">Descrizione (opzionale)</Label>
             <textarea
               id="holder-edit-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
               value={descrizione}
               onChange={(e) => setDescrizione(e.target.value)}
             />

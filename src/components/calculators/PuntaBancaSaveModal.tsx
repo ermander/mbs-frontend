@@ -462,12 +462,12 @@ export function PuntaBancaSaveModal({
         {/* Container per i dropdown SearchableSelect: in-modal portal così ricevono i click (Radix blocca body) */}
         <div
           ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-[9998]"
+          className="pointer-events-none fixed inset-0 z-9998"
           aria-hidden
         />
         {savedBetId ? (
           <>
-            <div className="px-6 pb-4 pt-6">
+            <div className="px-6 pt-6 pb-4">
               <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                 Giocata salvata
               </DialogTitle>
@@ -504,7 +504,7 @@ export function PuntaBancaSaveModal({
           </>
         ) : (
           <>
-            <div className="px-6 pb-1 pt-6">
+            <div className="px-6 pt-6 pb-1">
               <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                 Salva giocata Punta-Banca
               </DialogTitle>
@@ -559,7 +559,7 @@ export function PuntaBancaSaveModal({
               <BetCategorySelect value={categoria} onChange={setCategoria} />
 
               <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
+                <Label className="font-mono text-xs font-medium tracking-[0.02em] text-primary uppercase">
                   Collaboratore Punta
                 </Label>
                 {isMultiConto ? (
@@ -650,7 +650,7 @@ export function PuntaBancaSaveModal({
               </div>
 
               <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-destructive">
+                <Label className="font-mono text-xs font-medium tracking-[0.02em] text-destructive uppercase">
                   Collaboratore Banca
                 </Label>
                 <div className="space-y-2">

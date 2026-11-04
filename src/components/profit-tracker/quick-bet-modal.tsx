@@ -198,7 +198,7 @@ export function QuickBetModal({ open, onOpenChange, onSaved }: QuickBetModalProp
               <div className="flex items-center justify-between gap-3">
                 <span
                   id="rapida-conti-label"
-                  className="text-sm font-semibold leading-5 text-ds-ink"
+                  className="text-sm leading-5 font-semibold text-ds-ink"
                 >
                   Conti <span className="font-normal text-ds-ink-muted">· {picked}</span>
                 </span>

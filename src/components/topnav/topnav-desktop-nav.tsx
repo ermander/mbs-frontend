@@ -86,7 +86,7 @@ function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: 
           sideOffset={4}
           className={cn(
             topnavMenuPanel,
-            'max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-[14rem] overflow-y-auto',
+            'max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-56 overflow-y-auto',
           )}
         >
           {section.items.map((item) => {

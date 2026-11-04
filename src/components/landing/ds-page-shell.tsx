@@ -20,7 +20,7 @@ export function DsPageShell({
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] md:-mx-8',
+        'ds-scope -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light md:-mx-8',
         className,
       )}
     >

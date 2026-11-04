@@ -37,7 +37,7 @@ export default async function OffertaPage({ params }: Params) {
           updatedOn={romeToday(new Date(result.data.updatedAt))}
         />
       ) : (
-        <DsContainer className="pb-24 pt-10">
+        <DsContainer className="pt-10 pb-24">
           <OffersLoadError status={result.status} />
         </DsContainer>
       )}

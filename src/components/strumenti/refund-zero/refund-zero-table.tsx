@@ -75,7 +75,7 @@ function LastSeenCell({ row, now }: { row: RefundZeroRow; now: number }) {
   const age = refundZeroRowAge(row, now)
   return (
     <span
-      className="inline-block whitespace-nowrap text-xs tabular-nums"
+      className="inline-block text-xs whitespace-nowrap tabular-nums"
       title={`Quota vista meno di recente fra le tre: ${ageLabel(age)} fa (alle ${formatClock(row.lastSeenAt)})`}
       aria-label={`Ultimo aggiornamento ${ageLabel(age)} fa`}
     >
@@ -106,7 +106,7 @@ function LineDetail({ line, row }: { line: RefundZeroLine; row: RefundZeroRow })
   return (
     <div className="grid gap-2 text-xs sm:grid-cols-3">
       <div className="rounded-md border border-sky-500/30 bg-sky-500/5 p-2">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
           Punta {line.label} · {row.backBookmaker.name}
         </div>
         <div className="mt-1 font-mono tabular-nums">
@@ -114,7 +114,7 @@ function LineDetail({ line, row }: { line: RefundZeroLine; row: RefundZeroRow })
         </div>
       </div>
       <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
           Banca {line.label} · {row.layBookmaker.name}
         </div>
         <div className="mt-1 font-mono tabular-nums">
@@ -123,7 +123,7 @@ function LineDetail({ line, row }: { line: RefundZeroLine; row: RefundZeroRow })
         <div className="text-muted-foreground">responsabilità {formatEuro(line.layLiability)}</div>
       </div>
       <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-2">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
           Banca {row.zeroZero.lay.label} · {row.layBookmaker.name}
         </div>
         <div className="mt-1 font-mono tabular-nums">
@@ -164,7 +164,7 @@ function OtherLines({ row }: { row: RefundZeroRow }) {
   if (others.length === 0) return null
   return (
     <div className="mt-2">
-      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+      <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
         Altri risultati
       </div>
       <div className="mt-1 flex flex-wrap gap-1.5">
@@ -175,7 +175,7 @@ function OtherLines({ row }: { row: RefundZeroRow }) {
             title={`Punta ${line.back.odds.toFixed(2)} · banca ${line.lay.odds.toFixed(2)}`}
           >
             <span className="font-medium">{line.label}</span>
-            <span className="font-mono tabular-nums text-muted-foreground">
+            <span className="font-mono text-muted-foreground tabular-nums">
               {line.back.odds.toFixed(2)}/{line.lay.odds.toFixed(2)}
             </span>
             <span
@@ -281,33 +281,33 @@ export function RefundZeroTable({
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden max-h-[calc(100dvh-16rem-var(--topnav-h))] min-h-[20rem] overflow-auto rounded-lg border border-border md:block">
+      <div className="hidden max-h-[calc(100dvh-16rem-var(--topnav-h))] min-h-80 overflow-auto rounded-lg border border-border md:block">
         <table className="w-full min-w-[1040px] text-sm">
           <thead className="sticky top-0 z-10 bg-background [&_th]:shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-            <tr className="bg-muted/50 text-left font-mono text-[11px] uppercase tracking-[0.02em] text-muted-foreground">
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Data</th>
+            <tr className="bg-muted/50 text-left font-mono text-[11px] tracking-[0.02em] text-muted-foreground uppercase">
+              <th className="px-3 py-2 font-medium whitespace-nowrap">Data</th>
               <th className="px-3 py-2 font-medium">Evento</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Punta</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">Punta</th>
               <th
-                className="whitespace-nowrap px-2 py-2 font-medium"
+                className="px-2 py-2 font-medium whitespace-nowrap"
                 title="Il risultato puntato e la sua quota al book"
               >
                 Risultato
               </th>
               <th
-                className="whitespace-nowrap px-2 py-2 font-medium"
+                className="px-2 py-2 font-medium whitespace-nowrap"
                 title="La bancata dello stesso risultato sull'exchange"
               >
                 Banca
               </th>
               <th
-                className="whitespace-nowrap px-2 py-2 font-medium"
+                className="px-2 py-2 font-medium whitespace-nowrap"
                 title="La bancata dello 0-0 sull'exchange: il caso rimborsato"
               >
                 Banca 0-0
               </th>
               <th
-                className="whitespace-nowrap px-2 py-2 text-right font-medium"
+                className="px-2 py-2 text-right font-medium whitespace-nowrap"
                 title="Bancate da piazzare per la puntata impostata"
               >
                 Bancate €
@@ -339,14 +339,14 @@ export function RefundZeroTable({
                       onClick={() => toggle(key)}
                       aria-expanded={isOpen}
                     >
-                      <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
+                      <td className="px-3 py-2 text-xs whitespace-nowrap tabular-nums">
                         <div className="text-foreground">{formatKickoffDate(row.startTime)}</div>
                         <div className="text-muted-foreground">
                           h. {formatKickoffTime(row.startTime)}
                         </div>
                       </td>
                       <td className="min-w-[200px] px-3 py-2">
-                        <div className="whitespace-nowrap font-medium">
+                        <div className="font-medium whitespace-nowrap">
                           {row.homeName} – {row.awayName}
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -356,13 +356,13 @@ export function RefundZeroTable({
                             competition={row.competitionName}
                           />
                           <span>{row.competitionName}</span>
-                          <span className="rounded border border-border px-1 text-[10px] uppercase tracking-wide">
+                          <span className="rounded border border-border px-1 text-[10px] tracking-wide uppercase">
                             {row.marketLabel}
                           </span>
                         </div>
                       </td>
                       <td
-                        className="whitespace-nowrap px-3 py-2"
+                        className="px-3 py-2 whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <BookmakerLink
@@ -378,11 +378,11 @@ export function RefundZeroTable({
                           />
                         </BookmakerLink>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2">
+                      <td className="px-2 py-2 whitespace-nowrap">
                         <PriceChip label={row.best.label} odds={row.best.back.odds} side="back" />
                       </td>
                       <td
-                        className="whitespace-nowrap px-2 py-2"
+                        className="px-2 py-2 whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <BookmakerLink
@@ -394,24 +394,24 @@ export function RefundZeroTable({
                           <PriceChip label={row.best.label} odds={row.best.lay.odds} side="lay" />
                         </BookmakerLink>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2">
+                      <td className="px-2 py-2 whitespace-nowrap">
                         <PriceChip
                           label={row.zeroZero.lay.label}
                           odds={row.zeroZero.lay.odds}
                           side="lay"
                         />
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-right font-mono text-xs tabular-nums">
+                      <td className="px-2 py-2 text-right font-mono text-xs whitespace-nowrap tabular-nums">
                         <div title="Bancata sul risultato">{formatEuro(row.best.layStake)}</div>
                         <div className="text-muted-foreground" title="Bancata sullo 0-0">
                           {formatEuro(row.best.zeroLayStake)}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
                         <span className={profitBadge(row.best.profit)}>
                           {formatSignedEuro(row.best.profit)}
                         </span>
-                        <div className="text-[11px] tabular-nums text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground tabular-nums">
                           {formatSignedPct(row.best.profitPct)}
                         </div>
                       </td>

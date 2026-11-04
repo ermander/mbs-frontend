@@ -78,7 +78,7 @@ export function ImbalanceSlider({
   return (
     <div className="mt-3">
       <div className="mb-1.5 flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
+        <p className="font-mono text-[10px] tracking-[0.02em] text-muted-foreground uppercase">
           {label}
         </p>
         <span className="font-mono text-xs font-medium text-foreground">
@@ -116,7 +116,7 @@ export function ResultStat({
 }) {
   return (
     <div>
-      <p className="font-mono text-[10px] uppercase tracking-[0.02em] text-muted-foreground">
+      <p className="font-mono text-[10px] tracking-[0.02em] text-muted-foreground uppercase">
         {label}
       </p>
       <p className={cn('font-mono text-sm font-medium tabular-nums', className)}>{value}</p>

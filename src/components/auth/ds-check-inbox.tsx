@@ -41,10 +41,10 @@ export function DsCheckInbox({
   return (
     <div className="max-w-[440px]">
       <Clock className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
-      <h1 ref={headingRef} tabIndex={-1} className="ds-title mt-4 outline-none">
+      <h1 ref={headingRef} tabIndex={-1} className="ds-title mt-4 outline-hidden">
         Controlla la posta
       </h1>
-      <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">{children}</p>
+      <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">{children}</p>
       <div className="mt-6">
         <DsCallout tone="note" title="Nota">
           {note}
@@ -69,5 +69,5 @@ export function DsCheckInbox({
 
 /** L'indirizzo dentro il testo: ink a 600, a capo dove serve sui telefoni. */
 export function DsInboxEmail({ children }: { children: React.ReactNode }) {
-  return <b className="font-semibold text-ds-ink [overflow-wrap:anywhere]">{children}</b>
+  return <b className="font-semibold wrap-anywhere text-ds-ink">{children}</b>
 }

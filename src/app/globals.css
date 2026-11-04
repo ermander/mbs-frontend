@@ -1,6 +1,269 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* Tailwind 4 (ADAPTER_STATUS §14.334): la configurazione sta qui, non più in tailwind.config.js.
+   Il blocco @theme è la traduzione uno a uno del vecchio theme.extend (font, raggi, colori,
+   ombre, animazioni); i token veri restano le variabili --ow-*, --ds-* e quelle shadcn sotto.
+   `inline` è necessario: i token puntano a variabili che cambiano per elemento (--ow-* rimappate
+   in .ds-scope, le variabili shadcn in .ds-calc-bridge, --font-ds-* impostate da next/font sul
+   guscio pubblico) e devono essere lette sull'elemento che usa la utility, come faceva la 3; con
+   @theme normale verrebbero risolte una volta sola su :root e le rimappature non avrebbero effetto. */
+@plugin 'tailwindcss-animate';
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --font-ow-display: var(--font-ow-display), var(--font-geist-sans), sans-serif;
+  --font-ow-mono: var(--font-ow-mono), monospace;
+  --font-ds-serif: var(--font-ds-serif), Georgia, Times New Roman, serif;
+  --font-ds-sans: var(--font-ds-sans), system-ui, -apple-system, Segoe UI, sans-serif;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-pill: 9999px;
+  --radius-ow-card: var(--ow-radius-card);
+  --radius-ow-card-lg: var(--ow-radius-card-lg);
+  --radius-ow-btn: var(--ow-radius-btn);
+  --radius-ow-pill: var(--ow-radius-pill);
+  --radius-ds-xs: 4px;
+  --radius-ds-sm: 6px;
+  --radius-ds-md: 10px;
+  --radius-ds-lg: 16px;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-surface-1: hsl(var(--surface-1));
+  --color-surface-2: hsl(var(--surface-2));
+  --color-surface-3: hsl(var(--surface-3));
+
+  --color-neon-cyan: #52feca;
+  --color-neon-blue: #8bacff;
+  --color-neon-lavender: #af8bff;
+  --color-neon-orange: #ff9d53;
+  --color-neon-red: #ff4d6a;
+
+  --color-ds-surface: var(--ds-surface);
+  --color-ds-surface-raised: var(--ds-surface-raised);
+  --color-ds-surface-sunken: var(--ds-surface-sunken);
+  --color-ds-line: var(--ds-line);
+  --color-ds-line-strong: var(--ds-line-strong);
+  --color-ds-ink: var(--ds-ink);
+  --color-ds-ink-muted: var(--ds-ink-muted);
+  --color-ds-ink-faint: var(--ds-ink-faint);
+  --color-ds-brand: var(--ds-brand);
+  --color-ds-brand-hover: var(--ds-brand-hover);
+  --color-ds-brand-soft: var(--ds-brand-soft);
+  --color-ds-on-brand: var(--ds-on-brand);
+  --color-ds-accent: var(--ds-accent);
+  --color-ds-on-accent: var(--ds-on-accent);
+  --color-ds-profit: var(--ds-profit);
+  --color-ds-profit-soft: var(--ds-profit-soft);
+  --color-ds-loss: var(--ds-loss);
+  --color-ds-loss-soft: var(--ds-loss-soft);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-warning-soft: var(--ds-warning-soft);
+  --color-ds-info: var(--ds-info);
+  --color-ds-info-soft: var(--ds-info-soft);
+
+  --color-ow-bg: var(--ow-bg);
+  --color-ow-surface: var(--ow-surface);
+  --color-ow-raised: var(--ow-raised);
+  --color-ow-deep: var(--ow-deep);
+  --color-ow-deep-border: var(--ow-deep-border);
+  --color-ow-accent: var(--ow-accent);
+  --color-ow-amber: var(--ow-amber);
+  --color-ow-amber-text: var(--ow-amber-text);
+  --color-ow-text: var(--ow-text);
+  --color-ow-text-2: var(--ow-text-2);
+  --color-ow-text-3: var(--ow-text-3);
+  --color-ow-line: var(--ow-line);
+  --color-ow-line-strong: var(--ow-line-strong);
+  --color-ow-on-accent: var(--ow-on-accent);
+  --color-ow-on-deep: var(--ow-on-deep);
+  --color-ow-on-deep-2: var(--ow-on-deep-2);
+  --color-ow-on-raised: var(--ow-on-raised);
+  --color-ow-on-raised-2: var(--ow-on-raised-2);
+  --color-ow-raised-muted: var(--ow-raised-muted);
+  --color-ow-raised-line: var(--ow-raised-line);
+  --color-ow-raised-fill: var(--ow-raised-fill);
+  --color-ow-neutral: var(--ow-neutral);
+  --color-ow-on-neutral: var(--ow-on-neutral);
+  --color-ow-check-off: var(--ow-check-off);
+  --color-ow-danger: var(--ow-danger);
+  --color-ow-success: var(--ow-success);
+
+  --shadow-glow-sm: var(--glow-primary);
+  --shadow-glow-md: var(--glow-primary-strong);
+  --shadow-glow-destructive: var(--glow-destructive);
+  --shadow-ow-card: var(--ow-shadow-card);
+  --shadow-ds-sm: var(--ds-shadow-sm);
+  --shadow-ds-md: var(--ds-shadow-md);
+  --shadow-ds-lg: var(--ds-shadow-lg);
+  --shadow-ds-focus: var(--ds-focus-ring);
+}
+
+/* Palette di default: Tailwind 4 la ridefinisce in OKLCH e le tinte vengono un po' più sature
+   (amber-400 passa da #fbbf24 a lab(80 17 99)). Per non cambiare l'aspetto di badge, stati e
+   avvisi, le 29 tonalità usate dal progetto restano ai valori esadecimali della 3.4. Chi vuole la
+   palette nuova toglie questo blocco; una tonalità non elencata qui esce già in OKLCH. */
+@theme {
+  --color-amber-200: #fde68a;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-950: #022c22;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-rose-300: #fda4af;
+  --color-rose-500: #f43f5e;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-violet-400: #a78bfa;
+  --color-violet-500: #8b5cf6;
+}
+
+/* Animazioni e interlinee: valori fissi, quindi @theme normale (i keyframes vengono emessi solo
+   se usati). Le interlinee delle scale text-* tornano ai rem della 3: la 4 le definisce come rapporti
+   senza unità (es. --text-xs--line-height: calc(1 / 0.75)) e un figlio con un font-size diverso, per
+   esempio text-[11px] sotto un text-xs, erediterebbe il rapporto (11 × 1,33 = 14,7px) invece dei
+   16px fissi; con i rem i 110 text-[Npx] senza leading-* del progetto restano identici alla 3. */
+@theme {
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in: fade-in 0.4s ease-out;
+  --animate-slide-in-left: slide-in-left 0.3s ease-out;
+  --animate-ow-marquee: ow-marquee 70s linear infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes ow-marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* Tailwind 4 cambia il selettore di space-y-*: margine sotto ogni figlio tranne l'ultimo
+   (`> :not(:last-child)`) invece che sopra ogni fratello visibile (`> :not([hidden]) ~ :not([hidden])`
+   della 3). Con un ultimo figlio vuoto o nascosto (il segnaposto dell'errore sotto un campo, un
+   pannello chiuso) l'altezza cambia: misurato +/-6px nei filtri di Conti. Le 242 occorrenze del
+   progetto tengono la semantica della 3 con questa utility, che sostituisce quella di serie. */
+@utility space-y-* {
+  /* Stesso selettore e stessa specificità (0,3,0) della 3. */
+  & > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-y-reverse: 0;
+    margin-top: calc(var(--spacing) * --value(number) * calc(1 - var(--tw-space-y-reverse)));
+    margin-bottom: calc(var(--spacing) * --value(number) * var(--tw-space-y-reverse));
+  }
+  /* La utility di serie resta in uscita accanto a questa (una @utility omonima si aggiunge, non
+     sostituisce): il suo margin-block-end sui figli non ultimi va azzerato, con specificità (0,2,0)
+     sopra la sua (0,1,0). Effetto collaterale: un primo figlio con un mb-* proprio lo perde. */
+  & > :not(:last-child) {
+    margin-block-end: 0;
+  }
+}
+
+@utility glow-primary {
+  box-shadow: var(--glow-primary);
+}
+
+@utility glow-primary-strong {
+  box-shadow: var(--glow-primary-strong);
+}
 
 @layer base {
   /* Area autenticata: la stessa palette dark della landing (token ow-*), mappata sulle
@@ -64,6 +327,13 @@
     @apply border-border;
   }
 
+  /* Tailwind 4: il preflight mette `cursor: default` sui pulsanti (la 3 metteva pointer).
+     Ripristinato per non cambiare il comportamento di tutti i pulsanti e dei ruoli button. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
   body {
     @apply min-h-screen bg-background font-sans text-foreground;
     background-attachment: fixed;
@@ -101,44 +371,13 @@
   }
 }
 
-@layer utilities {
-  .glow-primary {
-    box-shadow: var(--glow-primary);
-  }
-  .glow-primary-strong {
-    box-shadow: var(--glow-primary-strong);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* ------------------------------------------------------------------------------------------
    OddWise — design tokens della landing.
    Grammatica «Linear» (ADAPTER_STATUS §14.15x): canvas quasi nero neutro, superfici a gradini
    neutri, bordi hairline al posto delle ombre, raggi 6/12, un solo colore cromatico (l'accento,
    usato dalla CTA primaria e dalla cifra del profitto). Tema principale: dark (nessun
    attributo). Varianti: <html data-theme="green"> (accento verde) e <html data-theme="light">.
-   Le variabili ow-* sono mappate in tailwind.config.js (colori ow-*, font ow-*, raggi ow-*).
+   Le variabili ow-* sono mappate nel blocco @theme in cima a questo file (colori ow-*, font ow-*, raggi ow-*).
    ------------------------------------------------------------------------------------------ */
 :root {
   --ow-bg: #08090a; /* canvas */
@@ -205,7 +444,7 @@
 /* ------------------------------------------------------------------------------------------
    OddWise — design system di Claude Design (ADAPTER_STATUS §14.248): token «ds-*» delle pagine
    pubbliche (landing, legali, contatti, 404). Valori da tokens.json del design: tema chiaro
-   principale, scuro con <html data-theme="dark">. Mappati in tailwind.config.js (colori ds-*, font
+   principale, scuro con <html data-theme="dark">. Mappati nel blocco @theme in cima a questo file (colori ds-*, font
    ds-serif/ds-sans, raggi ds-*, ombre ds-*). I token ow-* qui sopra restano per l'area autenticata
    e per le pagine di accesso; dentro il guscio pubblico (.ds-scope) vengono rimappati su questi,
    così i componenti vecchi che vi finiscono (il modulo dei contatti) prendono la stessa palette. */

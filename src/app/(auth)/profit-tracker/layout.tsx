@@ -20,5 +20,5 @@ const DS_BET_DETAIL = /^\/profit-tracker\/giocate-in-corso\/[^/]+$/
 export default function ProfitTrackerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   if (DS_PAGES.has(pathname) || DS_BET_DETAIL.test(pathname)) return <>{children}</>
-  return <Container className="max-w-screen-2xl">{children}</Container>
+  return <Container className="max-w-(--breakpoint-2xl)">{children}</Container>
 }

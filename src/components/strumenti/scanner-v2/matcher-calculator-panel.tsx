@@ -94,7 +94,7 @@ export function MatcherCalculatorPanel({
               {dayFormat.format(new Date(row.startTime))} · {formatKickoffTime(row.startTime)}
             </span>
           </div>
-          <h2 className="ds-display m-0 [text-wrap:balance]">
+          <h2 className="ds-display m-0 text-balance">
             {row.homeName ?? '?'} <span className="font-normal text-ds-ink-muted">–</span>{' '}
             {row.awayName ?? '?'}
           </h2>

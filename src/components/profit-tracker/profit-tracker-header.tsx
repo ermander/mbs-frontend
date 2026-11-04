@@ -18,7 +18,7 @@ export function ProfitTrackerHeader({ className, rightSlot }: ProfitTrackerHeade
       )}
     >
       <div className="space-y-0.5">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
           Strumenti · Profit Tracker
         </p>
         <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">

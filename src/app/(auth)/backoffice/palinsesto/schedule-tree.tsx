@@ -79,7 +79,7 @@ export function ScheduleTree({
       </div>
       <div className="relative flex-1 overflow-y-auto px-2 py-2">
         {loading && (
-          <div className="absolute right-3 top-2 text-[11px] text-muted-foreground">aggiorno…</div>
+          <div className="absolute top-2 right-3 text-[11px] text-muted-foreground">aggiorno…</div>
         )}
         {error ? (
           <p className="px-2 py-4 text-sm text-destructive">{error}</p>
@@ -105,7 +105,7 @@ export function ScheduleTree({
                   <Count n={s.fixtureCount} />
                 </button>
                 {isSportOpen(s) && (
-                  <ul className="ml-3 space-y-0.5 border-l border-border pl-2">
+                  <ul className="space-y-0.5 ml-3 border-l border-border pl-2">
                     {s.categories.map((c) => {
                       const selected = scope?.type === 'category' && scope.id === c.categoryId
                       const open = isCategoryOpen(s, c)
@@ -142,7 +142,7 @@ export function ScheduleTree({
                             </button>
                           </div>
                           {open && (
-                            <ul className="ml-4 space-y-0.5 border-l border-border pl-2">
+                            <ul className="space-y-0.5 ml-4 border-l border-border pl-2">
                               {c.competitions.map((comp) => {
                                 const sel =
                                   scope?.type === 'competition' && scope.id === comp.competitionId

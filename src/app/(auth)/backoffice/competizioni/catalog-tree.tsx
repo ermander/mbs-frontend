@@ -77,7 +77,7 @@ export function CatalogTree({
             />
           </div>
           {isSportOpen(s) && (
-            <ul className="ml-3 space-y-0.5 border-l border-border pl-2">
+            <ul className="space-y-0.5 ml-3 border-l border-border pl-2">
               {s.categories.map((c) => {
                 const open = isCategoryOpen(c)
                 return (
@@ -106,7 +106,7 @@ export function CatalogTree({
                       />
                     </div>
                     {open && (
-                      <ul className="ml-4 space-y-0.5 border-l border-border pl-2">
+                      <ul className="space-y-0.5 ml-4 border-l border-border pl-2">
                         {c.competitions.map((comp) => (
                           <li
                             key={comp.competitionId}
@@ -135,7 +135,7 @@ export function CatalogTree({
                               </span>
                             )}
                             <span
-                              className="w-24 text-right text-[11px] tabular-nums text-muted-foreground"
+                              className="w-24 text-right text-[11px] text-muted-foreground tabular-nums"
                               title={
                                 comp.nextKickoff
                                   ? `Prossima partita ${formatDate(comp.nextKickoff)}`
@@ -196,7 +196,7 @@ export function ScrapeSwitch({
       }
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${
         checked ? 'bg-emerald-500' : 'bg-muted-foreground/40'
       }`}
     >

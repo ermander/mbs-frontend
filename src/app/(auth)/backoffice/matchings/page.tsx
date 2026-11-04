@@ -224,7 +224,7 @@ export default function MatchingsPage() {
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/40 text-left font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border bg-muted/40 text-left font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2">Evento Canonico</th>
               <th className="px-3 py-2">Bookmaker</th>
               <th className="px-3 py-2">Nomi Bookmaker</th>
@@ -317,30 +317,30 @@ function MatchingRow({
   return (
     <>
       <tr className="cursor-pointer hover:bg-muted/20" onDoubleClick={onDoubleClick}>
-        <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
+        <td className="px-3 py-2 font-medium whitespace-nowrap text-foreground">
           {m.canonicalHome ?? '?'} - {m.canonicalAway ?? '?'}
         </td>
-        <td className="whitespace-nowrap px-3 py-2 text-foreground">{m.bookmakerName}</td>
-        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+        <td className="px-3 py-2 whitespace-nowrap text-foreground">{m.bookmakerName}</td>
+        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
           {m.bookmakerHomeName ?? '?'} - {m.bookmakerAwayName ?? '?'}
         </td>
-        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{m.competitionName}</td>
-        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{m.sportName}</td>
-        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{m.competitionName}</td>
+        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{m.sportName}</td>
+        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
           {formatDate(m.startTime)}
         </td>
-        <td className="whitespace-nowrap px-3 py-2">
+        <td className="px-3 py-2 whitespace-nowrap">
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
             {m.matchMethod}
           </code>
         </td>
-        <td className="whitespace-nowrap px-3 py-2 text-center font-mono text-foreground">
+        <td className="px-3 py-2 text-center font-mono whitespace-nowrap text-foreground">
           {(m.matchConfidence * 100).toFixed(0)}%
         </td>
-        <td className="whitespace-nowrap px-3 py-2">
+        <td className="px-3 py-2 whitespace-nowrap">
           <span className={statusBadge(m.matchStatus)}>{m.matchStatus.replace(/_/g, ' ')}</span>
         </td>
-        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+        <td className="px-3 py-2 text-xs whitespace-nowrap text-muted-foreground">
           {formatDate(m.matchedAt)}
         </td>
       </tr>
@@ -348,7 +348,7 @@ function MatchingRow({
       {isExpanded && (
         <tr>
           <td colSpan={10} className="border-t border-border bg-muted/10 px-4 py-3">
-            <div className="mb-2 font-mono text-xs font-semibold uppercase tracking-[0.02em] text-muted-foreground">
+            <div className="mb-2 font-mono text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
               Bookmaker associati a: {m.canonicalHome ?? '?'} - {m.canonicalAway ?? '?'}
             </div>
             {loadingDetail ? (
@@ -359,7 +359,7 @@ function MatchingRow({
               <div className="overflow-x-auto rounded border border-border">
                 <table className="min-w-full text-xs">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left font-mono font-medium uppercase tracking-[0.02em] text-muted-foreground">
+                    <tr className="border-b border-border bg-muted/30 text-left font-mono font-medium tracking-[0.02em] text-muted-foreground uppercase">
                       <th className="px-3 py-1.5">Bookmaker</th>
                       <th className="px-3 py-1.5">Nome Home</th>
                       <th className="px-3 py-1.5">Nome Away</th>
@@ -373,32 +373,32 @@ function MatchingRow({
                   <tbody className="divide-y divide-border">
                     {eventBookmakers.map((bk) => (
                       <tr key={bk.id} className="hover:bg-muted/20">
-                        <td className="whitespace-nowrap px-3 py-1.5 font-medium text-foreground">
+                        <td className="px-3 py-1.5 font-medium whitespace-nowrap text-foreground">
                           {bk.bookmakerName}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-foreground">
+                        <td className="px-3 py-1.5 whitespace-nowrap text-foreground">
                           {bk.bookmakerHomeName ?? '-'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-foreground">
+                        <td className="px-3 py-1.5 whitespace-nowrap text-foreground">
                           {bk.bookmakerAwayName ?? '-'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-muted-foreground">
+                        <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
                           {bk.bookmakerCompetitionName ?? '-'}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5">
+                        <td className="px-3 py-1.5 whitespace-nowrap">
                           <code className="rounded bg-muted px-1 py-0.5 font-mono">
                             {bk.matchMethod}
                           </code>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-center font-mono text-foreground">
+                        <td className="px-3 py-1.5 text-center font-mono whitespace-nowrap text-foreground">
                           {(bk.matchConfidence * 100).toFixed(0)}%
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5">
+                        <td className="px-3 py-1.5 whitespace-nowrap">
                           <span className={statusBadge(bk.matchStatus)}>
                             {bk.matchStatus.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-1.5 text-muted-foreground">
+                        <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
                           {formatDate(bk.matchedAt)}
                         </td>
                       </tr>

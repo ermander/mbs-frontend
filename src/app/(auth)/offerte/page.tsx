@@ -23,7 +23,7 @@ export default async function OffertePage() {
   const result = await fetchPublishedOffers()
   return (
     <DsPageShell>
-      <DsContainer className="flex flex-col gap-8 pb-16 pt-6">
+      <DsContainer className="flex flex-col gap-8 pt-6 pb-16">
         <h1 className="sr-only">{OFFERS_COPY.title}</h1>
         {result.ok ? (
           <Suspense>

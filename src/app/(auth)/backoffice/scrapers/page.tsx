@@ -203,12 +203,12 @@ export default function BackofficeScrapersPage() {
               disabled={togglingGlobal}
               onClick={handleGlobalToggle}
               title={globalEnabled ? 'Metti in pausa tutto lo scraping' : 'Riattiva lo scraping'}
-              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${
                 globalEnabled ? 'bg-green-500' : 'bg-red-500'
               }`}
             >
               <span
-                className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-xs transition-transform ${
                   globalEnabled ? 'translate-x-8' : 'translate-x-1'
                 }`}
               />
@@ -278,7 +278,7 @@ export default function BackofficeScrapersPage() {
                     {scraper.note && !isEditingNote && (
                       <p
                         data-testid={`scraper-note-${scraper.slug}`}
-                        className="mt-1 whitespace-pre-line text-xs text-foreground/80"
+                        className="mt-1 text-xs whitespace-pre-line text-foreground/80"
                       >
                         {scraper.note}
                       </p>
@@ -334,10 +334,10 @@ export default function BackofficeScrapersPage() {
                           ? 'Disattiva scraping'
                           : 'Attiva scraping'
                     }
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${toggleColor}`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${toggleColor}`}
                   >
                     <span
-                      className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-xs transition-transform ${
                         scraper.scrape_enabled ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
@@ -359,7 +359,7 @@ export default function BackofficeScrapersPage() {
                       disabled={savingNoteId === scraper.id}
                       onChange={(e) => setNoteDraft(e.target.value)}
                       placeholder="Perché è spento, cosa lo blocca, cosa è stato provato…"
-                      className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                      className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-50"
                     />
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <p className="text-xs text-muted-foreground">

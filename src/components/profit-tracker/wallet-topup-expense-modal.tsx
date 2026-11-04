@@ -147,7 +147,7 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
         {/* Portal container for SearchableSelect dropdowns inside the modal */}
         <div
           ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-[9998]"
+          className="pointer-events-none fixed inset-0 z-9998"
           aria-hidden
         />
         <DialogHeader>
@@ -263,7 +263,7 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
             <Label htmlFor="topup-desc">Descrizione (opzionale)</Label>
             <textarea
               id="topup-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
               value={descrizione}
               onChange={(e) => setDescrizione(e.target.value)}
             />

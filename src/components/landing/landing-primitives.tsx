@@ -29,7 +29,7 @@ export function Eyebrow({
   return (
     <span
       className={cn(
-        'font-ow-mono text-xs font-normal uppercase tracking-[0.02em] text-ow-text-3',
+        'font-ow-mono text-xs font-normal tracking-[0.02em] text-ow-text-3 uppercase',
         className,
       )}
     >
@@ -62,7 +62,7 @@ export function SectionHeading({
           size === 'lg'
             ? 'text-[28px] sm:text-[32px] lg:text-[40px]'
             : 'text-2xl sm:text-[28px] lg:text-[32px]',
-          'font-medium leading-[1.1] tracking-[-0.022em] text-ow-text',
+          'leading-[1.1] font-medium tracking-[-0.022em] text-ow-text',
         )}
       >
         {title}
@@ -82,11 +82,11 @@ export const landingButtonVariant: Record<LandingButtonVariant, string> = {
   /** Alias di neutral, tenuto per compatibilità con i chiamanti. */
   white: 'bg-ow-neutral text-ow-on-neutral hover:opacity-90',
   /** Secondario: trasparente con bordo hairline. */
-  ghost: 'border border-ow-line-strong bg-transparent text-ow-text hover:bg-white/[0.04]',
+  ghost: 'border border-ow-line-strong bg-transparent text-ow-text hover:bg-white/4',
 }
 
 export const landingFocusRing =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ow-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ow-bg'
+  'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ow-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ow-bg'
 
 /** Pulsante della landing: 36px, 14px medium, raggio 6px. L'altezza la può forzare il chiamante. */
 export function LandingButton({
@@ -104,7 +104,7 @@ export function LandingButton({
     <Link
       href={href}
       className={cn(
-        'inline-flex h-9 items-center justify-center whitespace-nowrap rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] transition-[opacity,background-color]',
+        'inline-flex h-9 items-center justify-center rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] whitespace-nowrap transition-[opacity,background-color]',
         landingFocusRing,
         landingButtonVariant[variant],
         className,

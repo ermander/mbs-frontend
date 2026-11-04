@@ -266,7 +266,7 @@ export default function ReviewQueuePage() {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="min-w-full text-sm">
-            <thead className="bg-muted text-left font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
+            <thead className="bg-muted text-left font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
               <tr>
                 <th className="p-2">Status</th>
                 <th className="p-2">Bookmaker</th>

@@ -8,7 +8,7 @@ import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
 export const topnavDsScope = cn(
   dsSerif.variable,
   dsSans.variable,
-  'ds-scope ds-calc-bridge font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light]',
+  'ds-scope ds-calc-bridge font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light',
 )
 
 /** Pannello delle tendine della barra: surface-raised, hairline, raggio md, ombra md. */

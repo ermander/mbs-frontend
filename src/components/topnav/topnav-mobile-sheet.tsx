@@ -48,7 +48,7 @@ export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps
           Voci di navigazione dell&apos;area autenticata
         </SheetDescription>
 
-        <div className="flex h-[var(--topnav-h)] shrink-0 items-center justify-between border-b border-ds-line px-4">
+        <div className="flex h-(--topnav-h) shrink-0 items-center justify-between border-b border-ds-line px-4">
           <Link
             href={POST_AUTH_REDIRECT}
             onClick={close}
@@ -72,7 +72,7 @@ export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps
           {sections.map((section) => (
             <div key={section.label} className="mb-3 last:mb-0">
               {section.display === 'menu' && (
-                <div className="ds-label mb-1 mt-2 px-3 uppercase text-ds-ink-muted">
+                <div className="ds-label mt-2 mb-1 px-3 text-ds-ink-muted uppercase">
                   {section.label}
                 </div>
               )}

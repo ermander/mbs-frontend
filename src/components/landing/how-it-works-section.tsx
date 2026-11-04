@@ -18,7 +18,7 @@ export function HowItWorksSection() {
             {HOW_IT_WORKS.steps.map((step, i) => (
               <li
                 key={step.title}
-                className="relative flex gap-4 pb-6 before:absolute before:bottom-1 before:left-[13px] before:top-8 before:w-0.5 before:bg-ds-line last:pb-0 last:before:hidden"
+                className="relative flex gap-4 pb-6 before:absolute before:top-8 before:bottom-1 before:left-[13px] before:w-0.5 before:bg-ds-line last:pb-0 last:before:hidden"
               >
                 <span
                   aria-hidden

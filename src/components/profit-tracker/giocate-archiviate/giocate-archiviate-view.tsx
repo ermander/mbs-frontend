@@ -284,7 +284,7 @@ export function GiocateArchiviateView() {
           {eventDateLabel(bet.eventoData)}
         </span>
         {caption && (
-          <span className="ds-caption mt-0.5 block whitespace-nowrap tabular-nums text-ds-ink-muted">
+          <span className="ds-caption mt-0.5 block whitespace-nowrap text-ds-ink-muted tabular-nums">
             {caption}
           </span>
         )}
@@ -301,7 +301,7 @@ export function GiocateArchiviateView() {
           <span className="mt-0.5 inline-flex text-ds-ink-muted">
             <OmSportIcon sport={bet.sport} size={20} />
           </span>
-          <span className="font-semibold text-ds-ink [text-wrap:pretty]">
+          <span className="font-semibold text-pretty text-ds-ink">
             {multi ? events[0] : bet.eventoNome}
             {multi && events.length > 1 && (
               <span className="font-normal text-ds-ink-muted"> +{events.length - 1}</span>
@@ -523,7 +523,7 @@ export function GiocateArchiviateView() {
 
       {active.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="ds-label uppercase text-ds-ink-muted">Filtri attivi</span>
+          <span className="ds-label text-ds-ink-muted uppercase">Filtri attivi</span>
           {active.map((a) => (
             <button
               key={a.key}
@@ -581,8 +581,8 @@ export function GiocateArchiviateView() {
                     : 'profitto, dal più alto'}
               </caption>
               <thead>
-                <tr className="ds-label bg-ds-surface-sunken text-left uppercase text-ds-ink-muted">
-                  <th scope="col" className="w-[118px] whitespace-nowrap py-3 pl-4 pr-2.5">
+                <tr className="ds-label bg-ds-surface-sunken text-left text-ds-ink-muted uppercase">
+                  <th scope="col" className="w-[118px] py-3 pr-2.5 pl-4 whitespace-nowrap">
                     Data evento
                   </th>
                   <th scope="col" className="min-w-[220px] px-2.5 py-3">
@@ -600,7 +600,7 @@ export function GiocateArchiviateView() {
                   <th scope="col" className="w-[160px] px-2.5 py-3">
                     Nota
                   </th>
-                  <th scope="col" className="w-[150px] py-3 pl-2 pr-4">
+                  <th scope="col" className="w-[150px] py-3 pr-4 pl-2">
                     <span className="sr-only">Azioni</span>
                   </th>
                 </tr>
@@ -614,13 +614,13 @@ export function GiocateArchiviateView() {
                       flashId === bet.id && 'bg-ds-brand-soft',
                     )}
                   >
-                    <td className="py-3 pl-4 pr-2.5">{whenCell(bet)}</td>
+                    <td className="py-3 pr-2.5 pl-4">{whenCell(bet)}</td>
                     <td className="px-2.5 py-3">{eventCell(bet)}</td>
                     <td className="px-2.5 py-3">{accountCell(bet)}</td>
                     <td className="px-2.5 py-3 text-right">{profitCell(bet, 'sm')}</td>
                     <td className="max-w-[128px] px-2.5 py-3">{muted(bet.tag)}</td>
                     <td className="max-w-[160px] px-2.5 py-3">{muted(bet.nota)}</td>
-                    <td className="py-2 pl-2 pr-4">{actions(bet)}</td>
+                    <td className="py-2 pr-4 pl-2">{actions(bet)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -712,7 +712,7 @@ export function GiocateArchiviateView() {
           </>
         }
       >
-        <p className="ds-body m-0 text-ds-ink [text-wrap:pretty]">
+        <p className="ds-body m-0 text-pretty text-ds-ink">
           L&apos;eliminazione è definitiva: la giocata e le sue gambe spariscono dallo storico.
         </p>
       </DsModal>

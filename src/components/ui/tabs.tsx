@@ -26,7 +26,7 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
           className={cn(
             'rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200',
             activeTab === tab.id
-              ? 'bg-primary/15 text-primary shadow-sm'
+              ? 'bg-primary/15 text-primary shadow-xs'
               : 'text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
         >

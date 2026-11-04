@@ -38,7 +38,7 @@ export function PasswordRevealButton({
       aria-controls={controls}
       title={label}
       className={cn(
-        'absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[4px] transition-colors',
+        'absolute top-1/2 right-1 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-ds-xs transition-colors',
         'disabled:pointer-events-none disabled:opacity-50',
         className,
       )}
@@ -69,7 +69,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           onToggle={() => setVisible((v) => !v)}
           controls={id}
           disabled={disabled}
-          className="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          className="text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-hidden"
         />
       </div>
     )

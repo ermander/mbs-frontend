@@ -346,7 +346,7 @@ export default function MatcherPage() {
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground uppercase">
               <th className="px-3 py-2">Rating</th>
               <th className="px-3 py-2">Tipo</th>
               <th className="px-3 py-2">Evento</th>
@@ -389,8 +389,8 @@ export default function MatcherPage() {
                       {r.sportName} — {r.competitionName}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs">{formatDate(r.startTime)}</td>
-                  <td className="whitespace-nowrap px-3 py-2">
+                  <td className="px-3 py-2 text-xs whitespace-nowrap">{formatDate(r.startTime)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
                     {marketLabel(r.marketTypeKey, r.line, r)}
                   </td>
                   {/* Leg 1 */}

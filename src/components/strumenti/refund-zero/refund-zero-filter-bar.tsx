@@ -103,7 +103,7 @@ export function RefundZeroFilterBar({
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-24 space-y-1">
+        <div className="space-y-1 w-24">
           <Label htmlFor="rz-stake" className="text-[11px] text-muted-foreground">
             Puntata €
           </Label>
@@ -116,7 +116,7 @@ export function RefundZeroFilterBar({
             aria-label="Puntata a bet365 in euro"
           />
         </div>
-        <div className="w-28 space-y-1">
+        <div className="space-y-1 w-28">
           <Label htmlFor="rz-commission" className="text-[11px] text-muted-foreground">
             Commissione %
           </Label>
@@ -130,12 +130,12 @@ export function RefundZeroFilterBar({
             title="La commissione dell'exchange sulle vincite nette, in percento"
           />
         </div>
-        <div className="min-w-[200px] flex-1 space-y-1">
+        <div className="space-y-1 min-w-[200px] flex-1">
           <Label htmlFor="rz-search" className="text-[11px] text-muted-foreground">
             Cerca
           </Label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="rz-search"
               value={filters.search}

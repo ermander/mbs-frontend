@@ -126,7 +126,7 @@ function TrendTooltip({
       >
         Nel mese {formatSignedCurrency(datum.mensile)}
       </p>
-      <p className="font-mono tabular-nums text-muted-foreground">
+      <p className="font-mono text-muted-foreground tabular-nums">
         Da inizio anno {formatSignedCurrency(datum.cumulato)}
       </p>
     </div>
@@ -150,7 +150,7 @@ export function ProfitTrendChart({
   const areaColor = lastCumulato >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR
 
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-border bg-card/70 p-4 shadow-xs">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-foreground">Trend guadagni {year}</p>

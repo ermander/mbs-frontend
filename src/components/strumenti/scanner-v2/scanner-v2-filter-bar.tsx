@@ -126,7 +126,7 @@ function bookOptions(list: MatcherBookmaker[]): OmOption[] {
 function PanelGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="grid items-start gap-3 md:grid-cols-[120px_minmax(0,1fr)] md:gap-6">
-      <span className="ds-label uppercase text-ds-ink-muted md:pt-[26px]">{title}</span>
+      <span className="ds-label text-ds-ink-muted uppercase md:pt-[26px]">{title}</span>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
     </div>
   )
@@ -270,7 +270,7 @@ export function ScannerV2FilterBar({
       {/* Barra principale */}
       <div className="grid grid-cols-2 items-end gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-4 shadow-ds-sm sm:grid-cols-2 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_120px_150px]">
         <div className="col-span-2 flex min-w-0 flex-col gap-1.5 lg:col-span-1">
-          <label htmlFor="om-search" className="text-sm font-semibold leading-5 text-ds-ink">
+          <label htmlFor="om-search" className="text-sm leading-5 font-semibold text-ds-ink">
             Cerca
           </label>
           <div className="flex h-10 items-center gap-2 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-2.5 transition-[border-color,box-shadow] duration-150 focus-within:border-ds-brand focus-within:shadow-ds-focus">
@@ -281,7 +281,7 @@ export function ScannerV2FilterBar({
               placeholder="Evento o competizione"
               value={filters.search}
               onChange={(e) => onChange({ search: e.target.value })}
-              className="ds-body h-full min-w-0 flex-1 border-0 bg-transparent text-ds-ink outline-none placeholder:text-ds-ink-faint"
+              className="ds-body h-full min-w-0 flex-1 border-0 bg-transparent text-ds-ink outline-hidden placeholder:text-ds-ink-faint"
             />
           </div>
         </div>
@@ -524,7 +524,7 @@ export function ScannerV2FilterBar({
       {/* Filtri attivi */}
       {chips.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="ds-label uppercase text-ds-ink-muted">Filtri attivi</span>
+          <span className="ds-label text-ds-ink-muted uppercase">Filtri attivi</span>
           {chips.map((c) => (
             <button
               key={c.key}

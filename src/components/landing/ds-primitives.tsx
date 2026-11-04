@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
  */
 
 /** Anello di fuoco del design: due anelli (superficie e brand) al posto dell'outline. */
-export const dsFocusRing = 'focus-visible:outline-none focus-visible:shadow-ds-focus'
+export const dsFocusRing = 'focus-visible:outline-hidden focus-visible:shadow-ds-focus'
 
 /**
  * Voce della Navbar del design: 64px, 500 in ink-muted, ink al passaggio; quella attiva in ink a
@@ -159,7 +159,7 @@ export function DsEyebrow({
   className?: string
   children: React.ReactNode
 }) {
-  return <span className={cn('ds-label uppercase text-ds-ink-muted', className)}>{children}</span>
+  return <span className={cn('ds-label text-ds-ink-muted uppercase', className)}>{children}</span>
 }
 
 /** Link nel testo: brand sottolineato, brand-hover al passaggio. */

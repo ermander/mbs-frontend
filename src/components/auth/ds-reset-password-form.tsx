@@ -41,9 +41,7 @@ const inlineLink = cn(
  * quando il controllo non ha risposto (rete, 429, backend senza la rotta): si va avanti senza.
  */
 type LinkCheck =
-  | { status: 'checking' }
-  | { status: 'valid'; email: string | null }
-  | { status: 'dead' }
+  { status: 'checking' } | { status: 'valid'; email: string | null } | { status: 'dead' }
 
 type FormError = { kind: 'dead' } | { kind: 'message'; text: string } | null
 
@@ -123,7 +121,7 @@ export function DsResetPasswordForm({ token }: { token: string }) {
         ) : link.email ? (
           <>
             Per l&apos;account{' '}
-            <b className="font-semibold text-ds-ink [overflow-wrap:anywhere]">{link.email}</b>.
+            <b className="font-semibold wrap-anywhere text-ds-ink">{link.email}</b>.
           </>
         ) : (
           'Scegli la password con cui accederai da adesso.'
@@ -237,7 +235,7 @@ function FocusedTitle({ children }: { children: React.ReactNode }) {
     ref.current?.focus()
   }, [])
   return (
-    <h1 ref={ref} tabIndex={-1} className="ds-title mt-4 outline-none">
+    <h1 ref={ref} tabIndex={-1} className="ds-title mt-4 outline-hidden">
       {children}
     </h1>
   )
@@ -249,7 +247,7 @@ function DeadLink() {
     <div>
       <Link2Off className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
       <FocusedTitle>Link non valido</FocusedTitle>
-      <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+      <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
         Questo link è scaduto o è già stato usato. I link per cambiare la password valgono 60 minuti
         e funzionano una volta sola.
       </p>
@@ -268,7 +266,7 @@ function PasswordChanged() {
     <div>
       <Check className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
       <FocusedTitle>Password cambiata</FocusedTitle>
-      <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+      <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
         Da adesso usi la nuova password e sei già dentro. Gli altri dispositivi collegati sono stati
         scollegati.
       </p>

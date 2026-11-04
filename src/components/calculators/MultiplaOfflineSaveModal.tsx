@@ -288,12 +288,12 @@ export function MultiplaOfflineSaveModal({
       <DialogContent className="max-h-[85vh] max-w-lg gap-0 overflow-y-auto p-0" showClose={true}>
         <div
           ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-[9998]"
+          className="pointer-events-none fixed inset-0 z-9998"
           aria-hidden
         />
         {savedBetId ? (
           <>
-            <div className="px-6 pb-4 pt-6">
+            <div className="px-6 pt-6 pb-4">
               <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                 Giocata salvata
               </DialogTitle>
@@ -330,7 +330,7 @@ export function MultiplaOfflineSaveModal({
           </>
         ) : (
           <>
-            <div className="px-6 pb-1 pt-6">
+            <div className="px-6 pt-6 pb-1">
               <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
                 Salva Multipla
               </DialogTitle>
@@ -342,7 +342,7 @@ export function MultiplaOfflineSaveModal({
             <div className="grid gap-4 px-6 py-5">
               {/* Collaboratore Punta */}
               <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
+                <Label className="font-mono text-xs font-medium tracking-[0.02em] text-primary uppercase">
                   Collaboratore Punta
                 </Label>
                 <div className="space-y-2">
@@ -397,7 +397,7 @@ export function MultiplaOfflineSaveModal({
 
               {/* Collaboratore Banca */}
               <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-destructive">
+                <Label className="font-mono text-xs font-medium tracking-[0.02em] text-destructive uppercase">
                   Collaboratore Copertura
                 </Label>
                 <div className="space-y-2">

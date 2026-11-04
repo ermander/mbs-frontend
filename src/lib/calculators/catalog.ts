@@ -20,14 +20,7 @@ export type CalculatorSlug =
 export type CalculatorGroupId = 'sport' | 'casino'
 
 export type CalculatorIcon =
-  | 'scale'
-  | 'arrows'
-  | 'triangle'
-  | 'layers'
-  | 'target'
-  | 'dices'
-  | 'circle-dot'
-  | 'gift'
+  'scale' | 'arrows' | 'triangle' | 'layers' | 'target' | 'dices' | 'circle-dot' | 'gift'
 
 export interface CalculatorTool {
   slug: CalculatorSlug

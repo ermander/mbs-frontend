@@ -15,7 +15,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light]',
+        'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light',
       )}
     >
       <LandingNav />

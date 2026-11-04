@@ -430,7 +430,7 @@ export default function PalinsestoPage() {
         className="flex gap-4"
         style={{ height: 'calc(100vh - 220px - var(--topnav-h))', minHeight: '32rem' }}
       >
-        <div className="w-[22rem] shrink-0">
+        <div className="w-88 shrink-0">
           <ScheduleTree
             tree={tree}
             loading={treeLoading}

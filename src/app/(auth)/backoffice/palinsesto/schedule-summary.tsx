@@ -84,7 +84,7 @@ export function ScheduleSummary({
   const t = summary.totals
 
   return (
-    <div className="mb-4 space-y-3">
+    <div className="space-y-3 mb-4">
       {/* Per-sport cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {summary.sports.map((s) => (
@@ -174,7 +174,7 @@ export function ScheduleSummary({
 
       {/* Sync runs + provider statuses */}
       <details className="rounded-lg border border-border bg-card">
-        <summary className="cursor-pointer select-none px-4 py-2 text-sm font-medium text-foreground">
+        <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-foreground select-none">
           Sincronizzazioni api-sports e stati delle partite future
           <span className="ml-2 text-xs font-normal text-muted-foreground">
             (aggiornato {ago(summary.now, now)})
@@ -194,7 +194,7 @@ export function ScheduleSummary({
         </summary>
         <div className="grid grid-cols-1 gap-4 border-t border-border px-4 py-3 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <div className="mb-1 font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
+            <div className="mb-1 font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
               Ultimo run per tipo
             </div>
             {runs.length === 0 ? (
@@ -244,7 +244,7 @@ export function ScheduleSummary({
             )}
           </div>
           <div className="lg:col-span-2">
-            <div className="mb-1 font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
+            <div className="mb-1 font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
               Partite future per stato (canonico / codice api-sports)
             </div>
             {summary.futureByStatus.length === 0 ? (

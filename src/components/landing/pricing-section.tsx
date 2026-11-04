@@ -18,12 +18,10 @@ export function PricingSection() {
       <DsContainer className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16">
         <div>
           <h2 className="ds-title">{PRICING.title}</h2>
-          <p className="ds-body-lg mt-4 max-w-[52ch] text-ds-ink-muted [text-wrap:pretty]">
+          <p className="ds-body-lg mt-4 max-w-[52ch] text-pretty text-ds-ink-muted">
             {PRICING.text}
           </p>
-          <p className="ds-body mt-3 max-w-[52ch] text-ds-ink-muted [text-wrap:pretty]">
-            {PRICING.text2}
-          </p>
+          <p className="ds-body mt-3 max-w-[52ch] text-pretty text-ds-ink-muted">{PRICING.text2}</p>
         </div>
 
         <DsCard size="lg">

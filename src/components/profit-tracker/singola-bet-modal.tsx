@@ -322,7 +322,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
         <div className="flex flex-col gap-2">
           <p className={sectionLabel}>Scommessa</p>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold leading-5 text-ds-ink">Categoria</span>
+            <span className="text-sm leading-5 font-semibold text-ds-ink">Categoria</span>
             <GTabs
               label="Categoria"
               items={CATEGORY_ITEMS}

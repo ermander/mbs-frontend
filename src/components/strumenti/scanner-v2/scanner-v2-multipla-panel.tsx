@@ -158,8 +158,8 @@ export function ScannerV2MultiplaPanel({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-ds-line pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-        <span className="ds-label uppercase text-ds-ink-muted">Multipla</span>
+      <div className="flex flex-col gap-3 border-t border-ds-line pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+        <span className="ds-label text-ds-ink-muted uppercase">Multipla</span>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="ds-caption text-ds-ink-muted">Eventi</div>

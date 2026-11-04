@@ -76,7 +76,7 @@ const SECTIONS: readonly LegalSection[] = [
     body: (
       <>
         <p>Trattiamo soltanto i dati che servono a far funzionare il servizio:</p>
-        <ul className="list-disc space-y-3 pl-5">
+        <ul className="space-y-3 list-disc pl-5">
           <li>
             <Term>Registrazione e account.</Term> Nome, cognome, indirizzo email e password. La
             password è conservata solo in forma di hash (bcrypt) e non è leggibile da nessuno;
@@ -149,7 +149,7 @@ const SECTIONS: readonly LegalSection[] = [
           I dati sono trattati dal titolare e dai fornitori che servono a far funzionare il
           servizio, ciascuno per la sola parte che lo riguarda:
         </p>
-        <ul className="list-disc space-y-3 pl-5">
+        <ul className="space-y-3 list-disc pl-5">
           <li>
             <Term>Fornitore di hosting cloud.</Term> Il server dell&apos;applicazione e il database
             girano su un&apos;infrastruttura cloud in affitto; il fornitore tratta i dati per nostro
@@ -200,7 +200,7 @@ const SECTIONS: readonly LegalSection[] = [
     id: 'conservazione',
     title: 'Conservazione',
     body: (
-      <ul className="list-disc space-y-3 pl-5">
+      <ul className="space-y-3 list-disc pl-5">
         <li>
           <Term>Dati dell&apos;account e del servizio</Term> (profilo, dati del Profit Tracker,
           collegamento Telegram): finché il tuo account esiste. Puoi eliminare l&apos;account da

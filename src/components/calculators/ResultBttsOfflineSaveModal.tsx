@@ -156,10 +156,10 @@ export function ResultBttsOfflineSaveModal({
     >
       <DialogContent className="max-h-[85vh] max-w-lg gap-0 overflow-y-auto p-0" showClose={true}>
         {/* Portal container for the SearchableSelect dropdowns inside the modal */}
-        <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-[9998]" aria-hidden />
+        <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-9998" aria-hidden />
         {savedBetId ? (
           <>
-            <div className="px-6 pb-4 pt-6">
+            <div className="px-6 pt-6 pb-4">
               <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Giocata salvata
               </DialogTitle>
@@ -190,7 +190,7 @@ export function ResultBttsOfflineSaveModal({
           </>
         ) : (
           <>
-            <div className="px-6 pb-1 pt-6">
+            <div className="px-6 pt-6 pb-1">
               <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
                 Salva giocata Risultato + Goal
               </DialogTitle>
@@ -235,7 +235,7 @@ export function ResultBttsOfflineSaveModal({
               </div>
 
               <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-                <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
+                <Label className="font-mono text-xs font-medium tracking-[0.02em] text-primary uppercase">
                   Collaboratore (tutte le gambe)
                 </Label>
                 <div className="space-y-2">

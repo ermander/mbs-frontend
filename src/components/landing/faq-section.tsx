@@ -11,7 +11,7 @@ export function FaqSection() {
           {FAQ.items.map((item) => (
             <div key={item.q} className="border-b border-ds-line py-5">
               <h3 className="ds-subheading">{item.q}</h3>
-              <p className="ds-body mt-1.5 text-ds-ink-muted [text-wrap:pretty]">{item.a}</p>
+              <p className="ds-body mt-1.5 text-pretty text-ds-ink-muted">{item.a}</p>
             </div>
           ))}
         </div>

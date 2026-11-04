@@ -193,7 +193,7 @@ export function SearchableMultiSelect({
       >
         <div className="shrink-0 border-b border-border p-1.5">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchInputRef}
               type="text"
@@ -219,7 +219,7 @@ export function SearchableMultiSelect({
                 role="option"
                 aria-selected={isSelected}
                 className={cn(
-                  'relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 outline-none transition-colors hover:bg-muted/80 focus:bg-muted/80',
+                  'relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 outline-hidden transition-colors select-none hover:bg-muted/80 focus:bg-muted/80',
                   isSmall ? 'text-xs' : 'text-sm',
                 )}
                 onClick={() => onToggle(opt.id)}
@@ -270,8 +270,8 @@ export function SearchableMultiSelect({
           tabIndex={0}
           className={cn(
             'flex w-full cursor-pointer flex-wrap items-center gap-1 rounded-md border border-input bg-background text-left text-foreground transition-colors',
-            'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-            isSmall ? 'min-h-[1.75rem] px-2 py-1' : 'min-h-[2.25rem] px-3 py-1.5',
+            'hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden',
+            isSmall ? 'min-h-7 px-2 py-1' : 'min-h-9 px-3 py-1.5',
           )}
           onClick={() => setOpen((prev) => !prev)}
           onKeyDown={(e) => {
@@ -297,7 +297,7 @@ export function SearchableMultiSelect({
               <span className="max-w-[120px] truncate">{opt.name}</span>
               <button
                 type="button"
-                className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground focus:outline-none"
+                className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground focus:outline-hidden"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleRemove(opt.id)

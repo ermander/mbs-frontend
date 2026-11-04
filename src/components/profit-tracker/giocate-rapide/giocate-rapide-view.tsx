@@ -260,7 +260,7 @@ export function GiocateRapideView() {
       <>
         <span className="ds-num-sm block whitespace-nowrap text-ds-ink">{r.date}</span>
         {r.caption && (
-          <span className="ds-caption mt-0.5 block whitespace-nowrap tabular-nums text-ds-ink-muted">
+          <span className="ds-caption mt-0.5 block whitespace-nowrap text-ds-ink-muted tabular-nums">
             {r.caption}
           </span>
         )}
@@ -451,7 +451,7 @@ export function GiocateRapideView() {
 
       {active.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="ds-label uppercase text-ds-ink-muted">Filtri attivi</span>
+          <span className="ds-label text-ds-ink-muted uppercase">Filtri attivi</span>
           {active.map((a) => (
             <button
               key={a.key}
@@ -502,8 +502,8 @@ export function GiocateRapideView() {
                   : SORT_OPTIONS.find((o) => o.value === sort)?.label.toLowerCase()}
               </caption>
               <thead>
-                <tr className="ds-label bg-ds-surface-sunken text-left uppercase text-ds-ink-muted">
-                  <th scope="col" className="w-[116px] whitespace-nowrap py-3 pl-4 pr-2.5">
+                <tr className="ds-label bg-ds-surface-sunken text-left text-ds-ink-muted uppercase">
+                  <th scope="col" className="w-[116px] py-3 pr-2.5 pl-4 whitespace-nowrap">
                     Registrata il
                   </th>
                   <th scope="col" className="w-[150px] px-2.5 py-3">
@@ -521,7 +521,7 @@ export function GiocateRapideView() {
                   <th scope="col" className="w-[120px] px-2.5 py-3 text-right">
                     Movimento
                   </th>
-                  <th scope="col" className="w-[84px] py-3 pl-2 pr-4">
+                  <th scope="col" className="w-[84px] py-3 pr-4 pl-2">
                     <span className="sr-only">Azioni</span>
                   </th>
                 </tr>
@@ -535,9 +535,9 @@ export function GiocateRapideView() {
                       flashId === bet.id && 'bg-ds-brand-soft',
                     )}
                   >
-                    <td className="py-3 pl-4 pr-2.5">{whenCell(bet)}</td>
+                    <td className="py-3 pr-2.5 pl-4">{whenCell(bet)}</td>
                     <td className="px-2.5 py-3">{accountCell(bet)}</td>
-                    <td className="whitespace-nowrap px-2.5 py-3 font-semibold text-ds-ink">
+                    <td className="px-2.5 py-3 font-semibold whitespace-nowrap text-ds-ink">
                       {quickMethodLabel(bet.quickMethod)}
                     </td>
                     <td className="px-2.5 py-3">{tagSelect(bet, 'riga')}</td>
@@ -545,7 +545,7 @@ export function GiocateRapideView() {
                     <td className="px-2.5 py-3 text-right">
                       <DsMoney value={bet.movimento} size="sm" />
                     </td>
-                    <td className="py-2 pl-2 pr-4">{actions(bet)}</td>
+                    <td className="py-2 pr-4 pl-2">{actions(bet)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -573,7 +573,7 @@ export function GiocateRapideView() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>{accountCell(bet)}</div>
                   {bet.nota && (
-                    <div className="min-w-0 max-w-[60%] text-right">{notaCell(bet)}</div>
+                    <div className="max-w-[60%] min-w-0 text-right">{notaCell(bet)}</div>
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-3 border-t border-ds-line pt-3">
@@ -643,7 +643,7 @@ export function GiocateRapideView() {
           </>
         }
       >
-        <p className="ds-body m-0 text-ds-ink [text-wrap:pretty]">
+        <p className="ds-body m-0 text-pretty text-ds-ink">
           L&apos;eliminazione è definitiva: il movimento non conterà più nel saldo del conto e nelle
           statistiche.
         </p>

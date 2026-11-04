@@ -79,7 +79,7 @@ export function DsForgotPasswordForm() {
   return (
     <>
       <h1 className="ds-title">Recupera la password</h1>
-      <p className="mt-2 text-ds-ink-muted [text-wrap:pretty]">
+      <p className="mt-2 text-pretty text-ds-ink-muted">
         Scrivi l&apos;email con cui ti sei registrato. Ti mandiamo un link per scegliere una
         password nuova.
       </p>

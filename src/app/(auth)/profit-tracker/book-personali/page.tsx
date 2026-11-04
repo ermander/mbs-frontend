@@ -141,9 +141,9 @@ function BooksSection() {
       </form>
 
       {/* Vista mobile: cards */}
-      <div className="block space-y-4 sm:hidden">
+      <div className="space-y-4 block sm:hidden">
         {books.map((book) => (
-          <div key={book.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div key={book.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{book.nome}</span>
@@ -186,17 +186,17 @@ function BooksSection() {
         ))}
 
         {books.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun book personale registrato. Usa &quot;Nuovo book&quot; per crearne uno.
           </div>
         )}
       </div>
 
       {/* Vista desktop: tabella */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Exchange</th>
@@ -352,9 +352,9 @@ function TagsSection() {
       {tagsError && !isLoadingTags && <p className="text-xs text-destructive">{tagsError}</p>}
 
       {/* Vista mobile: cards */}
-      <div className="block space-y-3 sm:hidden">
+      <div className="space-y-3 block sm:hidden">
         {tags.map((tag) => (
-          <div key={tag.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div key={tag.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div className="flex items-center gap-3">
               <span
                 className="h-4 w-4 shrink-0 rounded-full"
@@ -386,17 +386,17 @@ function TagsSection() {
         ))}
 
         {tags.length === 0 && !isLoadingTags && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun tag creato. Usa &quot;Nuovo tag&quot; per crearne uno.
           </div>
         )}
       </div>
 
       {/* Vista desktop: tabella */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Colore</th>
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-right">Azioni</th>

@@ -188,7 +188,7 @@ function TrendTooltip({
           <span className="text-muted-foreground">
             {perBookmaker ? bookmakerLabel(String(entry.dataKey)) : 'Valore'}
           </span>
-          <span className="ml-auto pl-3 font-medium tabular-nums text-foreground">
+          <span className="ml-auto pl-3 font-medium text-foreground tabular-nums">
             {typeof entry.value === 'number' ? formatValue(entry.value, unit) : '—'}
           </span>
         </div>

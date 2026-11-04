@@ -43,7 +43,7 @@ export function CalculatorSection() {
             </div>
             <div className="flex justify-between gap-3">
               <span>{example.commissionLabel}</span>
-              <span className="font-semibold tabular-nums text-ds-ink">{example.commission}</span>
+              <span className="font-semibold text-ds-ink tabular-nums">{example.commission}</span>
             </div>
           </div>
           <div

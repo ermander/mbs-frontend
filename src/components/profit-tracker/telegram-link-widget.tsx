@@ -64,7 +64,7 @@ export function TelegramLinkWidget({ botUsername }: TelegramLinkWidgetProps) {
               <p className="text-xs text-muted-foreground">
                 Collega il tuo account Telegram per ricevere notifiche automatiche sui promemoria.
               </p>
-              <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-xs text-muted-foreground">
+              <ol className="space-y-0.5 mt-1 list-decimal pl-4 text-xs text-muted-foreground">
                 <li>Genera un codice di collegamento.</li>
                 <li>
                   Apri il bot {botUsername ? `@${botUsername}` : 'Telegram dedicato'}{' '}

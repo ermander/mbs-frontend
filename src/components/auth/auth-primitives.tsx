@@ -58,9 +58,9 @@ export const AuthInput = React.forwardRef<
   <input
     ref={ref}
     className={cn(
-      'flex h-10 w-full rounded-ow-btn border border-ow-line-strong bg-white/[0.02] px-3 text-sm text-ow-text transition-colors placeholder:text-ow-text-3',
-      'focus-visible:border-ow-text-3 focus-visible:outline-none',
-      'aria-[invalid=true]:border-ow-danger',
+      'flex h-10 w-full rounded-ow-btn border border-ow-line-strong bg-white/2 px-3 text-sm text-ow-text transition-colors placeholder:text-ow-text-3',
+      'focus-visible:border-ow-text-3 focus-visible:outline-hidden',
+      'aria-invalid:border-ow-danger',
       'disabled:cursor-not-allowed disabled:opacity-50',
       className,
     )}
@@ -75,7 +75,7 @@ export const AuthLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <label
     ref={ref}
-    className={cn('text-[13px] font-medium leading-none text-ow-text-2', className)}
+    className={cn('text-[13px] leading-none font-medium text-ow-text-2', className)}
     {...props}
   />
 ))
@@ -90,7 +90,7 @@ export const AuthButton = React.forwardRef<
     ref={ref}
     type={type}
     className={cn(
-      'inline-flex h-10 w-full items-center justify-center whitespace-nowrap rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] transition-[opacity,background-color]',
+      'inline-flex h-10 w-full items-center justify-center rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] whitespace-nowrap transition-[opacity,background-color]',
       landingFocusRing,
       landingButtonVariant[variant],
       'disabled:pointer-events-none disabled:opacity-50',
@@ -112,9 +112,9 @@ export const AuthTextarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'flex min-h-[120px] w-full resize-y rounded-ow-btn border border-ow-line-strong bg-white/[0.02] px-3 py-2.5 text-sm leading-[1.5] text-ow-text transition-colors placeholder:text-ow-text-3',
-      'focus-visible:border-ow-text-3 focus-visible:outline-none',
-      'aria-[invalid=true]:border-ow-danger',
+      'flex min-h-[120px] w-full resize-y rounded-ow-btn border border-ow-line-strong bg-white/2 px-3 py-2.5 text-sm leading-normal text-ow-text transition-colors placeholder:text-ow-text-3',
+      'focus-visible:border-ow-text-3 focus-visible:outline-hidden',
+      'aria-invalid:border-ow-danger',
       'disabled:cursor-not-allowed disabled:opacity-50',
       className,
     )}
@@ -136,7 +136,7 @@ export function AuthMessage({
     <div
       role={error ? 'alert' : 'status'}
       className={cn(
-        'flex items-start gap-2.5 rounded-ow-btn border border-ow-line-strong px-3 py-2.5 text-[13px] leading-[1.5]',
+        'flex items-start gap-2.5 rounded-ow-btn border border-ow-line-strong px-3 py-2.5 text-[13px] leading-normal',
         error ? 'text-ow-danger' : 'text-ow-text-2',
       )}
     >

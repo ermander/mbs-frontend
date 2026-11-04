@@ -70,7 +70,7 @@ export default function CollaboratoriPage() {
       }
     >
       {/* Filters */}
-      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-xs sm:flex-row sm:flex-wrap sm:items-end">
         <div className="space-y-1.5 sm:min-w-[200px]">
           <Label htmlFor="filter-nome" className="text-xs">
             Nome
@@ -114,7 +114,7 @@ export default function CollaboratoriPage() {
               setFilterStato(e.target.value)
               setPage(1)
             }}
-            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
           >
             <option value="">Tutti</option>
             <option value="abilitato">Abilitato</option>
@@ -124,9 +124,9 @@ export default function CollaboratoriPage() {
       </div>
 
       {/* Mobile cards */}
-      <div className="block space-y-4 sm:hidden">
+      <div className="space-y-4 block sm:hidden">
         {isLoadingHolders && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Caricamento collaboratori in corso...
           </div>
         )}
@@ -134,7 +134,7 @@ export default function CollaboratoriPage() {
           holders.map((holder) => (
             <div
               key={holder.id}
-              className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+              className="rounded-xl border border-border bg-card/70 p-4 shadow-xs"
             >
               <div className="grid gap-2 text-xs">
                 <div className="flex justify-between gap-2">
@@ -186,7 +186,7 @@ export default function CollaboratoriPage() {
             </div>
           ))}
         {!isLoadingHolders && holders.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun collaboratore registrato. Usa &quot;Nuovo collaboratore&quot; per aggiungerne
             uno.
           </div>
@@ -199,10 +199,10 @@ export default function CollaboratoriPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Nome</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
               <th className="px-3 py-2 text-left">Stato</th>
@@ -286,7 +286,7 @@ export default function CollaboratoriPage() {
 
       {/* Pagination */}
       {holdersTotal > PAGE_SIZE && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-xs">
           <p className="text-xs text-muted-foreground">
             Pagina {page} di {totalPages} &middot; {holdersTotal} collaboratori in totale
           </p>

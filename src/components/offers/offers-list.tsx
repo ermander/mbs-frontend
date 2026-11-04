@@ -202,7 +202,7 @@ function BookSelect({
   const id = useId()
   return (
     <div className={cn('flex min-w-0 flex-col gap-1', className)}>
-      <label htmlFor={id} className="text-sm font-semibold leading-5 text-ds-ink">
+      <label htmlFor={id} className="text-sm leading-5 font-semibold text-ds-ink">
         {OFFERS_COPY.bookFilterLabel}
       </label>
       <div className="relative flex h-8 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised text-ds-ink transition-[border-color,box-shadow] focus-within:border-ds-brand focus-within:shadow-ds-focus">
@@ -210,7 +210,7 @@ function BookSelect({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pl-3 pr-8 text-base outline-none"
+          className="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-8 pl-3 text-base outline-hidden"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -220,7 +220,7 @@ function BookSelect({
         </select>
         <ChevronDown
           aria-hidden
-          className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ds-ink-muted"
+          className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-ds-ink-muted"
         />
       </div>
     </div>
@@ -255,7 +255,7 @@ function OfferCard({ offer }: { offer: Offer }) {
           </dt>
           <dd>
             {offer.profit === null ? (
-              <span className="text-base font-semibold leading-6">
+              <span className="text-base leading-6 font-semibold">
                 {OFFERS_COPY.variableProfit}
               </span>
             ) : (
@@ -267,7 +267,7 @@ function OfferCard({ offer }: { offer: Offer }) {
           <dt className="ds-caption tracking-[0.02em] text-ds-ink-muted">
             {OFFERS_COPY.difficultyLabel}
           </dt>
-          <dd className="text-base font-semibold leading-6">{offer.difficulty}</dd>
+          <dd className="text-base leading-6 font-semibold">{offer.difficulty}</dd>
         </div>
       </dl>
 

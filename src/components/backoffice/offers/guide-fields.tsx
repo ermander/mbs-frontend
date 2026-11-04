@@ -233,7 +233,7 @@ export function GuideFields({
               onChange={(value) =>
                 setTerms({ rows: replaceAt(guide.terms.rows, i, { ...row, value }) })
               }
-              className="min-w-[220px] flex-[2]"
+              className="min-w-[220px] flex-2"
             />
             <ItemControls
               name={`il termine ${i + 1}`}
@@ -316,7 +316,7 @@ function StepFields({
         {step.blocks.map((block, j) => (
           <div key={j} className="space-y-3 rounded-md border border-border bg-card p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {BLOCK_LABELS[block.type]}
               </span>
               <ItemControls

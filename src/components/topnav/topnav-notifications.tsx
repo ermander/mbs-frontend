@@ -28,7 +28,7 @@ export function TopnavNotifications() {
       {unread > 0 && (
         <span
           aria-hidden
-          className="absolute right-0 top-0.5 box-border h-[18px] min-w-[18px] rounded-full bg-ds-accent px-[5px] text-center text-[11px] font-semibold leading-[18px] text-ds-on-accent shadow-[0_0_0_2px_var(--ds-surface-raised)]"
+          className="absolute top-0.5 right-0 box-border h-[18px] min-w-[18px] rounded-full bg-ds-accent px-[5px] text-center text-[11px] leading-[18px] font-semibold text-ds-on-accent shadow-[0_0_0_2px_var(--ds-surface-raised)]"
         >
           {unread}
         </span>

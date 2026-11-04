@@ -9,9 +9,7 @@ import { isDeadResetLink } from '@/lib/password-recovery'
  * - `error`: rete, 500, 429 o la validazione: il link può essere ancora buono, si riprova.
  */
 export type VerifyFailure =
-  | { kind: 'expired'; email: string }
-  | { kind: 'dead' }
-  | { kind: 'error' }
+  { kind: 'expired'; email: string } | { kind: 'dead' } | { kind: 'error' }
 
 export function verifyFailureOf(err: unknown): VerifyFailure {
   // Il 400 del controller ha la stessa forma di quello della reimposta password (§14.257).

@@ -82,13 +82,13 @@ function CalcolatoriDashboard() {
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] md:-mx-8',
+        'ds-scope -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light md:-mx-8',
       )}
     >
       {/* Sotto il pannello aperto l'indice esce dal tab e dai lettori di schermo. */}
       <div
         inert={open ? true : undefined}
-        className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-10 px-4 pb-16 pt-10 sm:px-6"
+        className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-10 px-4 pt-10 pb-16 sm:px-6"
       >
         <h1 className="sr-only">Calcolatori</h1>
 
@@ -143,7 +143,7 @@ function CalculatorTile({
       type="button"
       onClick={onOpen}
       aria-label={`Apri ${tool.name}${admin ? ', solo admin' : ''}`}
-      className="flex min-h-16 appearance-none items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-left text-ds-ink shadow-ds-sm transition-[box-shadow,border-color] duration-150 hover:border-ds-line-strong hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-none"
+      className="flex min-h-16 appearance-none items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-left text-ds-ink shadow-ds-sm transition-[box-shadow,border-color] duration-150 hover:border-ds-line-strong hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-hidden"
     >
       <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-ds-sm bg-ds-brand-soft text-ds-brand">
         <CalculatorIcon name={tool.icon} />

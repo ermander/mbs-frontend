@@ -125,7 +125,7 @@ function BreakdownCard({
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
-        <ul className="mt-3 space-y-2.5">
+        <ul className="space-y-2.5 mt-3">
           {rows.map((row) => {
             const share = totalPositive !== 0 ? (row.totale / totalPositive) * 100 : 0
             return (
@@ -938,11 +938,11 @@ export default function ReportPage() {
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-3 font-medium">Data</th>
-                  <th className="pb-2 pr-3 font-medium">Tipo</th>
-                  <th className="pb-2 pr-3 font-medium">Descrizione</th>
-                  <th className="pb-2 pr-3 font-medium">Categoria</th>
-                  <th className="pb-2 pr-3 font-medium">Conto / Collaboratore</th>
+                  <th className="pr-3 pb-2 font-medium">Data</th>
+                  <th className="pr-3 pb-2 font-medium">Tipo</th>
+                  <th className="pr-3 pb-2 font-medium">Descrizione</th>
+                  <th className="pr-3 pb-2 font-medium">Categoria</th>
+                  <th className="pr-3 pb-2 font-medium">Conto / Collaboratore</th>
                   <th className="pb-2 text-right font-medium">Importo</th>
                 </tr>
               </thead>
@@ -952,10 +952,10 @@ export default function ReportPage() {
                     key={`${item.kind}-${item.id}`}
                     className="border-b border-border/60 last:border-0"
                   >
-                    <td className="whitespace-nowrap py-2 pr-3 text-muted-foreground">
+                    <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
                       {new Date(item.data).toLocaleDateString('it-IT')}
                     </td>
-                    <td className="whitespace-nowrap py-2 pr-3">
+                    <td className="py-2 pr-3 whitespace-nowrap">
                       <span
                         className={cn(
                           'inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium',
@@ -968,7 +968,7 @@ export default function ReportPage() {
                     <td className="max-w-[220px] truncate py-2 pr-3 text-foreground">
                       {item.kind === 'quick' ? item.nome || 'Giocata rapida' : item.nome || '—'}
                     </td>
-                    <td className="whitespace-nowrap py-2 pr-3 text-muted-foreground">
+                    <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
                       {rowCategoryLabel(item)}
                     </td>
                     <td className="max-w-[220px] truncate py-2 pr-3 text-muted-foreground">
@@ -978,7 +978,7 @@ export default function ReportPage() {
                     </td>
                     <td
                       className={cn(
-                        'whitespace-nowrap py-2 text-right font-medium tabular-nums',
+                        'py-2 text-right font-medium whitespace-nowrap tabular-nums',
                         item.importo >= 0 ? 'text-foreground' : 'text-destructive',
                       )}
                     >

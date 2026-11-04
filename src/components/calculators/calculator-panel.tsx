@@ -114,7 +114,7 @@ export function CalculatorPanel({
         dsSerif.variable,
         dsSans.variable,
         BRIDGE_CLASS,
-        'ds-scope fixed inset-0 z-50 flex flex-col overflow-auto bg-ds-surface-raised font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light]',
+        'ds-scope fixed inset-0 z-50 flex flex-col overflow-auto bg-ds-surface-raised font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light',
       )}
     >
       <div className="sticky top-0 z-10 border-b border-ds-line bg-ds-surface-raised">
@@ -211,7 +211,7 @@ export function CalculatorRating({
     <span className="ds-body-sm inline-flex items-center gap-1.5 whitespace-nowrap text-ds-ink-muted">
       {label}{' '}
       {shown && !plain && value >= 100 ? (
-        <DsBadge tone="profit" className="text-[13px] font-semibold tabular-nums tracking-normal">
+        <DsBadge tone="profit" className="text-[13px] font-semibold tracking-normal tabular-nums">
           {formatRating(value)}
         </DsBadge>
       ) : (

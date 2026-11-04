@@ -89,12 +89,12 @@ export function ResultBttsFilterBar({
   return (
     <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[220px] flex-1 space-y-1">
+        <div className="space-y-1 min-w-[220px] flex-1">
           <Label htmlFor="rb-search" className="text-[11px] text-muted-foreground">
             Cerca
           </Label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="rb-search"
               value={filters.search}

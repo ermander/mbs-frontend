@@ -152,7 +152,7 @@ export function OmDropdown({
 
   return (
     <div ref={rootRef} className={cn('relative flex min-w-0 flex-col gap-1.5', className)}>
-      <span id={`${id}-label`} className="text-sm font-semibold leading-5 text-ds-ink">
+      <span id={`${id}-label`} className="text-sm leading-5 font-semibold text-ds-ink">
         {label}
       </span>
       <button
@@ -166,10 +166,10 @@ export function OmDropdown({
         onClick={() => (open ? close(false) : openPanel())}
         className={cn(
           'flex w-full items-center justify-between gap-2 rounded-ds-sm border bg-ds-surface-raised text-left text-ds-ink transition-[border-color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-50',
-          size === 'sm' ? 'ds-body-sm h-8 pl-2.5 pr-2' : 'ds-body h-10 pl-3 pr-2.5',
+          size === 'sm' ? 'ds-body-sm h-8 pr-2 pl-2.5' : 'ds-body h-10 pr-2.5 pl-3',
           open
             ? 'border-ds-brand shadow-ds-focus'
-            : 'border-ds-line-strong focus-visible:border-ds-brand focus-visible:shadow-ds-focus focus-visible:outline-none',
+            : 'border-ds-line-strong focus-visible:border-ds-brand focus-visible:shadow-ds-focus focus-visible:outline-hidden',
         )}
       >
         <span className="truncate">{display}</span>
@@ -186,7 +186,7 @@ export function OmDropdown({
         <div
           className={cn(
             'z-30 max-w-[calc(100vw-32px)] rounded-ds-md border border-ds-line bg-ds-surface-raised p-2 shadow-ds-md',
-            !floating && 'absolute left-0 top-full mt-1',
+            !floating && 'absolute top-full left-0 mt-1',
           )}
           style={{ width: panelWidth, ...(floating ? floatPos : undefined) }}
         >
@@ -200,7 +200,7 @@ export function OmDropdown({
                 placeholder="Cerca"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="ds-body-sm min-w-0 flex-1 border-0 bg-transparent text-ds-ink outline-none placeholder:text-ds-ink-faint"
+                className="ds-body-sm min-w-0 flex-1 border-0 bg-transparent text-ds-ink outline-hidden placeholder:text-ds-ink-faint"
               />
             </div>
           )}
@@ -223,7 +223,7 @@ export function OmDropdown({
                     onChange={() => toggle(o.value)}
                     // Un radio già scelto non manda onChange: il clic lo toglie come una spunta.
                     onClick={single && checked ? () => toggle(o.value) : undefined}
-                    className="m-0 h-4 w-4 flex-none accent-[var(--ds-brand)]"
+                    className="m-0 h-4 w-4 flex-none accent-(--ds-brand)"
                   />
                   {o.icon && (
                     <span className="inline-flex flex-none text-ds-ink-muted">{o.icon}</span>
@@ -232,7 +232,7 @@ export function OmDropdown({
                     {o.render ?? <span className="truncate">{o.label}</span>}
                   </span>
                   {o.count != null && (
-                    <span className="ds-caption flex-none tabular-nums text-ds-ink-muted">
+                    <span className="ds-caption flex-none text-ds-ink-muted tabular-nums">
                       {o.count}
                     </span>
                   )}
@@ -287,7 +287,7 @@ export function OmBookLogo({
       <span
         title={label}
         className={cn(
-          'inline-flex items-center whitespace-nowrap rounded-ds-xs border border-ds-line bg-ds-surface-raised px-2 text-xs font-semibold leading-4 tracking-[0.02em] text-ds-ink',
+          'inline-flex items-center rounded-ds-xs border border-ds-line bg-ds-surface-raised px-2 text-xs leading-4 font-semibold tracking-[0.02em] whitespace-nowrap text-ds-ink',
           logoHeight[size],
         )}
       >
@@ -465,7 +465,7 @@ export function OmBetLeg({
 export function OmRating({ value, large }: { value: number; large?: boolean }) {
   if (value >= 100) {
     return (
-      <DsBadge tone="profit" className="text-[13px] font-semibold tabular-nums tracking-normal">
+      <DsBadge tone="profit" className="text-[13px] font-semibold tracking-normal tabular-nums">
         {formatRating(value)}
       </DsBadge>
     )
@@ -531,7 +531,7 @@ export function OmPagination({
   return (
     <nav
       aria-label="Pagine dei risultati"
-      className="ds-body-sm flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 tabular-nums text-ds-ink-muted"
+      className="ds-body-sm flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-ds-ink-muted tabular-nums"
     >
       <span>
         {countFormat.format(start)}–{countFormat.format(end)} di {countFormat.format(total)} {unit}

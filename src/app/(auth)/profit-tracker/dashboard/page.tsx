@@ -101,13 +101,13 @@ export default function ProfitTrackerDashboardPage() {
       sectionDescription="Quadro sintetico di saldi e performance."
     >
       <div className="space-y-4">
-        <h2 className="font-mono text-sm font-medium uppercase tracking-[0.02em] text-muted-foreground">
+        <h2 className="font-mono text-sm font-medium tracking-[0.02em] text-muted-foreground uppercase">
           Bilancio
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Saldo Bookmakers
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -118,9 +118,9 @@ export default function ProfitTrackerDashboardPage() {
               <Scale className="size-full" />
             </div>
           </div>
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Saldo Wallets
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -131,9 +131,9 @@ export default function ProfitTrackerDashboardPage() {
               <Wallet className="size-full" />
             </div>
           </div>
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Prelievi in attesa
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-amber-400">
@@ -147,9 +147,9 @@ export default function ProfitTrackerDashboardPage() {
               <Hourglass className="size-full" />
             </div>
           </div>
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Saldo bloccato
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-amber-400">
@@ -164,9 +164,9 @@ export default function ProfitTrackerDashboardPage() {
               <Lock className="size-full" />
             </div>
           </div>
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Puntate in corso
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -177,9 +177,9 @@ export default function ProfitTrackerDashboardPage() {
               <Loader2 className="size-full" />
             </div>
           </div>
-          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div className="flex items-start justify-between rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div>
-              <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+              <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
                 Saldo Totale
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -194,8 +194,8 @@ export default function ProfitTrackerDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+          <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
             Mese attuale
           </p>
           <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -205,8 +205,8 @@ export default function ProfitTrackerDashboardPage() {
             Profitto realizzato nel mese in corso.
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+          <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
             Media mensile
           </p>
           <p className="mt-2 font-mono text-2xl font-semibold text-foreground">
@@ -216,8 +216,8 @@ export default function ProfitTrackerDashboardPage() {
             Media mensile dei guadagni sull&apos;anno corrente.
           </p>
         </div>
-        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+          <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
             Totale anno {CURRENT_YEAR}
           </p>
           <p className="mt-2 font-mono text-2xl font-semibold text-foreground">

@@ -31,7 +31,7 @@ export const DsLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <label
     ref={ref}
-    className={cn('text-sm font-semibold leading-5 text-ds-ink', className)}
+    className={cn('text-sm leading-5 font-semibold text-ds-ink', className)}
     {...props}
   />
 ))
@@ -49,8 +49,8 @@ export const DsInput = React.forwardRef<
     ref={ref}
     className={cn(
       'flex h-12 w-full min-w-0 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-3 text-[17px] text-ds-ink transition-[border-color,box-shadow] placeholder:text-ds-ink-faint',
-      'focus:border-ds-brand focus:shadow-ds-focus focus:outline-none',
-      'aria-[invalid=true]:border-ds-loss',
+      'focus:border-ds-brand focus:shadow-ds-focus focus:outline-hidden',
+      'aria-invalid:border-ds-loss',
       'disabled:cursor-not-allowed disabled:opacity-50',
       className,
     )}

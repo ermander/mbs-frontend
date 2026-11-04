@@ -27,7 +27,7 @@ export function Topnav() {
     <header
       className={cn(
         topnavDsScope,
-        'sticky top-0 z-30 h-[var(--topnav-h)] border-b border-ds-line bg-ds-surface-raised',
+        'sticky top-0 z-30 h-(--topnav-h) border-b border-ds-line bg-ds-surface-raised',
       )}
     >
       <div className="mx-auto flex h-full w-full max-w-[1200px] items-center gap-6 px-4 sm:px-6">

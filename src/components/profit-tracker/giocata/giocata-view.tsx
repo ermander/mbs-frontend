@@ -499,14 +499,14 @@ export function GiocataView({ betId }: { betId: string }) {
         </Link>
         <span className="h-4 w-px bg-ds-line" aria-hidden />
         <span className="ds-label uppercase">Giocata</span>
-        <span className="font-mono text-[13px] font-medium leading-4 text-ds-ink">{bet.id}</span>
+        <span className="font-mono text-[13px] leading-4 font-medium text-ds-ink">{bet.id}</span>
         <DsBadge tone={multipla ? 'brand' : 'neutral'}>{multipla ? 'Multipla' : 'Singola'}</DsBadge>
         {archived && <DsBadge tone="neutral">Archiviata</DsBadge>}
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h1 className="ds-title m-0 [text-wrap:balance]">{name}</h1>
+          <h1 className="ds-title m-0 text-balance">{name}</h1>
           <div className="ds-body-sm flex flex-wrap items-center gap-2 text-ds-ink-muted">
             <span className="inline-flex">
               <OmSportIcon sport={bet.sport} size={18} />
@@ -576,8 +576,8 @@ export function GiocataView({ betId }: { betId: string }) {
                 <table className="w-full border-collapse">
                   <caption className="sr-only">Gambe della giocata</caption>
                   <thead>
-                    <tr className="ds-label bg-ds-surface-sunken text-left uppercase text-ds-ink-muted">
-                      <th scope="col" className="min-w-[160px] py-3 pl-4 pr-2.5">
+                    <tr className="ds-label bg-ds-surface-sunken text-left text-ds-ink-muted uppercase">
+                      <th scope="col" className="min-w-[160px] py-3 pr-2.5 pl-4">
                         Selezione
                       </th>
                       <th scope="col" className="w-32 px-2.5 py-3">
@@ -592,7 +592,7 @@ export function GiocataView({ betId }: { betId: string }) {
                       <th scope="col" className="w-36 px-2.5 py-3">
                         Stato evento
                       </th>
-                      <th scope="col" className="w-28 py-3 pl-2 pr-3">
+                      <th scope="col" className="w-28 py-3 pr-3 pl-2">
                         <span className="sr-only">Azioni</span>
                       </th>
                     </tr>
@@ -606,12 +606,12 @@ export function GiocataView({ betId }: { betId: string }) {
                           rowTone(l),
                         )}
                       >
-                        <td className="py-3 pl-4 pr-2.5">{selCell(l)}</td>
+                        <td className="py-3 pr-2.5 pl-4">{selCell(l)}</td>
                         <td className="px-2.5 py-3">{accountCell(l)}</td>
                         <td className="px-2.5 py-3 text-right">{quotaCell(l)}</td>
                         <td className="px-2.5 py-3 text-right">{importoCell(l)}</td>
                         <td className="px-2.5 py-3">{statoCell(l, 'riga')}</td>
-                        <td className="py-3 pl-2 pr-3">{legActions(l)}</td>
+                        <td className="py-3 pr-3 pl-2">{legActions(l)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -654,13 +654,13 @@ export function GiocataView({ betId }: { betId: string }) {
 
         <aside className="flex flex-col gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised p-5 shadow-ds-sm lg:sticky lg:top-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="ds-label uppercase text-ds-ink-muted">Riepilogo</span>
+            <span className="ds-label text-ds-ink-muted uppercase">Riepilogo</span>
             {statusBadge}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="ds-caption text-ds-ink-muted">Totale rischio</div>
-              <div className="ds-num-xl whitespace-nowrap text-[26px] leading-8">
+              <div className="ds-num-xl text-[26px] leading-8 whitespace-nowrap">
                 {eur.format(summary.totalRischio)} €
               </div>
             </div>
@@ -747,7 +747,7 @@ export function GiocataView({ betId }: { betId: string }) {
           </>
         }
       >
-        <p className="ds-body m-0 text-ds-ink [text-wrap:pretty]">
+        <p className="ds-body m-0 text-pretty text-ds-ink">
           La gamba sparisce dalla giocata e il riepilogo si ricalcola. L&apos;operazione è
           definitiva.
         </p>
@@ -779,7 +779,7 @@ export function GiocataView({ betId }: { betId: string }) {
           </>
         }
       >
-        <p className="ds-body m-0 text-ds-ink [text-wrap:pretty]">
+        <p className="ds-body m-0 text-pretty text-ds-ink">
           L&apos;eliminazione è definitiva e cancella anche le gambe. Se vuoi solo toglierla dalla
           lista, usa Archivia.
         </p>

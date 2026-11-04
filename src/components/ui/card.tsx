@@ -8,8 +8,7 @@ const cardVariants = cva('rounded-xl border transition-colors', {
     variant: {
       default: 'bg-card border-border text-card-foreground',
       elevated: 'bg-card border-border text-card-foreground shadow-glow-sm',
-      glass:
-        'bg-[var(--glass-bg)] border-[var(--glass-border)] text-card-foreground backdrop-blur-xl',
+      glass: 'bg-(--glass-bg) border-(--glass-border) text-card-foreground backdrop-blur-xl',
     },
   },
   defaultVariants: {
@@ -27,7 +26,7 @@ Card.displayName = 'Card'
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />
+    <div ref={ref} className={cn('space-y-1.5 flex flex-col p-6', className)} {...props} />
   ),
 )
 CardHeader.displayName = 'CardHeader'
@@ -36,7 +35,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-xl font-semibold leading-none tracking-[-0.025em]', className)}
+      className={cn('text-xl leading-none font-semibold tracking-tight', className)}
       {...props}
     />
   ),

@@ -97,7 +97,7 @@ export function DsVerifyEmail({ token }: { token: string }) {
         <div key="verified">
           <CircleCheck className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
           <FocusedTitle>Email confermata</FocusedTitle>
-          <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+          <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
             L&apos;account <DsInboxEmail>{view.email}</DsInboxEmail> è attivo. Il posto giusto da
             cui partire è la prima guida: mezz&apos;ora, deposito di 10 €, il conto lo fa il sito.
           </p>
@@ -116,7 +116,7 @@ export function DsVerifyEmail({ token }: { token: string }) {
         <div key="expired">
           <TriangleAlert className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
           <FocusedTitle>Il link non vale più</FocusedTitle>
-          <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+          <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
             È scaduto o è già stato usato. L&apos;account non è ancora attivo: chiedi un nuovo link
             a <DsInboxEmail>{view.email}</DsInboxEmail>.
           </p>
@@ -144,7 +144,7 @@ export function DsVerifyEmail({ token }: { token: string }) {
         <div key="resent">
           <Clock className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
           <FocusedTitle>Nuovo link inviato</FocusedTitle>
-          <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+          <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
             Controlla la posta di <DsInboxEmail>{view.email}</DsInboxEmail>. Il nuovo link vale 24
             ore; quello vecchio non funziona più.
           </p>
@@ -161,7 +161,7 @@ export function DsVerifyEmail({ token }: { token: string }) {
         <div key="dead">
           <Link2Off className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
           <FocusedTitle>Il link non vale più</FocusedTitle>
-          <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">
+          <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
             È già stato usato oppure ne hai ricevuto uno più recente. Se hai già confermato
             l&apos;email puoi accedere; altrimenti apri il link dell&apos;ultima email che ti
             abbiamo mandato.
@@ -178,7 +178,7 @@ export function DsVerifyEmail({ token }: { token: string }) {
         <div key="error">
           <TriangleAlert className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
           <FocusedTitle>Verifica non riuscita</FocusedTitle>
-          <p className="ds-body-lg mt-3 text-ds-ink-muted [text-wrap:pretty]">{view.message}</p>
+          <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">{view.message}</p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <DsFormButton onClick={retry}>Riprova</DsFormButton>
             <DsButton href={LANDING_ROUTES.login} variant="ghost" size="lg">
@@ -216,7 +216,7 @@ function FocusedTitle({ children }: { children: React.ReactNode }) {
     ref.current?.focus()
   }, [])
   return (
-    <h1 ref={ref} tabIndex={-1} className="ds-title mt-4 outline-none [text-wrap:pretty]">
+    <h1 ref={ref} tabIndex={-1} className="ds-title mt-4 text-pretty outline-hidden">
       {children}
     </h1>
   )

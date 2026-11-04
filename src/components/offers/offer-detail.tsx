@@ -80,7 +80,7 @@ export function OfferDetail({
   }
 
   return (
-    <DsContainer className="pb-24 pt-6">
+    <DsContainer className="pt-6 pb-24">
       <div className="grid items-start gap-y-10 lg:grid-cols-[minmax(0,720px)_280px] lg:justify-between lg:gap-x-16">
         <article className="min-w-0">
           <Link
@@ -165,7 +165,7 @@ function FactsGrid({ facts }: { facts: { label: string; value: React.ReactNode }
       {facts.map((fact) => (
         <div key={fact.label} className="flex flex-col gap-0.5 bg-ds-surface-raised px-4 py-3">
           <dt className="ds-caption tracking-[0.02em] text-ds-ink-muted">{fact.label}</dt>
-          <dd className="text-base font-semibold leading-6">{fact.value}</dd>
+          <dd className="text-base leading-6 font-semibold">{fact.value}</dd>
         </div>
       ))}
       {Array.from({ length: Math.max(fillMobile, fillSm) }, (_, i) => (
@@ -241,7 +241,7 @@ function GuideBody({
                   <span
                     aria-hidden
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-full border-2 bg-ds-surface-raised text-[17px] font-semibold leading-6 transition-colors',
+                      'flex h-10 w-10 items-center justify-center rounded-full border-2 bg-ds-surface-raised text-[17px] leading-6 font-semibold transition-colors',
                       here ? 'border-ds-brand text-ds-brand' : 'border-ds-line-strong text-ds-ink',
                     )}
                   >
@@ -407,7 +407,7 @@ function GuideButton({
 function StepsNav({ guide, activeStep }: { guide: OfferGuide; activeStep: number }) {
   return (
     <nav aria-label={GUIDE_COPY.stepsNav} className="px-1">
-      <div className="ds-label mb-3 uppercase tracking-[0.04em] text-ds-ink-muted">
+      <div className="ds-label mb-3 tracking-[0.04em] text-ds-ink-muted uppercase">
         {GUIDE_COPY.stepsNav}
       </div>
       <ol className="flex flex-col">
@@ -417,7 +417,7 @@ function StepsNav({ guide, activeStep }: { guide: OfferGuide; activeStep: number
           return (
             <li
               key={n}
-              className="relative flex pb-6 before:absolute before:bottom-1 before:left-[13px] before:top-8 before:w-0.5 before:bg-ds-line before:content-[''] last:pb-0 last:before:hidden"
+              className="relative flex pb-6 before:absolute before:top-8 before:bottom-1 before:left-[13px] before:w-0.5 before:bg-ds-line before:content-[''] last:pb-0 last:before:hidden"
             >
               <a
                 href={`#${stepAnchor(n)}`}
@@ -440,7 +440,7 @@ function StepsNav({ guide, activeStep }: { guide: OfferGuide; activeStep: number
                 </span>
                 <span
                   className={cn(
-                    'pt-0.5 text-[17px] font-semibold leading-6',
+                    'pt-0.5 text-[17px] leading-6 font-semibold',
                     here && 'text-ds-brand',
                   )}
                 >

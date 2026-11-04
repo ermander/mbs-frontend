@@ -195,7 +195,7 @@ function MultiplaCheckbox({ row, multipla }: { row: MatcherResult; multipla: Mul
       onClick={(e) => e.stopPropagation()}
       title={reason ?? (selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla')}
       aria-label={`${selected ? 'Togli dalla multipla' : 'Aggiungi alla multipla'}: ${eventName(row)}`}
-      className="m-0 h-4 w-4 accent-[var(--ds-brand)] disabled:cursor-not-allowed disabled:opacity-40"
+      className="m-0 h-4 w-4 accent-(--ds-brand) disabled:cursor-not-allowed disabled:opacity-40"
     />
   )
 }
@@ -333,7 +333,7 @@ export function ScannerV2Table({
                   ))}
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="ds-body-sm flex min-w-0 flex-wrap items-center gap-x-1.5 tabular-nums text-ds-ink-muted">
+                  <span className="ds-body-sm flex min-w-0 flex-wrap items-center gap-x-1.5 text-ds-ink-muted tabular-nums">
                     {kickoffLabel(row.startTime)} · <AgeCell row={row} now={now} />
                   </span>
                   <div className="flex items-center gap-3">
@@ -374,7 +374,7 @@ export function ScannerV2Table({
                   <th
                     key={label}
                     scope="col"
-                    className="ds-label whitespace-nowrap bg-ds-surface-sunken p-3 text-left uppercase text-ds-ink-muted first:pl-4"
+                    className="ds-label bg-ds-surface-sunken p-3 text-left whitespace-nowrap text-ds-ink-muted uppercase first:pl-4"
                   >
                     {label}
                   </th>
@@ -383,7 +383,7 @@ export function ScannerV2Table({
                   <th
                     key={label}
                     scope="col"
-                    className="ds-label whitespace-nowrap bg-ds-surface-sunken p-3 text-right uppercase text-ds-ink-muted"
+                    className="ds-label bg-ds-surface-sunken p-3 text-right whitespace-nowrap text-ds-ink-muted uppercase"
                   >
                     {label}
                   </th>
@@ -412,7 +412,7 @@ export function ScannerV2Table({
                         <MultiplaCheckbox row={row} multipla={multipla} />
                       </td>
                     )}
-                    <td className="ds-body-sm whitespace-nowrap border-t border-ds-line p-3 align-middle tabular-nums text-ds-ink-muted first:pl-4">
+                    <td className="ds-body-sm border-t border-ds-line p-3 align-middle whitespace-nowrap text-ds-ink-muted tabular-nums first:pl-4">
                       {kickoffLabel(row.startTime)}
                     </td>
                     <td className="min-w-[200px] border-t border-ds-line p-3 align-middle">
@@ -456,7 +456,7 @@ export function ScannerV2Table({
                         ))}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap border-t border-ds-line p-3 text-right align-middle">
+                    <td className="border-t border-ds-line p-3 text-right align-middle whitespace-nowrap">
                       <OmRating value={row.rating} />
                     </td>
                     <td className="border-t border-ds-line p-3 text-right align-middle">

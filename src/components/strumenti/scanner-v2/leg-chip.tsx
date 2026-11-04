@@ -22,7 +22,7 @@ export function BookmakerLink({
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       className={cn(
-        'inline-flex items-center gap-1 rounded hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+        'inline-flex items-center gap-1 rounded hover:opacity-80 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden',
         className,
       )}
       title={`Apri l'evento su ${shortBookmakerName(leg.bookmakerName)}`}

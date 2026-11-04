@@ -115,7 +115,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
@@ -243,7 +243,7 @@ export default function BackofficeSalutePage() {
               </span>
             </div>
             {report.alerts.length > 0 && (
-              <ul className="mt-3 space-y-1.5">
+              <ul className="space-y-1.5 mt-3">
                 {report.alerts.map((a) => (
                   <li key={a.key} className="flex flex-wrap items-baseline gap-2 text-sm">
                     <span
@@ -273,22 +273,22 @@ export default function BackofficeSalutePage() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="text-left">
-                    <th className="pb-2 pr-3 font-medium">Bookmaker</th>
-                    <th className="pb-2 pr-3 font-medium">Stato</th>
-                    <th className="pb-2 pr-3 font-medium">Ultimo run</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Silenzio</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Run</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Eventi</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Abbinati</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Orfani</th>
+                    <th className="pr-3 pb-2 font-medium">Bookmaker</th>
+                    <th className="pr-3 pb-2 font-medium">Stato</th>
+                    <th className="pr-3 pb-2 font-medium">Ultimo run</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Silenzio</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Run</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Eventi</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Abbinati</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Orfani</th>
                     <th
-                      className="pb-2 pr-3 text-right font-medium"
+                      className="pr-3 pb-2 text-right font-medium"
                       title="Eventi di sport senza fixture a catalogo, messi da parte: né abbinati né orfani"
                     >
                       Fuori catalogo
                     </th>
-                    <th className="pb-2 pr-3 text-right font-medium">Quote</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Run 24 h</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Quote</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Run 24 h</th>
                     <th className="pb-2 font-medium">Circuito</th>
                   </tr>
                 </thead>
@@ -361,7 +361,7 @@ export default function BackofficeSalutePage() {
                         >
                           {num(a.windowOdds)}
                         </td>
-                        <td className="py-2 pr-3 text-right text-xs tabular-nums text-muted-foreground">
+                        <td className="py-2 pr-3 text-right text-xs text-muted-foreground tabular-nums">
                           {runs ? `${num(runs.successRuns)} ok / ${num(runs.failedRuns)} ko` : '—'}
                         </td>
                         <td className="py-2 text-xs">
@@ -418,14 +418,14 @@ export default function BackofficeSalutePage() {
               )}
             </div>
             {report.browser.pages.length > 0 && (
-              <ul className="mt-3 space-y-1 text-xs">
+              <ul className="space-y-1 mt-3 text-xs">
                 {report.browser.pages.map((p) => (
                   <li key={p.slug} className="flex flex-wrap items-baseline gap-2">
                     <span className="font-mono text-foreground">{p.slug}</span>
                     <span className="max-w-md truncate text-muted-foreground" title={p.url}>
                       {p.url || '—'}
                     </span>
-                    <span className="tabular-nums text-muted-foreground">
+                    <span className="text-muted-foreground tabular-nums">
                       aperta da {p.ageMinutes} min
                     </span>
                   </li>
@@ -443,10 +443,10 @@ export default function BackofficeSalutePage() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="text-left">
-                    <th className="pb-2 pr-3 font-medium">Job</th>
-                    <th className="pb-2 pr-3 font-medium">Ultimo successo</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Durata</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Run / errori</th>
+                    <th className="pr-3 pb-2 font-medium">Job</th>
+                    <th className="pr-3 pb-2 font-medium">Ultimo successo</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Durata</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Run / errori</th>
                     <th className="pb-2 font-medium">Ultimo errore</th>
                   </tr>
                 </thead>
@@ -553,10 +553,10 @@ export default function BackofficeSalutePage() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="text-left">
-                    <th className="pb-2 pr-3 font-medium">Sync</th>
-                    <th className="pb-2 pr-3 font-medium">Esito</th>
-                    <th className="pb-2 pr-3 font-medium">Quando</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Righe</th>
+                    <th className="pr-3 pb-2 font-medium">Sync</th>
+                    <th className="pr-3 pb-2 font-medium">Esito</th>
+                    <th className="pr-3 pb-2 font-medium">Quando</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Righe</th>
                     <th className="pb-2 text-right font-medium">Chiamate</th>
                   </tr>
                 </thead>
@@ -626,9 +626,9 @@ export default function BackofficeSalutePage() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="text-left">
-                    <th className="pb-2 pr-3 font-medium">Bookmaker</th>
-                    <th className="pb-2 pr-3 font-medium">Stato</th>
-                    <th className="pb-2 pr-3 text-right font-medium">Quote</th>
+                    <th className="pr-3 pb-2 font-medium">Bookmaker</th>
+                    <th className="pr-3 pb-2 font-medium">Stato</th>
+                    <th className="pr-3 pb-2 text-right font-medium">Quote</th>
                     <th className="pb-2 text-right font-medium">Eventi</th>
                   </tr>
                 </thead>
@@ -671,7 +671,7 @@ export default function BackofficeSalutePage() {
                     <li key={t.name} className="text-xs">
                       <div className="flex items-baseline justify-between">
                         <span className="font-mono text-foreground">{t.name}</span>
-                        <span className="tabular-nums text-muted-foreground">
+                        <span className="text-muted-foreground tabular-nums">
                           {bytes(t.bytes)} · {num(t.liveRows)} righe
                         </span>
                       </div>

@@ -235,7 +235,7 @@ export default function WalletsPage() {
       >
         <WalletIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="text-sm text-muted-foreground">Saldo attuale</span>
-        <span className="text-base font-semibold tabular-nums text-foreground">
+        <span className="text-base font-semibold text-foreground tabular-nums">
           {saldoTotaleFormatted}
         </span>
         {inAttesaTotale > 0 && (
@@ -246,7 +246,7 @@ export default function WalletsPage() {
       </div>
 
       {pendingWithdrawals.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 shadow-sm">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 shadow-xs">
           <div className="mb-2 flex items-center gap-2">
             <Hourglass className="h-4 w-4 text-amber-400" aria-hidden />
             <h3 className="text-sm font-medium text-foreground">
@@ -299,7 +299,7 @@ export default function WalletsPage() {
         </div>
       )}
 
-      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex flex-col items-stretch gap-4 rounded-xl border border-border bg-card/70 p-3 shadow-xs sm:flex-row sm:flex-wrap sm:items-end">
         <SearchableMultiSelect
           label="Collaboratore"
           placeholder="Tutti"
@@ -356,7 +356,7 @@ export default function WalletsPage() {
               setFilterStato(e.target.value)
               setPage(1)
             }}
-            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
           >
             <option value="">Tutti</option>
             <option value="abilitato">Abilitato</option>
@@ -374,7 +374,7 @@ export default function WalletsPage() {
               setFilterBloccato(e.target.value as '' | 'solo' | 'no')
               setPage(1)
             }}
-            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden"
           >
             <option value="">Tutti</option>
             <option value="solo">Solo bloccati</option>
@@ -383,9 +383,9 @@ export default function WalletsPage() {
         </div>
       </div>
 
-      <div className="block space-y-4 sm:hidden">
+      <div className="space-y-4 block sm:hidden">
         {visible.map((wallet) => (
-          <div key={wallet.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+          <div key={wallet.id} className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
             <div className="grid gap-2 text-xs">
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Collaboratore</span>
@@ -444,21 +444,21 @@ export default function WalletsPage() {
           </div>
         ))}
         {wallets.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun wallet registrato. Usa &quot;Nuovo wallet&quot; per crearne uno.
           </div>
         )}
         {wallets.length > 0 && visible.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun wallet corrisponde ai filtri.
           </div>
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Collaboratore</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Descrizione</th>
@@ -466,7 +466,7 @@ export default function WalletsPage() {
                 <button
                   type="button"
                   onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
-                  className="inline-flex items-center gap-1 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="inline-flex items-center gap-1 hover:text-foreground focus:ring-2 focus:ring-ring focus:outline-hidden"
                   aria-label={
                     sortOrder === 'desc'
                       ? 'Ordina per saldo decrescente (clicca per crescente)'
@@ -552,7 +552,7 @@ export default function WalletsPage() {
       </div>
 
       {total > PER_PAGE && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 shadow-xs">
           <p className="text-xs text-muted-foreground">
             Pagina {safePage} di {maxPage} &middot; {total} wallet in totale
           </p>

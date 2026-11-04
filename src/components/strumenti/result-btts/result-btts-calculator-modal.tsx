@@ -79,7 +79,7 @@ export function ResultBttsCalculatorModal({ row, onClose }: ResultBttsCalculator
   return (
     <Dialog open={row != null} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
-        className="max-h-[100dvh] max-w-4xl overflow-y-auto overflow-x-hidden p-0 sm:max-h-[90vh]"
+        className="max-h-dvh max-w-4xl overflow-x-hidden overflow-y-auto p-0 sm:max-h-[90vh]"
         showClose={true}
       >
         <DialogTitle asChild>
@@ -296,7 +296,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
                 isPunta ? 'border-primary/40 bg-primary/5' : 'border-border bg-card',
               )}
             >
-              <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-muted-foreground">
+              <p className="font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase">
                 {isPunta ? 'Puntata' : 'Copertura'}
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">{leg.label}</p>
@@ -312,7 +312,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
                 className="mt-3 h-9 w-full text-center font-mono text-base font-semibold"
                 aria-label={`Quota ${leg.label}`}
               />
-              <p className="mt-3 font-mono text-sm font-semibold tabular-nums text-foreground">
+              <p className="mt-3 font-mono text-sm font-semibold text-foreground tabular-nums">
                 {formatNum(legResult?.stake ?? null)} €
               </p>
               {isPunta ? (
@@ -365,7 +365,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
               {advice.recommended != null ? (
                 <>
                   <span className="text-muted-foreground">Consigliata</span>
-                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                  <span className="font-mono font-semibold text-foreground tabular-nums">
                     {formatNum(advice.recommended)} €
                   </span>
                   {advice.favouriteAccountId && (
@@ -436,7 +436,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
 
       {result.showSummary && (
         <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full whitespace-nowrap text-sm">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
                 <th className="px-4 py-2.5 text-left">Esito</th>
@@ -596,7 +596,7 @@ function RecommendedAccountsPanel({
       {state.status === 'ready' && allocation != null && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-sm">
+            <table className="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
                   <th className="px-4 py-2 text-left">Gamba</th>
@@ -621,14 +621,14 @@ function RecommendedAccountsPanel({
                     >
                       <td className="px-4 py-2">
                         <span className="font-medium text-foreground">{leg.label}</span>
-                        <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.04em] text-muted-foreground">
+                        <span className="ml-2 font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase">
                           {isPunta ? 'puntata' : 'copertura'}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums text-foreground">
+                      <td className="px-3 py-2 text-right font-mono text-foreground tabular-nums">
                         {formatNum(quoteNums[i])}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums text-foreground">
+                      <td className="px-3 py-2 text-right font-mono text-foreground tabular-nums">
                         {formatNum(stakes[i])} €
                       </td>
                       <td className="px-3 py-2">
@@ -641,7 +641,7 @@ function RecommendedAccountsPanel({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
+                      <td className="px-3 py-2 text-right font-mono text-muted-foreground tabular-nums">
                         {formatNum(account?.available ?? null)} €
                         {account != null && account.bozzaStake > 0 && (
                           <span className="ml-1 text-[10px]">
@@ -649,7 +649,7 @@ function RecommendedAccountsPanel({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums text-emerald-400">
+                      <td className="px-3 py-2 text-right font-mono text-emerald-400 tabular-nums">
                         {formatNum(view.ifWins)} €
                       </td>
                       <td

@@ -49,7 +49,7 @@ export default function AccountProfiloPage() {
   const user = useAuthStore((s) => s.user)
 
   return (
-    <Container className="max-w-3xl space-y-6">
+    <Container className="space-y-6 max-w-3xl">
       <header className="border-b border-border/60 pb-3">
         <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
           Profilo
@@ -112,7 +112,7 @@ function AccountDataCard({ user }: { user: AuthUser }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+      <CardHeader className="space-y-0 flex flex-row items-center gap-4">
         <div
           aria-hidden
           className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-accent text-lg font-semibold text-foreground"

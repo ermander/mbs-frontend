@@ -195,7 +195,7 @@ function ConfigurationTab({
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col">
-      <dt className="font-mono text-xs uppercase tracking-[0.02em] text-muted-foreground">
+      <dt className="font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
         {label}
       </dt>
       <dd className="text-sm text-foreground">{value}</dd>
@@ -885,7 +885,7 @@ function MarketNode({ slug, market }: { slug: string; market: MarketDrilldownIte
       </button>
 
       {expanded && (
-        <div className="mb-1.5 ml-5 mt-1">
+        <div className="mt-1 mb-1.5 ml-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           {loading && outcomes === null && (
             <p className="py-2 text-center text-xs text-muted-foreground">Caricamento esiti...</p>
@@ -910,7 +910,7 @@ function OutcomesInlineTable({ outcomes }: { outcomes: OutcomeDrilldownItemDto[]
   return (
     <div className="overflow-x-auto rounded border border-border/50 bg-background">
       <table className="w-full text-xs">
-        <thead className="border-b border-border/50 text-left uppercase text-muted-foreground">
+        <thead className="border-b border-border/50 text-left text-muted-foreground uppercase">
           <tr>
             <th className="px-3 py-1.5 pr-4">Esito</th>
             <th className="py-1.5 pr-4">Raw</th>

@@ -100,12 +100,12 @@ export function FixturesTable({
 
       <div className="relative flex-1 overflow-auto">
         {loading && fixtures.length > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-background/60 py-1 text-center text-xs text-muted-foreground backdrop-blur-sm">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-background/60 py-1 text-center text-xs text-muted-foreground backdrop-blur-xs">
             aggiorno…
           </div>
         )}
         <table className="min-w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-xs">
             <tr className="text-left text-xs text-muted-foreground">
               <Th>Ora</Th>
               <Th>Competizione</Th>
@@ -139,13 +139,13 @@ export function FixturesTable({
             ) : (
               groups.map((g) => (
                 <Fragment key={g.day}>
-                  <tr className="sticky top-[33px] z-[5] bg-surface-1">
+                  <tr className="sticky top-[33px] z-5 bg-surface-1">
                     <td
                       colSpan={COLUMNS}
-                      className="border-y border-border px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-[0.02em] text-foreground"
+                      className="border-y border-border px-4 py-1.5 font-mono text-xs font-semibold tracking-[0.02em] text-foreground uppercase"
                     >
                       {g.heading}
-                      <span className="ml-2 font-normal normal-case text-muted-foreground">
+                      <span className="ml-2 font-normal text-muted-foreground normal-case">
                         {num(g.rows.length)} in pagina
                       </span>
                     </td>
@@ -158,7 +158,7 @@ export function FixturesTable({
                           expanded === f.eventId ? 'bg-accent/60' : ''
                         }`}
                       >
-                        <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-foreground">
+                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-foreground">
                           {formatTime(f.startTime)}
                         </td>
                         <td className="max-w-[16rem] px-4 py-2">
@@ -181,7 +181,7 @@ export function FixturesTable({
                           <span className="mx-1.5 text-muted-foreground">–</span>
                           <span className="font-medium">{f.awayName ?? '—'}</span>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <Badge variant={STATUS_VARIANT[f.status] ?? 'outline'}>
                             {STATUS_LABEL[f.status] ?? f.status}
                           </Badge>
@@ -190,19 +190,19 @@ export function FixturesTable({
                           </span>
                         </td>
                         <td
-                          className="max-w-[10rem] truncate px-4 py-2 text-xs text-muted-foreground"
+                          className="max-w-40 truncate px-4 py-2 text-xs text-muted-foreground"
                           title={f.round ?? undefined}
                         >
                           {f.round ?? '—'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2 text-xs">
+                        <td className="px-4 py-2 text-xs whitespace-nowrap">
                           <BookCount mapped={f.bookmakersMapped} withOdds={f.bookmakersWithOdds} />
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-muted-foreground">
+                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-muted-foreground">
                           {f.apisportsFixtureId}
                         </td>
                         <td
-                          className="whitespace-nowrap px-4 py-2 text-xs text-muted-foreground"
+                          className="px-4 py-2 text-xs whitespace-nowrap text-muted-foreground"
                           title={formatDateTime(f.lastSeenAt)}
                         >
                           {ago(f.lastSeenAt, now)}
@@ -357,7 +357,7 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
       </dl>
       <div className="lg:col-span-2">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono uppercase tracking-[0.02em] text-muted-foreground">
+          <span className="font-mono tracking-[0.02em] text-muted-foreground uppercase">
             Bookmaker collegati dal matcher
           </span>
           {bookmakers && <span className="text-muted-foreground">({num(bookmakers.length)})</span>}

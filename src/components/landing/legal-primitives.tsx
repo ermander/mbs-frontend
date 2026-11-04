@@ -29,7 +29,7 @@ export function LegalPage({
   sections: readonly LegalSection[]
 }) {
   return (
-    <DsContainer className="pb-24 pt-16">
+    <DsContainer className="pt-16 pb-24">
       <div className="grid gap-y-10 [grid-template-areas:'head'_'toc'_'body'] lg:grid-cols-[minmax(0,720px)_280px] lg:justify-between lg:gap-x-16 lg:gap-y-0 lg:[grid-template-areas:'head_toc'_'body_toc']">
         <header className="min-w-0 [grid-area:head]">
           <DsEyebrow>{eyebrow}</DsEyebrow>
@@ -38,7 +38,7 @@ export function LegalPage({
         </header>
 
         <nav aria-label="Indice" className="[grid-area:toc] lg:sticky lg:top-6 lg:self-start">
-          <div className="ds-label mb-3 uppercase text-ds-ink-muted">Indice</div>
+          <div className="ds-label mb-3 text-ds-ink-muted uppercase">Indice</div>
           <ol className="flex flex-col border-l border-ds-line">
             {sections.map((section, i) => (
               <li key={section.id}>

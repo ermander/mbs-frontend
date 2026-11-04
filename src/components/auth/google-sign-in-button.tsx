@@ -23,7 +23,7 @@ export function GoogleSignInButton({
     <a
       href={GOOGLE_AUTH_START_URL}
       className={cn(
-        'inline-flex h-10 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] transition-[opacity,background-color]',
+        'inline-flex h-10 w-full items-center justify-center gap-2.5 rounded-ow-btn px-4 text-sm font-medium tracking-[-0.011em] whitespace-nowrap transition-[opacity,background-color]',
         landingFocusRing,
         landingButtonVariant.ghost,
         className,

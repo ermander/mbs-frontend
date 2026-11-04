@@ -116,10 +116,7 @@ interface LineOutcomesMarketConfig extends BaseMarketConfig {
 }
 
 export type MarketConfig =
-  | OverUnderMarketConfig
-  | OutcomesMarketConfig
-  | PlainMarketConfig
-  | LineOutcomesMarketConfig
+  OverUnderMarketConfig | OutcomesMarketConfig | PlainMarketConfig | LineOutcomesMarketConfig
 
 export interface MarketOption {
   /** Id stabile, es. 'TOTAL_CORNERS:OVER:8.5' | 'CARDS_1X2:HOME' | 'HANDICAP' */

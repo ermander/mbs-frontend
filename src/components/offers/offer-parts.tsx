@@ -28,7 +28,7 @@ export function BookLogo({
     return (
       <span
         className={cn(
-          'inline-flex items-center whitespace-nowrap rounded-ds-xs border border-ds-line bg-ds-surface-raised px-2 text-xs font-semibold leading-4 tracking-[0.02em] text-ds-ink',
+          'inline-flex items-center rounded-ds-xs border border-ds-line bg-ds-surface-raised px-2 text-xs leading-4 font-semibold tracking-[0.02em] whitespace-nowrap text-ds-ink',
           s.box,
         )}
       >

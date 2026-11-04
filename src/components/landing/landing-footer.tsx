@@ -33,7 +33,7 @@ export function LandingFooter() {
             ))}
           </nav>
         </div>
-        <p className="ds-caption max-w-[68ch] border-t border-ds-line pt-5 text-ds-ink-muted [text-wrap:pretty]">
+        <p className="ds-caption max-w-[68ch] border-t border-ds-line pt-5 text-pretty text-ds-ink-muted">
           {FOOTER.disclaimer}
         </p>
       </DsContainer>

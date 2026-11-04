@@ -3,8 +3,14 @@ import { getCountryFlagUrl, resolveCompetitionFlag } from './country-flags'
 
 describe('resolveCompetitionFlag', () => {
   it('uses the ISO code first, then the nation name', () => {
-    expect(resolveCompetitionFlag('IT', 'Italy', 'Serie A')).toEqual({ url: 'https://flagcdn.com/it.svg', label: 'Italy' })
-    expect(resolveCompetitionFlag(null, 'Spagna', 'La Liga')).toEqual({ url: 'https://flagcdn.com/es.svg', label: 'Spagna' })
+    expect(resolveCompetitionFlag('IT', 'Italy', 'Serie A')).toEqual({
+      url: 'https://flagcdn.com/it.svg',
+      label: 'Italy',
+    })
+    expect(resolveCompetitionFlag(null, 'Spagna', 'La Liga')).toEqual({
+      url: 'https://flagcdn.com/es.svg',
+      label: 'Spagna',
+    })
     expect(getCountryFlagUrl('Europa')).toBe('https://flagcdn.com/eu.svg')
   })
 
@@ -22,7 +28,10 @@ describe('resolveCompetitionFlag', () => {
       'Europa League',
       'Conference League',
     ]) {
-      expect(resolveCompetitionFlag(null, 'World', name), name).toEqual({ url: 'https://flagcdn.com/eu.svg', label: 'Europa' })
+      expect(resolveCompetitionFlag(null, 'World', name), name).toEqual({
+        url: 'https://flagcdn.com/eu.svg',
+        label: 'Europa',
+      })
     }
   })
 

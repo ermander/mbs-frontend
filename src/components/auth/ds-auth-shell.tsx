@@ -56,10 +56,10 @@ export function DsLoginAside() {
 export function DsRegisterAside() {
   return (
     <div>
-      <h2 className="ds-display text-ds-brand [text-wrap:pretty]">
+      <h2 className="ds-display text-pretty text-ds-brand">
         Il primo bonus lo incassi in mezz&apos;ora.
       </h2>
-      <p className="ds-body-lg mt-4 max-w-[52ch] text-ds-ink-muted [text-wrap:pretty]">
+      <p className="ds-body-lg mt-4 max-w-[52ch] text-pretty text-ds-ink-muted">
         Con l&apos;account salvi le guide, segui le offerte nel tracker e scrivi nel forum. Oggi è
         tutto gratuito, senza carta.
       </p>
@@ -94,7 +94,7 @@ export function DsAuthShell({
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope grid min-h-screen bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light] lg:grid-cols-2',
+        'ds-scope grid min-h-screen bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light lg:grid-cols-2',
       )}
     >
       <aside className="hidden border-r border-ds-line bg-ds-brand-soft px-16 py-12 lg:flex lg:flex-col lg:justify-between lg:gap-12">
@@ -106,7 +106,7 @@ export function DsAuthShell({
           <DsWordmark />
         </Link>
         {aside}
-        <p className="ds-caption max-w-[60ch] text-ds-ink-muted [text-wrap:pretty]">{DISCLAIMER}</p>
+        <p className="ds-caption max-w-[60ch] text-pretty text-ds-ink-muted">{DISCLAIMER}</p>
       </aside>
 
       <main className="flex flex-col justify-center px-5 py-10 sm:px-8 sm:py-12 lg:px-24 lg:py-16">
@@ -148,7 +148,7 @@ export function DsCenteredAuthShell({
       className={cn(
         dsSerif.variable,
         dsSans.variable,
-        'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased [color-scheme:light]',
+        'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light',
       )}
     >
       <header className="border-b border-ds-line bg-ds-surface-raised">
@@ -172,9 +172,7 @@ export function DsCenteredAuthShell({
 
       <footer className="border-t border-ds-line bg-ds-surface-raised">
         <DsContainer className="flex flex-wrap items-center justify-between gap-6 py-6">
-          <p className="ds-caption max-w-[68ch] text-ds-ink-muted [text-wrap:pretty]">
-            {DISCLAIMER}
-          </p>
+          <p className="ds-caption max-w-[68ch] text-pretty text-ds-ink-muted">{DISCLAIMER}</p>
           <nav aria-label="Piè di pagina" className="ds-body-sm flex gap-6 text-ds-ink-muted">
             {CENTERED_FOOTER_LINKS.map((link) => (
               <LandingFooterLink key={link.href} href={link.href}>

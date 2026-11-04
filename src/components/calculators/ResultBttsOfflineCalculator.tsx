@@ -127,13 +127,13 @@ export function ResultBttsOfflineCalculator() {
                       }
                     }}
                     className={cn(
-                      'flex cursor-pointer flex-col items-center gap-2 rounded-ds-md border p-4 text-center transition-[border-color,box-shadow] duration-150 hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-none',
+                      'flex cursor-pointer flex-col items-center gap-2 rounded-ds-md border p-4 text-center transition-[border-color,box-shadow] duration-150 hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-hidden',
                       isPunta
                         ? 'border-ds-brand bg-ds-info-soft'
                         : 'border-ds-line bg-ds-surface-raised',
                     )}
                   >
-                    <span className="ds-label uppercase text-ds-ink-muted">
+                    <span className="ds-label text-ds-ink-muted uppercase">
                       {isPunta ? 'Puntata' : 'Copertura'}
                     </span>
                     <span className="ds-subheading">{outcome.label}</span>

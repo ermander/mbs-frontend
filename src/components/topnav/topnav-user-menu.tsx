@@ -58,12 +58,12 @@ export function TopnavUserMenu() {
           {...triggerProps}
           aria-label="Il tuo profilo"
           className={cn(
-            'inline-flex h-10 items-center gap-2.5 rounded-full p-0.5 text-left text-sm text-ds-ink transition-colors xl:pl-3 xl:pr-1',
+            'inline-flex h-10 items-center gap-2.5 rounded-full p-0.5 text-left text-sm text-ds-ink transition-colors xl:pr-1 xl:pl-3',
             'hover:bg-ds-surface-sunken data-[state=open]:bg-ds-surface-sunken',
             dsFocusRing,
           )}
         >
-          <span className="hidden max-w-[8rem] truncate xl:block">{firstName}</span>
+          <span className="hidden max-w-32 truncate xl:block">{firstName}</span>
           <span
             aria-hidden
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ds-brand-soft text-sm font-semibold text-ds-brand"
@@ -75,7 +75,7 @@ export function TopnavUserMenu() {
           {...hoverProps}
           align="end"
           sideOffset={6}
-          className={cn(topnavMenuPanel, 'min-w-[15rem]')}
+          className={cn(topnavMenuPanel, 'min-w-60')}
         >
           <div className="px-2.5 py-2">
             <div className="truncate text-sm font-semibold text-ds-ink">{displayName}</div>

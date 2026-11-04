@@ -147,7 +147,7 @@ export function SearchableSelect({
             role="listbox"
             data-searchable-select
             className={cn(
-              'pointer-events-auto z-[9999] overflow-hidden rounded-lg border border-border bg-popover shadow-lg',
+              'pointer-events-auto z-9999 overflow-hidden rounded-lg border border-border bg-popover shadow-lg',
               dropdownPos.useAbsolute ? 'absolute' : 'fixed',
             )}
             style={{
@@ -185,7 +185,7 @@ export function SearchableSelect({
                   <button
                     type="button"
                     className={cn(
-                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
+                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-hidden',
                       isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
                       !value && 'bg-muted/50 font-medium',
                     )}
@@ -203,7 +203,7 @@ export function SearchableSelect({
                   <button
                     type="button"
                     className={cn(
-                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-none',
+                      'w-full text-left hover:bg-muted/80 focus:bg-muted/80 focus:outline-hidden',
                       isSmall ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm',
                       value === opt.value && 'bg-muted/50 font-medium',
                     )}
@@ -249,7 +249,7 @@ export function SearchableSelect({
         disabled={disabled}
         className={cn(
           'flex w-full items-center justify-between rounded-md border border-input bg-background text-left text-foreground transition-colors',
-          'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          'hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden',
           isSmall ? 'h-7 gap-1 px-2 py-1 text-xs' : 'h-9 gap-2 px-3 py-2 text-sm',
           disabled && 'cursor-not-allowed opacity-70',
         )}

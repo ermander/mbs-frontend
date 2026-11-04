@@ -65,7 +65,7 @@ export function LegAccounts({
 }: LegAccountsProps) {
   return (
     <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
-      <Label className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-primary">
+      <Label className="font-mono text-xs font-medium tracking-[0.02em] text-primary uppercase">
         {title}
       </Label>
       <div className="space-y-2">

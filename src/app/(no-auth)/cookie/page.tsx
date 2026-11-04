@@ -102,7 +102,7 @@ function CookieTable() {
         <tbody className="divide-y divide-ds-line">
           {COOKIES.map((c) => (
             <tr key={c.name}>
-              <td className={`${TD} whitespace-nowrap font-mono text-ds-ink`}>{c.name}</td>
+              <td className={`${TD} font-mono whitespace-nowrap text-ds-ink`}>{c.name}</td>
               <td className={TD}>{c.purpose}</td>
               <td className={TD}>{c.kind}</td>
               <td className={TD}>{c.duration}</td>
@@ -132,7 +132,7 @@ function StorageTable() {
         <tbody className="divide-y divide-ds-line">
           {LOCAL_STORAGE.map((s) => (
             <tr key={s.key}>
-              <td className={`${TD} whitespace-nowrap font-mono text-ds-ink`}>{s.key}</td>
+              <td className={`${TD} font-mono whitespace-nowrap text-ds-ink`}>{s.key}</td>
               <td className={TD}>{s.purpose}</td>
             </tr>
           ))}

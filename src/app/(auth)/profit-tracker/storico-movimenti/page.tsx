@@ -245,7 +245,7 @@ export default function StoricoMovimentiPage() {
       sectionDescription="Tutte le transazioni finanziarie: scommesse, giocate rapide, depositi, prelievi e altro."
     >
       {/* Filters */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/70 p-4 shadow-xs sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex w-full flex-col gap-1 sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Tipo</label>
           <select
@@ -347,24 +347,24 @@ export default function StoricoMovimentiPage() {
       {/* Summary cards */}
       {summary && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+            <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               Totale entrate
             </p>
             <p className="mt-2 font-mono text-xl font-semibold text-emerald-400">
               {formatCurrency(summary.totaleEntrate)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+            <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               Totale uscite
             </p>
             <p className="mt-2 font-mono text-xl font-semibold text-destructive">
               {formatCurrency(summary.totaleUscite)}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm">
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-xs">
+            <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               Saldo netto
             </p>
             <p
@@ -380,11 +380,11 @@ export default function StoricoMovimentiPage() {
       {loading && <p className="text-sm text-muted-foreground">Caricamento movimenti...</p>}
 
       {/* Mobile cards */}
-      <div className="block space-y-3 sm:hidden">
+      <div className="space-y-3 block sm:hidden">
         {items.map((entry) => (
           <div
             key={`${entry.source}-${entry.id}`}
-            className="rounded-xl border border-border bg-card/70 p-4 shadow-sm"
+            className="rounded-xl border border-border bg-card/70 p-4 shadow-xs"
           >
             <div className="flex items-center justify-between">
               <span
@@ -432,17 +432,17 @@ export default function StoricoMovimentiPage() {
           </div>
         ))}
         {!loading && items.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground shadow-xs">
             Nessun movimento trovato.
           </div>
         )}
       </div>
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Data</th>
               <th className="px-3 py-2 text-left">Tipo</th>
               <th className="px-3 py-2 text-left">Conto / Wallet</th>
@@ -458,7 +458,7 @@ export default function StoricoMovimentiPage() {
                 key={`${entry.source}-${entry.id}`}
                 className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
               >
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-muted-foreground">
                   {new Date(entry.data).toLocaleDateString('it-IT', {
                     day: '2-digit',
                     month: '2-digit',
@@ -481,7 +481,7 @@ export default function StoricoMovimentiPage() {
                 <td className="px-3 py-2">
                   <CategoriaBadge entry={entry} />
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-right font-mono">
+                <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
                   <span
                     className={`text-sm font-medium ${
                       entry.importo >= 0 ? 'text-emerald-400' : 'text-destructive'
@@ -490,7 +490,7 @@ export default function StoricoMovimentiPage() {
                     {formatCurrency(entry.importo)}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2">
+                <td className="px-3 py-2 whitespace-nowrap">
                   {entry.source === 'prelievo' && (
                     <div className="flex items-center gap-2">
                       <StatoBadge stato={entry.stato} />

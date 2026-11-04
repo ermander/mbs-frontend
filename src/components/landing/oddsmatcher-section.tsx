@@ -68,11 +68,11 @@ export function OddsmatcherSection() {
                   </td>
                   <td className={cn(td, 'text-ds-ink-muted')}>{row.market}</td>
                   <td className={td}>{row.site}</td>
-                  <td className={cn(td, num, 'whitespace-nowrap font-semibold')}>
+                  <td className={cn(td, num, 'font-semibold whitespace-nowrap')}>
                     {formatOdds(row.back)}
                   </td>
                   <td className={td}>{row.exchange}</td>
-                  <td className={cn(td, num, 'whitespace-nowrap font-semibold')}>
+                  <td className={cn(td, num, 'font-semibold whitespace-nowrap')}>
                     {formatOdds(row.lay)}
                   </td>
                   <td className={cn(td, num)}>

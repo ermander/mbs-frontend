@@ -203,7 +203,7 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
         <ChevronLeft className="h-4 w-4" /> Tutte le offerte
       </Link>
 
-      <div className="sticky top-[var(--topnav-h)] z-20 -mx-4 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <div className="sticky top-(--topnav-h) z-20 -mx-4 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-xl font-semibold tracking-tight text-foreground">
@@ -293,7 +293,7 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
           <p className="mb-2 text-sm font-medium text-destructive">
             Da sistemare prima di salvare:
           </p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
+          <ul className="space-y-1 list-disc pl-5 text-sm text-destructive">
             {errors.map((error) => (
               <li key={error}>{error}</li>
             ))}
@@ -306,7 +306,7 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
           className={cn(
             dsSerif.variable,
             dsSans.variable,
-            'ds-scope overflow-hidden rounded-lg border border-border bg-ds-surface font-ds-sans text-base leading-6 text-ds-ink antialiased [color-scheme:light]',
+            'ds-scope overflow-hidden rounded-lg border border-border bg-ds-surface font-ds-sans text-base leading-6 text-ds-ink antialiased scheme-light',
           )}
         >
           <OfferDetail

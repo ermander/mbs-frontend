@@ -214,7 +214,7 @@ export default function CompetizioniPage() {
 
       <div className="relative rounded-lg border border-border bg-card px-2 py-2">
         {loading && (
-          <div className="absolute right-3 top-2 text-[11px] text-muted-foreground">aggiorno…</div>
+          <div className="absolute top-2 right-3 text-[11px] text-muted-foreground">aggiorno…</div>
         )}
         {error ? (
           <p className="px-2 py-4 text-sm text-destructive">{error}</p>

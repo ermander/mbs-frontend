@@ -9,7 +9,7 @@ import { Providers } from '@/components/providers'
 
 // Font OddWise (landing). Titoli e testo usano Geist Sans (font-sans, già caricato per
 // l'area autenticata); Bricolage Grotesque 800 resta solo per il marchio (font-ow-display);
-// JetBrains Mono per quote, importi e prezzi (font-ow-mono). Mappati in tailwind.config.js.
+// JetBrains Mono per quote, importi e prezzi (font-ow-mono). Mappati nel blocco @theme di globals.css.
 const owDisplay = Bricolage_Grotesque({
   subsets: ['latin'],
   weight: ['800'],

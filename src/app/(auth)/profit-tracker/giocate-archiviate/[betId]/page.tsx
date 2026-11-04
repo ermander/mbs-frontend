@@ -137,9 +137,9 @@ export default function ArchivedBetDetailPage() {
         </p>
       </header>
 
-      <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-sm">
+      <div className="space-y-4 rounded-xl border border-border bg-card/70 p-4 shadow-xs">
         <div>
-          <p className="font-mono text-xs font-medium uppercase tracking-[0.02em] text-muted-foreground">
+          <p className="font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
             <span className="text-muted-foreground">ID GIOCATA </span>
             <span className="font-mono text-foreground">{bet.id}</span>
           </p>
@@ -177,19 +177,19 @@ export default function ArchivedBetDetailPage() {
 
       {/* Vista mobile: card per leg */}
       {legs.length > 0 ? (
-        <div className="block space-y-4 sm:hidden">
+        <div className="space-y-4 block sm:hidden">
           {legs.map((leg) => {
             const { datePart, timePart } = formatEventDateDisplay(leg.eventoData)
             return (
               <div
                 key={leg.id}
-                className={`rounded-xl border border-border bg-card/70 p-4 shadow-sm ${
+                className={`rounded-xl border border-border bg-card/70 p-4 shadow-xs ${
                   leg.statoEvento !== 'bozza' ? 'opacity-75' : ''
                 }`}
               >
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-2">
-                    <span className="text-xs font-medium capitalize text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground capitalize">
                       {leg.metodo}
                     </span>
                     <span className="text-xs text-muted-foreground">·</span>
@@ -303,14 +303,14 @@ export default function ArchivedBetDetailPage() {
         </div>
       )}
 
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-sm sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="whitespace-nowrap border-b border-border/60 bg-muted/40 font-mono text-[11px] font-medium uppercase tracking-[0.02em] text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/40 font-mono text-[11px] font-medium tracking-[0.02em] whitespace-nowrap text-muted-foreground uppercase">
               <th className="px-3 py-2 text-left">Data evento</th>
               <th className="px-3 py-2 text-left">Evento</th>
               <th className="px-3 py-2 text-left">Competizione</th>
-              <th className="whitespace-nowrap px-3 py-2 text-left">Mercato</th>
+              <th className="px-3 py-2 text-left whitespace-nowrap">Mercato</th>
               <th className="px-3 py-2 text-left">Metodo</th>
               <th className="px-3 py-2 text-left">Tipo bonus</th>
               <th className="px-3 py-2 text-left">Conto</th>
@@ -341,14 +341,14 @@ export default function ArchivedBetDetailPage() {
                     )
                   })()}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-foreground">
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-foreground">
                   {leg.eventoNome}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                <td className="px-3 py-2 text-xs whitespace-nowrap text-muted-foreground">
                   {leg.mercato}
                 </td>
-                <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{leg.metodo}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground capitalize">{leg.metodo}</td>
                 <td className="px-3 py-2 text-xs text-foreground">
                   {leg.metodo === 'punta' ? (
                     TIPO_BONUS_LABEL[leg.tipoBonus]
@@ -374,7 +374,7 @@ export default function ArchivedBetDetailPage() {
                     '—'
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-foreground">
+                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap text-foreground">
                   {leg.rischio.toFixed(2)} €
                 </td>
                 <td className="px-3 py-2 text-xs text-foreground">
@@ -387,7 +387,7 @@ export default function ArchivedBetDetailPage() {
                     ? `${leg.rimborsoValore.toFixed(2)} €`
                     : '—'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-medium text-foreground">
+                <td className="px-3 py-2 font-mono text-xs font-medium whitespace-nowrap text-foreground">
                   {leg.movimento.toFixed(2)} €
                 </td>
                 <td className="px-3 py-2">

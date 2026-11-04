@@ -71,7 +71,7 @@ export default function BackofficeOffersPage() {
       (type === 'all' || o.type === type) && (visibility === 'all' || o.visibility === visibility),
   )
   const selectClass =
-    'h-9 rounded-md border border-border bg-surface-1 px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20'
+    'h-9 rounded-md border border-border bg-surface-1 px-3 text-sm text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/20'
 
   return (
     <Container>
@@ -179,7 +179,7 @@ export default function BackofficeOffersPage() {
                   <td className="px-4 py-2 text-muted-foreground">
                     {offer.guide ? `${offer.guide.steps.length} passi` : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
+                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">
                     {dateTime.format(new Date(offer.updatedAt))}
                   </td>
                   <td className="px-4 py-2 text-right">

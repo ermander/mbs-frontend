@@ -7,7 +7,9 @@
    in .ds-scope, le variabili shadcn in .ds-calc-bridge, --font-ds-* impostate da next/font sul
    guscio pubblico) e devono essere lette sull'elemento che usa la utility, come faceva la 3; con
    @theme normale verrebbero risolte una volta sola su :root e le rimappature non avrebbero effetto. */
-@plugin 'tailwindcss-animate';
+/* Animazioni di menu e dialoghi (animate-in/out, fade, zoom, slide): tw-animate-css è il
+   sostituto nativo per Tailwind 4 di tailwindcss-animate, stesse classi, nessun plugin JS. */
+@import 'tw-animate-css';
 
 @theme inline {
   --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;

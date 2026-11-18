@@ -159,7 +159,7 @@ describe('modale Modifica gamba', () => {
       'Importo non valido',
     )
   })
-  it('quota reale (§14.337): si scrive, si cambia, si toglie svuotando il campo', () => {
+  it('quota reale (§14.338): si scrive, si cambia, si toglie svuotando il campo', () => {
     const senza = leg({})
     expect(legToForm(senza).quotaReale).toBe('')
     expect(legFormPatch(senza, { ...legToForm(senza), quotaReale: '1,95' })).toEqual({
@@ -171,7 +171,7 @@ describe('modale Modifica gamba', () => {
     expect(legFormPatch(con, { ...legToForm(con), quotaReale: '2' })).toEqual({ quotaReale: 2 })
     expect(legFormPatch(con, { ...legToForm(con), quotaReale: ' ' })).toEqual({ quotaReale: null })
   })
-  it('quota reale (§14.337): vuota va bene, sopra 1 o errore', () => {
+  it('quota reale (§14.338): vuota va bene, sopra 1 o errore', () => {
     const l = leg({})
     expect(legFormErrors(l, legToForm(l), false).quotaReale).toBeUndefined()
     expect(legFormErrors(l, { ...legToForm(l), quotaReale: '1' }, false).quotaReale).toBe(

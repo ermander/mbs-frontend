@@ -123,7 +123,7 @@ export type LegPatch = Partial<
     | 'rischio'
   >
 > & {
-  /** §14.337: null toglie la quota reale. */
+  /** §14.338: null toglie la quota reale. */
   quotaReale?: number | null
 }
 
@@ -137,7 +137,7 @@ export interface LegForm {
   tipoBonus: BetLeg['tipoBonus']
   quota: string
   quotaRiferimento: string
-  /** §14.337: la quota reale (fair), vuota se non indicata. */
+  /** §14.338: la quota reale (fair), vuota se non indicata. */
   quotaReale: string
   stake: string
   bonusValore: string

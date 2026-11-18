@@ -323,7 +323,7 @@ export interface BetLeg {
   stake: number
   quota: number
   quotaRiferimento?: number
-  /** §14.337: la quota reale (fair) per il valore atteso delle valuebet. */
+  /** §14.338: la quota reale (fair) per il valore atteso delle valuebet. */
   quotaReale?: number
   rischio: number
   bonusValore?: number

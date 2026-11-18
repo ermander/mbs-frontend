@@ -1,7 +1,7 @@
 import type { BetLeg } from '@/types/profit-tracker'
 
 /**
- * Valore atteso di una gamba dalla quota reale (fair) (§14.337).
+ * Valore atteso di una gamba dalla quota reale (fair) (§14.338).
  *
  * La probabilità vera dell'esito è 1 / quota reale. Il valore atteso pesa con quella
  * probabilità i due esiti come li liquida il backend (`calcolaMovimentoPerStato`):

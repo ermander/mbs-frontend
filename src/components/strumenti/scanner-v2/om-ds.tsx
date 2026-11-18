@@ -19,6 +19,12 @@ import { cn } from '@/lib/utils'
 
 /** Altezza del pannello con ricerca, elenco pieno e piede: sotto questo spazio si apre in su. */
 const FLOAT_PANEL_HEIGHT = 330
+/** Bordo, padding e piede del pannello, più la ricerca (38px) quando c'è: tutto tranne l'elenco. */
+const PANEL_CHROME = 66
+const SEARCH_HEIGHT = 38
+/** L'elenco pieno (max-h-56) e il minimo sotto cui non si accorcia: due voci. */
+const LIST_MAX_HEIGHT = 224
+const LIST_MIN_HEIGHT = 72
 
 export interface OmOption {
   value: string
@@ -37,7 +43,8 @@ export interface OmOption {
  * `single` le voci sono radio: una scelta, «Azzera» torna a «tutti». Si chiude con un clic fuori,
  * con Esc (il fuoco torna sul pulsante) e con «Fatto». Con `floating` il pannello è `fixed` sul
  * pulsante e si apre verso l'alto se sotto non c'è posto: nei DsModal non resta tagliato dallo
- * scorrimento del modal.
+ * scorrimento del modal. Con `floating` e `alignBelow` si apre sempre sotto, allineato al
+ * pulsante e largo quanto lui, e l'elenco si accorcia allo spazio che resta sotto.
  */
 export function OmDropdown({
   id,
@@ -53,6 +60,7 @@ export function OmDropdown({
   emptyText = 'Nessun risultato. Prova con un altro nome.',
   disabled,
   floating,
+  alignBelow,
   className,
 }: {
   id: string
@@ -69,10 +77,13 @@ export function OmDropdown({
   emptyText?: string
   disabled?: boolean
   floating?: boolean
+  /** Con `floating`: sempre sotto il pulsante e largo quanto lui, mai in su. */
+  alignBelow?: boolean
   className?: string
 }) {
   const [open, setOpen] = React.useState(false)
   const [floatPos, setFloatPos] = React.useState<React.CSSProperties | null>(null)
+  const [listMaxHeight, setListMaxHeight] = React.useState<number | null>(null)
   const [query, setQuery] = React.useState('')
   const rootRef = React.useRef<HTMLDivElement>(null)
   const buttonRef = React.useRef<HTMLButtonElement>(null)
@@ -86,6 +97,14 @@ export function OmDropdown({
   const placeFloating = React.useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect()
     if (!rect) return
+    if (alignBelow) {
+      // Lo spazio fino a 16px dal fondo della finestra, meno ricerca e piede, va all'elenco.
+      const room =
+        window.innerHeight - rect.bottom - 4 - 16 - PANEL_CHROME - (searchable ? SEARCH_HEIGHT : 0)
+      setListMaxHeight(Math.max(LIST_MIN_HEIGHT, Math.min(LIST_MAX_HEIGHT, room)))
+      setFloatPos({ position: 'fixed', left: rect.left, top: rect.bottom + 4, width: rect.width })
+      return
+    }
     const below = window.innerHeight - rect.bottom
     const up = below < FLOAT_PANEL_HEIGHT && rect.top > below
     setFloatPos({
@@ -93,7 +112,7 @@ export function OmDropdown({
       left: Math.max(16, Math.min(rect.left, window.innerWidth - panelWidth - 16)),
       ...(up ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
     })
-  }, [panelWidth])
+  }, [panelWidth, alignBelow, searchable])
 
   const openPanel = () => {
     if (floating) placeFloating()
@@ -124,10 +143,12 @@ export function OmDropdown({
       }
     }
     document.addEventListener('pointerdown', onPointer)
-    document.addEventListener('keydown', onKey, true)
+    // Sulla window in cattura, non sul document: il DsModal (Radix) ascolta Esc sul document in
+    // cattura da prima che il menu si apra, e lì chiuderebbe la modale prima di noi.
+    window.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('pointerdown', onPointer)
-      document.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('keydown', onKey, true)
     }
   }, [open, close])
 
@@ -208,6 +229,11 @@ export function OmDropdown({
             role="group"
             aria-label={label}
             className={cn('flex max-h-56 flex-col overflow-auto', searchable && 'mt-1.5')}
+            style={
+              floating && alignBelow && listMaxHeight != null
+                ? { maxHeight: listMaxHeight }
+                : undefined
+            }
           >
             {shown.map((o) => {
               const checked = selected.includes(o.value)

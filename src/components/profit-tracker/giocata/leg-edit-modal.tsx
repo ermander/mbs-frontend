@@ -79,7 +79,7 @@ export function LegEditModal({
   const stake = parseDecimal(form.stake)
   const liability =
     isBanca && quota != null && stake != null && quota > 1 ? stake * (quota - 1) : null
-  // §14.337: il valore atteso con la quota reale scritta, sotto il campo.
+  // §14.338: il valore atteso con la quota reale scritta, sotto il campo.
   const valoreAtteso =
     quota != null && stake != null && !allErrors.quotaReale
       ? valoreAttesoGamba({

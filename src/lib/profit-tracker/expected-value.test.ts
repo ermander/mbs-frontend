@@ -12,7 +12,7 @@ const punta = (o: Partial<ExpectedValueLeg>): ExpectedValueLeg => ({
   ...o,
 })
 
-describe('valore atteso di una gamba (§14.337)', () => {
+describe('valore atteso di una gamba (§14.338)', () => {
   it('punta reale: puntata × (quota / quota reale − 1)', () => {
     expect(valoreAttesoGamba(punta({}))).toBeCloseTo(100 * (2.1 / 1.95 - 1), 10)
     expect(valoreAttesoGamba(punta({}))).toBeCloseTo(7.69, 2)

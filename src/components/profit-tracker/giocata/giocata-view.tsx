@@ -165,7 +165,7 @@ export function GiocataView({ betId }: { betId: string }) {
   const multipla = isMultiplaLegs(legs)
   const summary = betSummary(legs)
   const mainPunta = legs.find((l) => l.metodo === 'punta')
-  // §14.337: il valore atteso delle gambe con la quota reale (valuebet); null se nessuna ce l'ha.
+  // §14.338: il valore atteso delle gambe con la quota reale (valuebet); null se nessuna ce l'ha.
   const valoreAtteso = valoreAttesoGiocata(legs)
   const legsConQuotaReale = legs.filter((l) => l.quotaReale != null)
   const vantaggioUnico =

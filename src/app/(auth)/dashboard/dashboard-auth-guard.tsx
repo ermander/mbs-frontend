@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAuthStore, useAuthHydrated } from '@/stores/auth-store'
 import { authClient } from '@/services/api/auth-client'
 import { bootstrapRetryDelayMs, isUnauthenticatedError } from '@/lib/auth-session'
+import { holdPublicPage } from '@/lib/public-page'
 import { loginHref } from '@/lib/auth-redirects'
 import { AuthButton, AuthMessage } from '@/components/auth/auth-primitives'
 import { currentLocation } from '@/components/auth/post-auth-destination'
@@ -42,6 +43,10 @@ export function DashboardAuthGuard({
   // Failed attempts so far and the wait before the next one (0 = at once).
   const [retry, setRetry] = useState({ attempt: 0, delayMs: 0 })
   const allowGuest = publicFallback !== undefined
+
+  // Declared before the bootstrap: a 401 on the refresh must find the page already marked public,
+  // so AuthRefreshProvider does not send the visitor to /login.
+  useEffect(() => (allowGuest ? holdPublicPage() : undefined), [allowGuest])
 
   useEffect(() => {
     if (!isHydrated) return

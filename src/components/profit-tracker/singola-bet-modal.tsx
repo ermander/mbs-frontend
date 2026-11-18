@@ -343,12 +343,12 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
                 label="Conto"
                 allLabel="Scegli un conto"
                 single
-                panelWidth={300}
                 emptyText="Nessun conto con questo nome."
                 options={accountOptions}
                 selected={accountId ? [accountId] : []}
                 onChange={(next) => setAccountId(next[0] ?? '')}
                 floating
+                alignBelow
                 className="gap-1"
               />
               {errors.conto && <FieldError id="singola-conto-error">{errors.conto}</FieldError>}

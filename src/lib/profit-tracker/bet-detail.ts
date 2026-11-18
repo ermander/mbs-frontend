@@ -122,7 +122,10 @@ export type LegPatch = Partial<
     | 'accountId'
     | 'rischio'
   >
->
+> & {
+  /** §14.338: null toglie la quota reale. */
+  quotaReale?: number | null
+}
 
 /** Il modulo della modale «Modifica gamba»: testi come li scrive l'utente. */
 export interface LegForm {
@@ -134,6 +137,8 @@ export interface LegForm {
   tipoBonus: BetLeg['tipoBonus']
   quota: string
   quotaRiferimento: string
+  /** §14.338: la quota reale (fair), vuota se non indicata. */
+  quotaReale: string
   stake: string
   bonusValore: string
   rimborsoValore: string
@@ -168,6 +173,7 @@ export function legToForm(leg: BetLeg): LegForm {
     tipoBonus: leg.tipoBonus,
     quota: decimalText(leg.quota),
     quotaRiferimento: decimalText(leg.quotaRiferimento),
+    quotaReale: decimalText(leg.quotaReale),
     stake: decimalText(leg.stake),
     bonusValore: leg.bonusValore ? decimalText(leg.bonusValore) : '',
     rimborsoValore: leg.rimborsoValore ? decimalText(leg.rimborsoValore) : '',
@@ -192,6 +198,10 @@ export function legFormErrors(leg: BetLeg, f: LegForm, multipla: boolean): LegFo
     const q = parseDecimal(f.quotaRiferimento)
     if (q == null || q <= 1) e.quotaRiferimento = 'Serve una quota sopra 1'
   }
+  if (f.quotaReale.trim() !== '') {
+    const q = parseDecimal(f.quotaReale)
+    if (q == null || q <= 1) e.quotaReale = 'Serve una quota sopra 1'
+  }
   if (leg.metodo === 'banca') {
     const c = parseDecimal(f.commissione)
     if (c == null || c < 0 || c > 100) e.commissione = 'La commissione va da 0 a 100 %'
@@ -213,7 +223,7 @@ const changed = (a: number | null | undefined, b: number | null | undefined) =>
  * Solo i campi cambiati, con le regole della pagina di prima: la punta che cambia puntata
  * aggiorna anche il rischio; un tipo bonus diverso da «bonus»/«freebet» azzera il bonus
  * (la freebet vive in bonusValore, come la liquida il backend) e uno diverso da «rimborso»
- * azzera il rimborso; il metodo non si tocca.
+ * azzera il rimborso; la quota reale svuotata diventa null; il metodo non si tocca.
  */
 export function legFormPatch(leg: BetLeg, f: LegForm): LegPatch {
   const p: LegPatch = {}
@@ -232,6 +242,14 @@ export function legFormPatch(leg: BetLeg, f: LegForm): LegPatch {
   const qRif = parseDecimal(f.quotaRiferimento)
   if (leg.metodo !== 'punta' && qRif != null && changed(qRif, leg.quotaRiferimento))
     p.quotaRiferimento = qRif
+  // La quota reale si toglie svuotando il campo (null nel PATCH).
+  if (f.quotaReale.trim() === '') {
+    if (leg.quotaReale != null) p.quotaReale = null
+  } else {
+    const qReale = parseDecimal(f.quotaReale)
+    if (qReale != null && (leg.quotaReale == null || changed(qReale, leg.quotaReale)))
+      p.quotaReale = qReale
+  }
   const stake = parseDecimal(f.stake)
   if (stake != null && changed(stake, leg.stake)) {
     p.stake = stake
@@ -264,7 +282,8 @@ export function multiplaRecalcPatches(
   if (!isMultiplaLegs(legs)) return []
   const punta = legs.find((l) => l.metodo === 'punta')
   if (!punta) return []
-  const apply = (l: BetLeg): BetLeg => (l.id === legId ? { ...l, ...patch } : l)
+  const apply = (l: BetLeg): BetLeg =>
+    l.id === legId ? { ...l, ...patch, quotaReale: patch.quotaReale ?? l.quotaReale } : l
   const hedges = legs
     .filter((l) => l.id !== punta.id)
     .sort((a, b) => {

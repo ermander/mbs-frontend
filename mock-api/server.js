@@ -910,9 +910,10 @@ const server = http.createServer(async (req, res) => {
         const body = await readBody(req);
         saved.patches.push({ method: 'PATCH', path, body });
         console.log('  leg:', legOne[2], JSON.stringify(body));
-        const FIELDS = ['eventoData', 'eventoNome', 'mercato', 'selezione', 'stake', 'quota', 'quotaRiferimento', 'rischio', 'commissionePercentuale', 'statoEvento', 'tag', 'movimento', 'tipoBonus', 'bonusValore', 'rimborsoValore', 'accountId'];
+        // §14.338: quotaReale null la toglie (il backend la rimette assente nella risposta).
+        const FIELDS = ['eventoData', 'eventoNome', 'mercato', 'selezione', 'stake', 'quota', 'quotaRiferimento', 'quotaReale', 'rischio', 'commissionePercentuale', 'statoEvento', 'tag', 'movimento', 'tipoBonus', 'bonusValore', 'rimborsoValore', 'accountId'];
         const leg = LEGS[i];
-        for (const k of FIELDS) if (k in body) leg[k] = k === 'selezione' && !body[k] ? undefined : body[k];
+        for (const k of FIELDS) if (k in body) leg[k] = (k === 'selezione' && !body[k]) || (k === 'quotaReale' && body[k] == null) ? undefined : body[k];
         const c = (leg.commissionePercentuale ?? 0) / 100;
         const mov = { vinto: leg.metodo === 'punta' ? leg.stake * (leg.quota - 1) : leg.stake * (1 - c), perso: leg.metodo === 'punta' ? -leg.stake : -leg.stake * (leg.quota - 1) };
         leg.movimento = Math.round((mov[leg.statoEvento] ?? 0) * 100) / 100;

@@ -270,6 +270,7 @@ export function GiocateInCorsoView() {
         stake: leg.stake,
         quota: leg.quota,
         quotaRiferimento: leg.quotaRiferimento,
+        quotaReale: leg.quotaReale,
         rischio: leg.rischio,
         bonusValore: leg.bonusValore,
         rimborsoValore: leg.rimborsoValore,

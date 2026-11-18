@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { OmDropdown, type OmOption } from '@/components/strumenti/scanner-v2/om-ds'
 import {
   DsModal,
+  FieldError,
   GSelect,
   GTabs,
   GTextField,
 } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { AccountChip } from '@/components/profit-tracker/giocate-rapide/use-account-info'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import type {
@@ -133,14 +136,17 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
     onOpenChange(false)
   }, [resetState, onOpenChange])
 
-  const accountOptions = useMemo(
+  // Voci del menu con ricerca come nella giocata rapida: logo del book e titolare; la ricerca
+  // legge l'etichetta «Book · Titolare», quindi trova sia il bookmaker sia il titolare.
+  const accountOptions = useMemo<OmOption[]>(
     () =>
       allAccounts
         .map((a) => {
           const book = allBooks.find((b) => b.id === a.bookId)
           const holder = allHolders.find((h) => h.id === a.holderId)
           const label = book && holder ? `${book.nome} · ${holder.nome}` : a.nome
-          return { value: a.id, label }
+          const info = { account: a, book, holderName: holder?.nome ?? a.nome, label }
+          return { value: a.id, label, render: <AccountChip info={info} /> }
         })
         .sort((x, y) => x.label.localeCompare(y.label, 'it')),
     [allAccounts, allBooks, allHolders],
@@ -331,14 +337,22 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.9fr)]">
-            <GSelect
-              id="singola-conto"
-              label="Conto"
-              options={[{ value: '', label: 'Scegli un conto', disabled: true }, ...accountOptions]}
-              value={accountId}
-              onChange={setAccountId}
-              error={errors.conto}
-            />
+            <div className="flex min-w-0 flex-col gap-1">
+              <OmDropdown
+                id="singola-conto"
+                label="Conto"
+                allLabel="Scegli un conto"
+                single
+                emptyText="Nessun conto con questo nome."
+                options={accountOptions}
+                selected={accountId ? [accountId] : []}
+                onChange={(next) => setAccountId(next[0] ?? '')}
+                floating
+                alignBelow
+                className="gap-1"
+              />
+              {errors.conto && <FieldError id="singola-conto-error">{errors.conto}</FieldError>}
+            </div>
             <GSelect
               id="singola-tipo-stake"
               label="Modalità saldo"

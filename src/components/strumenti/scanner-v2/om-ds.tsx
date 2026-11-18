@@ -124,10 +124,12 @@ export function OmDropdown({
       }
     }
     document.addEventListener('pointerdown', onPointer)
-    document.addEventListener('keydown', onKey, true)
+    // Sulla window in cattura, non sul document: il DsModal (Radix) ascolta Esc sul document in
+    // cattura da prima che il menu si apra, e lì chiuderebbe la modale prima di noi.
+    window.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('pointerdown', onPointer)
-      document.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('keydown', onKey, true)
     }
   }, [open, close])
 

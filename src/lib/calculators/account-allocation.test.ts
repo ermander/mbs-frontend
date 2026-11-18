@@ -242,7 +242,7 @@ describe('adviseStake', () => {
       cushion: 100,
       maxStake: 150,
     })!
-    // 95 − 100 < 0: Marco is to refill; Linda bears 80, below the 150 cap.
+    // 95 − 100 < 0: Marco is to refill; Lucia bears 80, below the 150 cap.
     expect(advice.recommended).toBe(80)
     expect(advice.cappedBy).toBe('account')
     expect(advice.favouriteAccountId).toBe('linda')

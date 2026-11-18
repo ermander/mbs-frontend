@@ -10,3 +10,5 @@ docker-compose*
 .env
 .env.*
 !.env.example
+# finto backend per lo sviluppo (mock-api/server.js): non entra nell'immagine
+mock-api

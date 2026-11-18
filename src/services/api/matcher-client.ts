@@ -15,7 +15,8 @@ export async function getMatcherMeta(): Promise<MatcherMeta> {
 
 /**
  * The free Oddsmatcher for visitors who are not logged in (§14.339): no login needed, the scope
- * (back on Sisal, the Snai prices, lay on an exchange) is fixed by the backend, which reads only
+ * (back on Snai, lay on an exchange: the Sisal feed's prices, shown as Snai) is fixed by the
+ * backend, which reads only
  * the price bounds, the kickoff window, the sort and the page of `filters`.
  */
 export async function getFreeMatcherResults(

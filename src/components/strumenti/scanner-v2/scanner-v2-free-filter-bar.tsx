@@ -32,7 +32,8 @@ interface ScannerV2FreeFilterBarProps {
 
 /**
  * The bar of the free Oddsmatcher, for visitors who are not logged in (§14.339): the rows are only
- * back on Sisal (the Snai prices, §14.51) and lay on an exchange, and the backend enforces it. No
+ * back on Snai (the backend reads its prices from the Sisal feed and shows them as Snai) and lay on
+ * an exchange, and the backend enforces it. No
  * search, no bookmaker menus, no advanced panel and no Multipla: of the filters only the price of
  * the back leg (minima, massima) and the kickoff window (Dal, Al), next to the shared stake and the
  * sort, all in the card. Above it, one line on what the free version shows and the way to the rest.
@@ -54,9 +55,8 @@ export function ScannerV2FreeFilterBar({
         <p className="ds-body-sm m-0 flex items-start gap-2 text-ds-ink">
           <Sparkles className="mt-0.5 h-4 w-4 flex-none text-ds-brand" aria-hidden />
           <span>
-            <b>Versione gratuita:</b> punta su Sisal (stesse quote di Snai) e banca
-            sull&apos;exchange. Con un account, gratuito, hai tutti i siti di scommesse, la ricerca,
-            gli altri filtri e la multipla.
+            <b>Versione gratuita:</b> punta su Snai e banca sull&apos;exchange. Con un account,
+            gratuito, hai tutti i siti di scommesse, la ricerca, gli altri filtri e la multipla.
           </span>
         </p>
         <div className="flex flex-none flex-wrap gap-2">

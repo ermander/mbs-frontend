@@ -512,8 +512,9 @@ function filterRows(q) {
     return { results: rows.slice(offset, offset + limit), total: rows.length, calculatedAt: META.calculatedAt };
 }
 
-// §14.339: the free Oddsmatcher, no login: back on Sisal and lay on an exchange whatever the query
-// asks; only the price bounds, the kickoff window, the sort and the page are read (at most 50 rows).
+// §14.339: the free Oddsmatcher, no login: back on Sisal (shown as Snai) and lay on an exchange
+// whatever the query asks; only the price bounds, the kickoff window, the sort and the page are
+// read (at most 50 rows).
 const FREE_PARAMS = ['min_odds', 'max_odds', 'start_time_from', 'start_time_to', 'sort_by', 'sort_dir', 'offset'];
 function freeRows(q) {
     const p = new URLSearchParams();
@@ -522,7 +523,10 @@ function freeRows(q) {
     p.set('bookmaker', 'sisal');
     p.set('cover_bookmakers', Object.values(BOOKMAKERS).filter((b) => b.isExchange).map((b) => b.slug).join(','));
     p.set('limit', String(Math.min(parseInt(q.get('limit') || '50', 10) || 50, 50)));
-    return filterRows(p);
+    const page = filterRows(p);
+    // Shown as Snai, as the backend does: slug and name of the Sisal leg, no event page.
+    const asSnai = (l) => (l.bookmakerSlug === 'sisal' ? { ...l, bookmakerSlug: 'snai', bookmakerName: 'Snai', eventUrl: null } : l);
+    return { ...page, results: page.results.map((r) => ({ ...r, legs: r.legs.map(asSnai) })) };
 }
 
 // §14.262: le offerte del backoffice. Una pubblicata con una guida piccola e una bozza senza.
@@ -883,7 +887,7 @@ const server = http.createServer(async (req, res) => {
     if (path === '/api/odds-collection/matcher/results') return send(200, filterRows(url.searchParams));
     if (path === '/api/odds-collection/matcher/free/results') return send(200, freeRows(url.searchParams));
     if (path === '/api/odds-collection/matcher/free/meta') {
-        const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange);
+        const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange).map((b) => (b.slug === 'sisal' ? { ...b, slug: 'snai', name: 'Snai' } : b));
         const totalResults = freeRows(new URLSearchParams()).total;
         return send(200, { ...META, calculatedAt: ago(35), totalResults, sports: [], bookmakers, marketTypes: [], nations: [], competitions: [] });
     }

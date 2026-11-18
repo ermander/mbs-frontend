@@ -74,7 +74,7 @@ interface SelectedMultiplaRow {
 /**
  * The Oddsmatcher. §14.339: the page sits in the `(open)` route group, so a visitor who is not
  * logged in gets here from the landing too and sees the free version: the free endpoints of the
- * backend (back on Sisal, the Snai prices, lay on an exchange, enforced on the server), only the
+ * backend (back on Snai, lay on an exchange, enforced on the server), only the
  * price and date filters, no Multipla and no «Salva nel tracker».
  */
 export function OddsScannerV2() {

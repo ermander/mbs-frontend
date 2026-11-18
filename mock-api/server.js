@@ -260,10 +260,10 @@ const HOLDERS = [
     { id: 'h1', nome: 'Emanuele', descrizione: 'Collaboratore con descrizione da svuotare', stato: 'abilitato' },
     { id: 'h2', nome: 'Marco', stato: 'abilitato' },
     // §14.242: collaborators with a Bet365 account each, balances from poor to rich.
-    { id: 'h3', nome: 'Linda', stato: 'abilitato' },
-    { id: 'h4', nome: 'Chiraz', stato: 'abilitato' },
+    { id: 'h3', nome: 'Lucia', stato: 'abilitato' },
+    { id: 'h4', nome: 'Carla', stato: 'abilitato' },
     { id: 'h5', nome: 'Davide', stato: 'abilitato' },
-    { id: 'h6', nome: 'Sara', stato: 'abilitato' },
+    { id: 'h6', nome: 'Livia', stato: 'abilitato' },
     { id: 'h7', nome: 'Paolo (disabilitato)', stato: 'disabilitato' },
 ];
 const BOOKS = [
@@ -288,10 +288,10 @@ const ACCOUNTS = [
     // §14.242: six Bet365 accounts (one is blocked, one is on a suspended holder) for the recommended accounts.
     { id: 'b365-1', holderId: 'h1', bookId: 'pt-bet365', nome: 'Bet365 Emanuele', saldoAttuale: 420, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
     { id: 'b365-2', holderId: 'h2', bookId: 'pt-bet365', nome: 'Bet365 Marco', saldoAttuale: 95, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
-    { id: 'b365-3', holderId: 'h3', bookId: 'pt-bet365', nome: 'Bet365 Linda', saldoAttuale: 180, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
-    { id: 'b365-4', holderId: 'h4', bookId: 'pt-bet365', nome: 'Bet365 Chiraz', saldoAttuale: 640, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
+    { id: 'b365-3', holderId: 'h3', bookId: 'pt-bet365', nome: 'Bet365 Lucia', saldoAttuale: 180, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
+    { id: 'b365-4', holderId: 'h4', bookId: 'pt-bet365', nome: 'Bet365 Carla', saldoAttuale: 640, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
     { id: 'b365-5', holderId: 'h5', bookId: 'pt-bet365', nome: 'Bet365 Davide', saldoAttuale: 260, stato: 'abilitato', bloccato: false, createdAt: ago(86400) },
-    { id: 'b365-6', holderId: 'h6', bookId: 'pt-bet365', nome: 'Bet365 Sara (bloccato)', saldoAttuale: 900, stato: 'abilitato', bloccato: true, createdAt: ago(86400) },
+    { id: 'b365-6', holderId: 'h6', bookId: 'pt-bet365', nome: 'Bet365 Livia (bloccato)', saldoAttuale: 900, stato: 'abilitato', bloccato: true, createdAt: ago(86400) },
     { id: 'b365-7', holderId: 'h7', bookId: 'pt-bet365', nome: 'Bet365 Paolo', saldoAttuale: 50, stato: 'disabilitato', bloccato: false, createdAt: ago(86400) },
 ];
 const saved = { bets: [], legs: [], patches: [] };

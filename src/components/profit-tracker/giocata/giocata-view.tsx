@@ -23,6 +23,11 @@ import {
 import { LegEditModal } from '@/components/profit-tracker/giocata/leg-edit-modal'
 import { getErrorMessage } from '@/lib/error-utils'
 import {
+  valoreAttesoGamba,
+  valoreAttesoGiocata,
+  vantaggioPercentuale,
+} from '@/lib/profit-tracker/expected-value'
+import {
   FINAL_STATES,
   STATO_LABEL,
   STATO_TONE,
@@ -66,6 +71,11 @@ const STATO_OPTIONS = (Object.keys(STATO_LABEL) as BetStatus[]).map((v) => ({
 const odds = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 3 })
 const eur = new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pct = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 })
+const edge = new Intl.NumberFormat('it-IT', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+  signDisplay: 'exceptZero',
+})
 const p2 = (n: number) => String(n).padStart(2, '0')
 const shortDate = (iso: string) => {
   const d = new Date(iso)
@@ -155,6 +165,17 @@ export function GiocataView({ betId }: { betId: string }) {
   const multipla = isMultiplaLegs(legs)
   const summary = betSummary(legs)
   const mainPunta = legs.find((l) => l.metodo === 'punta')
+  // §14.337: il valore atteso delle gambe con la quota reale (valuebet); null se nessuna ce l'ha.
+  const valoreAtteso = valoreAttesoGiocata(legs)
+  const legsConQuotaReale = legs.filter((l) => l.quotaReale != null)
+  const vantaggioUnico =
+    legsConQuotaReale.length === 1
+      ? vantaggioPercentuale(
+          legsConQuotaReale[0].quota,
+          legsConQuotaReale[0].quotaReale,
+          legsConQuotaReale[0].metodo,
+        )
+      : null
 
   const accountInfo = useCallback(
     (accountId: string) => {
@@ -324,6 +345,7 @@ export function GiocataView({ betId }: { betId: string }) {
           stake: leg.stake,
           quota: leg.quota,
           quotaRiferimento: leg.quotaRiferimento,
+          quotaReale: leg.quotaReale,
           rischio: leg.rischio,
           bonusValore: leg.bonusValore,
           rimborsoValore: leg.rimborsoValore,
@@ -415,6 +437,17 @@ export function GiocataView({ betId }: { betId: string }) {
     )
   }
 
+  const evTitle = (l: BetLeg) => {
+    const ev = valoreAttesoGamba(l)
+    const v = vantaggioPercentuale(l.quota, l.quotaReale, l.metodo)
+    return [
+      ev != null ? `Valore atteso ${ev >= 0 ? '+' : ''}${eur.format(ev)} €` : null,
+      v != null ? `vantaggio ${edge.format(v)} %` : null,
+    ]
+      .filter(Boolean)
+      .join(', ')
+  }
+
   const quotaCell = (l: BetLeg) => (
     <>
       <span className="ds-num-sm block">{odds.format(l.quota)}</span>
@@ -426,6 +459,11 @@ export function GiocataView({ betId }: { betId: string }) {
       {multipla && l.metodo !== 'punta' && l.quotaRiferimento != null && (
         <span className="ds-caption block whitespace-nowrap text-ds-ink-muted">
           punta {odds.format(l.quotaRiferimento)}
+        </span>
+      )}
+      {l.quotaReale != null && (
+        <span className="ds-caption block whitespace-nowrap text-ds-ink-muted" title={evTitle(l)}>
+          reale {odds.format(l.quotaReale)}
         </span>
       )}
     </>
@@ -679,6 +717,19 @@ export function GiocataView({ betId }: { betId: string }) {
               </div>
             </div>
           </div>
+          {valoreAtteso != null && (
+            <div>
+              <div className="ds-caption text-ds-ink-muted">Valore atteso</div>
+              <div aria-live="polite" className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+                <DsMoney value={valoreAtteso} size="md" className="text-xl leading-7" />
+                {vantaggioUnico != null && (
+                  <span className="ds-caption text-ds-ink-muted">
+                    vantaggio {edge.format(vantaggioUnico)} % sulla quota reale
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           <div className="h-px bg-ds-line" />
           <GSelect
             id="giocata-tag"

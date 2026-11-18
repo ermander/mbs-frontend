@@ -22,6 +22,7 @@ import {
   type LegForm,
   type LegPatch,
 } from '@/lib/profit-tracker/bet-detail'
+import { valoreAttesoGamba } from '@/lib/profit-tracker/expected-value'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import type { BetLeg } from '@/types/profit-tracker'
 
@@ -69,6 +70,7 @@ export function LegEditModal({
         stake: form.stake !== '' ? allErrors.stake : undefined,
         commissione: allErrors.commissione,
         quotaRiferimento: allErrors.quotaRiferimento,
+        quotaReale: allErrors.quotaReale,
       }
 
   const isBanca = leg.metodo === 'banca'
@@ -77,6 +79,19 @@ export function LegEditModal({
   const stake = parseDecimal(form.stake)
   const liability =
     isBanca && quota != null && stake != null && quota > 1 ? stake * (quota - 1) : null
+  // §14.337: il valore atteso con la quota reale scritta, sotto il campo.
+  const valoreAtteso =
+    quota != null && stake != null && !allErrors.quotaReale
+      ? valoreAttesoGamba({
+          metodo: leg.metodo,
+          stake,
+          quota,
+          quotaReale: parseDecimal(form.quotaReale),
+          tipoBonus: form.tipoBonus,
+          bonusValore: parseDecimal(form.bonusValore) ?? 0,
+          commissionePercentuale: isBanca ? (parseDecimal(form.commissione) ?? 0) : 0,
+        })
+      : null
 
   const save = async () => {
     if (Object.keys(allErrors).length > 0) {
@@ -218,6 +233,23 @@ export function LegEditModal({
             onChange={num('quota')}
             error={errors.quota}
           />
+          {!multipla && (
+            <GTextField
+              id="gamba-quota-reale"
+              label="Quota reale"
+              optional
+              numeric
+              placeholder="Es. 1,75"
+              value={form.quotaReale}
+              onChange={num('quotaReale')}
+              error={errors.quotaReale}
+              hint={
+                valoreAtteso != null
+                  ? `Valore atteso ${valoreAtteso >= 0 ? '+' : ''}${money.format(valoreAtteso)} €`
+                  : 'Per il valore atteso della valuebet.'
+              }
+            />
+          )}
           {multipla && leg.metodo !== 'punta' && (
             <GTextField
               id="gamba-quota-punta"

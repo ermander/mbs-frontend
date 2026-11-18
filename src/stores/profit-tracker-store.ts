@@ -218,7 +218,7 @@ interface ProfitTrackerState {
         | 'accountId'
         | 'rischio'
       >
-    >,
+    > & { quotaReale?: number | null },
   ) => Promise<void>
   removeBetLeg: (betId: string, legId: string) => Promise<void>
   addBetLegs: (betId: string, legs: CreateBetLegPayload[]) => Promise<BetLeg[]>

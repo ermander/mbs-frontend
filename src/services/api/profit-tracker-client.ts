@@ -472,6 +472,7 @@ export interface CreateBetLegPayload {
   stake: number
   quota: number
   quotaRiferimento?: number
+  quotaReale?: number
   rischio?: number
   bonusValore?: number
   rimborsoValore?: number
@@ -576,7 +577,7 @@ export async function updateBetLeg(
       | 'accountId'
       | 'rischio'
     >
-  >,
+  > & { quotaReale?: number | null },
 ): Promise<BetLeg> {
   const response = await apiClient.patch<BetLeg>(
     `/profit-tracker/bets/${betId}/legs/${legId}`,

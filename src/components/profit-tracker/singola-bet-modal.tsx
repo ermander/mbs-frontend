@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DsMoney } from '@/components/landing/ds-data'
 import {
   DsModal,
   GSelect,
@@ -10,6 +11,7 @@ import {
   GTextField,
 } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import { valoreAttesoGamba, vantaggioPercentuale } from '@/lib/profit-tracker/expected-value'
 import { cn, sanitizeDecimal } from '@/lib/utils'
 import type {
   BetBonusType,
@@ -65,6 +67,12 @@ function modalitaSaldoFromTipoBonus(tipoBonus: BetBonusType): ModalitaSaldo {
   return 'reale'
 }
 
+const pct = new Intl.NumberFormat('it-IT', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+  signDisplay: 'exceptZero',
+})
+
 function parseNum(s: string): number | null {
   if (s.trim() === '') return null
   const n = Number.parseFloat(s.replace(',', '.'))
@@ -77,6 +85,8 @@ function parseNum(s: string): number | null {
  * descrizione). Stessa giocata salvata di prima: una gamba punta in bozza sul conto scelto.
  * Con bonus, freebet o rimborso si scrivono due importi: il reale giocato (anche 0 €) e il
  * valore del bonus, della freebet o del rimborso, che la gamba tiene separato dal reale.
+ * Nella categoria Valuebet (§14.337) c'è anche la quota reale (fair), opzionale: con quota e
+ * importo la modale mostra il valore atteso e il vantaggio, e la gamba la salva in `quotaReale`.
  */
 export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModalProps) {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
@@ -94,6 +104,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
   const [selezione, setSelezione] = useState('')
   const [accountId, setAccountId] = useState('')
   const [quota, setQuota] = useState('')
+  const [quotaReale, setQuotaReale] = useState('')
   const [tipoBonus, setTipoBonus] = useState<BetBonusType>('none')
   const [categoria, setCategoria] = useState<BetCategory>('matched_betting')
   const [stakeReale, setStakeReale] = useState('')
@@ -111,6 +122,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
     setSelezione('')
     setAccountId('')
     setQuota('')
+    setQuotaReale('')
     setTipoBonus('none')
     setCategoria('matched_betting')
     setStakeReale('')
@@ -155,6 +167,24 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
   const realeMin = tipoBonus === 'none' || tipoBonus === 'rimborso' ? 0 : -1
   const realeOk = realeNum != null && realeNum > realeMin
   const valoreOk = tipoBonus === 'none' || (valoreNum != null && valoreNum > 0)
+  // La quota reale vale solo per le valuebet ed è facoltativa: se c'è, deve essere sopra 1.
+  const isValuebet = categoria === 'valuebet'
+  const quotaRealeNum = isValuebet ? parseNum(quotaReale) : null
+  const quotaRealeOk = !isValuebet || quotaReale.trim() === '' || (quotaRealeNum ?? 0) > 1
+  const valoreAtteso =
+    isValuebet && realeOk && valoreOk && quotaNum != null && quotaNum > 1 && quotaRealeOk
+      ? valoreAttesoGamba({
+          metodo: 'punta',
+          stake: realeNum ?? 0,
+          quota: quotaNum,
+          quotaReale: quotaRealeNum,
+          tipoBonus,
+          bonusValore: valoreNum ?? 0,
+          commissionePercentuale: 0,
+        })
+      : null
+  const vantaggio =
+    quotaNum != null && quotaRealeOk ? vantaggioPercentuale(quotaNum, quotaRealeNum) : null
 
   // Gli errori compaiono dopo il primo «Salva»; quota e importi anche appena scritti.
   const errors = {
@@ -174,6 +204,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
           : 'Serve un importo da 0 € in su'
         : undefined,
     valore: (valore !== '' || tried) && !valoreOk ? 'Serve un importo sopra 0 €' : undefined,
+    quotaReale: !quotaRealeOk ? 'Serve una quota sopra 1' : undefined,
   }
   const canSave =
     !!eventoNome.trim() &&
@@ -182,6 +213,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
     !!accountId &&
     realeOk &&
     valoreOk &&
+    quotaRealeOk &&
     quotaNum != null &&
     quotaNum > 1
 
@@ -219,6 +251,7 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
         // rimborsoValore, come fanno i calcolatori.
         stake: realeNum,
         quota: quotaNum,
+        quotaReale: quotaRealeNum != null && quotaRealeNum > 1 ? quotaRealeNum : undefined,
         rischio: 0,
         bonusValore:
           (tipoBonus === 'bonus' || tipoBonus === 'freebet') && valoreNum ? valoreNum : undefined,
@@ -366,6 +399,42 @@ export function SingolaBetModal({ open, onOpenChange, onSaved }: SingolaBetModal
               error={errors.reale}
             />
           </div>
+          {isValuebet && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <GTextField
+                id="singola-quota-reale"
+                label="Quota reale"
+                optional
+                numeric
+                placeholder="Es. 1,75"
+                value={quotaReale}
+                onChange={(v) => setQuotaReale(sanitizeDecimal(v))}
+                error={errors.quotaReale}
+                hint="La quota giusta secondo te, senza il margine del book: serve per il valore atteso."
+              />
+              <div
+                className="flex min-w-0 flex-col gap-1 rounded-ds-sm border border-ds-line bg-ds-surface-sunken px-3 py-2"
+                aria-live="polite"
+              >
+                <span className="text-sm leading-5 font-semibold text-ds-ink">Valore atteso</span>
+                {valoreAtteso != null ? (
+                  <>
+                    <DsMoney value={valoreAtteso} size="md" />
+                    <span className="ds-caption text-ds-ink-muted">
+                      {vantaggio != null
+                        ? `Vantaggio ${pct.format(vantaggio)} % sulla quota reale`
+                        : ''}
+                      {tipoBonus === 'rimborso' ? ' · il rimborso non è contato' : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className="ds-caption text-ds-ink-muted">
+                    Scrivi quota, importo e quota reale per vederlo.
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
           {tipoBonus !== 'none' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <GTextField

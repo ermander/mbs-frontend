@@ -159,6 +159,28 @@ describe('modale Modifica gamba', () => {
       'Importo non valido',
     )
   })
+  it('quota reale (§14.337): si scrive, si cambia, si toglie svuotando il campo', () => {
+    const senza = leg({})
+    expect(legToForm(senza).quotaReale).toBe('')
+    expect(legFormPatch(senza, { ...legToForm(senza), quotaReale: '1,95' })).toEqual({
+      quotaReale: 1.95,
+    })
+    const con = leg({ quotaReale: 1.95 })
+    expect(legToForm(con).quotaReale).toBe('1,95')
+    expect(legFormPatch(con, legToForm(con))).toEqual({})
+    expect(legFormPatch(con, { ...legToForm(con), quotaReale: '2' })).toEqual({ quotaReale: 2 })
+    expect(legFormPatch(con, { ...legToForm(con), quotaReale: ' ' })).toEqual({ quotaReale: null })
+  })
+  it('quota reale (§14.337): vuota va bene, sopra 1 o errore', () => {
+    const l = leg({})
+    expect(legFormErrors(l, legToForm(l), false).quotaReale).toBeUndefined()
+    expect(legFormErrors(l, { ...legToForm(l), quotaReale: '1' }, false).quotaReale).toBe(
+      'Serve una quota sopra 1',
+    )
+    expect(legFormErrors(l, { ...legToForm(l), quotaReale: '1,01' }, false).quotaReale).toBe(
+      undefined,
+    )
+  })
   it('il metodo e la commissione della punta non entrano', () => {
     const l = leg({})
     expect(legFormPatch(l, { ...legToForm(l), commissione: '5' })).toEqual({})

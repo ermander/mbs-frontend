@@ -2,46 +2,96 @@ import { describe, expect, it } from 'vitest'
 import {
   CALCULATOR_TOOLS,
   CALCULATORS_WITHOUT_SAVE,
+  GUEST_CALCULATORS,
+  calculatorAccess,
   calculatorGroups,
   isCalculatorSlug,
   openCalculator,
+  type CalculatorViewer,
 } from './catalog'
 
-const outline = (role: Parameters<typeof calculatorGroups>[0]) =>
-  calculatorGroups(role).map((g) => [g.name, g.tools.map((t) => t.name)])
+const ADMIN: CalculatorViewer = { role: 'ADMIN_ROLE', tools: [] }
+const USER: CalculatorViewer = { role: 'USER_ROLE', tools: [] }
+const ENABLED: CalculatorViewer = { role: 'USER_ROLE', tools: ['result_btts'] }
+const OLD_BACKEND: CalculatorViewer = { role: 'USER_ROLE' }
+const GUEST: CalculatorViewer = null
+
+const outline = (viewer: CalculatorViewer) =>
+  calculatorGroups(viewer).map((g) => [g.name, g.tools.map((t) => t.name)])
+
+const access = (viewer: CalculatorViewer) =>
+  Object.fromEntries(CALCULATOR_TOOLS.map((t) => [t.slug, calculatorAccess(t, viewer)]))
 
 describe('calculatorGroups', () => {
-  it('an admin sees both groups in the design order, Risultato + Goal included', () => {
-    expect(outline('ADMIN_ROLE')).toEqual([
-      ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla', 'Risultato + Goal']],
-      ['Casinò', ['Baccarat', 'Roulette europea', 'Target fun bonus']],
-    ])
+  it('an admin and a user enabled from the backoffice see Risultato + Goal too', () => {
+    for (const viewer of [ADMIN, ENABLED]) {
+      expect(outline(viewer)).toEqual([
+        ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla', 'Risultato + Goal']],
+        ['Casinò', ['Baccarat', 'Roulette europea', 'Target fun bonus']],
+      ])
+    }
   })
 
-  it('a normal user and a missing user do not see the admin-only tool', () => {
-    for (const role of ['USER_ROLE', undefined] as const) {
-      expect(outline(role)[0][1]).toEqual(['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla'])
-      expect(outline(role)[1][1]).toHaveLength(3)
+  it('a user without the tool, an older backend and a guest never see Risultato + Goal', () => {
+    for (const viewer of [USER, OLD_BACKEND, GUEST, undefined]) {
+      expect(outline(viewer)).toEqual([
+        ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla']],
+        ['Casinò', ['Baccarat', 'Roulette europea', 'Target fun bonus']],
+      ])
     }
+  })
+})
+
+describe('calculatorAccess', () => {
+  it('a guest uses the six free calculators, the others ask to sign up, Risultato + Goal is hidden', () => {
+    expect(access(GUEST)).toEqual({
+      'punta-banca': 'open',
+      'punta-punta': 'open',
+      'tri-punta': 'open',
+      multipla: 'open',
+      'risultato-goal': 'hidden',
+      baccarat: 'open',
+      roulette: 'open',
+      'fun-bonus': 'members',
+    })
+  })
+
+  it('the free list is exactly the one of the task', () => {
+    expect([...GUEST_CALCULATORS].sort()).toEqual(
+      ['baccarat', 'multipla', 'punta-banca', 'punta-punta', 'roulette', 'tri-punta'].sort(),
+    )
+  })
+
+  it('a logged-in user uses every calculator they can see', () => {
+    expect(Object.values(access(USER)).filter((a) => a === 'members')).toEqual([])
+    expect(access(USER)['risultato-goal']).toBe('hidden')
+    expect(access(ENABLED)['risultato-goal']).toBe('open')
+    expect(access(ADMIN)['risultato-goal']).toBe('open')
   })
 })
 
 describe('openCalculator', () => {
   it('opens a known slug, the old URLs included', () => {
-    expect(openCalculator('punta-banca', 'USER_ROLE')?.name).toBe('Punta-Banca')
-    expect(openCalculator('fun-bonus', 'USER_ROLE')?.name).toBe('Target fun bonus')
-    expect(openCalculator('multipla', undefined)?.group).toBe('sport')
+    expect(openCalculator('punta-banca', USER)?.name).toBe('Punta-Banca')
+    expect(openCalculator('fun-bonus', USER)?.name).toBe('Target fun bonus')
+    expect(openCalculator('multipla', GUEST)?.group).toBe('sport')
   })
 
-  it('keeps the admin-only tool closed for the other roles', () => {
-    expect(openCalculator('risultato-goal', 'ADMIN_ROLE')?.name).toBe('Risultato + Goal')
-    expect(openCalculator('risultato-goal', 'USER_ROLE')).toBeNull()
-    expect(openCalculator('risultato-goal', undefined)).toBeNull()
+  it('a members-only calculator still opens for a guest (the panel shows the sign-up prompt)', () => {
+    expect(openCalculator('fun-bonus', GUEST)?.name).toBe('Target fun bonus')
+  })
+
+  it('keeps Risultato + Goal closed for whoever does not have it enabled', () => {
+    expect(openCalculator('risultato-goal', ADMIN)?.name).toBe('Risultato + Goal')
+    expect(openCalculator('risultato-goal', ENABLED)?.name).toBe('Risultato + Goal')
+    expect(openCalculator('risultato-goal', USER)).toBeNull()
+    expect(openCalculator('risultato-goal', OLD_BACKEND)).toBeNull()
+    expect(openCalculator('risultato-goal', GUEST)).toBeNull()
   })
 
   it('ignores an unknown or missing slug', () => {
-    expect(openCalculator('multi-tool', 'ADMIN_ROLE')).toBeNull()
-    expect(openCalculator(null, 'ADMIN_ROLE')).toBeNull()
+    expect(openCalculator('multi-tool', ADMIN)).toBeNull()
+    expect(openCalculator(null, ADMIN)).toBeNull()
   })
 })
 

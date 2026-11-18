@@ -2,14 +2,15 @@
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ListChecks, Lock, X } from 'lucide-react'
+import { ChevronLeft, ListChecks, Lock, UserPlus, X } from 'lucide-react'
 
 import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
-import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DsButton, dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
 import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { CALCULATORS_WITHOUT_SAVE, type CalculatorTool } from '@/lib/calculators/catalog'
 import { formatRating } from '@/lib/landing-format'
+import { LANDING_ROUTES } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
 
 /**
@@ -22,9 +23,15 @@ import { cn } from '@/lib/utils'
  * dell'area autenticata, scuri: la classe ds-calc-bridge li rimappa sulla palette chiara, sul
  * pannello e, finché è aperto, sull'<html>, così anche i portal (dialoghi di salvataggio, menu)
  * la prendono.
+ *
+ * §14.340: per un ospite (`guest`) niente «Salva nel tracker», che chiede i conti del tracker:
+ * il calcolatore non lo rende e la barra invita a iscriversi. Con `locked` (un calcolatore solo
+ * per iscritti aperto da un ospite) il corpo è l'invito e la barra ha solo «Annulla».
  */
 
 const SaveSlotContext = React.createContext<HTMLElement | null>(null)
+/** True dentro il pannello di un ospite: CalculatorSaveAction non rende nulla. */
+const GuestContext = React.createContext(false)
 const RatingSlotContext = React.createContext<HTMLElement | null>(null)
 
 /** Classe del ponte shadcn → ds-* in globals.css. */
@@ -67,10 +74,16 @@ export function CalculatorPanel({
   backLabel = 'Calcolatori',
   title,
   shortTitle,
+  guest = false,
+  locked = false,
   children,
 }: {
   tool: CalculatorTool
   onClose: () => void
+  /** Chi guarda non è entrato (§14.340): niente salvataggio, invito a iscriversi. */
+  guest?: boolean
+  /** Il calcolatore non è aperto a chi guarda: il corpo è l'invito a iscriversi (§14.340). */
+  locked?: boolean
   /** La pagina a cui torna «‹»: l'oddsmatcher apre qui i suoi calcolatori (§14.273). */
   backLabel?: string
   /** Il nome nella testata, quando non è quello della tessera. */
@@ -102,8 +115,8 @@ export function CalculatorPanel({
     }
   }, [])
 
-  const admin = Boolean(tool.requiresRole)
-  const canSave = !CALCULATORS_WITHOUT_SAVE.has(tool.slug)
+  const reserved = Boolean(tool.requiresTool)
+  const canSave = !CALCULATORS_WITHOUT_SAVE.has(tool.slug) && !locked
 
   return (
     <div
@@ -145,7 +158,8 @@ export function CalculatorPanel({
               ) : (
                 <span className="ds-heading truncate">{title ?? tool.name}</span>
               )}
-              {admin && <AdminBadge className="hidden sm:inline-flex" />}
+              {reserved && <CalculatorBadge kind="reserved" className="hidden sm:inline-flex" />}
+              {locked && <CalculatorBadge kind="members" className="hidden sm:inline-flex" />}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-4">
@@ -162,29 +176,47 @@ export function CalculatorPanel({
         </div>
       </div>
 
-      <SaveSlotContext.Provider value={saveSlot}>
-        <RatingSlotContext.Provider value={ratingSlot}>
-          <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6">{children}</div>
-        </RatingSlotContext.Provider>
-      </SaveSlotContext.Provider>
+      <GuestContext.Provider value={guest}>
+        <SaveSlotContext.Provider value={saveSlot}>
+          <RatingSlotContext.Provider value={ratingSlot}>
+            <div className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-6">{children}</div>
+          </RatingSlotContext.Provider>
+        </SaveSlotContext.Provider>
+      </GuestContext.Provider>
 
       <div className="sticky bottom-0 mt-auto border-t border-ds-line bg-ds-surface">
         <div className="mx-auto flex max-w-[1200px] items-center justify-end gap-4 px-4 py-4 sm:px-6">
           <button type="button" onClick={onClose} className={dsButtonClass('ghost', 'md')}>
             Annulla
           </button>
-          {canSave && <div ref={setSaveSlot} className="contents" />}
+          {canSave && !guest && <div ref={setSaveSlot} className="contents" />}
+          {canSave && guest && (
+            <DsButton href={LANDING_ROUTES.register} variant="primary">
+              <UserPlus className="h-5 w-5" aria-hidden />
+              Iscriviti per salvare nel tracker
+            </DsButton>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-export function AdminBadge({ className }: { className?: string }) {
+/**
+ * Il lucchetto accanto al nome di un calcolatore: `reserved` per quelli abilitati dal backoffice
+ * (Risultato + Goal, §14.220 e §14.340), `members` per quelli che un ospite non può usare.
+ */
+export function CalculatorBadge({
+  kind,
+  className,
+}: {
+  kind: 'reserved' | 'members'
+  className?: string
+}) {
   return (
     <DsBadge tone="neutral" className={className}>
       <Lock className="h-3 w-3" aria-hidden />
-      Solo admin
+      {kind === 'reserved' ? 'Riservato' : 'Solo iscritti'}
     </DsBadge>
   )
 }
@@ -235,6 +267,8 @@ export function CalculatorSaveAction({
   disabled?: boolean
 }) {
   const slot = React.useContext(SaveSlotContext)
+  const guest = React.useContext(GuestContext)
+  if (guest) return null
   const button = (
     <button
       type="button"

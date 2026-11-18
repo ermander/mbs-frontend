@@ -2,11 +2,13 @@
 
 import * as React from 'react'
 import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 
 import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
-import { AdminBadge, CalculatorPanel } from '@/components/calculators/calculator-panel'
+import { CalculatorBadge, CalculatorPanel } from '@/components/calculators/calculator-panel'
+import { MembersOnlyNotice } from '@/components/calculators/members-only-notice'
 import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalculator'
 import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
@@ -15,22 +17,36 @@ import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOffl
 import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
 import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
 import { FunBonusCalculator } from '@/components/calculators/FunBonusCalculator'
-import { ResultBttsOfflineCalculator } from '@/components/calculators/ResultBttsOfflineCalculator'
 import { useAuthStore } from '@/stores/auth-store'
 import {
+  calculatorAccess,
   calculatorGroups,
   openCalculator,
+  type CalculatorAccess,
   type CalculatorSlug,
   type CalculatorTool,
 } from '@/lib/calculators/catalog'
 import { cn } from '@/lib/utils'
+
+/**
+ * §14.340: Risultato + Goal in un pezzo di codice a parte, che il browser scarica solo quando lo
+ * apre chi ce l'ha abilitato; un ospite o un utente senza lo strumento non lo ricevono mai.
+ */
+const ResultBttsOfflineCalculator = dynamic(
+  () =>
+    import('@/components/calculators/ResultBttsOfflineCalculator').then(
+      (m) => m.ResultBttsOfflineCalculator,
+    ),
+  { ssr: false },
+)
 
 const RENDER: Record<CalculatorSlug, () => React.ReactNode> = {
   'punta-banca': () => <PuntaBancaCalculator />,
   'punta-punta': () => <PuntaPuntaCalculator />,
   'tri-punta': () => <TriPuntaCalculator />,
   multipla: () => <MultiplaOfflineCalculator />,
-  // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per gli admin.
+  // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per chi ha lo
+  // strumento abilitato dal backoffice (§14.340).
   'risultato-goal': () => <ResultBttsOfflineCalculator />,
   baccarat: () => <BaccaratCalculator />,
   roulette: () => <RouletteCalculator />,
@@ -42,15 +58,22 @@ const RENDER: Record<CalculatorSlug, () => React.ReactNode> = {
  * compatte divise in Sport e Casinò sul tema chiaro ds-*; una tessera apre il calcolatore a
  * schermo intero. Il calcolatore aperto sta in `?expand=<slug>` come prima, così i link delle
  * guide e di /calcolatori/<slug> continuano ad aprirlo.
+ *
+ * §14.340: la pagina è aperta anche a chi non è entrato (gruppo di rotte `(open)`, OpenAreaLayout), che ci arriva
+ * dalla landing. Un ospite usa i calcolatori di GUEST_CALCULATORS senza salvataggio; gli altri si
+ * aprono con l'invito a iscriversi. Risultato + Goal non esiste per chi non ce l'ha abilitato.
  */
 function CalcolatoriDashboard() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const role = useAuthStore((s) => s.user?.role)
-  const groups = calculatorGroups(role)
-  // §14.220: le tessere riservate a un ruolo spariscono per gli altri, «expand» compreso.
-  const open = openCalculator(searchParams.get('expand'), role)
+  const user = useAuthStore((s) => s.user)
+  const guest = !user
+  const groups = calculatorGroups(user)
+  const expand = searchParams.get('expand')
+  // §14.220: le tessere riservate spariscono per chi non le ha, «expand» compreso.
+  const open = openCalculator(expand, user)
+  const openAccess = open ? calculatorAccess(open, user) : null
 
   const lastOpened = React.useRef<CalculatorSlug | null>(null)
   const tiles = React.useRef(new Map<CalculatorSlug, HTMLButtonElement>())
@@ -65,6 +88,13 @@ function CalcolatoriDashboard() {
     },
     [router, pathname, searchParams],
   )
+
+  // Uno slug che chi guarda non può aprire (sconosciuto, o Risultato + Goal senza lo strumento)
+  // esce dall'URL: la pagina non lascia traccia di ciò che non mostra. Il layout rende la pagina
+  // solo quando sa chi guarda, quindi `user` qui è già quello vero.
+  React.useEffect(() => {
+    if (expand !== null && !open) setExpand(null)
+  }, [expand, open, setExpand])
 
   // Chiuso il pannello, il fuoco torna sulla tessera che l'aveva aperto.
   const openSlug = open?.slug ?? null
@@ -102,6 +132,7 @@ function CalcolatoriDashboard() {
                 <CalculatorTile
                   key={tool.slug}
                   tool={tool}
+                  access={calculatorAccess(tool, user)}
                   onOpen={() => setExpand(tool.slug)}
                   buttonRef={(el) => {
                     if (el) tiles.current.set(tool.slug, el)
@@ -119,8 +150,14 @@ function CalcolatoriDashboard() {
       </div>
 
       {open && (
-        <CalculatorPanel key={open.slug} tool={open} onClose={() => setExpand(null)}>
-          {RENDER[open.slug]()}
+        <CalculatorPanel
+          key={open.slug}
+          tool={open}
+          guest={guest}
+          locked={openAccess !== 'open'}
+          onClose={() => setExpand(null)}
+        >
+          {openAccess === 'open' ? RENDER[open.slug]() : <MembersOnlyNotice tool={open} />}
         </CalculatorPanel>
       )}
     </div>
@@ -129,20 +166,24 @@ function CalcolatoriDashboard() {
 
 function CalculatorTile({
   tool,
+  access,
   onOpen,
   buttonRef,
 }: {
   tool: CalculatorTool
+  access: CalculatorAccess
   onOpen: () => void
   buttonRef: (el: HTMLButtonElement | null) => void
 }) {
-  const admin = Boolean(tool.requiresRole)
+  const reserved = Boolean(tool.requiresTool)
+  const members = access === 'members'
+  const note = reserved ? ', riservato' : members ? ', solo per utenti iscritti' : ''
   return (
     <button
       ref={buttonRef}
       type="button"
       onClick={onOpen}
-      aria-label={`Apri ${tool.name}${admin ? ', solo admin' : ''}`}
+      aria-label={`Apri ${tool.name}${note}`}
       className="flex min-h-16 appearance-none items-center gap-3 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-left text-ds-ink shadow-ds-sm transition-[box-shadow,border-color] duration-150 hover:border-ds-line-strong hover:shadow-ds-md focus-visible:shadow-ds-focus focus-visible:outline-hidden"
     >
       <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-ds-sm bg-ds-brand-soft text-ds-brand">
@@ -150,7 +191,8 @@ function CalculatorTile({
       </span>
       <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
         <span className="ds-subheading max-w-full truncate">{tool.name}</span>
-        {admin && <AdminBadge />}
+        {reserved && <CalculatorBadge kind="reserved" />}
+        {members && <CalculatorBadge kind="members" />}
       </span>
       <ArrowRight className="h-5 w-5 flex-none text-ds-brand" aria-hidden />
     </button>

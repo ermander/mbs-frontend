@@ -16,9 +16,11 @@ export interface LandingLink {
 
 /**
  * Destinazioni reali dietro i link del design: le sezioni dell'app (a chi non è autenticato la
- * guard rimanda al login), le rotte di accesso, l'ancora dei prezzi e le pagine pubbliche. I
- * prezzi stanno sulla landing: l'ancora porta il percorso, perché il footer compare anche sulle
- * pagine legali e sui contatti, dove «#prezzi» da solo non porta da nessuna parte.
+ * guard rimanda al login, tranne l'oddsmatcher e i calcolatori del gruppo `(open)`, che si aprono
+ * nella versione per gli ospiti: §14.339, §14.340), le rotte di accesso, l'ancora dei prezzi e le
+ * pagine pubbliche. I prezzi stanno sulla landing: l'ancora porta il percorso, perché il footer
+ * compare anche sulle pagine legali e sui contatti, dove «#prezzi» da solo non porta da nessuna
+ * parte.
  */
 export const LANDING_ROUTES = {
   home: '/',

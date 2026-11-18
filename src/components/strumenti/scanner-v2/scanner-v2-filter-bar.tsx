@@ -109,7 +109,7 @@ interface ScannerV2FilterBarProps {
   onMultiplaOpenChange: (open: boolean) => void
 }
 
-const SORT_OPTIONS = [
+export const SORT_OPTIONS = [
   { value: 'rating', label: 'Rating' },
   { value: 'start_time', label: 'Data e ora' },
 ]

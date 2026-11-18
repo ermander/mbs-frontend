@@ -47,6 +47,11 @@ interface PuntaBancaCalculatorViewProps {
   /** Exchange commission in percent (4.5). */
   commissionPercent: number
   onClose: () => void
+  /**
+   * «Salva nel tracker» and the category of the saved bet: off in the free Oddsmatcher (§14.339),
+   * where the visitor has no account and no tracker.
+   */
+  canSave?: boolean
 }
 
 /**
@@ -63,6 +68,7 @@ export function PuntaBancaCalculatorView({
   defaults,
   commissionPercent,
   onClose,
+  canSave = true,
 }: PuntaBancaCalculatorViewProps) {
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   const [backLeg, layLeg] = row.legs
@@ -377,7 +383,7 @@ export function PuntaBancaCalculatorView({
                 />
               }
             />
-            <MatcherCategoryChoice value={categoria} onChange={setCategoria} />
+            {canSave && <MatcherCategoryChoice value={categoria} onChange={setCategoria} />}
           </>
         }
       />
@@ -391,24 +397,28 @@ export function PuntaBancaCalculatorView({
         />
       </CalcProfits>
 
-      <CalculatorSaveAction onClick={() => setAssignOpen(true)} disabled={!canSend} />
+      {canSave && (
+        <>
+          <CalculatorSaveAction onClick={() => setAssignOpen(true)} disabled={!canSend} />
 
-      <AssignAccountsModal
-        open={assignOpen}
-        onOpenChange={(open) => {
-          setAssignOpen(open)
-          if (!open) setSaveError(null)
-        }}
-        legs={assignLegs}
-        onConfirm={(ids) => void handleConfirm(ids)}
-        saving={saving}
-        error={saveError}
-        savedBetId={savedBetId}
-        onDone={() => {
-          setAssignOpen(false)
-          onClose()
-        }}
-      />
+          <AssignAccountsModal
+            open={assignOpen}
+            onOpenChange={(open) => {
+              setAssignOpen(open)
+              if (!open) setSaveError(null)
+            }}
+            legs={assignLegs}
+            onConfirm={(ids) => void handleConfirm(ids)}
+            saving={saving}
+            error={saveError}
+            savedBetId={savedBetId}
+            onDone={() => {
+              setAssignOpen(false)
+              onClose()
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }

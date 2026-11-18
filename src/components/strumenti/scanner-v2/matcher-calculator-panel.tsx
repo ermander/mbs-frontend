@@ -18,6 +18,8 @@ interface MatcherCalculatorPanelProps {
   /** Exchange commission in percent (4.5). */
   commissionPercent: number
   onClose: () => void
+  /** Off in the free Oddsmatcher (§14.339): no «Salva nel tracker» for a visitor. */
+  canSave?: boolean
 }
 
 /** The event of a row as the Profit Tracker payloads describe it. */
@@ -60,6 +62,7 @@ export function MatcherCalculatorPanel({
   defaults,
   commissionPercent,
   onClose,
+  canSave = true,
 }: MatcherCalculatorPanelProps) {
   const event = useMemo(() => betEventInfo(row), [row])
   const backLay = row.matchType === 'back_lay'
@@ -108,6 +111,7 @@ export function MatcherCalculatorPanel({
             defaults={defaults}
             commissionPercent={commissionPercent}
             onClose={onClose}
+            canSave={canSave}
           />
         ) : (
           <DutchCalculatorView
@@ -118,6 +122,7 @@ export function MatcherCalculatorPanel({
             defaults={defaults}
             commissionPercent={commissionPercent}
             onClose={onClose}
+            canSave={canSave}
           />
         )}
       </div>

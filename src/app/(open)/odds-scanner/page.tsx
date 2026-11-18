@@ -8,6 +8,10 @@ import { cn } from '@/lib/utils'
  * L'Oddsmatcher dal design «OddWise Oddsmatcher» di Claude Design (§14.272): tema chiaro ds-* su
  * tutta l'altezza sotto la barra in alto, colonna da 1200px. Il ponte ds-calc-bridge rimappa sul
  * chiaro i pezzi shadcn rimasti nella pagina.
+ *
+ * §14.339: sta nel gruppo di rotte `(open)` (OpenAreaLayout): chi arriva dalla landing senza
+ * account vede la versione gratuita (OddsScannerV2 legge l'utente dallo store), chi è entrato
+ * l'oddsmatcher completo come prima.
  */
 export default function OddsScannerPage() {
   return (

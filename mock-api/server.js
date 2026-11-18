@@ -147,6 +147,10 @@ const ROWS = [
     { ...EVENTS.flamengo, ...market('1x2', null), matchType: 'dutch_3way', legs: [leg('goldbet', 'home', '1', 2.4, 60), leg('sisal', 'draw', 'X', 3.2, 40), leg('betfair', 'away', '2', net(3.4), 20)], rating: dutchRating([2.4, 3.2, net(3.4)]) },
     { ...EVENTS.lakers, ...market('over_under', 220.5), matchType: 'dutch_2way', legs: [leg('sisal', 'over', 'Over', 1.95, 30), leg('betsson', 'under', 'Under', 2.0, 45)], rating: dutchRating([1.95, 2.0]) },
     { ...EVENTS.lakers, ...market('draw_no_bet', null), matchType: 'back_lay', legs: [leg('betsson', 'home', 'BACK LA Lakers', 1.7, 45), leg('betfair', 'home', 'LAY LA Lakers', 1.66, 15)], rating: backLayRating(1.7, 1.66) },
+    // §14.339: more back on Sisal / lay on Betfair, the rows of the free Oddsmatcher.
+    { ...EVENTS.lazio, ...market('1x2', null), matchType: 'back_lay', legs: [leg('sisal', 'home', 'BACK 1', 2.6, 50), leg('betfair', 'home', 'LAY 1', 2.64, 20)], rating: backLayRating(2.6, 2.64) },
+    { ...EVENTS.arsenal, ...market('over_under', 2.5), matchType: 'back_lay', legs: [leg('sisal', 'over', 'BACK Over', 1.72, 2500), leg('betfair', 'over', 'LAY Over', 1.75, 2400)], rating: backLayRating(1.72, 1.75) },
+    { ...EVENTS.celtic, ...market('1x2', null), matchType: 'back_lay', legs: [leg('sisal', 'away', 'BACK 2', 5.5, 60), leg('betfair', 'away', 'LAY 2', 5.9, 20)], rating: backLayRating(5.5, 5.9) },
 ].map((r) => ({ ...r, rating: Math.round(r.rating * 100) / 100 }));
 
 const META = {
@@ -158,10 +162,10 @@ const META = {
     marketTypes: ['1x2', 'btts', 'double_chance', 'draw_no_bet', 'handicap_asian', 'over_under'],
     nations: ['England', 'Italy', 'USA', 'World'],
     competitions: [
-        { id: 'c-seriea', name: 'Serie A', nationName: 'Italy', nationCode: 'IT', sportName: 'Football', results: 6 },
-        { id: 'c-pl', name: 'Premier League', nationName: 'England', nationCode: 'GB', sportName: 'Football', results: 2 },
+        { id: 'c-seriea', name: 'Serie A', nationName: 'Italy', nationCode: 'IT', sportName: 'Football', results: 7 },
+        { id: 'c-pl', name: 'Premier League', nationName: 'England', nationCode: 'GB', sportName: 'Football', results: 3 },
         { id: 'c-nba', name: 'NBA', nationName: 'USA', nationCode: 'US', sportName: 'Basketball', results: 2 },
-        { id: 'c-uel', name: 'UEFA Europa League', nationName: 'World', nationCode: null, sportName: 'Football', results: 1 },
+        { id: 'c-uel', name: 'UEFA Europa League', nationName: 'World', nationCode: null, sportName: 'Football', results: 2 },
         { id: 'c-lib', name: 'CONMEBOL Libertadores', nationName: 'World', nationCode: null, sportName: 'Football', results: 1 },
     ],
 };
@@ -506,6 +510,19 @@ function filterRows(q) {
     const limit = Math.min(parseInt(get('limit') || '50', 10), 200);
     const offset = parseInt(get('offset') || '0', 10);
     return { results: rows.slice(offset, offset + limit), total: rows.length, calculatedAt: META.calculatedAt };
+}
+
+// §14.339: the free Oddsmatcher, no login: back on Sisal and lay on an exchange whatever the query
+// asks; only the price bounds, the kickoff window, the sort and the page are read (at most 50 rows).
+const FREE_PARAMS = ['min_odds', 'max_odds', 'start_time_from', 'start_time_to', 'sort_by', 'sort_dir', 'offset'];
+function freeRows(q) {
+    const p = new URLSearchParams();
+    for (const k of FREE_PARAMS) if (q.get(k)) p.set(k, q.get(k));
+    p.set('match_type', 'back_lay');
+    p.set('bookmaker', 'sisal');
+    p.set('cover_bookmakers', Object.values(BOOKMAKERS).filter((b) => b.isExchange).map((b) => b.slug).join(','));
+    p.set('limit', String(Math.min(parseInt(q.get('limit') || '50', 10) || 50, 50)));
+    return filterRows(p);
 }
 
 // §14.262: le offerte del backoffice. Una pubblicata con una guida piccola e una bozza senza.
@@ -864,6 +881,12 @@ const server = http.createServer(async (req, res) => {
         return send(200, body);
     }
     if (path === '/api/odds-collection/matcher/results') return send(200, filterRows(url.searchParams));
+    if (path === '/api/odds-collection/matcher/free/results') return send(200, freeRows(url.searchParams));
+    if (path === '/api/odds-collection/matcher/free/meta') {
+        const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange);
+        const totalResults = freeRows(new URLSearchParams()).total;
+        return send(200, { ...META, calculatedAt: ago(35), totalResults, sports: [], bookmakers, marketTypes: [], nations: [], competitions: [] });
+    }
     if (path === '/api/profit-tracker/holders') return send(200, { items: HOLDERS, total: HOLDERS.length });
     if (path === '/api/profit-tracker/books') return send(200, { items: BOOKS, total: BOOKS.length });
     // §14.242: the open stakes per account (drafts not yet taken from the balance, legs in progress), from the legs.

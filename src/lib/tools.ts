@@ -21,7 +21,8 @@ export function canUseTool(
 
 /**
  * Whether the user has the role a page or a card asks for; nothing asked,
- * everyone passes. The admin-only offline calculator (§14.220) is gated here.
+ * everyone passes. (The offline «Risultato + Goal» calculator, admin-only in
+ * §14.220, follows `canUseTool` since §14.340.)
  */
 export function hasRole(
   user: Pick<AuthUser, 'role'> | null | undefined,

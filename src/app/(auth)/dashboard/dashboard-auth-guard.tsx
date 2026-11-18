@@ -17,8 +17,19 @@ import { currentLocation } from '@/components/auth/post-auth-destination'
  * message and a «Riprova» button meanwhile. Before, any failure cleared the session.
  * Both ways out carry `?next=` with the page being left (§14.326), so the login brings the
  * user back there instead of the dashboard.
+ *
+ * With `publicFallback`, a page open to visitors too (the `(open)` route group, §14.339-14.340):
+ * whoever is not logged in (no persisted flag, or a 401 that survives the refresh) sees
+ * `publicFallback` instead of going to /login; a logged-in user gets `children` as on every
+ * other page.
  */
-export function DashboardAuthGuard({ children }: { children: React.ReactNode }) {
+export function DashboardAuthGuard({
+  children,
+  publicFallback,
+}: {
+  children: React.ReactNode
+  publicFallback?: React.ReactNode
+}) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
@@ -30,12 +41,13 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
   const clearUser = useAuthStore((s) => s.clearUser)
   // Failed attempts so far and the wait before the next one (0 = at once).
   const [retry, setRetry] = useState({ attempt: 0, delayMs: 0 })
+  const allowGuest = publicFallback !== undefined
 
   useEffect(() => {
     if (!isHydrated) return
     if (user || isBootstrapping) return
     if (!isLoggedIn) {
-      router.replace(loginHref(currentLocation()))
+      if (!allowGuest) router.replace(loginHref(currentLocation()))
       return
     }
     let cancelled = false
@@ -48,6 +60,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
       } catch (error) {
         if (isUnauthenticatedError(error)) {
           clearUser()
+          if (allowGuest) return
           const href = loginHref(currentLocation())
           router.replace(href)
           if (typeof window !== 'undefined') {
@@ -69,6 +82,7 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
       clearTimeout(timer)
     }
   }, [
+    allowGuest,
     clearUser,
     finishBootstrapping,
     isBootstrapping,
@@ -82,6 +96,8 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
   ])
 
   if (!user) {
+    // Store not read yet: neither the public page nor the app, so a logged-in user sees no flash.
+    if (allowGuest && isHydrated && !isLoggedIn) return <>{publicFallback}</>
     if (retry.attempt === 0) return null
     return (
       <div className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col justify-center gap-3 px-4">

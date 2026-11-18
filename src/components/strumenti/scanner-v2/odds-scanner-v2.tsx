@@ -1,7 +1,13 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getMatcherMeta, getMatcherResults } from '@/services/api/matcher-client'
+import {
+  getFreeMatcherMeta,
+  getFreeMatcherResults,
+  getMatcherMeta,
+  getMatcherResults,
+} from '@/services/api/matcher-client'
+import { useAuthStore } from '@/stores/auth-store'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { holdCalcBridge } from '@/components/calculators/calculator-panel'
 import { exchangeCommissionOf, shortBookmakerName } from '@/lib/bookmakers'
@@ -25,6 +31,7 @@ import {
   ScannerV2FilterBar,
   type ScannerV2Filters,
 } from './scanner-v2-filter-bar'
+import { ScannerV2FreeFilterBar } from './scanner-v2-free-filter-bar'
 import {
   EMPTY_MULTIPLA_PARAMS,
   ScannerV2MultiplaPanel,
@@ -64,8 +71,16 @@ interface SelectedMultiplaRow {
   event: MultiplaEvent
 }
 
+/**
+ * The Oddsmatcher. §14.339: the page sits in the `(open)` route group, so a visitor who is not
+ * logged in gets here from the landing too and sees the free version: the free endpoints of the
+ * backend (back on Snai, lay on an exchange, enforced on the server), only the
+ * price and date filters, no Multipla and no «Salva nel tracker».
+ */
 export function OddsScannerV2() {
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
+  // OpenAreaLayout renders the page for a visitor only with no user, for a member only with one.
+  const free = useAuthStore((s) => s.user === null)
 
   const [filters, setFiltersState] = useState<ScannerV2Filters>(EMPTY_FILTERS)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -171,6 +186,16 @@ export function OddsScannerV2() {
       sort_by: filters.sort,
       sort_dir: filters.sort === 'start_time' ? 'ASC' : 'DESC',
     }
+    if (free) {
+      // The free endpoint reads only these (§14.339): price of the back leg and kickoff window.
+      const minOdds = parseNum(filters.minOdds)
+      const maxOdds = parseNum(filters.maxOdds)
+      if (minOdds != null) q.min_odds = minOdds
+      if (maxOdds != null) q.max_odds = maxOdds
+      if (filters.startFrom) q.start_time_from = new Date(filters.startFrom).toISOString()
+      if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
+      return q
+    }
     if (filters.sport) q.sport = filters.sport
     if (filters.matchType) q.match_type = filters.matchType
     if (filters.marketType) q.market_type = filters.marketType
@@ -209,6 +234,7 @@ export function OddsScannerV2() {
     else if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
     return q
   }, [
+    free,
     page,
     filters.sort,
     filters.sport,
@@ -239,7 +265,7 @@ export function OddsScannerV2() {
   // (react-hooks/set-state-in-effect).
   const loadMeta = useCallback(
     () =>
-      getMatcherMeta()
+      (free ? getFreeMatcherMeta() : getMatcherMeta())
         .then((m) => {
           setMeta(m)
           // A selected competition that left the results (its rows purged) leaves the
@@ -256,13 +282,14 @@ export function OddsScannerV2() {
         .catch(() => {
           /* ignore: meta is non-critical */
         }),
-    [],
+    [free],
   )
 
   const applyResults = useCallback((res: Awaited<ReturnType<typeof getMatcherResults>>) => {
     setResults(res.results)
     setTotal(res.total)
   }, [])
+  const fetchResults = free ? getFreeMatcherResults : getMatcherResults
 
   useEffect(() => {
     void loadMeta()
@@ -271,7 +298,7 @@ export function OddsScannerV2() {
   // A response that lands after the query changed is ignored.
   useEffect(() => {
     let cancelled = false
-    getMatcherResults(query)
+    fetchResults(query)
       .then((res) => {
         if (!cancelled) applyResults(res)
       })
@@ -284,13 +311,13 @@ export function OddsScannerV2() {
     return () => {
       cancelled = true
     }
-  }, [query, applyResults])
+  }, [query, applyResults, fetchResults])
 
   // «Aggiorna»: same query, filters as they are right now; the table flashes when it worked.
   const refresh = useCallback(() => {
     void loadMeta()
     setRefreshing(true)
-    getMatcherResults(query)
+    fetchResults(query)
       .then((res) => {
         applyResults(res)
         setFlash(true)
@@ -300,7 +327,7 @@ export function OddsScannerV2() {
         /* ignore: the user can retry with «Aggiorna» */
       })
       .finally(() => setRefreshing(false))
-  }, [query, applyResults, loadMeta])
+  }, [query, applyResults, loadMeta, fetchResults])
 
   // The page is light (ds-*): the accounts dialog of the multipla takes the same palette through
   // the bridge of the calculators while it is open (the calculator panel holds its own).
@@ -444,22 +471,34 @@ export function OddsScannerV2() {
     <>
       {/* Under the open calculator the page leaves the tab order and the screen readers. */}
       <div inert={calculatorRow ? true : undefined} className="flex flex-col gap-4">
-        <ScannerV2FilterBar
-          filters={filters}
-          onChange={setFilters}
-          onReset={resetFilters}
-          onRefresh={refresh}
-          open={filtersOpen}
-          onOpenChange={openFilters}
-          meta={meta}
-          books={books}
-          exchanges={exchanges}
-          loading={loading}
-          now={now}
-          multiplaOpen={multiplaOpen}
-          onMultiplaOpenChange={openMultipla}
-        />
-        {multiplaOpen && (
+        {free ? (
+          <ScannerV2FreeFilterBar
+            filters={filters}
+            onChange={setFilters}
+            onReset={resetFilters}
+            onRefresh={refresh}
+            meta={meta}
+            loading={loading}
+            now={now}
+          />
+        ) : (
+          <ScannerV2FilterBar
+            filters={filters}
+            onChange={setFilters}
+            onReset={resetFilters}
+            onRefresh={refresh}
+            open={filtersOpen}
+            onOpenChange={openFilters}
+            meta={meta}
+            books={books}
+            exchanges={exchanges}
+            loading={loading}
+            now={now}
+            multiplaOpen={multiplaOpen}
+            onMultiplaOpenChange={openMultipla}
+          />
+        )}
+        {!free && multiplaOpen && (
           <ScannerV2MultiplaPanel
             params={multiplaParams}
             onParamsChange={setMultiplaParam}
@@ -493,7 +532,7 @@ export function OddsScannerV2() {
           onPageChange={setPage}
           onOpenCalculator={openCalculator}
           onResetFilters={resetFilters}
-          multipla={multiplaSelection}
+          multipla={free ? undefined : multiplaSelection}
         />
       </div>
       {calculatorRow && (
@@ -503,25 +542,28 @@ export function OddsScannerV2() {
           defaults={{ stake: filters.stake, bonus: filters.bonus, rimborso: filters.rimborso }}
           commissionPercent={commissionPercent}
           onClose={closeCalculator}
+          canSave={!free}
         />
       )}
-      <AssignAccountsModal
-        open={multiplaSaveOpen}
-        onOpenChange={(open) => {
-          setMultiplaSaveOpen(open)
-          if (!open) setMultiplaError(null)
-        }}
-        legs={multiplaAssignLegs}
-        onConfirm={(ids) => void handleMultiplaConfirm(ids)}
-        saving={multiplaSaving}
-        error={multiplaError}
-        savedBetId={multiplaSavedBetId}
-        onDone={() => {
-          setMultiplaSaveOpen(false)
-          setMultiplaSavedBetId(null)
-          setMultiplaRows([])
-        }}
-      />
+      {!free && (
+        <AssignAccountsModal
+          open={multiplaSaveOpen}
+          onOpenChange={(open) => {
+            setMultiplaSaveOpen(open)
+            if (!open) setMultiplaError(null)
+          }}
+          legs={multiplaAssignLegs}
+          onConfirm={(ids) => void handleMultiplaConfirm(ids)}
+          saving={multiplaSaving}
+          error={multiplaError}
+          savedBetId={multiplaSavedBetId}
+          onDone={() => {
+            setMultiplaSaveOpen(false)
+            setMultiplaSavedBetId(null)
+            setMultiplaRows([])
+          }}
+        />
+      )}
     </>
   )
 }

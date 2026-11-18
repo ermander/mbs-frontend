@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "mock-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["mock-api/server.js"],
+      "port": 4000
+    },
+    {
+      "name": "mock-api-alt",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["mock-api/server.js", "4100"],
+      "port": 4100
+    },
+    {
+      "name": "frontend-dev-alt",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "NEXT_DIST_DIR=.next-alt MOCK_API_URL=http://localhost:4100 npm run dev -- -p 3100"],
+      "port": 3100
+    },
+    {
+      "name": "mock-api-alt2",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["mock-api/server.js", "4200"],
+      "port": 4200
+    },
+    {
+      "name": "frontend-dev-alt2",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "NEXT_DIST_DIR=.next-alt2 MOCK_API_URL=http://localhost:4200 npm run dev -- -p 3200"],
+      "port": 3200
+    }
+  ]
+}

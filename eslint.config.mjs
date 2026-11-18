@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Finto backend Node (CommonJS) per lo sviluppo, fuori dall'app Next.
+    "mock-api/**",
   ]),
 ]);
 

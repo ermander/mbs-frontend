@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
     ]
   },
   async rewrites() {
-    // In development the API is the mock of smoke/mock-api (port 4000); MOCK_API_URL points
+    // In development the API is the mock in mock-api/server.js (port 4000); MOCK_API_URL points
     // a second dev server at a mock on another port when 4000 is taken.
     const apiBaseUrl =
       process.env.NODE_ENV === 'development'

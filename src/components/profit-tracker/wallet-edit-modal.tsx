@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { CalcSwitch } from '@/components/calculators/calc-ds'
+import { STATO_OPTIONS } from '@/components/profit-tracker/account-create-modal'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GReadOnly,
+  GSelect,
+  GTextArea,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { getErrorMessage } from '@/lib/error-utils'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { EnabledStatus, Wallet } from '@/types/profit-tracker'
 
@@ -22,6 +23,7 @@ interface WalletEditModalProps {
   wallet: Wallet | null
 }
 
+/** «Modifica wallet» sul design OddWise (§14.350): descrizione, stato e wallet bloccato. */
 export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalProps) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const updateWallet = useProfitTrackerStore((s) => s.updateWallet)
@@ -60,103 +62,80 @@ export function WalletEditModal({ open, onOpenChange, wallet }: WalletEditModalP
       })
       onOpenChange(false)
     } catch (err: unknown) {
-      setError(getErrorMessage(err) || 'Errore durante il salvataggio')
+      setError(getErrorMessage(err) || 'Errore nel salvataggio del wallet.')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleClose = () => {
-    if (!saving) onOpenChange(false)
+  const handleClose = (nextOpen: boolean) => {
+    if (!nextOpen && saving) return
+    onOpenChange(nextOpen)
   }
 
+  const hasChanges =
+    wallet != null &&
+    (stato !== wallet.stato ||
+      (wallet.descrizione ?? '') !== descrizione.trim() ||
+      bloccato !== (wallet.bloccato === true))
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Modifica Wallet: {wallet?.nome ?? ''}</DialogTitle>
-        </DialogHeader>
-        {wallet == null ? (
-          <div className="p-4 pt-0">
-            <p className="text-sm text-muted-foreground">Nessun wallet selezionato.</p>
+    <DsModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Modifica wallet"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => handleClose(false)}
+            disabled={saving}
+            className={dsButtonClass('ghost', 'md')}
+          >
+            Annulla
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving || !hasChanges}
+            className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+          >
+            {saving ? 'Salvataggio…' : 'Salva le modifiche'}
+          </button>
+        </>
+      }
+    >
+      {wallet == null ? (
+        <p className="ds-body m-0 text-ds-ink-muted">Nessun wallet selezionato.</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <GReadOnly label="Metodo">{wallet.nome}</GReadOnly>
+            <GReadOnly label="Collaboratore">{holderName}</GReadOnly>
           </div>
-        ) : (
-          <>
-            <div className="space-y-4 p-4 pt-0 text-sm">
-              <div className="space-y-1.5">
-                <Label htmlFor="wallet-edit-holder">Collaboratore</Label>
-                <Input
-                  id="wallet-edit-holder"
-                  value={holderName}
-                  readOnly
-                  className="h-9 bg-muted/50 read-only:cursor-default"
-                  aria-readonly="true"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wallet-edit-nome">Nome</Label>
-                <Input
-                  id="wallet-edit-nome"
-                  value={wallet.nome}
-                  readOnly
-                  className="h-9 bg-muted/50 read-only:cursor-default"
-                  aria-readonly="true"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wallet-edit-desc">Descrizione</Label>
-                <textarea
-                  id="wallet-edit-desc"
-                  className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-                  value={descrizione}
-                  onChange={(e) => setDescrizione(e.target.value)}
-                  placeholder="Opzionale"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wallet-edit-stato">Stato</Label>
-                <select
-                  id="wallet-edit-stato"
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                  value={stato}
-                  onChange={(e) => setStato(e.target.value as EnabledStatus)}
-                >
-                  <option value="abilitato">Abilitato</option>
-                  <option value="disabilitato">Non abilitato</option>
-                </select>
-              </div>
-              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 cursor-pointer"
-                  checked={bloccato}
-                  onChange={(e) => setBloccato(e.target.checked)}
-                />
-                <span className="space-y-0.5">
-                  <span className="block font-medium text-foreground">Wallet bloccato</span>
-                  <span className="block text-muted-foreground">
-                    Segnala che il provider ha bloccato il wallet. Il saldo viene incluso nella card
-                    &quot;Saldo bloccato&quot; della dashboard. Non limita l&apos;operatività.
-                  </span>
-                </span>
-              </label>
-              {error != null && (
-                <p className="text-xs text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleClose} disabled={saving}>
-                Chiudi
-              </Button>
-              <Button type="button" onClick={handleSave} disabled={saving}>
-                {saving ? 'Salvataggio...' : 'Salva'}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+          <GSelect
+            id="wallet-edit-stato"
+            label="Stato"
+            options={STATO_OPTIONS}
+            value={stato}
+            onChange={(v) => setStato(v as EnabledStatus)}
+          />
+          <GTextArea
+            id="wallet-edit-desc"
+            label="Descrizione"
+            optional
+            value={descrizione}
+            onChange={setDescrizione}
+          />
+          <CalcSwitch
+            label="Wallet bloccato"
+            checked={bloccato}
+            onChange={setBloccato}
+            hint="Segnala che il provider ha bloccato il wallet: il saldo finisce in «Saldo bloccato» della Dashboard. Non limita le operazioni."
+          />
+          {error && <FieldError id="wallet-edit-error">{error}</FieldError>}
+        </div>
+      )}
+    </DsModal>
   )
 }

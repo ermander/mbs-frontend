@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge, DsMoney } from '@/components/landing/ds-data'
 import { OmBookLogo, OmSportIcon } from '@/components/strumenti/scanner-v2/om-ds'
-import { holdCalcBridge } from '@/components/calculators/calculator-panel'
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import {
   DsModal,
@@ -175,8 +174,6 @@ export function GiocataView({
     const t = setTimeout(() => setFlashId(null), FLASH_MS)
     return () => clearTimeout(t)
   }, [flashId])
-  // La modale del deposito è quella di prima (shadcn): chiara col ponte finché è aperta.
-  useEffect(() => (depositOpen ? holdCalcBridge() : undefined), [depositOpen])
 
   const bet = useMemo(() => ongoingBets.find((b) => b.id === betId), [ongoingBets, betId])
   const legs = useMemo(() => sortLegs(allLegs.filter((l) => l.betId === betId)), [allLegs, betId])

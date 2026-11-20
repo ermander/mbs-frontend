@@ -14,6 +14,7 @@ import {
   dashMoneyRound,
   scalePosition,
 } from '@/lib/profit-tracker/dashboard'
+import { DsSegmented } from '@/components/profit-tracker/tracker-ds'
 import { cn } from '@/lib/utils'
 
 type View = 'mensile' | 'cumulato'
@@ -269,45 +270,6 @@ export function MonthBars({
           </span>
         ))}
       </div>
-    </div>
-  )
-}
-
-/** L'interruttore a due o più voci del design (Mensile/Cumulato): la scelta in brand-soft. */
-export function DsSegmented<T extends string>({
-  label,
-  items,
-  value,
-  onChange,
-}: {
-  label: string
-  items: { value: T; label: string }[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      className="inline-flex gap-0.5 rounded-ds-sm border border-ds-line bg-ds-surface p-[3px]"
-    >
-      {items.map((it) => (
-        <button
-          key={it.value}
-          type="button"
-          aria-pressed={value === it.value}
-          onClick={() => onChange(it.value)}
-          className={cn(
-            'h-7 cursor-pointer rounded-ds-xs border-0 px-3 font-ds-sans text-sm leading-5 font-semibold whitespace-nowrap transition-colors duration-150',
-            dsFocusRing,
-            value === it.value
-              ? 'bg-ds-brand-soft text-ds-brand'
-              : 'bg-transparent text-ds-ink-muted hover:text-ds-ink',
-          )}
-        >
-          {it.label}
-        </button>
-      ))}
     </div>
   )
 }

@@ -2,19 +2,25 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { CalcSwitch } from '@/components/calculators/calc-ds'
+import { OmDropdown } from '@/components/strumenti/scanner-v2/om-ds'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+  DsModal,
+  FieldError,
+  GReadOnly,
+  GSelect,
+  GTextArea,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import {
+  AccountChip,
+  useAccountInfo,
+} from '@/components/profit-tracker/giocate-rapide/use-account-info'
+import { DsSegmented } from '@/components/profit-tracker/tracker-ds'
+import { dashMoney } from '@/lib/profit-tracker/dashboard'
+import { cn, sanitizeDecimal } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { sanitizeDecimal } from '@/lib/utils'
 import type { Account, AccountMovementType } from '@/types/profit-tracker'
 
 interface AccountMovementModalProps {
@@ -34,6 +40,16 @@ interface AccountMovementModalProps {
   defaultAccountId?: string
 }
 
+const TIPI: { value: AccountMovementType; label: string }[] = [
+  { value: 'deposito', label: 'Deposito' },
+  { value: 'prelievo', label: 'Prelievo' },
+  { value: 'riconciliazione', label: 'Riconciliazione' },
+]
+
+/**
+ * «Nuovo movimento conto» sul design OddWise (§14.350): metodo, conto (con il logo del book),
+ * wallet del collaboratore, importo, data e descrizione. Stesso salvataggio di prima.
+ */
 export function AccountMovementModal({
   open,
   onOpenChange,
@@ -47,6 +63,7 @@ export function AccountMovementModal({
   const addAccountMovement = useProfitTrackerStore((s) => s.addAccountMovement)
   const isSavingAccountMovement = useProfitTrackerStore((s) => s.isSavingAccountMovement)
   const accountMovementsError = useProfitTrackerStore((s) => s.accountMovementsError)
+  const { accountInfo, accountOptions } = useAccountInfo()
 
   const [accountId, setAccountId] = useState('')
   const [walletId, setWalletId] = useState('')
@@ -56,7 +73,6 @@ export function AccountMovementModal({
   const [descrizione, setDescrizione] = useState('')
   // §14.109: un prelievo nasce in attesa; con la spunta nasce già pagato e accredita subito il wallet.
   const [giaPagato, setGiaPagato] = useState(false)
-  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -91,10 +107,15 @@ export function AccountMovementModal({
         ? walletId
         : (holderWallets[0]?.id ?? '')
 
-  const handleSave = async () => {
-    const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!effectiveAccountId || !Number.isFinite(importo)) return
+  const importo = Number.parseFloat(valore.replace(',', '.'))
+  const canSave =
+    !!effectiveAccountId &&
+    valore.trim() !== '' &&
+    Number.isFinite(importo) &&
+    (tipo === 'riconciliazione' || !!effectiveWalletId)
 
+  const handleSave = async () => {
+    if (!canSave) return
     await addAccountMovement({
       accountId: effectiveAccountId,
       tipo,
@@ -115,147 +136,121 @@ export function AccountMovementModal({
     onOpenChange(false)
   }
 
-  const accountOptions = useMemo(
-    () => allAccounts.map((a) => ({ value: a.id, label: a.nome })),
-    [allAccounts],
-  )
-
-  const walletOptions = useMemo(
-    () =>
-      holderWallets.map((w) => ({
-        value: w.id,
-        label: `${w.nome} (${w.saldoAttuale.toFixed(2)} €)`,
-      })),
-    [holderWallets],
-  )
-
-  const canSave =
-    effectiveAccountId &&
-    valore.trim() !== '' &&
-    Number.isFinite(Number.parseFloat(valore.replace(',', '.'))) &&
-    (tipo === 'riconciliazione' || effectiveWalletId)
+  const walletOptions = holderWallets.map((w) => ({
+    value: w.id,
+    label: `${w.nome} · ${dashMoney(w.saldoAttuale, { sign: false })}`,
+  }))
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        {/* Portal container per dropdown SearchableSelect dentro la modale */}
-        <div
-          ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-9998"
-          aria-hidden
-        />
-        <DialogHeader>
-          <DialogTitle>Nuovo movimento conto</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="mov-tipo">Metodo</Label>
-            <select
-              id="mov-tipo"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as AccountMovementType)}
-            >
-              <option value="deposito">Deposito</option>
-              <option value="prelievo">Prelievo</option>
-              <option value="riconciliazione">Riconciliazione</option>
-            </select>
-          </div>
-          {account ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="mov-account-locked">Conto</Label>
-              <div
-                id="mov-account-locked"
-                className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
-              >
-                {account.nome}
-              </div>
-            </div>
-          ) : (
-            <SearchableSelect
-              id="mov-account"
-              label="Conto"
-              options={accountOptions}
-              value={effectiveAccountId}
-              onChange={setAccountId}
-              allowEmpty={false}
-              placeholder="Seleziona conto"
-              searchPlaceholder="Cerca conto..."
-              portalContainer={dropdownPortalEl}
-            />
-          )}
-          {tipo !== 'riconciliazione' && (
-            <SearchableSelect
+    <DsModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Nuovo movimento conto"
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={dsButtonClass('ghost', 'md')}
+          >
+            Annulla
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!canSave || isSavingAccountMovement}
+            className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+          >
+            {isSavingAccountMovement ? 'Salvataggio…' : 'Salva il movimento'}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm leading-5 font-semibold text-ds-ink">Metodo</span>
+          <DsSegmented label="Metodo" items={TIPI} value={tipo} onChange={setTipo} />
+        </div>
+        {account ? (
+          <GReadOnly label="Conto">
+            {accountInfo(account.id).book ? (
+              <AccountChip info={accountInfo(account.id)} />
+            ) : (
+              account.nome
+            )}
+          </GReadOnly>
+        ) : (
+          <OmDropdown
+            id="mov-account"
+            label="Conto"
+            allLabel="Scegli un conto"
+            single
+            floating
+            alignBelow
+            emptyText="Nessun conto con questo nome."
+            options={accountOptions}
+            selected={effectiveAccountId ? [effectiveAccountId] : []}
+            onChange={(next) => next[0] && setAccountId(next[0])}
+            className="gap-1"
+          />
+        )}
+        {tipo !== 'riconciliazione' &&
+          (walletOptions.length > 0 ? (
+            <GSelect
               id="mov-wallet"
               label="Wallet"
               options={walletOptions}
               value={effectiveWalletId}
               onChange={setWalletId}
-              allowEmpty={false}
-              placeholder="Seleziona wallet"
-              searchPlaceholder="Cerca wallet..."
-              portalContainer={dropdownPortalEl}
             />
-          )}
-          {tipo === 'prelievo' && (
-            <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
-              <p className="text-amber-200">
-                Il conto viene scalato subito; il wallet verrà accreditato quando segnerai il
-                prelievo come pagato (dalla pagina Wallets o dallo storico).
-              </p>
-              <label className="flex cursor-pointer items-center gap-2 text-foreground">
-                <input
-                  id="mov-gia-pagato"
-                  type="checkbox"
-                  className="h-4 w-4 cursor-pointer"
-                  checked={giaPagato}
-                  onChange={(e) => setGiaPagato(e.target.checked)}
-                />
-                Già pagato: accredita subito il wallet
-              </label>
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="mov-valore">Movimento (€)</Label>
-            <Input
-              id="mov-valore"
-              type="text"
-              inputMode="decimal"
-              value={valore}
-              onChange={(e) => setValore(sanitizeDecimal(e.target.value))}
+          ) : (
+            <GReadOnly
+              label="Wallet"
+              hint="Aggiungi un wallet al collaboratore del conto da Gestione conti → Wallets."
+            >
+              <span className="text-ds-ink-muted">Nessun wallet per questo collaboratore</span>
+            </GReadOnly>
+          ))}
+        {tipo === 'prelievo' && (
+          <div className="flex flex-col gap-3 rounded-ds-sm bg-ds-warning-soft px-3 py-3">
+            <p className="ds-body-sm m-0 text-ds-ink">
+              Il conto scende subito; il wallet riceve l&apos;importo quando segni il prelievo come
+              pagato (da Wallets o dallo Storico movimenti).
+            </p>
+            <CalcSwitch
+              label="Già pagato: accredita subito il wallet"
+              checked={giaPagato}
+              onChange={setGiaPagato}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mov-data">Registrato il</Label>
-            <Input
-              id="mov-data"
-              type="date"
-              value={dataRegistrazione}
-              onChange={(e) => setDataRegistrazione(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mov-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="mov-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          {accountMovementsError && (
-            <p className="text-xs text-destructive">{accountMovementsError}</p>
-          )}
+        )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <GTextField
+            id="mov-valore"
+            label="Movimento"
+            numeric
+            suffix="€"
+            placeholder="0,00"
+            value={valore}
+            onChange={(v) => setValore(sanitizeDecimal(v))}
+          />
+          <GTextField
+            id="mov-data"
+            label="Registrato il"
+            type="date"
+            value={dataRegistrazione}
+            onChange={setDataRegistrazione}
+          />
         </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave || isSavingAccountMovement}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <GTextArea
+          id="mov-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        {accountMovementsError && <FieldError id="mov-error">{accountMovementsError}</FieldError>}
+      </div>
+    </DsModal>
   )
 }

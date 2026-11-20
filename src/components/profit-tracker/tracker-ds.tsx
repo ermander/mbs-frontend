@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
+import { dsFocusRing } from '@/components/landing/ds-primitives'
 import { dashMoney } from '@/lib/profit-tracker/dashboard'
 import { cn } from '@/lib/utils'
 
@@ -222,4 +223,87 @@ export function DsAmount({
 /** «1 giocata», «3 giocate»: il nome giusto per il numero. */
 export function countLabel(n: number, one: string, many: string): string {
   return `${n.toLocaleString('it-IT')} ${n === 1 ? one : many}`
+}
+
+const toggleTone = {
+  profit: 'bg-ds-profit-soft text-ds-profit',
+  warning: 'bg-ds-warning-soft text-ds-warning',
+  neutral: 'bg-ds-surface-sunken text-ds-ink-muted',
+} as const
+
+/**
+ * Un badge che si cambia con un clic (Abilitato/Non abilitato, Bloccato/Libero nelle liste di
+ * conti e wallet): stessa forma del DsBadge, contorno al passaggio, `title` con l'azione.
+ */
+export function DsBadgeToggle({
+  tone,
+  label,
+  actionLabel,
+  icon,
+  onClick,
+  disabled,
+}: {
+  tone: keyof typeof toggleTone
+  label: string
+  /** «Disabilita il conto»: nome accessibile e titolo del pulsante. */
+  actionLabel: string
+  icon?: ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      title={actionLabel}
+      aria-label={`${label}: ${actionLabel.toLowerCase()}`}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'inline-flex h-[22px] cursor-pointer items-center gap-1 rounded-full px-2 text-xs leading-4 font-medium tracking-[0.02em] whitespace-nowrap ring-ds-line-strong transition-shadow hover:ring-1 focus-visible:shadow-ds-focus focus-visible:outline-hidden disabled:cursor-wait disabled:opacity-60',
+        toggleTone[tone],
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+/** L'interruttore a due o più voci del design (Mensile/Cumulato): la scelta in brand-soft. */
+export function DsSegmented<T extends string>({
+  label,
+  items,
+  value,
+  onChange,
+}: {
+  label: string
+  items: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex gap-0.5 rounded-ds-sm border border-ds-line bg-ds-surface p-[3px]"
+    >
+      {items.map((it) => (
+        <button
+          key={it.value}
+          type="button"
+          aria-pressed={value === it.value}
+          onClick={() => onChange(it.value)}
+          className={cn(
+            'h-7 cursor-pointer rounded-ds-xs border-0 px-3 font-ds-sans text-sm leading-5 font-semibold whitespace-nowrap transition-colors duration-150',
+            dsFocusRing,
+            value === it.value
+              ? 'bg-ds-brand-soft text-ds-brand'
+              : 'bg-transparent text-ds-ink-muted hover:text-ds-ink',
+          )}
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
+  )
 }

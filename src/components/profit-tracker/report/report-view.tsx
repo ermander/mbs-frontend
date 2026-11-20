@@ -6,7 +6,7 @@ import { BarChart3, Calculator, ListChecks, Scale, Trophy, X } from 'lucide-reac
 import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
 import { OmDropdown, OmPagination, type OmOption } from '@/components/strumenti/scanner-v2/om-ds'
-import { DsSegmented, MonthBars } from '@/components/profit-tracker/dashboard/profit-month-chart'
+import { MonthBars } from '@/components/profit-tracker/dashboard/profit-month-chart'
 import { GSelect } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { useAccountInfo } from '@/components/profit-tracker/giocate-rapide/use-account-info'
 import {
@@ -20,6 +20,7 @@ import {
   DsAmount,
   DsPageHeader,
   DsSection,
+  DsSegmented,
   DsStatTile,
   countLabel,
 } from '@/components/profit-tracker/tracker-ds'

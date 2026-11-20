@@ -2,16 +2,18 @@
 
 import { useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { CalcSwitch } from '@/components/calculators/calc-ds'
+import { STATO_OPTIONS } from '@/components/profit-tracker/account-create-modal'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GReadOnly,
+  GSelect,
+  GTextArea,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { getErrorMessage } from '@/lib/error-utils'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { Account, EnabledStatus } from '@/types/profit-tracker'
 
@@ -21,6 +23,7 @@ interface AccountEditModalProps {
   account: Account
 }
 
+/** «Modifica conto» sul design OddWise (§14.350): stato, descrizione e conto bloccato. */
 export function AccountEditModal({ open, onOpenChange, account }: AccountEditModalProps) {
   const updateAccount = useProfitTrackerStore((s) => s.updateAccount)
 
@@ -79,74 +82,55 @@ export function AccountEditModal({ open, onOpenChange, account }: AccountEditMod
     bloccato !== (account.bloccato === true)
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Modifica conto</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label>Conto</Label>
-            <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              {account.nome}
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-account-stato">Stato</Label>
-            <select
-              id="edit-account-stato"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={stato}
-              onChange={(e) => setStato(e.target.value as EnabledStatus)}
-            >
-              <option value="abilitato">Abilitato</option>
-              <option value="disabilitato">Non abilitato</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-account-descrizione">Descrizione (opzionale)</Label>
-            <textarea
-              id="edit-account-descrizione"
-              className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-
-          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/30 p-3 text-xs">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 cursor-pointer"
-              checked={bloccato}
-              onChange={(e) => setBloccato(e.target.checked)}
-            />
-            <span className="space-y-0.5">
-              <span className="block font-medium text-foreground">Conto bloccato</span>
-              <span className="block text-muted-foreground">
-                Segnala che il sito ha bloccato il conto. Il saldo viene incluso nella card
-                &quot;Saldo bloccato&quot; della dashboard. Non limita l&apos;operatività.
-              </span>
-            </span>
-          </label>
-
-          {error && <p className="text-xs text-destructive">{error}</p>}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
+    <DsModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Modifica conto"
+      footer={
+        <>
+          <button
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
+            className={dsButtonClass('ghost', 'md')}
           >
             Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving || !hasChanges}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving || !hasChanges}
+            className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+          >
+            {isSaving ? 'Salvataggio…' : 'Salva le modifiche'}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <GReadOnly label="Conto">{account.nome}</GReadOnly>
+        <GSelect
+          id="edit-account-stato"
+          label="Stato"
+          options={STATO_OPTIONS}
+          value={stato}
+          onChange={(v) => setStato(v as EnabledStatus)}
+        />
+        <GTextArea
+          id="edit-account-descrizione"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        <CalcSwitch
+          label="Conto bloccato"
+          checked={bloccato}
+          onChange={setBloccato}
+          hint="Segnala che il sito ha bloccato il conto: il saldo finisce in «Saldo bloccato» della Dashboard. Non limita le operazioni."
+        />
+        {error && <FieldError id="edit-account-error">{error}</FieldError>}
+      </div>
+    </DsModal>
   )
 }

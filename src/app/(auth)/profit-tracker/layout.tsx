@@ -16,6 +16,8 @@ const DS_PAGES = new Set([
   '/profit-tracker/giocate-rapide',
   '/profit-tracker/giocate-archiviate',
   '/profit-tracker/archivio',
+  '/profit-tracker/gestione-conti',
+  '/profit-tracker/conti',
 ])
 const DS_BET_DETAIL = /^\/profit-tracker\/giocate-(in-corso|archiviate)\/[^/]+$/
 

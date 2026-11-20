@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { GiocateDsShell, GTabs } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { ContiView } from '@/components/profit-tracker/gestione-conti/conti-view'
 import { WalletsView } from '@/components/profit-tracker/gestione-conti/wallets-view'
-import { CollaboratoriContent } from '@/app/(auth)/profit-tracker/collaboratori/page'
+import { CollaboratoriView } from '@/components/profit-tracker/gestione-conti/collaboratori-view'
 
 type GestioneTab = 'conti' | 'wallets' | 'collaboratori'
 
@@ -24,7 +24,7 @@ export default function GestioneContiPage() {
       <GTabs label="Gestione conti" items={tabs} value={activeTab} onChange={setActiveTab} />
       {activeTab === 'conti' && <ContiView />}
       {activeTab === 'wallets' && <WalletsView />}
-      {activeTab === 'collaboratori' && <CollaboratoriContent />}
+      {activeTab === 'collaboratori' && <CollaboratoriView />}
     </GiocateDsShell>
   )
 }

@@ -10,6 +10,7 @@ import { Container } from '@/components/ui/container'
  */
 const DS_PAGES = new Set([
   '/profit-tracker/dashboard',
+  '/profit-tracker/report',
   '/profit-tracker/giocate',
   '/profit-tracker/giocate-in-corso',
   '/profit-tracker/giocate-rapide',

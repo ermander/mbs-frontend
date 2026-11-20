@@ -76,6 +76,21 @@ describe('landing copy (OddWise, design di Claude Design)', () => {
     expect(current('/')).toEqual([])
   })
 
+  it("il piè di pagina dell'app è quello della landing senza «Prezzi» (§14.348)", () => {
+    const labels = (columns: typeof content.APP_FOOTER_COLUMNS) =>
+      columns.map((column) => column.map((l) => l.label))
+    expect(labels(content.APP_FOOTER_COLUMNS)).toEqual([
+      ['Guide', 'Offerte', 'Oddsmatcher', 'Calcolatori', 'Forum'],
+      ['Contatti', 'Privacy', 'Termini', 'Cookie'],
+    ])
+    // Chi è entrato viene rimandato via dalla landing: nessun link dell'app ci porta.
+    for (const link of content.APP_FOOTER_COLUMNS.flat()) {
+      expect(link.href).toMatch(/^\/[a-z]/)
+      expect(link.href).not.toContain('#')
+    }
+    expect(content.LANDING_FOOTER_LINKS.map((l) => l.label)).toContain('Prezzi')
+  })
+
   it('segna nella barra la sezione delle offerte, anche sul dettaglio', () => {
     const active = (pathname: string) =>
       content.LANDING_NAV_LINKS.filter((l) => content.isCurrentSection(l.href, pathname)).map(

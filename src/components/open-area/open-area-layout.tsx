@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils'
  * §14.339-14.340: oddsmatcher e calcolatori, dove dalla landing si arriva senza account). Chi è
  * entrato vede la pagina come nel layout di (auth), con DashboardAuthGuard e Topnav; chi non è
  * entrato (o ha la sessione scaduta) la vede nel guscio della landing invece di finire sul login.
- * Cosa può usare un ospite lo decide ogni pagina.
+ * Cosa può usare un ospite lo decide ogni pagina. Il piè di pagina c'è in tutti e due i casi: per
+ * chi è entrato nella versione dell'app, come nel layout di (auth) (§14.348).
  */
 export function OpenAreaLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export function OpenAreaLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen flex-col bg-background">
         <Topnav />
         <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
+        <LandingFooter inApp />
       </div>
     </DashboardAuthGuard>
   )

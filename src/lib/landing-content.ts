@@ -66,6 +66,19 @@ export const LANDING_FOOTER_COLUMNS: readonly (readonly LandingLink[])[] = [
 
 export const LANDING_FOOTER_LINKS: readonly LandingLink[] = LANDING_FOOTER_COLUMNS.flat()
 
+/**
+ * Le colonne del piè di pagina dentro l'app, sotto le pagine di chi è entrato (§14.348): le
+ * sezioni dell'app e, accanto, Contatti con le pagine legali. Manca «Prezzi», che sta sulla
+ * landing, da cui chi è entrato viene rimandato alla dashboard (RedirectIfLoggedIn): l'ancora non
+ * si aprirebbe mai. Due colonne invece di tre, così sul telefono stanno affiancate.
+ */
+export const APP_FOOTER_COLUMNS: readonly (readonly LandingLink[])[] = [
+  LANDING_NAV_LINKS,
+  LANDING_FOOTER_COLUMNS.slice(1)
+    .flat()
+    .filter((link) => link.href !== LANDING_ROUTES.prezzi),
+]
+
 /** Il link porta alla pagina che si sta leggendo (il design la segna nel footer); le ancore mai. */
 export function isCurrentPage(href: string, pathname: string): boolean {
   return !href.includes('#') && href === pathname

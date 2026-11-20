@@ -41,6 +41,7 @@ import {
   sortLegs,
   type LegPatch,
 } from '@/lib/profit-tracker/bet-detail'
+import { eventDateLabel } from '@/lib/profit-tracker/archived-bets'
 import {
   SPORT_LABEL,
   bookLogoSlug,
@@ -58,11 +59,20 @@ import type { BetLeg, BetStatus } from '@/types/profit-tracker'
  * gambe (schede sul telefono) con lo stato modificabile e Modifica / Clona / Elimina,
  * riepilogo a destra con rischio, guadagno, tag e nota. Stessi salvataggi della pagina di
  * prima; il ricalcolo delle coperture della multipla sta in lib/profit-tracker/bet-detail.
+ *
+ * Con `archivedView` è il dettaglio della giocata archiviata (§14.350): la stessa pagina in sola
+ * lettura, come quella di prima. Briciola verso l'Archivio, data dell'evento senza «Iniziata»,
+ * stato delle gambe come badge, tag e nota da leggere; Ripristina porta al dettaglio in corso,
+ * Elimina solo se il backend la lascia eliminare (nessuna gamba in corso, vinta o persa).
  */
 
 const NOTICE_MS = 7000
 const FLASH_MS = 1500
 const BACK_HREF = '/profit-tracker/giocate'
+const ARCHIVE_HREF = '/profit-tracker/archivio'
+/** Le gambe che il backend non lascia eliminare con la giocata (come `eliminabile` della lista). */
+const UNDELETABLE_STATES = new Set<BetStatus>(['in_corso', 'vinto', 'perso'])
+const NOT_DELETABLE = 'Non si può: la giocata ha gambe vinte o perse che contano nei saldi'
 
 const STATO_OPTIONS = (Object.keys(STATO_LABEL) as BetStatus[]).map((v) => ({
   value: v,
@@ -92,7 +102,14 @@ function useNow(intervalMs: number): Date {
   return now
 }
 
-export function GiocataView({ betId }: { betId: string }) {
+export function GiocataView({
+  betId,
+  archivedView = false,
+}: {
+  betId: string
+  /** Il dettaglio dall'Archivio: sola lettura, Ripristina ed Elimina. */
+  archivedView?: boolean
+}) {
   const router = useRouter()
   const now = useNow(60_000)
 
@@ -213,6 +230,7 @@ export function GiocataView({ betId }: { betId: string }) {
   const when = eventWhen(bet.eventoData, now)
   const archived = Boolean(bet.archiviata)
   const lockedByOpenLegs = summary.hasLegsInCorso
+  const undeletable = legs.some((l) => UNDELETABLE_STATES.has(l.statoEvento))
 
   /* ---------- Giocata ---------- */
 
@@ -249,12 +267,24 @@ export function GiocataView({ betId }: { betId: string }) {
     }
   }
 
+  /** Dall'Archivio: la giocata torna in corso e si apre il suo dettaglio modificabile. */
+  const restoreAndOpen = async () => {
+    setBusy(true)
+    try {
+      await updateBet(bet.id, { archiviata: false })
+      router.push(`/profit-tracker/giocate-in-corso/${bet.id}`)
+    } catch (err) {
+      setBusy(false)
+      fail(err, 'Impossibile ripristinare la giocata.')
+    }
+  }
+
   const deleteBet = async () => {
     setBusy(true)
     try {
       setNavigatingAway(true)
       await removeOngoingBet(bet.id)
-      router.push(BACK_HREF)
+      router.push(archivedView ? ARCHIVE_HREF : BACK_HREF)
     } catch (err) {
       setNavigatingAway(false)
       setBusy(false)
@@ -400,8 +430,9 @@ export function GiocataView({ betId }: { betId: string }) {
   /* ---------- Celle ---------- */
 
   const highlighted = (l: BetLeg) =>
-    Boolean(bet.eventoNotificato && bet.hasOpenLegs) ||
-    (Boolean(l.eventoNotificato) && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso'))
+    !archivedView &&
+    (Boolean(bet.eventoNotificato && bet.hasOpenLegs) ||
+      (Boolean(l.eventoNotificato) && (l.statoEvento === 'bozza' || l.statoEvento === 'in_corso')))
   const rowTone = (l: BetLeg) =>
     flashId === l.id ? 'bg-ds-brand-soft' : highlighted(l) ? 'bg-ds-warning-soft' : ''
 
@@ -486,21 +517,27 @@ export function GiocataView({ betId }: { betId: string }) {
     </>
   )
 
-  const statoCell = (l: BetLeg, where: 'riga' | 'scheda') => (
-    <div className="flex flex-col gap-1">
-      <GSelect
-        id={`stato-${where}-${l.id}`}
-        ariaLabel={`Stato evento di ${legName(l)}`}
-        size="sm"
-        options={STATO_OPTIONS}
-        value={l.statoEvento}
-        tone={STATO_TONE[l.statoEvento]}
-        onChange={(v) => void changeStato(l, v as BetStatus)}
-        className="w-[124px]"
-      />
-      {FINAL_STATES.has(l.statoEvento) && <DsMoney value={l.movimento} size="sm" />}
-    </div>
-  )
+  const statoCell = (l: BetLeg, where: 'riga' | 'scheda') =>
+    archivedView ? (
+      <div className="flex flex-col items-start gap-1">
+        <DsBadge tone={STATO_TONE[l.statoEvento]}>{STATO_LABEL[l.statoEvento]}</DsBadge>
+        {FINAL_STATES.has(l.statoEvento) && <DsMoney value={l.movimento} size="sm" />}
+      </div>
+    ) : (
+      <div className="flex flex-col gap-1">
+        <GSelect
+          id={`stato-${where}-${l.id}`}
+          ariaLabel={`Stato evento di ${legName(l)}`}
+          size="sm"
+          options={STATO_OPTIONS}
+          value={l.statoEvento}
+          tone={STATO_TONE[l.statoEvento]}
+          onChange={(v) => void changeStato(l, v as BetStatus)}
+          className="w-[124px]"
+        />
+        {FINAL_STATES.has(l.statoEvento) && <DsMoney value={l.movimento} size="sm" />}
+      </div>
+    )
 
   const legActions = (l: BetLeg) => (
     <div className="flex items-center justify-end gap-0.5">
@@ -533,9 +570,12 @@ export function GiocataView({ betId }: { betId: string }) {
   return (
     <>
       <div className="ds-body-sm flex flex-wrap items-center gap-3 text-ds-ink-muted">
-        <Link href={BACK_HREF} className={cn(dsButtonClass('ghost', 'sm'), 'pl-1.5')}>
+        <Link
+          href={archivedView ? ARCHIVE_HREF : BACK_HREF}
+          className={cn(dsButtonClass('ghost', 'sm'), 'pl-1.5')}
+        >
           <ChevronLeft className="h-4 w-4" aria-hidden />
-          Giocate in corso
+          {archivedView ? 'Giocate archiviate' : 'Giocate in corso'}
         </Link>
         <span className="h-4 w-px bg-ds-line" aria-hidden />
         <span className="ds-label uppercase">Giocata</span>
@@ -557,53 +597,98 @@ export function GiocataView({ betId }: { betId: string }) {
               {[SPORT_LABEL[bet.sport] ?? bet.sport, competition].filter(Boolean).join(' · ')}
             </span>
             <span className="text-ds-line-strong">·</span>
-            <span className={cn('tabular-nums', when.started ? 'text-ds-warning' : 'text-ds-ink')}>
-              {when.text}
-            </span>
+            {archivedView ? (
+              <span className="text-ds-ink tabular-nums">
+                Evento del {eventDateLabel(bet.eventoData)}
+              </span>
+            ) : (
+              <span
+                className={cn('tabular-nums', when.started ? 'text-ds-warning' : 'text-ds-ink')}
+              >
+                {when.text}
+              </span>
+            )}
             <span className="text-ds-line-strong">·</span>
             <span className="tabular-nums">{createdLabel(bet.createdAt)}</span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setDepositOpen(true)}
-            className={dsButtonClass('secondary', 'md')}
-          >
-            <Plus className="h-5 w-5" aria-hidden />
-            Nuovo deposito
-          </button>
-          <button
-            type="button"
-            onClick={() => void setArchived(!archived)}
-            disabled={busy || (!archived && lockedByOpenLegs)}
-            title={!archived ? lockTitle : undefined}
-            className={cn(
-              dsButtonClass('secondary', 'md'),
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
+        {archivedView ? (
+          <div className="flex flex-wrap items-center gap-2">
             {archived ? (
-              <ArchiveRestore className="h-5 w-5" aria-hidden />
+              <button
+                type="button"
+                onClick={() => void restoreAndOpen()}
+                disabled={busy}
+                className={cn(dsButtonClass('secondary', 'md'), 'disabled:opacity-50')}
+              >
+                <ArchiveRestore className="h-5 w-5" aria-hidden />
+                Ripristina
+              </button>
             ) : (
-              <Archive className="h-5 w-5" aria-hidden />
+              <Link
+                href={`/profit-tracker/giocate-in-corso/${bet.id}`}
+                className={dsButtonClass('secondary', 'md')}
+              >
+                Apri tra le giocate in corso
+              </Link>
             )}
-            {archived ? 'Ripristina' : 'Archivia'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteBetOpen(true)}
-            disabled={busy || lockedByOpenLegs}
-            title={lockTitle}
-            className={cn(
-              dsDangerButtonClass('md'),
-              'disabled:cursor-not-allowed disabled:opacity-50',
-            )}
-          >
-            <Trash2 className="h-5 w-5" aria-hidden />
-            Elimina
-          </button>
-        </div>
+            <span title={undeletable ? NOT_DELETABLE : undefined} className="inline-flex">
+              <button
+                type="button"
+                onClick={() => setDeleteBetOpen(true)}
+                disabled={busy || undeletable}
+                className={cn(
+                  dsDangerButtonClass('md'),
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+              >
+                <Trash2 className="h-5 w-5" aria-hidden />
+                Elimina
+              </button>
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDepositOpen(true)}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              <Plus className="h-5 w-5" aria-hidden />
+              Nuovo deposito
+            </button>
+            <button
+              type="button"
+              onClick={() => void setArchived(!archived)}
+              disabled={busy || (!archived && lockedByOpenLegs)}
+              title={!archived ? lockTitle : undefined}
+              className={cn(
+                dsButtonClass('secondary', 'md'),
+                'disabled:cursor-not-allowed disabled:opacity-50',
+              )}
+            >
+              {archived ? (
+                <ArchiveRestore className="h-5 w-5" aria-hidden />
+              ) : (
+                <Archive className="h-5 w-5" aria-hidden />
+              )}
+              {archived ? 'Ripristina' : 'Archivia'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteBetOpen(true)}
+              disabled={busy || lockedByOpenLegs}
+              title={lockTitle}
+              className={cn(
+                dsDangerButtonClass('md'),
+                'disabled:cursor-not-allowed disabled:opacity-50',
+              )}
+            >
+              <Trash2 className="h-5 w-5" aria-hidden />
+              Elimina
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-1 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -634,9 +719,11 @@ export function GiocataView({ betId }: { betId: string }) {
                       <th scope="col" className="w-36 px-2.5 py-3">
                         Stato evento
                       </th>
-                      <th scope="col" className="w-28 py-3 pr-3 pl-2">
-                        <span className="sr-only">Azioni</span>
-                      </th>
+                      {!archivedView && (
+                        <th scope="col" className="w-28 py-3 pr-3 pl-2">
+                          <span className="sr-only">Azioni</span>
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -653,7 +740,7 @@ export function GiocataView({ betId }: { betId: string }) {
                         <td className="px-2.5 py-3 text-right">{quotaCell(l)}</td>
                         <td className="px-2.5 py-3 text-right">{importoCell(l)}</td>
                         <td className="px-2.5 py-3">{statoCell(l, 'riga')}</td>
-                        <td className="py-3 pr-3 pl-2">{legActions(l)}</td>
+                        {!archivedView && <td className="py-3 pr-3 pl-2">{legActions(l)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -685,7 +772,7 @@ export function GiocataView({ betId }: { betId: string }) {
                     </div>
                     <div className="flex items-end justify-between gap-3 border-t border-ds-line pt-2">
                       {statoCell(l, 'scheda')}
-                      {legActions(l)}
+                      {!archivedView && legActions(l)}
                     </div>
                   </li>
                 ))}
@@ -735,29 +822,46 @@ export function GiocataView({ betId }: { betId: string }) {
             </div>
           )}
           <div className="h-px bg-ds-line" />
-          <GSelect
-            id="giocata-tag"
-            label="Tag"
-            options={[
-              { value: '', label: 'Nessun tag' },
-              ...tags.map((t) => ({ value: t.nome, label: t.nome })),
-              ...(bet.tag && !tags.some((t) => t.nome === bet.tag)
-                ? [{ value: bet.tag, label: bet.tag }]
-                : []),
-            ]}
-            value={bet.tag ?? ''}
-            onChange={(v) => void changeTag(v)}
-          />
-          <GTextField
-            id="giocata-nota"
-            label="Nota"
-            optional
-            placeholder="Aggiungi una nota"
-            value={notaDraft ?? bet.nota ?? ''}
-            onChange={setNotaDraft}
-            onBlur={saveNota}
-            onEnter={saveNota}
-          />
+          {archivedView ? (
+            <dl className="m-0 flex flex-col gap-3">
+              <div>
+                <dt className="text-sm leading-5 font-semibold text-ds-ink">Tag</dt>
+                <dd className="ds-body m-0 mt-1 text-ds-ink-muted">{bet.tag || 'Nessun tag'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm leading-5 font-semibold text-ds-ink">Nota</dt>
+                <dd className="ds-body m-0 mt-1 text-pretty break-words text-ds-ink-muted">
+                  {bet.nota || 'Nessuna nota'}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <>
+              <GSelect
+                id="giocata-tag"
+                label="Tag"
+                options={[
+                  { value: '', label: 'Nessun tag' },
+                  ...tags.map((t) => ({ value: t.nome, label: t.nome })),
+                  ...(bet.tag && !tags.some((t) => t.nome === bet.tag)
+                    ? [{ value: bet.tag, label: bet.tag }]
+                    : []),
+                ]}
+                value={bet.tag ?? ''}
+                onChange={(v) => void changeTag(v)}
+              />
+              <GTextField
+                id="giocata-nota"
+                label="Nota"
+                optional
+                placeholder="Aggiungi una nota"
+                value={notaDraft ?? bet.nota ?? ''}
+                onChange={setNotaDraft}
+                onBlur={saveNota}
+                onEnter={saveNota}
+              />
+            </>
+          )}
         </aside>
       </div>
 
@@ -811,7 +915,7 @@ export function GiocataView({ betId }: { betId: string }) {
       <DsModal
         open={deleteBetOpen}
         onOpenChange={(next) => !next && !busy && setDeleteBetOpen(false)}
-        title="Eliminare la giocata?"
+        title={archivedView ? 'Eliminare la giocata archiviata?' : 'Eliminare la giocata?'}
         description={`${name} · ${bet.id}`}
         footer={
           <>
@@ -835,8 +939,9 @@ export function GiocataView({ betId }: { betId: string }) {
         }
       >
         <p className="ds-body m-0 text-pretty text-ds-ink">
-          L&apos;eliminazione è definitiva e cancella anche le gambe. Se vuoi solo toglierla dalla
-          lista, usa Archivia.
+          {archivedView
+            ? 'L’eliminazione è definitiva: la giocata e le sue gambe spariscono dallo storico.'
+            : 'L’eliminazione è definitiva e cancella anche le gambe. Se vuoi solo toglierla dalla lista, usa Archivia.'}
         </p>
       </DsModal>
 

@@ -162,6 +162,7 @@ export function GTextField({
   disabled,
   onBlur,
   onEnter,
+  inputProps,
   className,
 }: {
   id: string
@@ -170,7 +171,7 @@ export function GTextField({
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  type?: 'text' | 'search' | 'date' | 'datetime-local'
+  type?: 'text' | 'search' | 'date' | 'datetime-local' | 'password' | 'email'
   size?: keyof typeof controlHeight
   numeric?: boolean
   optional?: boolean
@@ -183,6 +184,11 @@ export function GTextField({
   onBlur?: () => void
   /** Invio nel campo (la nota del riepilogo si salva così). */
   onEnter?: () => void
+  /** Attributi nativi in più (autoComplete, maxLength, autoFocus…), per i moduli del Profilo. */
+  inputProps?: Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'id' | 'type' | 'value' | 'onChange' | 'className'
+  >
   className?: string
 }) {
   const errorId = `${id}-error`
@@ -205,6 +211,7 @@ export function GTextField({
           <span className="flex flex-none items-center pl-3 text-ds-ink-muted">{prefix}</span>
         )}
         <input
+          {...inputProps}
           id={id}
           type={type}
           value={value}

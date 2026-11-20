@@ -25,6 +25,7 @@ import {
   DsAlert,
   DsAmount,
   DsBadgeToggle,
+  DsBalancePanel,
   DsEmptyState,
   DsPageHeader,
   countLabel,
@@ -312,23 +313,11 @@ export function ContiView() {
         }
       />
 
-      <div
-        role="status"
-        className={cn(DS_PANEL, 'flex w-full items-center gap-4 px-5 py-4 sm:w-fit')}
-      >
-        <span
-          aria-hidden
-          className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-ds-brand-soft text-ds-brand"
-        >
-          <Scale className="h-5 w-5" />
-        </span>
-        <span className="flex flex-col">
-          <span className="font-ds-sans text-xs leading-4 font-medium tracking-[0.02em] text-ds-ink-muted">
-            Saldo attuale{holderIds.length + bookIds.length > 0 ? ' dei conti filtrati' : ''}
-          </span>
-          <DsAmount value={saldoTotale} neutral size="lg" />
-        </span>
-      </div>
+      <DsBalancePanel
+        icon={Scale}
+        label={`Saldo attuale${holderIds.length + bookIds.length > 0 ? ' dei conti filtrati' : ''}`}
+        value={saldoTotale}
+      />
 
       <div
         className={cn(DS_PANEL, 'grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-4')}

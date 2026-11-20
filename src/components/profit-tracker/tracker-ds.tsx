@@ -307,3 +307,40 @@ export function DsSegmented<T extends string>({
     </div>
   )
 }
+
+/**
+ * Il saldo in testa a Conti, Wallets e Collaboratori: icona nel cerchio brand-soft, etichetta,
+ * importo neutro e, se c'è, una nota sotto (i prelievi in attesa dei wallet).
+ */
+export function DsBalancePanel({
+  label,
+  value,
+  note,
+  icon: Icon,
+}: {
+  label: string
+  value: number
+  note?: ReactNode
+  icon: LucideIcon
+}) {
+  return (
+    <div
+      role="status"
+      className={cn(DS_PANEL, 'flex w-full items-center gap-4 px-5 py-4 sm:w-fit')}
+    >
+      <span
+        aria-hidden
+        className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-ds-brand-soft text-ds-brand"
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="font-ds-sans text-xs leading-4 font-medium tracking-[0.02em] text-ds-ink-muted">
+          {label}
+        </span>
+        <DsAmount value={value} neutral size="lg" />
+        {note && <span className="ds-caption text-ds-ink-muted">{note}</span>}
+      </span>
+    </div>
+  )
+}

@@ -1,22 +1,23 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { OmDropdown, type OmOption } from '@/components/strumenti/scanner-v2/om-ds'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableSelect } from '@/components/ui/searchable-select'
-import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { sanitizeDecimal } from '@/lib/utils'
+  DsModal,
+  FieldError,
+  GReadOnly,
+  GSelect,
+  GTextArea,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsSegmented } from '@/components/profit-tracker/tracker-ds'
+import { walletOptionLabel } from '@/components/profit-tracker/wallet-transfer-modal'
 import { NATURA_HINTS, direzioneForTipo } from '@/lib/profit-tracker/movement-categories'
+import { cn, sanitizeDecimal } from '@/lib/utils'
+import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { WalletMovementType } from '@/types/profit-tracker'
 
 interface WalletTopupExpenseModalProps {
@@ -26,16 +27,40 @@ interface WalletTopupExpenseModalProps {
 
 type TopupTipo = Exclude<WalletMovementType, 'trasferimento'>
 
+const TIPI: { value: TopupTipo; label: string }[] = [
+  { value: 'ricarica', label: 'Ricarica' },
+  { value: 'spesa', label: 'Spesa' },
+]
+
 /** Lo slug della categoria che chiede a quale collaboratore va il compenso (§14.111). */
 const COMPENSO_SLUG = 'compenso-identita'
 
+/**
+ * «Nuova ricarica o spesa» di un wallet sul design OddWise (§14.350): tipo, collaboratore, wallet,
+ * categoria del catalogo (§14.111, con il collaboratore del compenso quando serve), importo, data
+ * e descrizione. Stesso salvataggio di prima; se non va, la modale resta aperta con l'errore.
+ */
 export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpenseModalProps) {
+  const fetchMovementCategories = useProfitTrackerStore((s) => s.fetchMovementCategories)
+
+  useEffect(() => {
+    if (open) void fetchMovementCategories()
+  }, [open, fetchMovementCategories])
+
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Nuova ricarica o spesa">
+      {open && <WalletTopupForm onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+/** Montato solo a modale aperta: i campi ripartono vuoti a ogni apertura. */
+function WalletTopupForm({ onClose }: { onClose: () => void }) {
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const wallets = useProfitTrackerStore((s) => s.wallets)
   const movementCategories = useProfitTrackerStore((s) => s.movementCategories)
-  const fetchMovementCategories = useProfitTrackerStore((s) => s.fetchMovementCategories)
   const addWalletMovement = useProfitTrackerStore((s) => s.addWalletMovement)
-  const isSavingWalletMovement = useProfitTrackerStore((s) => s.isSavingWalletMovement)
+  const isSaving = useProfitTrackerStore((s) => s.isSavingWalletMovement)
   const walletMovementsError = useProfitTrackerStore((s) => s.walletMovementsError)
 
   const [holderId, setHolderId] = useState('')
@@ -46,74 +71,59 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
   const [valore, setValore] = useState('')
   const [dataRegistrazione, setDataRegistrazione] = useState(new Date().toISOString().slice(0, 10))
   const [descrizione, setDescrizione] = useState('')
-  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null)
+  // L'errore dello store vale solo dopo un salvataggio da questa modale.
+  const [tried, setTried] = useState(false)
 
-  useEffect(() => {
-    if (open) void fetchMovementCategories()
-  }, [open, fetchMovementCategories])
-
-  const handleOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      if (nextOpen) {
-        setHolderId('')
-        setWalletId('')
-        setTipo('ricarica')
-        setCategoryId('')
-        setBeneficiaryId('')
-        setValore('')
-        setDataRegistrazione(new Date().toISOString().slice(0, 10))
-        setDescrizione('')
-      }
-      onOpenChange(nextOpen)
-    },
-    [onOpenChange],
+  const holderOptions: OmOption[] = useMemo(
+    () =>
+      holders
+        .map((h) => ({ value: h.id, label: h.nome }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'it')),
+    [holders],
   )
 
-  const effectiveHolderId =
-    holderId || (wallets.length > 0 ? wallets[0].holderId : holders.length > 0 ? holders[0].id : '')
-
-  const holderWallets = useMemo(() => {
-    if (!effectiveHolderId) return wallets
-    return wallets.filter((w) => w.holderId === effectiveHolderId)
-  }, [wallets, effectiveHolderId])
-
+  const effectiveHolderId = holderId || wallets[0]?.holderId || holders[0]?.id || ''
+  const holderWallets = useMemo(
+    () => wallets.filter((w) => w.holderId === effectiveHolderId),
+    [wallets, effectiveHolderId],
+  )
   const effectiveWalletId =
     holderWallets.length === 0
       ? ''
-      : walletId && holderWallets.some((w) => w.id === walletId)
+      : holderWallets.some((w) => w.id === walletId)
         ? walletId
-        : (holderWallets[0]?.id ?? '')
+        : holderWallets[0].id
 
-  // §14.111: solo le categorie della direzione del tipo (entrata per le ricariche, uscita
-  // per le spese), nell'ordine del catalogo: il capitale proprio sta in fondo.
-  const categoryOptions = useMemo(() => {
+  // §14.111: solo le categorie della direzione del tipo (entrata per le ricariche, uscita per le
+  // spese), nell'ordine del catalogo: il capitale proprio sta in fondo.
+  const categories = useMemo(() => {
     const direzione = direzioneForTipo(tipo)
     return movementCategories
       .filter((c) => c.attivo && c.direzione === direzione)
       .sort((a, b) => a.ordine - b.ordine || a.nome.localeCompare(b.nome, 'it'))
   }, [movementCategories, tipo])
-
-  const effectiveCategoryId =
-    categoryId && categoryOptions.some((c) => c.id === categoryId) ? categoryId : ''
-  const selectedCategory = categoryOptions.find((c) => c.id === effectiveCategoryId) ?? null
+  const effectiveCategoryId = categories.some((c) => c.id === categoryId) ? categoryId : ''
+  const selectedCategory = categories.find((c) => c.id === effectiveCategoryId) ?? null
   const asksBeneficiary = selectedCategory?.slug === COMPENSO_SLUG
   const effectiveBeneficiaryId = beneficiaryId || effectiveHolderId
 
-  const holderOptions = useMemo(
-    () => holders.map((h) => ({ value: h.id, label: h.nome })),
-    [holders],
-  )
+  const importo = Number.parseFloat(valore.replace(',', '.'))
+  const canSave =
+    !!effectiveWalletId &&
+    !!effectiveCategoryId &&
+    valore.trim() !== '' &&
+    Number.isFinite(importo) &&
+    !isSaving
 
   const handleSave = async () => {
-    const importo = Number.parseFloat(valore.replace(',', '.'))
-    if (!effectiveWalletId || !effectiveCategoryId || !Number.isFinite(importo)) return
-
-    const success = await addWalletMovement({
+    if (!canSave) return
+    setTried(true)
+    const ok = await addWalletMovement({
       walletId: effectiveWalletId,
       tipo,
       valore: importo,
       dataRegistrazione: new Date(dataRegistrazione).toISOString(),
-      descrizione: descrizione || undefined,
+      descrizione: descrizione.trim() || undefined,
       categoryId: effectiveCategoryId,
       // Il collaboratore di riferimento viaggia solo quando è diverso dal proprietario del wallet.
       holderId:
@@ -121,166 +131,142 @@ export function WalletTopupExpenseModal({ open, onOpenChange }: WalletTopupExpen
           ? effectiveBeneficiaryId
           : undefined,
     })
-
-    if (success) {
-      const label = tipo === 'ricarica' ? 'Ricarica' : 'Spesa'
-      toast.success(`${label} registrata con successo`)
-      handleOpenChange(false)
-    } else {
-      toast.error(
-        useProfitTrackerStore.getState().walletMovementsError ||
-          'Errore nel salvataggio del movimento',
-      )
-    }
+    if (!ok) return
+    toast.success(tipo === 'ricarica' ? 'Ricarica registrata' : 'Spesa registrata')
+    onClose()
   }
 
-  const canSave =
-    effectiveHolderId &&
-    effectiveWalletId &&
-    effectiveCategoryId &&
-    valore.trim() !== '' &&
-    Number.isFinite(Number.parseFloat(valore.replace(',', '.')))
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
-        {/* Portal container for SearchableSelect dropdowns inside the modal */}
-        <div
-          ref={setDropdownPortalEl}
-          className="pointer-events-none fixed inset-0 z-9998"
-          aria-hidden
-        />
-        <DialogHeader>
-          <DialogTitle>Nuova ricarica/spesa</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-holder">Collaboratore</Label>
-            <SearchableSelect
-              id="topup-holder"
-              options={holderOptions}
-              value={effectiveHolderId}
-              onChange={setHolderId}
-              allowEmpty={false}
-              placeholder="Seleziona collaboratore"
-              searchPlaceholder="Cerca collaboratore..."
-              portalContainer={dropdownPortalEl}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-tipo">Tipo</Label>
-            <select
-              id="topup-tipo"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={tipo}
-              onChange={(e) => {
-                setTipo(e.target.value as TopupTipo)
-                setCategoryId('')
-              }}
-            >
-              <option value="ricarica">Ricarica</option>
-              <option value="spesa">Spesa</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-wallet">Wallet</Label>
-            <select
+    <>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm leading-5 font-semibold text-ds-ink">Tipo</span>
+          <DsSegmented
+            label="Tipo"
+            items={TIPI}
+            value={tipo}
+            onChange={(v) => {
+              setTipo(v)
+              setCategoryId('')
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <OmDropdown
+            id="topup-holder"
+            label="Collaboratore"
+            allLabel="Scegli un collaboratore"
+            single
+            floating
+            alignBelow
+            emptyText="Nessun collaboratore con questo nome."
+            options={holderOptions}
+            selected={effectiveHolderId ? [effectiveHolderId] : []}
+            onChange={(next) => next[0] && setHolderId(next[0])}
+            className="gap-1"
+          />
+          {holderWallets.length > 0 ? (
+            <GSelect
               id="topup-wallet"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              label="Wallet"
+              options={holderWallets.map((w) => ({ value: w.id, label: walletOptionLabel(w) }))}
               value={effectiveWalletId}
-              onChange={(e) => setWalletId(e.target.value)}
-            >
-              {holderWallets.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.nome} ({w.saldoAttuale.toFixed(2)} €)
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-categoria">Categoria *</Label>
-            <select
-              id="topup-categoria"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={effectiveCategoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Seleziona categoria</option>
-              {categoryOptions.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-            {selectedCategory ? (
-              <p className="text-[11px] text-muted-foreground">
-                {NATURA_HINTS[selectedCategory.natura]}
-              </p>
-            ) : categoryOptions.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">
-                Nessuna categoria attiva per questo tipo: aggiungila dal backoffice.
-              </p>
-            ) : null}
-          </div>
-          {asksBeneficiary && (
-            <div className="space-y-1.5">
-              <Label htmlFor="topup-beneficiario">Per il collaboratore</Label>
-              <SearchableSelect
-                id="topup-beneficiario"
-                options={holderOptions}
-                value={effectiveBeneficiaryId}
-                onChange={setBeneficiaryId}
-                allowEmpty={false}
-                placeholder="Seleziona collaboratore"
-                searchPlaceholder="Cerca collaboratore..."
-                portalContainer={dropdownPortalEl}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Il compenso pesa sul netto di questo collaboratore nel report.
-              </p>
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-valore">Movimento (€)</Label>
-            <Input
-              id="topup-valore"
-              type="text"
-              inputMode="decimal"
-              value={valore}
-              onChange={(e) => setValore(sanitizeDecimal(e.target.value))}
+              onChange={setWalletId}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-data">Registrato il</Label>
-            <Input
-              id="topup-data"
-              type="date"
-              value={dataRegistrazione}
-              onChange={(e) => setDataRegistrazione(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="topup-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="topup-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          {walletMovementsError && (
-            <p className="text-xs text-destructive">{walletMovementsError}</p>
+          ) : (
+            <GReadOnly label="Wallet">
+              <span className="text-ds-ink-muted">Nessun wallet</span>
+            </GReadOnly>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => handleOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave || isSavingWalletMovement}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="flex flex-col gap-1">
+          <GSelect
+            id="topup-categoria"
+            label="Categoria"
+            options={[
+              { value: '', label: 'Scegli una categoria' },
+              ...categories.map((c) => ({ value: c.id, label: c.nome })),
+            ]}
+            value={effectiveCategoryId}
+            onChange={setCategoryId}
+          />
+          {selectedCategory ? (
+            <p className="m-0 text-sm leading-5 text-ds-ink-muted">
+              {NATURA_HINTS[selectedCategory.natura]}
+            </p>
+          ) : categories.length === 0 ? (
+            <p className="m-0 text-sm leading-5 text-ds-ink-muted">
+              Nessuna categoria attiva per questo tipo: aggiungila dal backoffice.
+            </p>
+          ) : null}
+        </div>
+        {asksBeneficiary && (
+          <div className="flex flex-col gap-1">
+            <OmDropdown
+              id="topup-beneficiario"
+              label="Per il collaboratore"
+              allLabel="Scegli un collaboratore"
+              single
+              floating
+              alignBelow
+              emptyText="Nessun collaboratore con questo nome."
+              options={holderOptions}
+              selected={effectiveBeneficiaryId ? [effectiveBeneficiaryId] : []}
+              onChange={(next) => next[0] && setBeneficiaryId(next[0])}
+              className="gap-1"
+            />
+            <p className="m-0 text-sm leading-5 text-ds-ink-muted">
+              Il compenso pesa sul netto di questo collaboratore nel Report.
+            </p>
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <GTextField
+            id="topup-valore"
+            label="Importo"
+            numeric
+            suffix="€"
+            placeholder="0,00"
+            value={valore}
+            onChange={(v) => setValore(sanitizeDecimal(v))}
+          />
+          <GTextField
+            id="topup-data"
+            label="Registrato il"
+            type="date"
+            value={dataRegistrazione}
+            onChange={setDataRegistrazione}
+          />
+        </div>
+        <GTextArea
+          id="topup-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        {tried && walletMovementsError && (
+          <FieldError id="topup-error">{walletMovementsError}</FieldError>
+        )}
+      </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSaving}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!canSave}
+          className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+        >
+          {isSaving ? 'Salvataggio…' : tipo === 'ricarica' ? 'Salva la ricarica' : 'Salva la spesa'}
+        </button>
+      </div>
+    </>
   )
 }

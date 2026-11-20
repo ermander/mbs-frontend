@@ -6,6 +6,7 @@ import { notFound, useParams, useRouter } from 'next/navigation'
 
 import { Ban } from 'lucide-react'
 
+import { GEventLink } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { getErrorMessage } from '@/lib/error-utils'
 import { formatEventDateDisplay } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
@@ -129,7 +130,7 @@ export default function ArchivedBetDetailPage() {
     <section className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Dettaglio giocata archiviata {bet.eventoNome}
+          Dettaglio giocata archiviata <GEventLink name={bet.eventoNome} />
         </h1>
         <p className="text-sm text-muted-foreground">
           Vista in sola lettura. Puoi ripristinare la giocata per spostarla nuovamente in
@@ -198,7 +199,7 @@ export default function ArchivedBetDetailPage() {
                     </span>
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
-                      {leg.eventoNome}
+                      <GEventLink name={leg.eventoNome} />
                     </span>
                   </div>
 
@@ -342,7 +343,7 @@ export default function ArchivedBetDetailPage() {
                   })()}
                 </td>
                 <td className="px-3 py-2 text-xs whitespace-nowrap text-foreground">
-                  {leg.eventoNome}
+                  <GEventLink name={leg.eventoNome} />
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{leg.competizione}</td>
                 <td className="px-3 py-2 text-xs whitespace-nowrap text-muted-foreground">

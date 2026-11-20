@@ -15,6 +15,7 @@ import {
 } from '@/components/strumenti/scanner-v2/om-ds'
 import {
   DsModal,
+  GEventLink,
   GIconButton,
   GNotice,
   GSelect,
@@ -302,7 +303,7 @@ export function GiocateArchiviateView() {
             <OmSportIcon sport={bet.sport} size={20} />
           </span>
           <span className="font-semibold text-pretty text-ds-ink">
-            {multi ? events[0] : bet.eventoNome}
+            <GEventLink name={multi ? events[0] : bet.eventoNome} />
             {multi && events.length > 1 && (
               <span className="font-normal text-ds-ink-muted"> +{events.length - 1}</span>
             )}

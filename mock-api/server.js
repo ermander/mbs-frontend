@@ -571,11 +571,77 @@ const OFFERS = [
         createdAt: '2026-10-19T09:00:00.000Z', updatedAt: '2026-10-19T09:00:00.000Z', guide: null,
     },
 ];
+// §14.345: il catalogo d'esempio del design (lib/offers-sample.ts) pubblicato, senza guida, perché
+// l'elenco abbia più pagine (10 per pagina): 14 offerte di benvenuto con of-1, due delle quali
+// scadute. Gli slug di of-1 e of-2 restano loro. Scadenze in giorni da oggi (negativo = scaduta).
+[
+    ['betflag-10', 'benvenuto', 'Singola', 'betflag', 'Betflag', 'Scommetti 50 €, ricevi 10 € di free bet', 5.5, 'Facile'],
+    ['daznbet-100', 'benvenuto', 'Multipla', 'daznbet', 'Daznbet', 'Scommetti 200 €, ricevi 100 € in quintupla', 40, 'Media'],
+    ['eurobet-100', 'benvenuto', 'Multipla', 'eurobet', 'Eurobet', 'Deposita 200 €, ricevi 100 € in quintupla', 60, 'Media'],
+    ['sisal-100', 'benvenuto', 'Multipla', 'sisal', 'Sisal', 'Deposita 200 €, scommetti 10 €, ricevi 100 € in quadrupla', 65, 'Media', null, true],
+    ['stanleybet-40', 'benvenuto', 'Multipla', 'stanleybet', 'Stanleybet', 'Scommetti 20 €, ricevi 4 × 10 € in tripla', 29, 'Media'],
+    ['williamhill-100', 'benvenuto', 'Multipla', 'williamhill', 'William Hill', 'Scommetti 100 €, ricevi 10 × 10 € di free bet', 55, 'Media'],
+    ['planetwin-50', 'benvenuto', 'Multipla', 'planetwin365', 'Planetwin365', 'Scommetti 50 €, ricevi 50 € in sestupla', 26, 'Difficile'],
+    ['bet365-100', 'benvenuto', 'Rollover', 'bet365', 'Bet365', 'Deposita fino a 100 €, ricevi il 100 % con rollover', 70, 'Difficile'],
+    ['netbet-30', 'benvenuto', 'Rimborso', 'netbet', 'Netbet', 'Scommetti 10 €, ricevi fino a 30 € di free bet', 10, 'Media'],
+    ['goldbet-slot', 'benvenuto', 'Casinò', 'goldbet', 'Goldbet', 'Deposita 500 €, ricevi 50 € per le slot IGT', 20, 'Facile'],
+    ['leovegas-casino', 'benvenuto', 'Casinò', 'leovegas', 'LeoVegas', 'Deposita 20 €, ricevi 20 € per il casinò', 8, 'Media'],
+    ['admiralbet-20', 'benvenuto', 'Singola', 'admiralbet', 'Admiralbet', 'Scommetti 20 €, ricevi 20 € di free bet', 12, 'Facile', -5],
+    ['winbet-25', 'benvenuto', 'Singola', 'winbet', 'Winbet', 'Deposita 25 €, ricevi 25 € di bonus', 14, 'Facile', -20],
+    ['sisal-ruota-scommesse', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus scommesse', null, 'Facile'],
+    ['sisal-ruota-casino', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus casinò e slot', null, 'Facile'],
+    ['goldbet-live', 'ricorrenti', 'Ogni settimana', 'goldbet', 'Goldbet', 'Rimborso del 10 % sul casinò live, fino a 10 €', 2, 'Media', 2],
+    ['betsson-quadrupla', 'ricorrenti', 'Ogni settimana', 'betsson', 'Betsson', 'Scommetti 10 € in quadrupla, ricevi 5 € di free bet', 1.5, 'Media', null, true],
+    ['888-mensile', 'ricorrenti', 'Ogni mese', '888sport', '888sport', 'Rimborso del 10 % sulle perdite nette del mese, fino a 50 €', 12, 'Facile'],
+    ['bet365-maggiorate', 'ricorrenti', 'Quando disponibili', 'bet365', 'Bet365', 'Quote maggiorate con la spunta gialla', null, 'Difficile'],
+    ['eurobet-superquote', 'ricorrenti', 'Quando disponibili', 'eurobet', 'Eurobet', 'Super quote sugli eventi di Serie A', null, 'Media'],
+    ['snai-tripla', 'ricorrenti', 'Ogni settimana', 'snai', 'Snai', 'Scommetti 50 € in tripla, ricevi 15 € di free bet', 3, 'Media', -1],
+    ['betpassion-escl', 'esclusive', null, 'betpassion', 'Betpassion', 'Via e-mail: scommetti 150 € in tripla, ricevi 50 € di free bet', 18, 'Media'],
+    ['leovegas-escl', 'esclusive', null, 'leovegas', 'LeoVegas', 'Via SMS: rimborso del 20 % sulle perdite della settimana, fino a 50 €', 15, 'Facile'],
+    ['netbet-escl', 'esclusive', null, 'netbet', 'Netbet', 'Nel conto: ricarica 50 €, ricevi altri 50 €', 22, 'Media', null, true],
+    ['888-escl', 'esclusive', null, '888sport', '888sport', 'Via e-mail: deposita 20 €, ricevi 20 € di free bet', 10, 'Facile', -15],
+].forEach(([slug, type, groupLabel, bookmakerSlug, bookmakerName, title, profit, difficulty, expiresIn = null, isNew = false], i) => OFFERS.push({
+    id: `of-s${i + 1}`, slug, type, groupLabel, bookmakerSlug, bookmakerName, title, profit, difficulty, isNew,
+    expiresOn: expiresIn === null ? null : new Date(Date.now() + expiresIn * 86400000).toISOString().slice(0, 10), expiryOverride: null, sortOrder: 0,
+    visibility: 'published', publishedAt: '2026-11-01T09:00:00.000Z', createdAt: new Date(Date.parse('2026-11-01T09:00:00Z') - i * 60000).toISOString(),
+    updatedAt: '2026-11-01T09:00:00.000Z', guide: null,
+}));
 function offerView(row) {
     const today = romeToday();
     const days = row.expiresOn ? dayNum(row.expiresOn) - dayNum(today) : null;
     const expired = row.expiryOverride === 'expired' ? true : row.expiryOverride === 'active' ? false : days !== null && days < 0;
     return { ...row, expired, daysLeft: expired || days === null || days < 0 ? null : days, hasGuide: row.guide !== null };
+}
+function publicCard(o) {
+    const { guide, id, visibility, publishedAt, createdAt, updatedAt, expiryOverride, ...card } = offerView(o);
+    return card;
+}
+// §14.345: GET /api/offers?page= come il backend (listPublishedOffersPage): un tipo e un sito,
+// le attive per gruppo nell'ordine dell'editor (gli altri gruppi dopo, quelli senza gruppo prima
+// di loro), poi tutte le scadute; dentro la sezione sortOrder e la più nuova prima. Una pagina
+// oltre l'ultima serve l'ultima.
+const OFFER_GROUP_ORDER = { benvenuto: ['Singola', 'Multipla', 'Rollover', 'Rimborso', 'Casinò'], ricorrenti: ['Ogni giorno', 'Ogni settimana', 'Ogni mese', 'Quando disponibili'], esclusive: [] };
+function offersPage(q) {
+    const type = OFFER_GROUP_ORDER[q.get('type')] ? q.get('type') : 'benvenuto';
+    const book = (q.get('book') || '').trim() || null;
+    const limit = Math.min(Math.max(parseInt(q.get('limit') || '10', 10) || 10, 1), 50);
+    const order = OFFER_GROUP_ORDER[type];
+    const published = OFFERS.filter((o) => o.visibility === 'published').map(offerView);
+    const rank = (o) => (o.expired ? 0 : order.includes(o.groupLabel) ? order.indexOf(o.groupLabel) + 1 : order.length + 1);
+    const group = (o) => (o.expired ? null : o.groupLabel);
+    const bySection = (a, b) => Number(a.expired) - Number(b.expired) || rank(a) - rank(b) || (group(a) ?? '').localeCompare(group(b) ?? '', 'it');
+    const rows = published.filter((o) => o.type === type && (!book || o.bookmakerName === book))
+        .sort((a, b) => bySection(a, b) || a.sortOrder - b.sortOrder || b.createdAt.localeCompare(a.createdAt));
+    const sections = [];
+    for (const o of rows) {
+        const last = sections[sections.length - 1];
+        if (last && last.expired === o.expired && last.group === group(o)) last.count += 1;
+        else sections.push({ group: group(o), expired: o.expired, count: 1 });
+    }
+    const page = Math.min(Math.max(parseInt(q.get('page'), 10) || 1, 1), Math.max(1, Math.ceil(rows.length / limit)));
+    const activeByType = Object.fromEntries(Object.keys(OFFER_GROUP_ORDER).map((t) => [t, published.filter((o) => o.type === t && !o.expired).length]));
+    const books = [...new Set(published.filter((o) => o.type === type).map((o) => o.bookmakerName))].sort((a, b) => a.localeCompare(b, 'it'));
+    return { offers: rows.slice((page - 1) * limit, page * limit).map(publicCard), total: rows.length, page, limit, sections, activeByType, books };
 }
 function offerBodyError(body, selfId) {
     if (String(body.slug || '').startsWith('rotto')) return [500, { message: 'Errore finto del mock' }];
@@ -777,10 +843,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/api/offers' && req.method === 'GET') {
         if (offersDown) return send(503, { message: 'down' });
+        if (url.searchParams.has('page')) return send(200, offersPage(url.searchParams));
         const rank = { benvenuto: 0, ricorrenti: 1, esclusive: 2 };
         const cards = OFFERS.filter((o) => o.visibility === 'published')
             .sort((a, b) => rank[a.type] - rank[b.type] || a.sortOrder - b.sortOrder)
-            .map((o) => { const { guide, id, visibility, publishedAt, createdAt, updatedAt, expiryOverride, ...card } = offerView(o); return card; });
+            .map(publicCard);
         return send(200, { offers: cards });
     }
     const publicOffer = path.match(/^\/api\/offers\/([^/]+)$/);

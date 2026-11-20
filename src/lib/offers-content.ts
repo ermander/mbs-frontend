@@ -1,5 +1,5 @@
 import type { DsBadgeTone } from '@/components/landing/ds-data'
-import type { OfferDifficulty, OfferType } from '@/types/offers'
+import type { OfferDifficulty, OfferSectionApi, OfferType } from '@/types/offers'
 
 /**
  * Elenco delle offerte dal design «OddWise Offerte» di Claude Design (artifact
@@ -8,7 +8,8 @@ import type { OfferDifficulty, OfferType } from '@/types/offers'
  *
  * Dal §14.263 le offerte vengono dal database (GET /offers, lib/offers-api.ts, convertite con
  * offerFromCard); il catalogo d'esempio del design è in lib/offers-sample.ts, solo per i test.
- * Le funzioni pure lavorano su qualunque elenco di Offer.
+ * Dal §14.345 l'elenco arriva una pagina alla volta (OFFERS_PAGE_SIZE carte): tipo, sito e pagina
+ * stanno nell'indirizzo, e ordine dei gruppi, sezioni e conteggi li fa il backend.
  *
  * Deviazioni dal design: il filtro si chiama «Sito di scommesse» e non «Bookmaker», e la parola
  * sparisce anche dalla descrizione del benvenuto e dalle note (regola del brand, come sulla
@@ -61,14 +62,10 @@ export const OFFER_TYPES: readonly { value: OfferType; label: string; descriptio
   },
 ]
 
-/** Ordine delle sezioni di ogni tipo; un gruppo che non compare qui va in coda, mai scartato. */
-const GROUP_ORDER: Record<OfferType, readonly (string | null)[]> = {
-  benvenuto: ['Singola', 'Multipla', 'Rollover', 'Rimborso', 'Casinò'],
-  ricorrenti: ['Ogni giorno', 'Ogni settimana', 'Ogni mese', 'Quando disponibili'],
-  esclusive: [null],
-}
-
 export const ALL_BOOKS = 'all'
+
+/** Offerte per pagina dell'elenco (§14.345). */
+export const OFFERS_PAGE_SIZE = 10
 
 /** Il tipo dal parametro ?tipo= della pagina (link «indietro» del dettaglio); il benvenuto se manca o è sconosciuto. */
 export function parseOfferType(value: string | string[] | undefined): OfferType {
@@ -81,9 +78,28 @@ export function offerById(offers: readonly Offer[], id: string): Offer | null {
   return offers.find((offer) => offer.id === id) ?? null
 }
 
-/** La pagina dell'elenco aperta sul tipo dell'offerta. */
-export function offersListHref(type: OfferType): string {
-  return `/offerte?tipo=${type}`
+/** Il sito dal parametro ?sito= (§14.345); ALL_BOOKS se manca o è vuoto. */
+export function parseOfferBook(value: string | string[] | undefined): string {
+  const v = (Array.isArray(value) ? value[0] : value)?.trim()
+  return v ? v : ALL_BOOKS
+}
+
+/** La pagina dal parametro ?pagina= (§14.345), da 1; 1 se manca o non è un intero positivo. */
+export function parseOffersPage(value: string | string[] | undefined): number {
+  const v = Array.isArray(value) ? value[0] : value
+  const n = v !== undefined && /^\d{1,6}$/.test(v) ? Number(v) : 1
+  return n >= 1 ? n : 1
+}
+
+/**
+ * La pagina dell'elenco aperta sul tipo (il link «indietro» del dettaglio) e, dal §14.345, sul
+ * sito e sulla pagina: «Tutti i siti» e la pagina 1 restano fuori dall'indirizzo.
+ */
+export function offersListHref(type: OfferType, book: string = ALL_BOOKS, page = 1): string {
+  const query = new URLSearchParams({ tipo: type })
+  if (book !== ALL_BOOKS) query.set('sito', book)
+  if (page > 1) query.set('pagina', String(page))
+  return `/offerte?${query}`
 }
 
 export const OFFERS_COPY = {
@@ -106,6 +122,8 @@ export const OFFERS_COPY = {
   emptyAction: 'Mostra tutte',
   responsibleGaming: 'Gioco vietato ai minori di 18 anni. Gioca responsabilmente.',
   loadError: 'Non riusciamo a caricare le offerte in questo momento. Riprova tra qualche minuto.',
+  /** §14.345: «1–10 di 23 offerte» sotto l'elenco. */
+  pageUnit: 'offerte',
   /** §14.315: mentre OffersLoadError rinnova la sessione e fa rileggere la pagina. */
   loading: 'Carico le offerte…',
 } as const
@@ -134,20 +152,16 @@ export function formatOfferDate(isoDate: string): string {
   return dayMonth.format(new Date(`${isoDate}T00:00:00Z`))
 }
 
-/** Le offerte non scadute di un tipo: il numero sulla scheda del tipo. */
-export function activeCount(offers: readonly Offer[], type: OfferType): number {
-  return offers.filter((offer) => offer.type === type && !isExpired(offer)).length
-}
-
-/** Le voci del filtro per il tipo scelto: «Tutti i siti» e i siti che hanno offerte, in ordine alfabetico. */
+/**
+ * Le voci del filtro per il tipo scelto: «Tutti i siti» e i siti che hanno offerte del tipo (dal
+ * backend, già in ordine alfabetico). Il sito scelto resta fra le voci anche se non ne ha più
+ * (un indirizzo vecchio), così il menu mostra quello che la pagina sta filtrando.
+ */
 export function bookOptions(
-  offers: readonly Offer[],
-  type: OfferType,
+  books: readonly string[],
+  selected: string = ALL_BOOKS,
 ): { value: string; label: string }[] {
-  const names = [
-    ...new Set(offers.filter((offer) => offer.type === type).map((offer) => offer.bookName)),
-  ]
-  names.sort((a, b) => a.localeCompare(b, 'it'))
+  const names = selected === ALL_BOOKS || books.includes(selected) ? books : [...books, selected]
   return [
     { value: ALL_BOOKS, label: OFFERS_COPY.allBooks },
     ...names.map((name) => ({ value: name, label: name })),
@@ -188,51 +202,43 @@ export interface OfferSection {
 }
 
 /**
- * Le sezioni della pagina per un tipo e un sito: un gruppo per sezione nell'ordine di GROUP_ORDER
- * (i gruppi sconosciuti in coda), poi tutte le scadute insieme. Sezioni vuote mai.
+ * Le sezioni di una pagina (§14.345): le carte della pagina divise nelle sezioni del backend, nel
+ * loro ordine (un gruppo per sezione, poi tutte le scadute insieme); il numero accanto al titolo è
+ * quello della sezione intera, anche quando continua nella pagina dopo. Sezioni vuote mai.
  */
-export function offerSections(
+export function pageSections(
   offers: readonly Offer[],
-  type: OfferType,
-  book: string,
+  sections: readonly OfferSectionApi[],
 ): OfferSection[] {
-  const visible = offers.filter(
-    (offer) => offer.type === type && (book === ALL_BOOKS || offer.bookName === book),
-  )
-  const active = visible.filter((offer) => !isExpired(offer))
-  const expired = visible.filter(isExpired)
-
-  const order = GROUP_ORDER[type]
-  const rank = (group: string | null) => {
-    const i = order.indexOf(group)
-    return i === -1 ? order.length : i
-  }
-  const groups = [...new Set(active.map((offer) => offer.group))]
-  groups.sort((a, b) => rank(a) - rank(b) || (a ?? '').localeCompare(b ?? '', 'it'))
-
-  const sections: OfferSection[] = groups.map((group) => {
-    const items = active.filter((offer) => offer.group === group)
-    return {
-      key: group ?? 'tutte',
-      title: group ?? OFFERS_COPY.exclusivesTitle,
-      countLabel:
-        group === null
-          ? `${offersCountLabel(items.length)} · ${OFFERS_COPY.exclusivesNote}`
-          : offersCountLabel(items.length),
-      expired: false,
-      offers: items,
+  return sections.flatMap((section): OfferSection[] => {
+    const items = offers.filter((offer) =>
+      section.expired ? isExpired(offer) : !isExpired(offer) && offer.group === section.group,
+    )
+    if (items.length === 0) return []
+    if (section.expired) {
+      return [
+        {
+          key: 'scadute',
+          title: OFFERS_COPY.expiredTitle,
+          countLabel: `${offersCountLabel(section.count)} · ${OFFERS_COPY.expiredNote}`,
+          expired: true,
+          offers: items,
+        },
+      ]
     }
+    return [
+      {
+        key: section.group ?? 'tutte',
+        title: section.group ?? OFFERS_COPY.exclusivesTitle,
+        countLabel:
+          section.group === null
+            ? `${offersCountLabel(section.count)} · ${OFFERS_COPY.exclusivesNote}`
+            : offersCountLabel(section.count),
+        expired: false,
+        offers: items,
+      },
+    ]
   })
-  if (expired.length > 0) {
-    sections.push({
-      key: 'scadute',
-      title: OFFERS_COPY.expiredTitle,
-      countLabel: `${offersCountLabel(expired.length)} · ${OFFERS_COPY.expiredNote}`,
-      expired: true,
-      offers: expired,
-    })
-  }
-  return sections
 }
 
 /** Titolo dello stato vuoto: con il sito quando il filtro è attivo. */

@@ -533,7 +533,7 @@ function freeRows(q) {
 const romeToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const dayNum = (d) => Date.parse(`${d}T00:00:00Z`) / 86400000;
 let offersDown = false;
-// §14.346: il cookie della sessione che il mock mette al login e al refresh (e toglie al logout).
+// §14.351: il cookie della sessione che il mock mette al login e al refresh (e toglie al logout).
 const SESSION_COOKIE = 'access_token=mock; Path=/; HttpOnly; SameSite=Lax';
 // §14.315: GET /api/__mock/offers-401 fa rispondere 401 alla PROSSIMA lettura di /api/offers o
 // /api/offers/:slug (una sola volta), come un access_token scaduto: la pagina deve rinnovare la
@@ -574,7 +574,7 @@ const OFFERS = [
     },
 ];
 // §14.345: il catalogo d'esempio del design (lib/offers-sample.ts) pubblicato, senza guida, perché
-// l'elenco abbia più pagine (10 per pagina): 16 offerte di benvenuto con of-1 (§14.346: due coi
+// l'elenco abbia più pagine (10 per pagina): 16 offerte di benvenuto con of-1 (§14.351: due coi
 // titoli del worker), due delle quali scadute. Gli slug di of-1 e of-2 restano loro. Scadenze in giorni da oggi (negativo = scaduta).
 [
     ['betflag-10', 'benvenuto', 'Singola', 'betflag', 'Betflag', 'Scommetti 50 €, ricevi 10 € di free bet', 5.5, 'Facile'],
@@ -590,9 +590,9 @@ const OFFERS = [
     ['leovegas-casino', 'benvenuto', 'Casinò', 'leovegas', 'LeoVegas', 'Deposita 20 €, ricevi 20 € per il casinò', 8, 'Media'],
     ['admiralbet-20', 'benvenuto', 'Singola', 'admiralbet', 'Admiralbet', 'Scommetti 20 €, ricevi 20 € di free bet', 12, 'Facile', -5],
     ['winbet-25', 'benvenuto', 'Singola', 'winbet', 'Winbet', 'Deposita 25 €, ricevi 25 € di bonus', 14, 'Facile', -20],
-    // §14.346: titoli come quelli del worker delle guide, col sito dentro (coperto per gli ospiti).
-    ['zonagioco-sport', 'benvenuto', 'Singola', 'zonagioco', 'Zonagioco', 'Benvenuto Sport Zonagioco', 45, 'Media'],
-    ['williamhill-sport', 'benvenuto', 'Singola', 'williamhill', 'Williamhill', 'Benvenuto Sport William Hill', 35, 'Media'],
+    // §14.351: come quelle del worker delle guide: senza gruppo e col sito nel titolo (coperto per gli ospiti).
+    ['zonagioco-sport', 'benvenuto', null, 'zonagioco', 'Zonagioco', 'Benvenuto Sport Zonagioco', 45, 'Media'],
+    ['williamhill-sport', 'benvenuto', null, 'williamhill', 'Williamhill', 'Benvenuto Sport William Hill', 35, 'Media'],
     ['sisal-ruota-scommesse', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus scommesse', null, 'Facile'],
     ['sisal-ruota-casino', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus casinò e slot', null, 'Facile'],
     ['goldbet-live', 'ricorrenti', 'Ogni settimana', 'goldbet', 'Goldbet', 'Rimborso del 10 % sul casinò live, fino a 10 €', 2, 'Media', 2],
@@ -648,7 +648,7 @@ function offersPage(q) {
     const books = [...new Set(published.filter((o) => o.type === type).map((o) => o.bookmakerName))].sort((a, b) => a.localeCompare(b, 'it'));
     return { offers: rows.slice((page - 1) * limit, page * limit).map(publicCard), total: rows.length, page, limit, sections, activeByType, books };
 }
-// §14.346: le letture per chi non è entrato, come resources/offers/free-offers.ts del backend:
+// §14.351: le letture per chi non è entrato, come resources/offers/free-offers.ts del backend:
 // intero solo il benvenuto di Snai, le altre carte chiuse (senza slug, sito e data, col titolo
 // coperto: ogni sito noto, anche scritto con spazi o in maiuscolo), nessun sito nel filtro.
 const isFreeOffer = (o) => o.type === 'benvenuto' && o.bookmakerSlug === 'snai';
@@ -865,7 +865,7 @@ const server = http.createServer(async (req, res) => {
     // GET /api/__mock/offers-down fa rispondere 503 alle due rotte (avviso «non riusciamo a caricare»).
     if (path === '/api/__mock/offers-down') { offersDown = !offersDown; return send(200, { offersDown }); }
     if (path === '/api/__mock/offers-401') { offersUnauthorizedOnce = true; return send(200, { offersUnauthorizedOnce }); }
-    // §14.346: le letture per gli ospiti, aperte.
+    // §14.351: le letture per gli ospiti, aperte.
     if (path === '/api/offers/free/page' && req.method === 'GET') {
         if (offersDown) return send(503, { message: 'down' });
         return send(200, freeOffersPage(url.searchParams));
@@ -878,7 +878,7 @@ const server = http.createServer(async (req, res) => {
         const { id, visibility, publishedAt, createdAt, expiryOverride, ...detail } = offerView(row);
         return send(200, { offer: detail });
     }
-    // §14.346: come il backend, le letture da iscritto vogliono il cookie della sessione (il mock
+    // §14.351: come il backend, le letture da iscritto vogliono il cookie della sessione (il mock
     // lo mette al login e al refresh): senza, 401, e la pagina mostra la versione per gli ospiti.
     if ((path === '/api/offers' || /^\/api\/offers\/[^/]+$/.test(path)) && req.method === 'GET' && !/(^|;\s*)access_token=/.test(req.headers.cookie || '')) {
         return send(401, { status: 401, message: 'Authentication required' });

@@ -29,7 +29,7 @@ const RENEWAL_WINDOW_MS = 10_000
  * dell'offerta (§14.326) per tornarci dopo il login. Per ogni altro stato (503, rete) l'avviso
  * di sempre.
  *
- * §14.346: le due pagine stanno nel gruppo (open) e un 401 arriva qui solo tramite
+ * §14.351: le due pagine stanno nel gruppo (open) e un 401 arriva qui solo tramite
  * OffersGuestGate, cioè con l'utente ancora nello store. Se il rinnovo risponde 401 si toglie
  * l'utente e basta: la guard passa al guscio pubblico e il cancello mostra la versione per gli
  * ospiti, invece di mandare al login chi stava solo guardando le offerte.

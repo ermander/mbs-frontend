@@ -120,7 +120,7 @@ export interface OfferCardPageApi {
 }
 
 /**
- * §14.346: una carta dell'elenco per chi non è entrato (GET /offers/free/page) che solo un
+ * §14.351: una carta dell'elenco per chi non è entrato (GET /offers/free/page) che solo un
  * iscritto può aprire: quanto vale e quanto è difficile, il titolo con i nomi dei siti coperti da
  * asterischi; niente slug, sito, logo o data (backend resources/offers/free-offers.ts).
  */
@@ -136,10 +136,10 @@ export interface LockedOfferCardApi {
   daysLeft: number | null
 }
 
-/** §14.346: una carta dell'elenco per gli ospiti: il benvenuto di Snai intero, le altre chiuse. */
+/** §14.351: una carta dell'elenco per gli ospiti: il benvenuto di Snai intero, le altre chiuse. */
 export type FreeOfferCardApi = (OfferCardApi & { locked: false }) | LockedOfferCardApi
 
-/** §14.346: una pagina dell'elenco per gli ospiti: come quella degli iscritti, senza siti nel filtro. */
+/** §14.351: una pagina dell'elenco per gli ospiti: come quella degli iscritti, senza siti nel filtro. */
 export interface FreeOfferCardPageApi extends Omit<OfferCardPageApi, 'offers'> {
   offers: FreeOfferCardApi[]
 }

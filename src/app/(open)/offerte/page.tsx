@@ -34,7 +34,7 @@ interface OffertePageProps {
  * conteggi intorno; una pagina oltre l'ultima riporta all'ultima. Se il backend non risponde la
  * pagina lo dice, invece di mostrare un elenco vuoto che sembrerebbe «nessuna offerta».
  *
- * §14.346: la pagina sta nel gruppo (open), aperta anche a chi arriva dalla landing senza
+ * §14.351: la pagina sta nel gruppo (open), aperta anche a chi arriva dalla landing senza
  * account (OpenAreaLayout: guard e Topnav per chi è entrato, il guscio della landing per gli
  * altri). Se la lettura da iscritto risponde 401 il server legge l'elenco per gli ospiti
  * (GET /offers/free/page: il benvenuto di Snai intero, le altre carte chiuse e senza sito) e lo

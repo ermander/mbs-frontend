@@ -204,7 +204,7 @@ describe('dalla carta dell’API alla pagina pubblica', () => {
     expect(offerBadge(forced).label).toBe('Scaduta')
   })
 
-  // §14.346: l'elenco per chi non è entrato.
+  // §14.351: l'elenco per chi non è entrato.
   it('una carta aperta per gli ospiti è la carta degli iscritti', () => {
     expect(offerFromFreeCard({ ...card, locked: false }, 3)).toEqual(offerFromCard(card))
   })

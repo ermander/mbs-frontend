@@ -15,7 +15,7 @@ import { OffersSignupNotice } from '@/components/offers/offers-signup'
 type Params = { params: Promise<{ id: string }> }
 
 /**
- * §14.346: la lettura per la pagina. Da iscritto prima; se risponde 401 (ospite, o access_token
+ * §14.351: la lettura per la pagina. Da iscritto prima; se risponde 401 (ospite, o access_token
  * scaduto) quella per gli ospiti, che apre solo le guide del benvenuto di Snai: `guest` dice che
  * il contenuto va dietro OffersGuestGate.
  */
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
  * 404 (la not-found di questa cartella) se lo slug non c'è o l'offerta è bozza o nascosta; se il
  * backend non risponde, un avviso. La data «Aggiornata il» è il giorno di updatedAt a Roma.
  *
- * §14.346: la pagina sta nel gruppo (open). Chi non è entrato legge per intero solo le guide del
+ * §14.351: la pagina sta nel gruppo (open). Chi non è entrato legge per intero solo le guide del
  * benvenuto di Snai (GET /offers/free/guide/:slug); per ogni altro slug il backend risponde 404,
  * che esista o no, e la pagina mostra l'invito a iscriversi (mai la 404, che direbbe quali slug
  * esistono). Tutto questo passa da OffersGuestGate: un iscritto con l'access_token scaduto vede

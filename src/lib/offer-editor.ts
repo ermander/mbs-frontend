@@ -386,7 +386,7 @@ export function offerFromCard(card: OfferCardApi): Offer {
 }
 
 /**
- * §14.346: una carta dell'elenco per gli ospiti nella forma della pagina. Le carte chiuse non
+ * §14.351: una carta dell'elenco per gli ospiti nella forma della pagina. Le carte chiuse non
  * hanno slug né sito: l'id viene dalla posizione nella pagina (solo per le chiavi di React) e la
  * carta porta `locked`, che le toglie logo e link alla guida.
  */

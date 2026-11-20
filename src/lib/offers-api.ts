@@ -19,7 +19,7 @@ import type {
  * (`authenticated`): senza cookie o con l'access_token scaduto risponde 401, e la pagina lo
  * passa a OffersLoadError, che rinnova la sessione e rilegge invece di mostrare un errore.
  *
- * §14.346: le pagine sono aperte anche a chi non è entrato. Senza il cookie access_token la
+ * §14.351: le pagine sono aperte anche a chi non è entrato. Senza il cookie access_token la
  * lettura da iscritto risponderebbe 401 di sicuro, quindi non parte nemmeno (le letture del
  * server di Next escono tutte dallo stesso indirizzo e contano sullo stesso limite di richieste
  * del backend): la pagina passa subito alle letture gratuite (/offers/free/...), che vanno senza
@@ -44,7 +44,7 @@ async function read<T>(path: string): Promise<ApiRead<T>> {
   return request<T>(path, jar.toString())
 }
 
-/** §14.346: una lettura per gli ospiti, aperta: senza cookie. */
+/** §14.351: una lettura per gli ospiti, aperta: senza cookie. */
 function readFree<T>(path: string): Promise<ApiRead<T>> {
   return request<T>(path, '')
 }
@@ -91,7 +91,7 @@ export const fetchPublishedOffer = cache(async (slug: string): Promise<ApiRead<O
 })
 
 /**
- * §14.346: una pagina dell'elenco per chi non è entrato: tutte le offerte del tipo, di ogni sito,
+ * §14.351: una pagina dell'elenco per chi non è entrato: tutte le offerte del tipo, di ogni sito,
  * a pagine come per gli iscritti; intero solo il benvenuto di Snai, le altre carte chiuse (senza
  * sito, col titolo coperto). Nessun filtro per sito: il backend non lo legge.
  */
@@ -105,7 +105,7 @@ export const fetchFreeOffersPage = cache(
 )
 
 /**
- * §14.346: la guida di un'offerta per chi non è entrato: solo il benvenuto di Snai; status 404
+ * §14.351: la guida di un'offerta per chi non è entrato: solo il benvenuto di Snai; status 404
  * per ogni altro slug, che esista o no.
  */
 export const fetchFreeOffer = cache(async (slug: string): Promise<ApiRead<OfferDetailApi>> => {

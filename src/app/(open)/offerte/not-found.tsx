@@ -5,7 +5,7 @@ import { NotFoundContent } from '@/components/landing/not-found-page'
 /**
  * La 404 di un'offerta che non c'è, è bozza o è nascosta (notFound() in [id]/page.tsx): resta
  * nel layout della pagina, con la Topnav e il menu utente, invece della 404 pubblica con
- * «Accedi» (§14.324). Dal §14.346 il layout è quello di (open), e la 404 arriva solo a chi è
+ * «Accedi» (§14.324). Dal §14.351 il layout è quello di (open), e la 404 arriva solo a chi è
  * entrato: a un ospite il backend risponde 404 per qualunque slug che non sia il benvenuto di
  * Snai, e la pagina gli mostra l'invito a iscriversi.
  */

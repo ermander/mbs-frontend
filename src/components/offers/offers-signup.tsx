@@ -9,7 +9,7 @@ import { DsButton } from '@/components/landing/ds-primitives'
 import { DsModal } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 
 /**
- * §14.346: l'invito a iscriversi che vede chi non è entrato quando apre la guida di un'offerta
+ * §14.351: l'invito a iscriversi che vede chi non è entrato quando apre la guida di un'offerta
  * chiusa: dall'elenco come finestra (OffersSignupDialog), da un indirizzo /offerte/<slug> come
  * pagina (OffersSignupNotice). Porta alla registrazione e, per chi ha già un account, al login
  * che riporta a `from` (`?next=`).

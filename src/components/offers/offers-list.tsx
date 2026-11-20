@@ -44,7 +44,7 @@ interface OffersView {
  * cambiano subito (useOptimistic); le carte restano quelle di prima, attenuate, finché non arriva
  * la pagina nuova.
  *
- * §14.346: le tre schede grandi del tipo diventano una select come quella del sito, sulla stessa
+ * §14.351: le tre schede grandi del tipo diventano una select come quella del sito, sulla stessa
  * riga (per tutti). Con `guest` l'elenco è quello per chi non è entrato: il filtro per sito è
  * spento (direbbe di che sito è ogni carta chiusa), le carte chiuse non hanno logo e il loro
  * «Apri la guida» apre l'invito a iscriversi invece della guida.
@@ -65,7 +65,7 @@ export function OffersList({
   sections: readonly OfferSectionApi[]
   activeByType: Record<OfferType, number>
   books: readonly string[]
-  /** §14.346: l'elenco per chi non è entrato (carte chiuse, niente filtro per sito). */
+  /** §14.351: l'elenco per chi non è entrato (carte chiuse, niente filtro per sito). */
   guest?: boolean
 }) {
   const router = useRouter()
@@ -98,7 +98,7 @@ export function OffersList({
     topRef.current?.scrollIntoView({ block: 'start' })
   }, [page])
 
-  const shown = pageSections(offers, sections)
+  const shown = pageSections(offers, sections, type)
 
   return (
     <>
@@ -205,7 +205,7 @@ function typeOptions(counts: Record<OfferType, number>): { value: string; label:
 
 /**
  * Il Select del design in taglia sm: etichetta sopra, controllo da 32px con la freccia a destra.
- * Dal §14.346 serve sia al tipo sia al sito; spento (ospiti, sul sito) mostra `hint` al passaggio.
+ * Dal §14.351 serve sia al tipo sia al sito; spento (ospiti, sul sito) mostra `hint` al passaggio.
  */
 function FilterSelect({
   label,
@@ -277,7 +277,7 @@ function FilterSelect({
 
 /**
  * La carta di un'offerta: logo e stato, titolo, riquadro con profitto e difficoltà, guida in fondo.
- * §14.346: una carta chiusa (ospiti) ha uno skeleton al posto del logo, il titolo coperto che
+ * §14.351: una carta chiusa (ospiti) ha uno skeleton al posto del logo, il titolo coperto che
  * arriva dal backend e un «Apri la guida» che chiama `onLockedGuide` (l'invito a iscriversi).
  */
 function OfferCard({ offer, onLockedGuide }: { offer: Offer; onLockedGuide: () => void }) {

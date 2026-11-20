@@ -13,6 +13,7 @@ import { holdCalcBridge } from '@/components/calculators/calculator-panel'
 import { AccountMovementModal } from '@/components/profit-tracker/account-movement-modal'
 import {
   DsModal,
+  GEventLink,
   GIconButton,
   GNotice,
   GSelect,
@@ -414,7 +415,8 @@ export function GiocataView({ betId }: { betId: string }) {
       </span>
       {(multipla || l.eventoNome !== bet.eventoNome) && (
         <span className="ds-caption mt-0.5 block text-ds-ink-muted">
-          {l.eventoNome} · <span className="tabular-nums">{shortDate(l.eventoData)}</span>
+          <GEventLink name={l.eventoNome} /> ·{' '}
+          <span className="tabular-nums">{shortDate(l.eventoData)}</span>
         </span>
       )}
     </>
@@ -544,7 +546,9 @@ export function GiocataView({ betId }: { betId: string }) {
 
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h1 className="ds-title m-0 text-balance">{name}</h1>
+          <h1 className="ds-title m-0 text-balance">
+            <GEventLink name={name} />
+          </h1>
           <div className="ds-body-sm flex flex-wrap items-center gap-2 text-ds-ink-muted">
             <span className="inline-flex">
               <OmSportIcon sport={bet.sport} size={18} />

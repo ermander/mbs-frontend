@@ -6,12 +6,13 @@ import { ChevronDown, CircleCheck, CircleX, X } from 'lucide-react'
 
 import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
 import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { eventSearchQuery, eventSearchUrl } from '@/lib/profit-tracker/ongoing-bets'
 import { cn } from '@/lib/utils'
 
 /**
  * Primitive del design «OddWise Giocate in corso» (§14.281) sui token ds-*: guscio chiaro della
  * pagina, Modal, TextField e Select con errore, Tabs, avviso in basso con «Annulla», pulsante
- * quadrato delle azioni di riga.
+ * quadrato delle azioni di riga, nome dell'evento che apre la ricerca Google.
  */
 
 /** Il guscio chiaro a tutta altezza sotto la barra in alto, con la colonna da 1200px del design. */
@@ -479,5 +480,38 @@ export function GIconButton({
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * Il nome dell'evento come link alla ricerca Google in una nuova scheda (§14.346), che porta alla
+ * scheda della partita. Eredita colore e peso del testo intorno; il link si vede al passaggio.
+ */
+export function GEventLink({
+  name,
+  className,
+  children,
+}: {
+  name: string
+  className?: string
+  children?: React.ReactNode
+}) {
+  const href = eventSearchUrl(name)
+  if (!href) return <>{children ?? name}</>
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Cerca «${eventSearchQuery(name)}» su Google`}
+      className={cn(
+        'rounded-ds-sm underline decoration-transparent underline-offset-4 transition-colors hover:text-ds-brand hover:decoration-current',
+        dsFocusRing,
+        className,
+      )}
+    >
+      {children ?? name}
+      <span className="sr-only"> (cerca su Google, si apre in una nuova scheda)</span>
+    </a>
   )
 }

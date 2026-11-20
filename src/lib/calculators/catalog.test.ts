@@ -26,7 +26,17 @@ describe('calculatorGroups', () => {
   it('an admin and a user enabled from the backoffice see Risultato + Goal too', () => {
     for (const viewer of [ADMIN, ENABLED]) {
       expect(outline(viewer)).toEqual([
-        ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla', 'Risultato + Goal']],
+        [
+          'Sport',
+          [
+            'Punta-Banca',
+            'Punta-Punta',
+            'Tri-Punta',
+            'Multipla',
+            'Condizionato',
+            'Risultato + Goal',
+          ],
+        ],
         ['Casinò', ['Baccarat', 'Roulette europea', 'Target fun bonus']],
       ])
     }
@@ -35,7 +45,7 @@ describe('calculatorGroups', () => {
   it('a user without the tool, an older backend and a guest never see Risultato + Goal', () => {
     for (const viewer of [USER, OLD_BACKEND, GUEST, undefined]) {
       expect(outline(viewer)).toEqual([
-        ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla']],
+        ['Sport', ['Punta-Banca', 'Punta-Punta', 'Tri-Punta', 'Multipla', 'Condizionato']],
         ['Casinò', ['Baccarat', 'Roulette europea', 'Target fun bonus']],
       ])
     }
@@ -43,12 +53,13 @@ describe('calculatorGroups', () => {
 })
 
 describe('calculatorAccess', () => {
-  it('a guest uses the six free calculators, the others ask to sign up, Risultato + Goal is hidden', () => {
+  it('a guest uses the seven free calculators, the others ask to sign up, Risultato + Goal is hidden', () => {
     expect(access(GUEST)).toEqual({
       'punta-banca': 'open',
       'punta-punta': 'open',
       'tri-punta': 'open',
       multipla: 'open',
+      condizionato: 'open',
       'risultato-goal': 'hidden',
       baccarat: 'open',
       roulette: 'open',
@@ -58,7 +69,15 @@ describe('calculatorAccess', () => {
 
   it('the free list is exactly the one of the task', () => {
     expect([...GUEST_CALCULATORS].sort()).toEqual(
-      ['baccarat', 'multipla', 'punta-banca', 'punta-punta', 'roulette', 'tri-punta'].sort(),
+      [
+        'baccarat',
+        'condizionato',
+        'multipla',
+        'punta-banca',
+        'punta-punta',
+        'roulette',
+        'tri-punta',
+      ].sort(),
     )
   })
 
@@ -75,6 +94,7 @@ describe('openCalculator', () => {
     expect(openCalculator('punta-banca', USER)?.name).toBe('Punta-Banca')
     expect(openCalculator('fun-bonus', USER)?.name).toBe('Target fun bonus')
     expect(openCalculator('multipla', GUEST)?.group).toBe('sport')
+    expect(openCalculator('condizionato', GUEST)?.name).toBe('Condizionato')
   })
 
   it('a members-only calculator still opens for a guest (the panel shows the sign-up prompt)', () => {
@@ -104,6 +124,6 @@ describe('catalog', () => {
   })
 
   it('leaves the save action out only where there is no bet to save', () => {
-    expect([...CALCULATORS_WITHOUT_SAVE]).toEqual(['fun-bonus'])
+    expect([...CALCULATORS_WITHOUT_SAVE]).toEqual(['condizionato', 'fun-bonus'])
   })
 })

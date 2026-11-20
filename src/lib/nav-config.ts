@@ -179,7 +179,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
       { label: 'Multipla', href: '/strumenti-offline/multipla' },
       // { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
-      // { label: 'Condizionato', href: '/calcolatori/condizionato' },
+      { label: 'Condizionato', href: '/calcolatori/condizionato' },
       // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
       // { label: 'Converter', href: '/calcolatori/converter' },
       { label: 'Baccarat', href: '/calcolatori/baccarat' },

@@ -1,71 +1,121 @@
 'use client'
 
-import { useId, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useId, useOptimistic, useRef, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { BadgePercent, ChevronDown } from 'lucide-react'
 
 import {
   ALL_BOOKS,
   OFFERS_COPY,
+  OFFERS_PAGE_SIZE,
   OFFER_TYPES,
-  activeCount,
   bookOptions,
   emptyTitle,
   formatOfferDate,
   isExpired,
   offerBadge,
   offerHref,
-  offerSections,
   offersListHref,
-  parseOfferType,
+  pageSections,
   type Offer,
   type OfferType,
 } from '@/lib/offers-content'
+import type { OfferSectionApi } from '@/types/offers'
 import { cn } from '@/lib/utils'
 import { DsBadge, DsMoney } from '@/components/landing/ds-data'
 import { DsButton, DsCard, dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import { BookLogo } from '@/components/offers/offer-parts'
+import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
+
+interface OffersView {
+  type: OfferType
+  book: string
+  page: number
+}
 
 /**
  * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): le tre schede del tipo, il filtro
  * per sito, una sezione per gruppo con le carte su tre colonne (due da md, una sul telefono) e le
- * scadute in fondo. Il tipo scelto sta solo nell'indirizzo (?tipo=, §14.260): il link «indietro» del
- * dettaglio e il tasto indietro del browser riaprono la stessa scheda. Il filtro vale per il tipo su
- * cui è stato scelto, quindi cambiare tipo lo azzera, come nel design.
+ * scadute in fondo. Dal §14.345 una pagina di OFFERS_PAGE_SIZE carte alla volta, letta dal server
+ * di Next: tipo, sito e pagina stanno nell'indirizzo (?tipo=&sito=&pagina=), quindi il link
+ * «indietro» del dettaglio e il tasto indietro del browser riaprono la stessa vista. Cambiare tipo
+ * azzera il sito, come nel design, e cambiare tipo o sito riporta alla pagina 1. Schede, filtro e
+ * numero di pagina cambiano subito (useOptimistic); le carte restano quelle di prima, attenuate,
+ * finché non arriva la pagina nuova.
  */
-export function OffersList({ offers }: { offers: readonly Offer[] }) {
-  const type = parseOfferType(useSearchParams().get('tipo') ?? undefined)
-  const [filter, setFilter] = useState<{ type: OfferType; book: string }>({
-    type,
-    book: ALL_BOOKS,
-  })
-  const book = filter.type === type ? filter.book : ALL_BOOKS
-  const setBook = (value: string) => setFilter({ type, book: value })
+export function OffersList({
+  type,
+  book,
+  page,
+  total,
+  offers,
+  sections,
+  activeByType,
+  books,
+}: OffersView & {
+  total: number
+  offers: readonly Offer[]
+  sections: readonly OfferSectionApi[]
+  activeByType: Record<OfferType, number>
+  books: readonly string[]
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [view, setView] = useOptimistic<OffersView>({ type, book, page })
   const panelId = useId()
+  const topRef = useRef<HTMLDivElement>(null)
+  const scrollOnArrival = useRef(false)
 
-  // replaceState aggiorna useSearchParams senza ricaricare la pagina.
-  const selectType = (value: OfferType) => {
-    setFilter({ type: value, book: ALL_BOOKS })
-    window.history.replaceState(null, '', offersListHref(value))
+  // Tipo e sito sostituiscono la voce della cronologia (come prima del §14.345); la pagina ne
+  // aggiunge una, così «indietro» torna alla pagina di prima.
+  const navigate = (next: OffersView, history: 'push' | 'replace') => {
+    startTransition(() => {
+      setView(next)
+      router[history](offersListHref(next.type, next.book, next.page), { scroll: false })
+    })
+  }
+  const selectType = (value: OfferType) =>
+    navigate({ type: value, book: ALL_BOOKS, page: 1 }, 'replace')
+  const setBook = (value: string) => navigate({ type: view.type, book: value, page: 1 }, 'replace')
+  const goToPage = (value: number) => {
+    scrollOnArrival.current = true
+    navigate({ ...view, page: value }, 'push')
   }
 
-  const sections = offerSections(offers, type, book)
+  // Con la pagina nuova arrivata, si riparte dall'inizio dell'elenco (le schede).
+  useEffect(() => {
+    if (!scrollOnArrival.current) return
+    scrollOnArrival.current = false
+    topRef.current?.scrollIntoView({ block: 'start' })
+  }, [page])
+
+  const shown = pageSections(offers, sections)
 
   return (
     <>
-      <TypeTabs offers={offers} value={type} onChange={selectType} panelId={panelId} />
+      <div ref={topRef} className="scroll-mt-[calc(var(--topnav-h)+1.5rem)]">
+        <TypeTabs counts={activeByType} value={view.type} onChange={selectType} panelId={panelId} />
+      </div>
 
-      <div id={panelId} role="tabpanel" className="flex flex-col gap-8">
+      <div
+        id={panelId}
+        role="tabpanel"
+        aria-busy={pending}
+        className={cn(
+          'flex flex-col gap-8 transition-opacity',
+          pending && 'pointer-events-none opacity-60',
+        )}
+      >
         <div className="-mt-2 flex justify-end">
           <BookSelect
-            options={bookOptions(offers, type)}
-            value={book}
+            options={bookOptions(books, view.book)}
+            value={view.book}
             onChange={setBook}
             className="w-full sm:w-[220px]"
           />
         </div>
 
-        {sections.map((section) => (
+        {shown.map((section) => (
           <section key={section.key} className="flex flex-col gap-5">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-ds-line pb-3">
               <h2 className="ds-heading">{section.title}</h2>
@@ -81,7 +131,7 @@ export function OffersList({ offers }: { offers: readonly Offer[] }) {
           </section>
         ))}
 
-        {sections.length === 0 && (
+        {total === 0 && (
           <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
             <span
               aria-hidden
@@ -102,6 +152,16 @@ export function OffersList({ offers }: { offers: readonly Offer[] }) {
             </button>
           </div>
         )}
+
+        {total > OFFERS_PAGE_SIZE && (
+          <OmPagination
+            page={view.page - 1}
+            pageSize={OFFERS_PAGE_SIZE}
+            total={total}
+            unit={OFFERS_COPY.pageUnit}
+            onChange={(index) => goToPage(index + 1)}
+          />
+        )}
       </div>
     </>
   )
@@ -109,12 +169,12 @@ export function OffersList({ offers }: { offers: readonly Offer[] }) {
 
 /** Le schede del tipo: card da 10px con nome, «N attive» e descrizione; quella scelta in brand-soft. */
 function TypeTabs({
-  offers,
+  counts,
   value,
   onChange,
   panelId,
 }: {
-  offers: readonly Offer[]
+  counts: Record<OfferType, number>
   value: OfferType
   onChange: (value: OfferType) => void
   panelId: string
@@ -176,7 +236,7 @@ function TypeTabs({
                 {t.label}
               </span>
               <span className="ds-num-sm whitespace-nowrap text-ds-ink-muted">
-                {activeCount(offers, t.value)} attive
+                {counts[t.value] ?? 0} attive
               </span>
             </span>
             <span className="ds-body-sm text-pretty text-ds-ink-muted">{t.description}</span>

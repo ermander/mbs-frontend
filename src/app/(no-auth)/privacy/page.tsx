@@ -6,14 +6,16 @@ import { SiteShell } from '@/components/landing/site-shell'
 // Informativa sulla privacy (ADAPTER_STATUS §14.250).
 //
 // Il testo descrive solo quello che il codice fa davvero (verificato il
-// 2026-10-18, cancellazione dell'account aggiornata il 2026-10-30):
+// 2026-10-18, cancellazione dell'account aggiornata il 2026-10-30, copie
+// di sicurezza aggiunte il 2026-11-20, §14.344):
 // registrazione con nome, cognome, email e password; accesso con Google
 // (email, nome, identificativo dell'account Google); dati del Profit
 // Tracker; notifiche Telegram facoltative; log del server; nessun
 // analytics né script di terze parti; bandiere scaricate dal browser da
 // flagcdn.com; sito e API dietro il proxy di Cloudflare; cancellazione
 // dell'account fatta dall'utente stesso dalla pagina del profilo
-// (§14.251), con eliminazione immediata di tutti i dati collegati.
+// (§14.251), con eliminazione immediata di tutti i dati collegati dal
+// database; le copie di sicurezza notturne scadono con la loro rotazione.
 //
 // PLACEHOLDER DA COMPILARE (l'utente), tutti nella sezione «Titolare»:
 //   TITOLARE_NOME       → nome o ragione sociale del titolare
@@ -158,7 +160,9 @@ const SECTIONS: readonly LegalSection[] = [
           <li>
             <Term>Cloudflare.</Term> Il sito e l&apos;API passano attraverso i server di Cloudflare,
             che protegge e instrada il traffico: Cloudflare vede l&apos;indirizzo IP e le richieste
-            in transito.
+            in transito. Sullo spazio di archiviazione di Cloudflare conserviamo anche le copie di
+            sicurezza del database, descritte nella sezione{' '}
+            <DsTextLink href="#conservazione">Conservazione</DsTextLink>.
           </li>
           <li>
             <Term>Google.</Term> Solo se usi l&apos;accesso con Google: Google riceve la richiesta
@@ -206,8 +210,15 @@ const SECTIONS: readonly LegalSection[] = [
           collegamento Telegram): finché il tuo account esiste. Puoi eliminare l&apos;account da
           solo, in qualsiasi momento, dalla sezione «Elimina account» della{' '}
           <DsTextLink href="/account/profilo">pagina del profilo</DsTextLink>: l&apos;account e
-          tutti i dati collegati vengono cancellati immediatamente e in modo definitivo, senza
-          bisogno di una richiesta al titolare.
+          tutti i dati collegati vengono cancellati subito e in modo definitivo
+          dall&apos;applicazione e dal suo database, senza bisogno di una richiesta al titolare.
+        </li>
+        <li>
+          <Term>Copie di sicurezza</Term>: ogni notte facciamo una copia del database, per poterlo
+          ripristinare in caso di guasto. Le copie si sostituiscono a rotazione e le più vecchie
+          durano circa tre mesi: dopo l&apos;eliminazione dell&apos;account i tuoi dati possono
+          quindi restare nelle copie fino a quel termine. Nel frattempo non li usiamo per nessun
+          altro scopo.
         </li>
         <li>
           <Term>Log tecnici del server</Term>: per il tempo strettamente necessario alle finalità di

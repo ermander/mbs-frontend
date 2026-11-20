@@ -14,6 +14,7 @@ import { PuntaBancaCalculator } from '@/components/calculators/PuntaBancaCalcula
 import { PuntaPuntaCalculator } from '@/components/calculators/PuntaPuntaCalculator'
 import { TriPuntaCalculator } from '@/components/calculators/TriPuntaCalculator'
 import { MultiplaOfflineCalculator } from '@/components/calculators/MultiplaOfflineCalculator'
+import { CondizionatoCalculator } from '@/components/calculators/CondizionatoCalculator'
 import { BaccaratCalculator } from '@/components/calculators/BaccaratCalculator'
 import { RouletteCalculator } from '@/components/calculators/RouletteCalculator'
 import { FunBonusCalculator } from '@/components/calculators/FunBonusCalculator'
@@ -45,6 +46,8 @@ const RENDER: Record<CalculatorSlug, () => React.ReactNode> = {
   'punta-punta': () => <PuntaPuntaCalculator />,
   'tri-punta': () => <TriPuntaCalculator />,
   multipla: () => <MultiplaOfflineCalculator />,
+  // §14.349: rimborso condizionato, aperto anche agli ospiti.
+  condizionato: () => <CondizionatoCalculator />,
   // §14.220: la versione offline del calcolatore di «Risultato + Goal», solo per chi ha lo
   // strumento abilitato dal backoffice (§14.340).
   'risultato-goal': () => <ResultBttsOfflineCalculator />,

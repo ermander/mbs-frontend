@@ -13,6 +13,7 @@ export type CalculatorSlug =
   | 'punta-punta'
   | 'tri-punta'
   | 'multipla'
+  | 'condizionato'
   | 'risultato-goal'
   | 'baccarat'
   | 'roulette'
@@ -21,7 +22,7 @@ export type CalculatorSlug =
 export type CalculatorGroupId = 'sport' | 'casino'
 
 export type CalculatorIcon =
-  'scale' | 'arrows' | 'triangle' | 'layers' | 'target' | 'dices' | 'circle-dot' | 'gift'
+  'scale' | 'arrows' | 'triangle' | 'layers' | 'split' | 'target' | 'dices' | 'circle-dot' | 'gift'
 
 export interface CalculatorTool {
   slug: CalculatorSlug
@@ -46,6 +47,8 @@ export const CALCULATOR_TOOLS: ReadonlyArray<CalculatorTool> = [
   { slug: 'punta-punta', group: 'sport', name: 'Punta-Punta', icon: 'arrows' },
   { slug: 'tri-punta', group: 'sport', name: 'Tri-Punta', icon: 'triangle' },
   { slug: 'multipla', group: 'sport', name: 'Multipla', icon: 'layers' },
+  // §14.349: rimborso condizionato, aperto anche agli ospiti.
+  { slug: 'condizionato', group: 'sport', name: 'Condizionato', icon: 'split' },
   {
     slug: 'risultato-goal',
     group: 'sport',
@@ -58,8 +61,14 @@ export const CALCULATOR_TOOLS: ReadonlyArray<CalculatorTool> = [
   { slug: 'fun-bonus', group: 'casino', name: 'Target fun bonus', icon: 'gift' },
 ]
 
-/** I calcolatori senza giocata da salvare: il guscio non mostra «Salva nel tracker». */
-export const CALCULATORS_WITHOUT_SAVE: ReadonlySet<CalculatorSlug> = new Set(['fun-bonus'])
+/**
+ * I calcolatori senza giocata da salvare: il guscio non mostra «Salva nel tracker». Il
+ * condizionato (§14.349) per ora non salva: le sue gambe non hanno ancora un tipo di giocata.
+ */
+export const CALCULATORS_WITHOUT_SAVE: ReadonlySet<CalculatorSlug> = new Set([
+  'condizionato',
+  'fun-bonus',
+])
 
 export function isCalculatorSlug(value: string | null | undefined): value is CalculatorSlug {
   return CALCULATOR_TOOLS.some((tool) => tool.slug === value)
@@ -67,13 +76,15 @@ export function isCalculatorSlug(value: string | null | undefined): value is Cal
 
 /**
  * §14.340: i calcolatori che anche chi non è entrato può usare, dalla landing. Gli altri si aprono
- * lo stesso, ma il pannello mostra l'invito a iscriversi al posto del calcolatore.
+ * lo stesso, ma il pannello mostra l'invito a iscriversi al posto del calcolatore. §14.349: anche
+ * il condizionato.
  */
 export const GUEST_CALCULATORS: ReadonlySet<CalculatorSlug> = new Set<CalculatorSlug>([
   'punta-banca',
   'punta-punta',
   'tri-punta',
   'multipla',
+  'condizionato',
   'baccarat',
   'roulette',
 ])

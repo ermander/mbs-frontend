@@ -47,7 +47,7 @@ describe('catalogo', () => {
 
   it('non usa mai la parola «bookmaker» nei testi', () => {
     const texts = [
-      ...Object.values(OFFERS_COPY),
+      ...Object.values(OFFERS_COPY).flat(),
       ...OFFER_TYPES.flatMap((t) => [t.label, t.description]),
     ]
     for (const text of texts) expect(text.toLowerCase()).not.toContain('bookmaker')
@@ -91,9 +91,25 @@ describe('pageSections', () => {
     const sections = pageSections(
       [offer({ id: 'x1', type: 'esclusive', group: null })],
       [section(null, 3)],
+      'esclusive',
     )
     expect(sections.map((s) => s.title)).toEqual(['Segnalate dagli utenti'])
     expect(sections[0].countLabel).toMatch(/^3 offerte · offerte personali/)
+  })
+
+  // §14.351: le offerte del worker non hanno gruppo, e non sono segnalate dagli utenti.
+  it('nel benvenuto e nelle ricorrenti le attive senza gruppo sono offerte del sito', () => {
+    for (const type of ['benvenuto', 'ricorrenti'] as const) {
+      const sections = pageSections(
+        [offer({ id: 'w1', type, group: null }), offer({ id: 's1', type, group: 'Singola' })],
+        [section('Singola', 1), section(null, 23)],
+        type,
+      )
+      expect(sections.map((s) => [s.title, s.countLabel])).toEqual([
+        ['Singola', '1 offerta'],
+        ['Offerte dal sito di scommesse', '23 offerte'],
+      ])
+    }
   })
 
   it('una scaduta non finisce nel suo gruppo e una attiva non finisce fra le scadute', () => {

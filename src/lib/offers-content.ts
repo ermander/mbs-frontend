@@ -42,6 +42,11 @@ export interface Offer {
    * Le offerte dell'API lo portano sempre.
    */
   expired?: boolean
+  /**
+   * §14.346: carta dell'elenco per gli ospiti che solo un iscritto può aprire: senza logo, col
+   * titolo già coperto dal backend, e «Apri la guida» che invita a iscriversi.
+   */
+  locked?: boolean
 }
 
 export const OFFER_TYPES: readonly { value: OfferType; label: string; description: string }[] = [
@@ -104,7 +109,7 @@ export function offersListHref(type: OfferType, book: string = ALL_BOOKS, page =
 
 export const OFFERS_COPY = {
   title: 'Offerte',
-  tablistLabel: 'Tipo di offerta',
+  typeFilterLabel: 'Tipo di offerta',
   bookFilterLabel: 'Sito di scommesse',
   allBooks: 'Tutti i siti',
   profitLabel: 'Profitto stimato',
@@ -126,6 +131,21 @@ export const OFFERS_COPY = {
   pageUnit: 'offerte',
   /** §14.315: mentre OffersLoadError rinnova la sessione e fa rileggere la pagina. */
   loading: 'Carico le offerte…',
+  /** §14.346: la versione per chi non è entrato. */
+  guestBookFilterHint: 'Iscriviti per filtrare le offerte per sito di scommesse',
+  lockedLogoLabel: 'Sito di scommesse visibile agli iscritti',
+  signupTitle: 'Sblocca tutte le offerte',
+  signupGuideTitle: 'Questa guida è riservata agli iscritti',
+  signupDescription:
+    "Senza account puoi aprire solo l'offerta di benvenuto di Snai. L'iscrizione è gratuita e sblocca tutte le altre.",
+  signupPoints: [
+    'Il sito di scommesse di ogni offerta di benvenuto, ricorrente ed esclusiva',
+    'Le guide passo passo di ogni offerta',
+    'Il filtro per sito di scommesse',
+  ],
+  signupAction: 'Iscriviti gratis',
+  loginAction: 'Ho già un account',
+  backToOffers: 'Torna alle offerte',
 } as const
 
 export function isExpired(offer: Offer): boolean {

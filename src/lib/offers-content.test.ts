@@ -47,7 +47,7 @@ describe('catalogo', () => {
 
   it('non usa mai la parola «bookmaker» nei testi', () => {
     const texts = [
-      ...Object.values(OFFERS_COPY),
+      ...Object.values(OFFERS_COPY).flat(),
       ...OFFER_TYPES.flatMap((t) => [t.label, t.description]),
     ]
     for (const text of texts) expect(text.toLowerCase()).not.toContain('bookmaker')

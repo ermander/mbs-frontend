@@ -11,6 +11,7 @@ import {
   moveItem,
   newBlock,
   offerFromCard,
+  offerFromFreeCard,
   previewOffer,
   removeAt,
   replaceAt,
@@ -201,6 +202,53 @@ describe('dalla carta dell’API alla pagina pubblica', () => {
     const forced = offerFromCard({ ...card, expiresOn: null, expired: true, daysLeft: null })
     expect(isExpired(forced) && forced.expiredOn === undefined).toBe(true)
     expect(offerBadge(forced).label).toBe('Scaduta')
+  })
+
+  // §14.346: l'elenco per chi non è entrato.
+  it('una carta aperta per gli ospiti è la carta degli iscritti', () => {
+    expect(offerFromFreeCard({ ...card, locked: false }, 3)).toEqual(offerFromCard(card))
+  })
+
+  it('una carta chiusa: senza sito né link, id dalla posizione, stato e scadenza come le altre', () => {
+    const locked = offerFromFreeCard(
+      {
+        locked: true,
+        type: 'benvenuto',
+        groupLabel: null,
+        title: 'Benvenuto Sport ******',
+        profit: 40,
+        difficulty: 'Media',
+        isNew: false,
+        expired: false,
+        daysLeft: 2,
+      },
+      4,
+    )
+    expect(locked).toMatchObject({
+      id: 'chiusa-4',
+      locked: true,
+      bookSlug: '',
+      bookName: '',
+      title: 'Benvenuto Sport ******',
+      profit: 40,
+      group: null,
+    })
+    expect(offerBadge(locked).label).toBe('Scade tra 2 giorni')
+    const expired = offerFromFreeCard(
+      {
+        locked: true,
+        type: 'ricorrenti',
+        groupLabel: 'Ogni mese',
+        title: 'T',
+        profit: null,
+        difficulty: 'Facile',
+        isNew: false,
+        expired: true,
+        daysLeft: null,
+      },
+      0,
+    )
+    expect(isExpired(expired) && expired.expiredOn === undefined).toBe(true)
   })
 
   it('l’anteprima mette un titolo e un sito di ripiego finché sono vuoti', () => {

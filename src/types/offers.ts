@@ -93,6 +93,32 @@ export interface OfferCardApi {
   sortOrder: number
 }
 
+/** Una sezione dell'elenco pubblico (§14.345): un gruppo delle attive, o tutte le scadute insieme. */
+export interface OfferSectionApi {
+  /** Il gruppo; null per le scadute e per le attive senza gruppo (le esclusive). */
+  group: string | null
+  expired: boolean
+  /** Offerte della sezione su tutte le pagine, non solo su questa. */
+  count: number
+}
+
+/** Una pagina dell'elenco pubblico (GET /offers?page=, §14.345). */
+export interface OfferCardPageApi {
+  /** Al massimo `limit` carte, nell'ordine di `sections`. */
+  offers: OfferCardApi[]
+  /** Offerte del tipo e del sito, su tutte le pagine. */
+  total: number
+  /** La pagina servita: oltre l'ultima il backend serve l'ultima. */
+  page: number
+  limit: number
+  /** Tutte le sezioni del tipo e del sito, nell'ordine della pagina. */
+  sections: OfferSectionApi[]
+  /** Le attive per tipo, di tutti i siti: i numeri sulle schede. */
+  activeByType: Record<OfferType, number>
+  /** I siti con un'offerta pubblicata del tipo, scadute comprese: le voci del filtro. */
+  books: string[]
+}
+
 /** Il dettaglio pubblico (GET /offers/:slug). */
 export interface OfferDetailApi extends OfferCardApi {
   guide: OfferGuide | null

@@ -94,13 +94,7 @@ export const authNavSections: AuthNavSection[] = [
         icon: Goal,
         requiresTool: 'result_btts',
       },
-      // §14.288: the same promotion on the Correct Score, three legs with Sportmarket; same tool switch.
-      {
-        label: 'Rimborso 0-0',
-        href: '/rimborso-zero',
-        icon: Goal,
-        requiresTool: 'result_btts',
-      },
+      // §14.347: «Rimborso 0-0» (§14.288) is out of the menu; its page stays at /rimborso-zero.
       { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
     ],
   },
@@ -185,7 +179,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
       { label: 'Tri-Punta', href: '/calcolatori/tri-punta' },
       { label: 'Multipla', href: '/strumenti-offline/multipla' },
       // { label: 'Multi-Tool', href: '/calcolatori/multi-tool' },
-      // { label: 'Condizionato', href: '/calcolatori/condizionato' },
+      { label: 'Condizionato', href: '/calcolatori/condizionato' },
       // { label: 'Combo Tool', href: '/calcolatori/combo-tool' },
       // { label: 'Converter', href: '/calcolatori/converter' },
       { label: 'Baccarat', href: '/calcolatori/baccarat' },
@@ -227,6 +221,5 @@ export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
   { label: 'RISULTATO + GOAL', href: '/risultato-goal', requiresTool: 'result_btts' },
-  { label: 'RIMBORSO 0-0', href: '/rimborso-zero', requiresTool: 'result_btts' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

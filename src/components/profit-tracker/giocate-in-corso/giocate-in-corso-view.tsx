@@ -12,6 +12,7 @@ import { OmBookLogo, OmDropdown, OmSportIcon } from '@/components/strumenti/scan
 import { SingolaBetModal } from '@/components/profit-tracker/singola-bet-modal'
 import {
   DsModal,
+  GEventLink,
   GIconButton,
   GNotice,
   GSelect,
@@ -368,7 +369,7 @@ export function GiocateInCorsoView() {
             <OmSportIcon sport={bet.sport} size={20} />
           </span>
           <span className="font-semibold text-pretty text-ds-ink">
-            {multi ? events[0] : bet.eventoNome}
+            <GEventLink name={multi ? events[0] : bet.eventoNome} />
             {multi && events.length > 1 && (
               <span className="font-normal text-ds-ink-muted"> +{events.length - 1}</span>
             )}

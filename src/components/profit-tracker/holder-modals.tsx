@@ -2,17 +2,18 @@
 
 import { useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { STATO_OPTIONS } from '@/components/profit-tracker/account-create-modal'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GReadOnly,
+  GSelect,
+  GTextArea,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { getErrorMessage } from '@/lib/error-utils'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { EnabledStatus, Holder } from '@/types/profit-tracker'
 
@@ -21,77 +22,90 @@ interface HolderCreateModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+/**
+ * «Nuovo collaboratore» sul design OddWise (§14.350): nome e descrizione. Il backend crea il
+ * collaboratore abilitato (lo stato si cambia da Modifica), quindi la modale non lo chiede più:
+ * prima la tendina c'era ma il valore non partiva. Se il nome esiste già l'errore resta qui.
+ */
 export function HolderCreateModal({ open, onOpenChange }: HolderCreateModalProps) {
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Nuovo collaboratore">
+      {open && <HolderCreateForm onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+/** Montato solo a modale aperta: i campi ripartono vuoti a ogni apertura. */
+function HolderCreateForm({ onClose }: { onClose: () => void }) {
   const addHolder = useProfitTrackerStore((s) => s.addHolder)
-  const holdersError = useProfitTrackerStore((s) => s.holdersError)
 
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
-  const [stato, setStato] = useState<EnabledStatus>('abilitato')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const canSave = nome.trim() !== '' && !saving
 
   const handleSave = async () => {
-    if (!nome.trim()) return
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
     await addHolder({
       nome: nome.trim(),
-      descrizione: descrizione || undefined,
-      stato,
+      descrizione: descrizione.trim() || undefined,
+      stato: 'abilitato',
     })
-    if (!holdersError) {
-      setNome('')
-      setDescrizione('')
-      onOpenChange(false)
+    // Lo store non lancia: segnala l'errore nello stato. Lo si porta nella modale e lo si toglie
+    // dallo store, che lo userebbe anche come errore di caricamento dell'elenco.
+    const failed = useProfitTrackerStore.getState().holdersError
+    setSaving(false)
+    if (failed) {
+      useProfitTrackerStore.setState({ holdersError: undefined })
+      setError(failed)
+      return
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Nuovo collaboratore</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-nome">Nome</Label>
-            <Input
-              id="holder-nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Es. Emanuele Bertuol"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="holder-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-stato">Stato</Label>
-            <select
-              id="holder-stato"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={stato}
-              onChange={(e) => setStato(e.target.value as EnabledStatus)}
-            >
-              <option value="abilitato">Abilitato</option>
-              <option value="disabilitato">Non abilitato</option>
-            </select>
-          </div>
-          {holdersError && <p className="text-xs text-destructive">{holdersError}</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!nome.trim()}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GTextField
+          id="holder-nome"
+          label="Nome"
+          placeholder="Es. Mario Rossi"
+          value={nome}
+          onChange={setNome}
+          onEnter={() => void handleSave()}
+        />
+        <GTextArea
+          id="holder-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        {error && <FieldError id="holder-create-error">{error}</FieldError>}
+      </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!canSave}
+          className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+        >
+          {saving ? 'Salvataggio…' : 'Salva il collaboratore'}
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -101,6 +115,7 @@ interface HolderEditModalProps {
   holder: Holder | null
 }
 
+/** «Modifica collaboratore» sul design OddWise (§14.350): stato e descrizione; il nome resta. */
 export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalProps) {
   const updateHolder = useProfitTrackerStore((s) => s.updateHolder)
 
@@ -136,65 +151,51 @@ export function HolderEditModal({ open, onOpenChange, holder }: HolderEditModalP
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Modifica collaboratore</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-edit-nome">Nome</Label>
-            <Input
-              id="holder-edit-nome"
-              value={holder.nome}
-              disabled
-              className="cursor-default bg-muted/60 select-none"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Il nome del collaboratore non può essere modificato dopo la creazione.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-edit-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="holder-edit-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="holder-edit-stato">Stato</Label>
-            <select
-              id="holder-edit-stato"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={stato}
-              onChange={(e) => setStato(e.target.value as EnabledStatus)}
-            >
-              <option value="abilitato">Abilitato</option>
-              <option value="disabilitato">Non abilitato</option>
-            </select>
-          </div>
-          {error != null && (
-            <p className="text-xs text-destructive" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
+    <DsModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Modifica collaboratore"
+      footer={
+        <>
+          <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleClose(false)}
             disabled={isSaving}
+            className={dsButtonClass('ghost', 'md')}
           >
             Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving || !hasChanges}>
-            {isSaving ? 'Salvataggio...' : 'Salva'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving || !hasChanges}
+            className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+          >
+            {isSaving ? 'Salvataggio…' : 'Salva le modifiche'}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <GReadOnly label="Nome" hint="Il nome del collaboratore non si cambia dopo la creazione.">
+          {holder.nome}
+        </GReadOnly>
+        <GSelect
+          id="holder-edit-stato"
+          label="Stato"
+          options={STATO_OPTIONS}
+          value={stato}
+          onChange={(v) => setStato(v as EnabledStatus)}
+        />
+        <GTextArea
+          id="holder-edit-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        {error && <FieldError id="holder-edit-error">{error}</FieldError>}
+      </div>
+    </DsModal>
   )
 }

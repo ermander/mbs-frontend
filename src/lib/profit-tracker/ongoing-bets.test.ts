@@ -6,6 +6,8 @@ import {
   betCaption,
   bookLogoSlug,
   displayName,
+  eventSearchQuery,
+  eventSearchUrl,
   eventWhen,
   filterOngoingBets,
   legSummary,
@@ -231,5 +233,29 @@ describe('filterOngoingBets', () => {
         filterOngoingBets(bets, '', { ...f, dal: '2026-10-28', al: '2026-10-31' }, 'evento', label),
       ),
     ).toEqual(['a'])
+  })
+})
+
+describe('eventSearchUrl', () => {
+  it("cerca su Google il nome dell'evento, codificato", () => {
+    expect(eventSearchUrl('Juventus - Venezia')).toBe(
+      'https://www.google.com/search?q=Juventus%20-%20Venezia',
+    )
+    expect(eventSearchUrl("  Brighton & Hove Albion - Nott'm Forest ")).toBe(
+      "https://www.google.com/search?q=Brighton%20%26%20Hove%20Albion%20-%20Nott'm%20Forest",
+    )
+  })
+
+  it('toglie «MULTIPLA» davanti, come il nome mostrato', () => {
+    expect(eventSearchQuery('MULTIPLA Inter - Milan')).toBe('Inter - Milan')
+    expect(eventSearchUrl('multipla Inter - Milan')).toBe(
+      'https://www.google.com/search?q=Inter%20-%20Milan',
+    )
+  })
+
+  it('senza nome non dà link', () => {
+    expect(eventSearchUrl('')).toBeNull()
+    expect(eventSearchUrl('   ')).toBeNull()
+    expect(eventSearchUrl('MULTIPLA ')).toBeNull()
   })
 })

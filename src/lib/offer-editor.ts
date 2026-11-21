@@ -5,6 +5,7 @@ import type {
   GuideBlockType,
   GuideButtonKind,
   GuideCalloutTone,
+  FreeOfferCardApi,
   OfferAdmin,
   OfferCardApi,
   OfferGuide,
@@ -381,6 +382,32 @@ export function offerFromCard(card: OfferCardApi): Offer {
       !card.expired && card.daysLeft !== null && card.daysLeft <= EXPIRING_SOON_DAYS
         ? card.daysLeft
         : undefined,
+  }
+}
+
+/**
+ * §14.351: una carta dell'elenco per gli ospiti nella forma della pagina. Le carte chiuse non
+ * hanno slug né sito: l'id viene dalla posizione nella pagina (solo per le chiavi di React) e la
+ * carta porta `locked`, che le toglie logo e link alla guida.
+ */
+export function offerFromFreeCard(card: FreeOfferCardApi, index: number): Offer {
+  if (!card.locked) return offerFromCard(card)
+  return {
+    id: `chiusa-${index}`,
+    type: card.type,
+    group: card.groupLabel,
+    bookSlug: '',
+    bookName: '',
+    title: card.title,
+    profit: card.profit,
+    difficulty: card.difficulty,
+    isNew: card.isNew,
+    expired: card.expired,
+    expiresInDays:
+      !card.expired && card.daysLeft !== null && card.daysLeft <= EXPIRING_SOON_DAYS
+        ? card.daysLeft
+        : undefined,
+    locked: true,
   }
 }
 

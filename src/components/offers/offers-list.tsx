@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useId, useOptimistic, useRef, useTransition } from 'react'
+import { useEffect, useId, useOptimistic, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgePercent, ChevronDown } from 'lucide-react'
+import { ArrowRight, BadgePercent, ChevronDown, Lock } from 'lucide-react'
 
 import {
   ALL_BOOKS,
@@ -23,8 +23,9 @@ import {
 import type { OfferSectionApi } from '@/types/offers'
 import { cn } from '@/lib/utils'
 import { DsBadge, DsMoney } from '@/components/landing/ds-data'
-import { DsButton, DsCard, dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { DsButton, DsCard, dsButtonClass } from '@/components/landing/ds-primitives'
 import { BookLogo } from '@/components/offers/offer-parts'
+import { OffersSignupDialog } from '@/components/offers/offers-signup'
 import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
 
 interface OffersView {
@@ -34,14 +35,19 @@ interface OffersView {
 }
 
 /**
- * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): le tre schede del tipo, il filtro
- * per sito, una sezione per gruppo con le carte su tre colonne (due da md, una sul telefono) e le
- * scadute in fondo. Dal §14.345 una pagina di OFFERS_PAGE_SIZE carte alla volta, letta dal server
- * di Next: tipo, sito e pagina stanno nell'indirizzo (?tipo=&sito=&pagina=), quindi il link
- * «indietro» del dettaglio e il tasto indietro del browser riaprono la stessa vista. Cambiare tipo
- * azzera il sito, come nel design, e cambiare tipo o sito riporta alla pagina 1. Schede, filtro e
- * numero di pagina cambiano subito (useOptimistic); le carte restano quelle di prima, attenuate,
- * finché non arriva la pagina nuova.
+ * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): il tipo, il filtro per sito, una
+ * sezione per gruppo con le carte su tre colonne (due da md, una sul telefono) e le scadute in
+ * fondo. Dal §14.345 una pagina di OFFERS_PAGE_SIZE carte alla volta, letta dal server di Next:
+ * tipo, sito e pagina stanno nell'indirizzo (?tipo=&sito=&pagina=), quindi il link «indietro» del
+ * dettaglio e il tasto indietro del browser riaprono la stessa vista. Cambiare tipo azzera il
+ * sito, come nel design, e cambiare tipo o sito riporta alla pagina 1. Filtri e numero di pagina
+ * cambiano subito (useOptimistic); le carte restano quelle di prima, attenuate, finché non arriva
+ * la pagina nuova.
+ *
+ * §14.351: le tre schede grandi del tipo diventano una select come quella del sito, sulla stessa
+ * riga (per tutti). Con `guest` l'elenco è quello per chi non è entrato: il filtro per sito è
+ * spento (direbbe di che sito è ogni carta chiusa), le carte chiuse non hanno logo e il loro
+ * «Apri la guida» apre l'invito a iscriversi invece della guida.
  */
 export function OffersList({
   type,
@@ -52,17 +58,20 @@ export function OffersList({
   sections,
   activeByType,
   books,
+  guest = false,
 }: OffersView & {
   total: number
   offers: readonly Offer[]
   sections: readonly OfferSectionApi[]
   activeByType: Record<OfferType, number>
   books: readonly string[]
+  /** §14.351: l'elenco per chi non è entrato (carte chiuse, niente filtro per sito). */
+  guest?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [view, setView] = useOptimistic<OffersView>({ type, book, page })
-  const panelId = useId()
+  const [signupOpen, setSignupOpen] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
   const scrollOnArrival = useRef(false)
 
@@ -89,32 +98,39 @@ export function OffersList({
     topRef.current?.scrollIntoView({ block: 'start' })
   }, [page])
 
-  const shown = pageSections(offers, sections)
+  const shown = pageSections(offers, sections, type)
 
   return (
     <>
-      <div ref={topRef} className="scroll-mt-[calc(var(--topnav-h)+1.5rem)]">
-        <TypeTabs counts={activeByType} value={view.type} onChange={selectType} panelId={panelId} />
+      <div
+        ref={topRef}
+        className="flex scroll-mt-[calc(var(--topnav-h)+1.5rem)] flex-col gap-3 sm:flex-row sm:items-end"
+      >
+        <FilterSelect
+          label={OFFERS_COPY.typeFilterLabel}
+          options={typeOptions(activeByType)}
+          value={view.type}
+          onChange={(value) => selectType(value as OfferType)}
+          className="w-full sm:w-[220px]"
+        />
+        <FilterSelect
+          label={OFFERS_COPY.bookFilterLabel}
+          options={guest ? bookOptions([]) : bookOptions(books, view.book)}
+          value={guest ? ALL_BOOKS : view.book}
+          onChange={setBook}
+          disabled={guest}
+          hint={guest ? OFFERS_COPY.guestBookFilterHint : undefined}
+          className="w-full sm:w-[220px]"
+        />
       </div>
 
       <div
-        id={panelId}
-        role="tabpanel"
         aria-busy={pending}
         className={cn(
           'flex flex-col gap-8 transition-opacity',
           pending && 'pointer-events-none opacity-60',
         )}
       >
-        <div className="-mt-2 flex justify-end">
-          <BookSelect
-            options={bookOptions(books, view.book)}
-            value={view.book}
-            onChange={setBook}
-            className="w-full sm:w-[220px]"
-          />
-        </div>
-
         {shown.map((section) => (
           <section key={section.key} className="flex flex-col gap-5">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-ds-line pb-3">
@@ -124,7 +140,7 @@ export function OffersList({
             <ul className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
               {section.offers.map((offer) => (
                 <li key={offer.id} className="flex min-w-0">
-                  <OfferCard offer={offer} />
+                  <OfferCard offer={offer} onLockedGuide={() => setSignupOpen(true)} />
                 </li>
               ))}
             </ul>
@@ -140,16 +156,20 @@ export function OffersList({
               <BadgePercent className="h-8 w-8" />
             </span>
             <h2 className="ds-heading">{emptyTitle(type, book)}</h2>
-            <p className="ds-body max-w-[440px] text-ds-ink-muted">
-              {OFFERS_COPY.emptyDescription}
-            </p>
-            <button
-              type="button"
-              onClick={() => setBook(ALL_BOOKS)}
-              className={cn(dsButtonClass('secondary', 'md'), 'mt-3')}
-            >
-              {OFFERS_COPY.emptyAction}
-            </button>
+            {!guest && (
+              <>
+                <p className="ds-body max-w-[440px] text-ds-ink-muted">
+                  {OFFERS_COPY.emptyDescription}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setBook(ALL_BOOKS)}
+                  className={cn(dsButtonClass('secondary', 'md'), 'mt-3')}
+                >
+                  {OFFERS_COPY.emptyAction}
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -163,114 +183,77 @@ export function OffersList({
           />
         )}
       </div>
+
+      {guest && (
+        <OffersSignupDialog
+          open={signupOpen}
+          onOpenChange={setSignupOpen}
+          from={offersListHref(view.type, ALL_BOOKS, view.page)}
+        />
+      )}
     </>
   )
 }
 
-/** Le schede del tipo: card da 10px con nome, «N attive» e descrizione; quella scelta in brand-soft. */
-function TypeTabs({
-  counts,
-  value,
-  onChange,
-  panelId,
-}: {
-  counts: Record<OfferType, number>
-  value: OfferType
-  onChange: (value: OfferType) => void
-  panelId: string
-}) {
-  const refs = useRef<(HTMLButtonElement | null)[]>([])
-
-  // Frecce, Home e Fine spostano la scheda scelta (tablist con attivazione automatica).
-  const onKeyDown = (event: React.KeyboardEvent, index: number) => {
-    const last = OFFER_TYPES.length - 1
-    const next =
-      event.key === 'ArrowRight' || event.key === 'ArrowDown'
-        ? index === last
-          ? 0
-          : index + 1
-        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-          ? index === 0
-            ? last
-            : index - 1
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? last
-              : null
-    if (next === null) return
-    event.preventDefault()
-    onChange(OFFER_TYPES[next].value)
-    refs.current[next]?.focus()
-  }
-
-  return (
-    <div
-      role="tablist"
-      aria-label={OFFERS_COPY.tablistLabel}
-      className="grid gap-3 sm:grid-cols-3 sm:gap-6"
-    >
-      {OFFER_TYPES.map((t, i) => {
-        const selected = t.value === value
-        return (
-          <button
-            key={t.value}
-            ref={(el) => {
-              refs.current[i] = el
-            }}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            aria-controls={panelId}
-            tabIndex={selected ? 0 : -1}
-            onClick={() => onChange(t.value)}
-            onKeyDown={(event) => onKeyDown(event, i)}
-            className={cn(
-              'flex flex-col gap-1.5 rounded-ds-md border px-5 py-4 text-left text-ds-ink shadow-ds-sm transition-[border-color,background-color,box-shadow] hover:shadow-ds-md',
-              selected ? 'border-ds-brand bg-ds-brand-soft' : 'border-ds-line bg-ds-surface-raised',
-              dsFocusRing,
-            )}
-          >
-            <span className="flex items-baseline justify-between gap-3">
-              <span className={cn('ds-heading', selected ? 'text-ds-brand' : 'text-ds-ink')}>
-                {t.label}
-              </span>
-              <span className="ds-num-sm whitespace-nowrap text-ds-ink-muted">
-                {counts[t.value] ?? 0} attive
-              </span>
-            </span>
-            <span className="ds-body-sm text-pretty text-ds-ink-muted">{t.description}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
+/** Le voci del filtro per tipo: «Benvenuto · 12 attive», i numeri di tutti i siti. */
+function typeOptions(counts: Record<OfferType, number>): { value: string; label: string }[] {
+  return OFFER_TYPES.map((t) => ({
+    value: t.value,
+    label: `${t.label} · ${counts[t.value] ?? 0} attive`,
+  }))
 }
 
-/** Il Select del design in taglia sm: etichetta sopra, controllo da 32px con la freccia a destra. */
-function BookSelect({
+/**
+ * Il Select del design in taglia sm: etichetta sopra, controllo da 32px con la freccia a destra.
+ * Dal §14.351 serve sia al tipo sia al sito; spento (ospiti, sul sito) mostra `hint` al passaggio.
+ */
+function FilterSelect({
+  label,
   options,
   value,
   onChange,
+  disabled = false,
+  hint,
   className,
 }: {
+  label: string
   options: { value: string; label: string }[]
   value: string
   onChange: (value: string) => void
+  disabled?: boolean
+  hint?: string
   className?: string
 }) {
   const id = useId()
+  const hintId = useId()
   return (
-    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
-      <label htmlFor={id} className="text-sm leading-5 font-semibold text-ds-ink">
-        {OFFERS_COPY.bookFilterLabel}
+    <div className={cn('flex min-w-0 flex-col gap-1', className)} title={hint}>
+      <label
+        htmlFor={id}
+        className={cn(
+          'flex items-center gap-1.5 text-sm leading-5 font-semibold',
+          disabled ? 'text-ds-ink-muted' : 'text-ds-ink',
+        )}
+      >
+        {label}
+        {disabled && <Lock aria-hidden className="h-3.5 w-3.5" />}
       </label>
-      <div className="relative flex h-8 rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised text-ds-ink transition-[border-color,box-shadow] focus-within:border-ds-brand focus-within:shadow-ds-focus">
+      <div
+        className={cn(
+          'relative flex h-8 rounded-ds-sm border border-ds-line-strong text-ds-ink transition-[border-color,box-shadow] focus-within:border-ds-brand focus-within:shadow-ds-focus',
+          disabled ? 'bg-ds-surface-sunken text-ds-ink-muted' : 'bg-ds-surface-raised',
+        )}
+      >
         <select
           id={id}
           value={value}
+          disabled={disabled}
+          aria-describedby={hint ? hintId : undefined}
           onChange={(event) => onChange(event.target.value)}
-          className="h-full min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-8 pl-3 text-base outline-hidden"
+          className={cn(
+            'h-full min-w-0 flex-1 appearance-none border-0 bg-transparent pr-8 pl-3 text-base outline-hidden',
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          )}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -283,19 +266,39 @@ function BookSelect({
           className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-ds-ink-muted"
         />
       </div>
+      {hint && (
+        <span id={hintId} className="sr-only">
+          {hint}
+        </span>
+      )}
     </div>
   )
 }
 
-/** La carta di un'offerta: logo e stato, titolo, riquadro con profitto e difficoltà, guida in fondo. */
-function OfferCard({ offer }: { offer: Offer }) {
+/**
+ * La carta di un'offerta: logo e stato, titolo, riquadro con profitto e difficoltà, guida in fondo.
+ * §14.351: una carta chiusa (ospiti) ha uno skeleton al posto del logo, il titolo coperto che
+ * arriva dal backend e un «Apri la guida» che chiama `onLockedGuide` (l'invito a iscriversi).
+ */
+function OfferCard({ offer, onLockedGuide }: { offer: Offer; onLockedGuide: () => void }) {
   const expired = isExpired(offer)
   const badge = offerBadge(offer)
+  const guideLabel = expired ? OFFERS_COPY.readGuide : OFFERS_COPY.openGuide
 
   return (
     <DsCard className="flex w-full min-w-0 flex-col">
       <div className="flex items-center justify-between gap-3">
-        <BookLogo slug={offer.bookSlug} name={offer.bookName} />
+        {offer.locked ? (
+          <span
+            aria-label={OFFERS_COPY.lockedLogoLabel}
+            role="img"
+            className="inline-flex h-6 w-24 items-center justify-center rounded-ds-xs bg-ds-surface-sunken text-ds-ink-muted"
+          >
+            <Lock aria-hidden className="h-3.5 w-3.5" />
+          </span>
+        ) : (
+          <BookLogo slug={offer.bookSlug} name={offer.bookName} />
+        )}
         <DsBadge tone={badge.tone}>{badge.label}</DsBadge>
       </div>
 
@@ -337,15 +340,27 @@ function OfferCard({ offer }: { offer: Offer }) {
             Scaduta il {formatOfferDate(offer.expiredOn)}
           </span>
         )}
-        <DsButton
-          href={offerHref(offer)}
-          variant="secondary"
-          size="sm"
-          iconEnd="arrow-right"
-          className="ml-auto"
-        >
-          {expired ? OFFERS_COPY.readGuide : OFFERS_COPY.openGuide}
-        </DsButton>
+        {offer.locked ? (
+          <button
+            type="button"
+            onClick={onLockedGuide}
+            aria-haspopup="dialog"
+            className={cn(dsButtonClass('secondary', 'sm'), 'ml-auto')}
+          >
+            {guideLabel}
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+          </button>
+        ) : (
+          <DsButton
+            href={offerHref(offer)}
+            variant="secondary"
+            size="sm"
+            iconEnd="arrow-right"
+            className="ml-auto"
+          >
+            {guideLabel}
+          </DsButton>
+        )}
       </div>
     </DsCard>
   )

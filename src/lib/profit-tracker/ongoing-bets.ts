@@ -50,6 +50,20 @@ export function displayName(bet: Pick<OngoingBet, 'eventoNome'>): string {
   return bet.eventoNome.replace(MULTIPLA_PREFIX, '').trim() || bet.eventoNome
 }
 
+/**
+ * La ricerca Google dell'evento, che apre la scheda della partita (§14.346): per «Juventus -
+ * Venezia» Google mostra orario, competizione e risultato. Senza nome non c'è link.
+ */
+export function eventSearchUrl(eventName: string): string | null {
+  const q = eventSearchQuery(eventName)
+  return q ? `https://www.google.com/search?q=${encodeURIComponent(q)}` : null
+}
+
+/** Il testo cercato: il nome dell'evento senza «MULTIPLA» davanti. */
+export function eventSearchQuery(eventName: string): string {
+  return eventName.replace(MULTIPLA_PREFIX, '').trim()
+}
+
 export const SPORT_LABEL: Record<SportType, string> = {
   calcio: 'Calcio',
   tennis: 'Tennis',

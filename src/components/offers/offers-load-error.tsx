@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { loginHref } from '@/lib/auth-redirects'
 import { isUnauthenticatedError } from '@/lib/auth-session'
+import { isPublicPageMounted } from '@/lib/public-page'
 import { OFFERS_COPY } from '@/lib/offers-content'
 import { authClient } from '@/services/api/auth-client'
 import { useAuthStore } from '@/stores/auth-store'
@@ -27,6 +28,11 @@ const RENEWAL_WINDOW_MS = 10_000
  * rinnovo risponde 401 la sessione è davvero finita: si esce come fa la guard, con il `?next=`
  * dell'offerta (§14.326) per tornarci dopo il login. Per ogni altro stato (503, rete) l'avviso
  * di sempre.
+ *
+ * §14.351: le due pagine stanno nel gruppo (open) e un 401 arriva qui solo tramite
+ * OffersGuestGate, cioè con l'utente ancora nello store. Se il rinnovo risponde 401 si toglie
+ * l'utente e basta: la guard passa al guscio pubblico e il cancello mostra la versione per gli
+ * ospiti, invece di mandare al login chi stava solo guardando le offerte.
  */
 export function OffersLoadError({ status }: { status: number | null }) {
   const router = useRouter()
@@ -52,7 +58,7 @@ export function OffersLoadError({ status }: { status: number | null }) {
         if (cancelled) return
         if (isUnauthenticatedError(error)) {
           clearUser()
-          router.replace(loginHref(currentLocation()))
+          if (!isPublicPageMounted()) router.replace(loginHref(currentLocation()))
           return
         }
         setRenewalFailed(true)

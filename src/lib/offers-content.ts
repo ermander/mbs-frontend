@@ -42,6 +42,11 @@ export interface Offer {
    * Le offerte dell'API lo portano sempre.
    */
   expired?: boolean
+  /**
+   * §14.351: carta dell'elenco per gli ospiti che solo un iscritto può aprire: senza logo, col
+   * titolo già coperto dal backend, e «Apri la guida» che invita a iscriversi.
+   */
+  locked?: boolean
 }
 
 export const OFFER_TYPES: readonly { value: OfferType; label: string; description: string }[] = [
@@ -104,7 +109,7 @@ export function offersListHref(type: OfferType, book: string = ALL_BOOKS, page =
 
 export const OFFERS_COPY = {
   title: 'Offerte',
-  tablistLabel: 'Tipo di offerta',
+  typeFilterLabel: 'Tipo di offerta',
   bookFilterLabel: 'Sito di scommesse',
   allBooks: 'Tutti i siti',
   profitLabel: 'Profitto stimato',
@@ -113,6 +118,8 @@ export const OFFERS_COPY = {
   openGuide: 'Apri la guida',
   readGuide: 'Leggi la guida',
   exclusivesTitle: 'Segnalate dagli utenti',
+  /** §14.351: le offerte di benvenuto o ricorrenti senza gruppo (quelle del worker). */
+  siteOffersTitle: 'Offerte dal sito di scommesse',
   exclusivesNote:
     "offerte personali che il sito di scommesse propone solo ad alcuni utenti; controlla se l'hai ricevuta anche tu",
   expiredTitle: 'Scadute',
@@ -126,6 +133,21 @@ export const OFFERS_COPY = {
   pageUnit: 'offerte',
   /** §14.315: mentre OffersLoadError rinnova la sessione e fa rileggere la pagina. */
   loading: 'Carico le offerte…',
+  /** §14.351: la versione per chi non è entrato. */
+  guestBookFilterHint: 'Iscriviti per filtrare le offerte per sito di scommesse',
+  lockedLogoLabel: 'Sito di scommesse visibile agli iscritti',
+  signupTitle: 'Sblocca tutte le offerte',
+  signupGuideTitle: 'Questa guida è riservata agli iscritti',
+  signupDescription:
+    "Senza account puoi aprire solo l'offerta di benvenuto di Snai. L'iscrizione è gratuita e sblocca tutte le altre.",
+  signupPoints: [
+    'Il sito di scommesse di ogni offerta di benvenuto, ricorrente ed esclusiva',
+    'Le guide passo passo di ogni offerta',
+    'Il filtro per sito di scommesse',
+  ],
+  signupAction: 'Iscriviti gratis',
+  loginAction: 'Ho già un account',
+  backToOffers: 'Torna alle offerte',
 } as const
 
 export function isExpired(offer: Offer): boolean {
@@ -205,10 +227,15 @@ export interface OfferSection {
  * Le sezioni di una pagina (§14.345): le carte della pagina divise nelle sezioni del backend, nel
  * loro ordine (un gruppo per sezione, poi tutte le scadute insieme); il numero accanto al titolo è
  * quello della sezione intera, anche quando continua nella pagina dopo. Sezioni vuote mai.
+ *
+ * §14.351: le attive senza gruppo sono «Segnalate dagli utenti» solo fra le esclusive; nel
+ * benvenuto e nelle ricorrenti (le offerte del worker non hanno gruppo) sono le offerte del sito
+ * di scommesse, senza la nota delle offerte personali.
  */
 export function pageSections(
   offers: readonly Offer[],
   sections: readonly OfferSectionApi[],
+  type: OfferType = 'esclusive',
 ): OfferSection[] {
   return sections.flatMap((section): OfferSection[] => {
     const items = offers.filter((offer) =>
@@ -226,14 +253,15 @@ export function pageSections(
         },
       ]
     }
+    const exclusives = section.group === null && type === 'esclusive'
     return [
       {
         key: section.group ?? 'tutte',
-        title: section.group ?? OFFERS_COPY.exclusivesTitle,
-        countLabel:
-          section.group === null
-            ? `${offersCountLabel(section.count)} · ${OFFERS_COPY.exclusivesNote}`
-            : offersCountLabel(section.count),
+        title:
+          section.group ?? (exclusives ? OFFERS_COPY.exclusivesTitle : OFFERS_COPY.siteOffersTitle),
+        countLabel: exclusives
+          ? `${offersCountLabel(section.count)} · ${OFFERS_COPY.exclusivesNote}`
+          : offersCountLabel(section.count),
         expired: false,
         offers: items,
       },

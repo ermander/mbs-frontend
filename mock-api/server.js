@@ -533,6 +533,8 @@ function freeRows(q) {
 const romeToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const dayNum = (d) => Date.parse(`${d}T00:00:00Z`) / 86400000;
 let offersDown = false;
+// §14.351: il cookie della sessione che il mock mette al login e al refresh (e toglie al logout).
+const SESSION_COOKIE = 'access_token=mock; Path=/; HttpOnly; SameSite=Lax';
 // §14.315: GET /api/__mock/offers-401 fa rispondere 401 alla PROSSIMA lettura di /api/offers o
 // /api/offers/:slug (una sola volta), come un access_token scaduto: la pagina deve rinnovare la
 // sessione e rileggere, non mostrare l'avviso.
@@ -572,8 +574,8 @@ const OFFERS = [
     },
 ];
 // §14.345: il catalogo d'esempio del design (lib/offers-sample.ts) pubblicato, senza guida, perché
-// l'elenco abbia più pagine (10 per pagina): 14 offerte di benvenuto con of-1, due delle quali
-// scadute. Gli slug di of-1 e of-2 restano loro. Scadenze in giorni da oggi (negativo = scaduta).
+// l'elenco abbia più pagine (10 per pagina): 16 offerte di benvenuto con of-1 (§14.351: due coi
+// titoli del worker), due delle quali scadute. Gli slug di of-1 e of-2 restano loro. Scadenze in giorni da oggi (negativo = scaduta).
 [
     ['betflag-10', 'benvenuto', 'Singola', 'betflag', 'Betflag', 'Scommetti 50 €, ricevi 10 € di free bet', 5.5, 'Facile'],
     ['daznbet-100', 'benvenuto', 'Multipla', 'daznbet', 'Daznbet', 'Scommetti 200 €, ricevi 100 € in quintupla', 40, 'Media'],
@@ -588,6 +590,9 @@ const OFFERS = [
     ['leovegas-casino', 'benvenuto', 'Casinò', 'leovegas', 'LeoVegas', 'Deposita 20 €, ricevi 20 € per il casinò', 8, 'Media'],
     ['admiralbet-20', 'benvenuto', 'Singola', 'admiralbet', 'Admiralbet', 'Scommetti 20 €, ricevi 20 € di free bet', 12, 'Facile', -5],
     ['winbet-25', 'benvenuto', 'Singola', 'winbet', 'Winbet', 'Deposita 25 €, ricevi 25 € di bonus', 14, 'Facile', -20],
+    // §14.351: come quelle del worker delle guide: senza gruppo e col sito nel titolo (coperto per gli ospiti).
+    ['zonagioco-sport', 'benvenuto', null, 'zonagioco', 'Zonagioco', 'Benvenuto Sport Zonagioco', 45, 'Media'],
+    ['williamhill-sport', 'benvenuto', null, 'williamhill', 'Williamhill', 'Benvenuto Sport William Hill', 35, 'Media'],
     ['sisal-ruota-scommesse', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus scommesse', null, 'Facile'],
     ['sisal-ruota-casino', 'ricorrenti', 'Ogni giorno', 'sisal', 'Sisal', 'Ruota dei bonus casinò e slot', null, 'Facile'],
     ['goldbet-live', 'ricorrenti', 'Ogni settimana', 'goldbet', 'Goldbet', 'Rimborso del 10 % sul casinò live, fino a 10 €', 2, 'Media', 2],
@@ -642,6 +647,25 @@ function offersPage(q) {
     const activeByType = Object.fromEntries(Object.keys(OFFER_GROUP_ORDER).map((t) => [t, published.filter((o) => o.type === t && !o.expired).length]));
     const books = [...new Set(published.filter((o) => o.type === type).map((o) => o.bookmakerName))].sort((a, b) => a.localeCompare(b, 'it'));
     return { offers: rows.slice((page - 1) * limit, page * limit).map(publicCard), total: rows.length, page, limit, sections, activeByType, books };
+}
+// §14.351: le letture per chi non è entrato, come resources/offers/free-offers.ts del backend:
+// intero solo il benvenuto di Snai, le altre carte chiuse (senza slug, sito e data, col titolo
+// coperto: ogni sito noto, anche scritto con spazi o in maiuscolo), nessun sito nel filtro.
+const isFreeOffer = (o) => o.type === 'benvenuto' && o.bookmakerSlug === 'snai';
+function maskSites(title) {
+    const names = [...new Set(OFFERS.flatMap((o) => [o.bookmakerName, o.bookmakerSlug]))].sort((a, b) => b.length - a.length);
+    const patterns = names.map((n) => [...n.toLowerCase()].filter((c) => /[\p{L}\p{N}]/u.test(c)).map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("[\\s.\\-_'’]?"))
+        .filter(Boolean).map((p) => `(?<![\\p{L}\\p{N}])${p}['’]?(?![\\p{L}\\p{N}])`);
+    return title.replace(new RegExp(patterns.join('|'), 'giu'), '******');
+}
+function freeOffersPage(q) {
+    const params = new URLSearchParams(q);
+    params.delete('book');
+    const p = offersPage(params);
+    const offers = p.offers.map((o) => (isFreeOffer(o)
+        ? { ...o, locked: false }
+        : { locked: true, type: o.type, groupLabel: o.groupLabel, title: maskSites(o.title), profit: o.profit, difficulty: o.difficulty, isNew: o.isNew, expired: o.expired, daysLeft: o.daysLeft }));
+    return { ...p, offers, books: [] };
 }
 function offerBodyError(body, selfId) {
     if (String(body.slug || '').startsWith('rotto')) return [500, { message: 'Errore finto del mock' }];
@@ -722,6 +746,7 @@ const server = http.createServer(async (req, res) => {
         const body = await readBody(req);
         console.log('  login:', body.email, body.password === 'sbagliata' ? '(sbagliata)' : '***');
         if (body.password === 'sbagliata') return send(401, { message: 'Credenziali non valide' });
+        res.setHeader('Set-Cookie', SESSION_COOKIE);
         return send(200, { user });
     }
     // §14.253: registrazione del design, solo email e password. 'esistente@esempio.it' → 409
@@ -732,6 +757,7 @@ const server = http.createServer(async (req, res) => {
         if (body.email === 'esistente@esempio.it') return send(409, { message: 'Un utente con questa email o username esiste già' });
         return send(201, { status: 'pending_verification', email: body.email });
     }
+    if (path === '/api/auth/refresh') res.setHeader('Set-Cookie', SESSION_COOKIE);
     if (path === '/api/auth/me' || path === '/api/auth/refresh' || path === '/api/auth/login') return send(200, { user });
     // §14.249: «Imposta una password» dal profilo di chi è entrato con Google: la stessa
     // risposta neutra del backend per forgot-password.
@@ -803,7 +829,10 @@ const server = http.createServer(async (req, res) => {
     if (path === '/api/profit-tracker/telegram/status') return send(200, telegram);
     if (path === '/api/profit-tracker/telegram/generate-code') return send(200, { code: 'ABC123', expiresAt: iso(Date.now() + 600000) });
     if (path === '/api/profit-tracker/telegram/unlink') { telegram = { linked: false, linkedAt: null }; return send(204); }
-    if (path === '/api/auth/logout') return send(204);
+    if (path === '/api/auth/logout') {
+        res.setHeader('Set-Cookie', 'access_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+        return send(204);
+    }
     // §14.122: strumenti per utente e il confronto Risultato + Goal.
     if (path === '/api/tools/result-btts') return send(200, filterResultBtts(url.searchParams));
     if (path === '/api/tools/refund-zero') return send(200, filterRefundZero(url.searchParams));
@@ -836,6 +865,24 @@ const server = http.createServer(async (req, res) => {
     // GET /api/__mock/offers-down fa rispondere 503 alle due rotte (avviso «non riusciamo a caricare»).
     if (path === '/api/__mock/offers-down') { offersDown = !offersDown; return send(200, { offersDown }); }
     if (path === '/api/__mock/offers-401') { offersUnauthorizedOnce = true; return send(200, { offersUnauthorizedOnce }); }
+    // §14.351: le letture per gli ospiti, aperte.
+    if (path === '/api/offers/free/page' && req.method === 'GET') {
+        if (offersDown) return send(503, { message: 'down' });
+        return send(200, freeOffersPage(url.searchParams));
+    }
+    const freeGuide = path.match(/^\/api\/offers\/free\/guide\/([^/]+)$/);
+    if (freeGuide && req.method === 'GET') {
+        if (offersDown) return send(503, { message: 'down' });
+        const row = OFFERS.find((o) => o.slug === decodeURIComponent(freeGuide[1]) && o.visibility === 'published' && isFreeOffer(o));
+        if (!row) return send(404, { message: 'Offerta non trovata' });
+        const { id, visibility, publishedAt, createdAt, expiryOverride, ...detail } = offerView(row);
+        return send(200, { offer: detail });
+    }
+    // §14.351: come il backend, le letture da iscritto vogliono il cookie della sessione (il mock
+    // lo mette al login e al refresh): senza, 401, e la pagina mostra la versione per gli ospiti.
+    if ((path === '/api/offers' || /^\/api\/offers\/[^/]+$/.test(path)) && req.method === 'GET' && !/(^|;\s*)access_token=/.test(req.headers.cookie || '')) {
+        return send(401, { status: 401, message: 'Authentication required' });
+    }
     if ((path === '/api/offers' || /^\/api\/offers\/[^/]+$/.test(path)) && req.method === 'GET' && offersUnauthorizedOnce) {
         offersUnauthorizedOnce = false;
         console.log('  offers: 401 once (mock)');

@@ -162,6 +162,7 @@ export function GTextField({
   disabled,
   onBlur,
   onEnter,
+  inputProps,
   className,
 }: {
   id: string
@@ -170,7 +171,7 @@ export function GTextField({
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  type?: 'text' | 'search' | 'date' | 'datetime-local'
+  type?: 'text' | 'search' | 'date' | 'datetime-local' | 'password' | 'email'
   size?: keyof typeof controlHeight
   numeric?: boolean
   optional?: boolean
@@ -183,6 +184,11 @@ export function GTextField({
   onBlur?: () => void
   /** Invio nel campo (la nota del riepilogo si salva così). */
   onEnter?: () => void
+  /** Attributi nativi in più (autoComplete, maxLength, autoFocus…), per i moduli del Profilo. */
+  inputProps?: Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'id' | 'type' | 'value' | 'onChange' | 'className'
+  >
   className?: string
 }) {
   const errorId = `${id}-error`
@@ -205,6 +211,7 @@ export function GTextField({
           <span className="flex flex-none items-center pl-3 text-ds-ink-muted">{prefix}</span>
         )}
         <input
+          {...inputProps}
           id={id}
           type={type}
           value={value}
@@ -240,6 +247,73 @@ export function GTextField({
           </p>
         )
       )}
+    </div>
+  )
+}
+
+/** Il campo di testo su più righe del design (Descrizione), con lo stesso contorno del TextField. */
+export function GTextArea({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  optional,
+  rows = 3,
+  maxLength,
+  disabled,
+  className,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  optional?: boolean
+  rows?: number
+  maxLength?: number
+  disabled?: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
+      <FieldLabel htmlFor={id} optional={optional}>
+        {label}
+      </FieldLabel>
+      <textarea
+        id={id}
+        rows={rows}
+        value={value}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          'min-h-[72px] w-full resize-y rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-3 py-2 text-base leading-6 text-ds-ink outline-hidden transition-[border-color,box-shadow] duration-150 placeholder:text-ds-ink-faint focus:border-ds-brand focus:shadow-ds-focus',
+          disabled && 'cursor-not-allowed text-ds-ink-muted',
+        )}
+      />
+    </div>
+  )
+}
+
+/** Un valore che non si cambia nella modale (il conto del movimento): etichetta e riquadro sunken. */
+export function GReadOnly({
+  label,
+  children,
+  hint,
+}: {
+  label: string
+  children: React.ReactNode
+  hint?: string
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-sm leading-5 font-semibold text-ds-ink">{label}</span>
+      <div className="flex min-h-10 items-center rounded-ds-sm border border-ds-line bg-ds-surface-sunken px-3 py-2 text-base text-ds-ink">
+        {children}
+      </div>
+      {hint && <p className="m-0 text-sm leading-5 text-ds-ink-muted">{hint}</p>}
     </div>
   )
 }

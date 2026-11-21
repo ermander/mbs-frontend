@@ -14,6 +14,7 @@ import {
   dashMoneyRound,
   scalePosition,
 } from '@/lib/profit-tracker/dashboard'
+import { DsSegmented } from '@/components/profit-tracker/tracker-ds'
 import { cn } from '@/lib/utils'
 
 type View = 'mensile' | 'cumulato'
@@ -44,33 +45,10 @@ export function ProfitMonthChart({
   const cum = view === 'cumulato'
 
   const shown = useMemo(() => (cum ? cumulativeSeries(series) : series), [cum, series])
-  const scale = useMemo(() => chartScale(shown), [shown])
-  const zero = scalePosition(0, scale)
-
-  const bars = shown.map((v, i) => {
-    const future = v === null
-    const pos = future ? zero : scalePosition(v, scale)
-    const h = future || v === 0 ? 0 : Math.max(2, Math.abs(pos - zero) * CHART_H)
-    const negative = !future && v < 0
-    const current = i === currentMonth
-    return {
-      i,
-      v,
-      future,
-      negative,
-      current,
-      h,
-      valueLabel: future || v === 0 ? '' : dashMoneyRound(v),
-      title: future
-        ? `${MONTH_FULL[i]} ${year}: mese non ancora iniziato`
-        : `${MONTH_FULL[i]} ${year}: ${dashMoney(v)}${cum ? ' cumulati' : ''}${current ? ', mese in corso' : ''}`,
-    }
-  })
-
-  const aria = `Grafico a barre del profitto ${cum ? 'cumulato' : 'mensile'} del ${year}: ${bars
-    .filter((b) => b.valueLabel)
-    .map((b) => `${MONTH_SHORT[b.i]} ${b.valueLabel}`)
-    .join(', ')}`
+  const barTitle = (i: number, v: number | null) =>
+    v === null
+      ? `${MONTH_FULL[i]} ${year}: mese non ancora iniziato`
+      : `${MONTH_FULL[i]} ${year}: ${dashMoney(v)}${cum ? ' cumulati' : ''}${i === currentMonth ? ', mese in corso' : ''}`
 
   return (
     <div className="flex flex-col gap-6 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 pt-5 pb-6 shadow-ds-sm sm:px-6">
@@ -83,27 +61,15 @@ export function ProfitMonthChart({
               : 'Profitto realizzato in ciascun mese, giocate archiviate'}
           </p>
         </div>
-        <div
-          role="group"
-          aria-label="Vista del grafico"
-          className="inline-flex gap-0.5 rounded-ds-sm border border-ds-line bg-ds-surface p-[3px]"
-        >
-          {(['mensile', 'cumulato'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={view === v}
-              onClick={() => setView(v)}
-              className={cn(
-                'h-7 cursor-pointer rounded-ds-xs border-0 px-3 font-ds-sans text-sm leading-5 font-semibold transition-colors duration-150',
-                dsFocusRing,
-                view === v ? 'bg-ds-brand-soft text-ds-brand' : 'bg-transparent text-ds-ink-muted',
-              )}
-            >
-              {v === 'mensile' ? 'Mensile' : 'Cumulato'}
-            </button>
-          ))}
-        </div>
+        <DsSegmented
+          label="Vista del grafico"
+          items={[
+            { value: 'mensile', label: 'Mensile' },
+            { value: 'cumulato', label: 'Cumulato' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
       </div>
 
       {isLoading ? (
@@ -137,88 +103,173 @@ export function ProfitMonthChart({
           </div>
         </div>
       ) : (
-        <div
-          role="img"
-          aria-label={aria}
-          className="grid grid-cols-[52px_minmax(0,1fr)] gap-x-2 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-x-3"
-        >
-          <div className="relative" style={{ height: CHART_H }}>
-            {scale.ticks.map((t) => (
-              <span
-                key={t}
-                className="absolute right-0 translate-y-1/2 font-ds-sans text-xs leading-4 font-medium whitespace-nowrap text-ds-ink-muted tabular-nums sm:text-sm sm:leading-5"
-                style={{ bottom: `${scalePosition(t, scale) * 100}%` }}
-              >
-                {dashMoneyRound(t)}
-              </span>
-            ))}
-          </div>
-          <div className="relative" style={{ height: CHART_H }}>
-            {scale.ticks.map((t) => (
-              <div
-                key={t}
-                aria-hidden
-                className={cn(
-                  'absolute inset-x-0 border-t',
-                  t === 0 ? 'border-ds-line-strong' : 'border-ds-line',
-                )}
-                style={{ bottom: `${scalePosition(t, scale) * 100}%` }}
-              />
-            ))}
-            <div className="absolute inset-0 grid grid-cols-12">
-              {bars.map((b) => (
-                <div key={b.i} title={b.title} className="relative min-w-0">
-                  <div
+        <MonthBars
+          series={shown}
+          currentMonth={currentMonth}
+          barTitle={barTitle}
+          label={`Grafico a barre del profitto ${cum ? 'cumulato' : 'mensile'} del ${year}`}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Le barre dei dodici mesi sui token ds-* (§14.336): asse con passi tondi che scende sotto lo zero,
+ * perdite in loss sotto la linea dello zero, mese in corso in brand-hover. Con `onSelect` ogni mese
+ * è un pulsante (il Report, §14.350): il mese scelto resta pieno, gli altri si attenuano.
+ */
+export function MonthBars({
+  series,
+  currentMonth,
+  barTitle,
+  label,
+  selectedMonth = null,
+  onSelect,
+}: {
+  /** Dodici valori, null per i mesi non ancora iniziati. */
+  series: (number | null)[]
+  /** Indice del mese in corso, -1 se l'anno non è quello corrente. */
+  currentMonth: number
+  barTitle: (month: number, value: number | null) => string
+  /** Inizio dell'etichetta accessibile; i valori dei mesi si aggiungono da soli. */
+  label: string
+  selectedMonth?: number | null
+  onSelect?: (month: number) => void
+}) {
+  const scale = useMemo(() => chartScale(series), [series])
+  const zero = scalePosition(0, scale)
+
+  const bars = series.map((v, i) => {
+    const future = v === null
+    const pos = future ? zero : scalePosition(v, scale)
+    const h = future || v === 0 ? 0 : Math.max(2, Math.abs(pos - zero) * CHART_H)
+    return {
+      i,
+      future,
+      negative: !future && v < 0,
+      current: i === currentMonth,
+      dimmed: selectedMonth != null && selectedMonth !== i,
+      h,
+      valueLabel: future || v === 0 ? '' : dashMoneyRound(v),
+      title: barTitle(i, v),
+    }
+  })
+
+  const aria = `${label}: ${bars
+    .filter((b) => b.valueLabel)
+    .map((b) => `${MONTH_SHORT[b.i]} ${b.valueLabel}`)
+    .join(', ')}`
+
+  return (
+    <div
+      role={onSelect ? 'group' : 'img'}
+      aria-label={aria}
+      className="grid grid-cols-[52px_minmax(0,1fr)] gap-x-2 sm:grid-cols-[72px_minmax(0,1fr)] sm:gap-x-3"
+    >
+      <div className="relative" style={{ height: CHART_H }}>
+        {scale.ticks.map((t) => (
+          <span
+            key={t}
+            aria-hidden
+            className="absolute right-0 translate-y-1/2 font-ds-sans text-xs leading-4 font-medium whitespace-nowrap text-ds-ink-muted tabular-nums sm:text-sm sm:leading-5"
+            style={{ bottom: `${scalePosition(t, scale) * 100}%` }}
+          >
+            {dashMoneyRound(t)}
+          </span>
+        ))}
+      </div>
+      <div className="relative" style={{ height: CHART_H }}>
+        {scale.ticks.map((t) => (
+          <div
+            key={t}
+            aria-hidden
+            className={cn(
+              'absolute inset-x-0 border-t',
+              t === 0 ? 'border-ds-line-strong' : 'border-ds-line',
+            )}
+            style={{ bottom: `${scalePosition(t, scale) * 100}%` }}
+          />
+        ))}
+        <div className="absolute inset-0 grid grid-cols-12">
+          {bars.map((b) => {
+            const content = (
+              <>
+                <div
+                  className={cn(
+                    'absolute left-1/2 w-[56%] max-w-12 -translate-x-1/2 transition-[height,background-color,opacity] duration-150',
+                    b.negative
+                      ? 'rounded-b-[3px] bg-ds-loss'
+                      : b.current
+                        ? 'rounded-t-[3px] bg-ds-brand-hover'
+                        : 'rounded-t-[3px] bg-ds-brand',
+                    b.dimmed && 'opacity-35',
+                  )}
+                  style={
+                    b.negative
+                      ? { top: `${(1 - zero) * 100}%`, height: b.h }
+                      : { bottom: `${zero * 100}%`, height: b.h }
+                  }
+                />
+                {b.valueLabel && (
+                  <span
+                    aria-hidden
                     className={cn(
-                      'absolute left-1/2 w-[56%] max-w-12 -translate-x-1/2 transition-[height,background-color] duration-150',
-                      b.negative
-                        ? 'rounded-b-[3px] bg-ds-loss'
-                        : b.current
-                          ? 'rounded-t-[3px] bg-ds-brand-hover'
-                          : 'rounded-t-[3px] bg-ds-brand',
+                      'ds-caption absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-ds-ink-muted tabular-nums sm:block',
+                      b.dimmed && 'opacity-50',
                     )}
                     style={
                       b.negative
-                        ? { top: `${(1 - zero) * 100}%`, height: b.h }
-                        : { bottom: `${zero * 100}%`, height: b.h }
+                        ? { top: `calc(${(1 - zero) * 100}% + ${b.h + 6}px)` }
+                        : { bottom: `calc(${zero * 100}% + ${b.h + 6}px)` }
                     }
-                  />
-                  {b.valueLabel && (
-                    <span
-                      className="ds-caption absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap text-ds-ink-muted tabular-nums sm:block"
-                      style={
-                        b.negative
-                          ? { top: `calc(${(1 - zero) * 100}% + ${b.h + 6}px)` }
-                          : { bottom: `calc(${zero * 100}% + ${b.h + 6}px)` }
-                      }
-                    >
-                      {b.valueLabel}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div />
-          <div className="grid grid-cols-12 pt-2">
-            {bars.map((b) => (
-              <span
+                  >
+                    {b.valueLabel}
+                  </span>
+                )}
+              </>
+            )
+            return onSelect ? (
+              <button
                 key={b.i}
+                type="button"
+                title={b.title}
+                aria-label={b.title}
+                aria-pressed={selectedMonth === b.i}
+                onClick={() => onSelect(b.i)}
                 className={cn(
-                  'text-center font-ds-sans text-xs leading-4 sm:text-sm sm:leading-5',
-                  b.current
-                    ? 'font-semibold text-ds-brand'
-                    : b.future
-                      ? 'text-ds-ink-faint'
-                      : 'text-ds-ink-muted',
+                  'relative min-w-0 cursor-pointer rounded-ds-xs transition-colors hover:bg-ds-surface-sunken/60',
+                  dsFocusRing,
                 )}
               >
-                {MONTH_SHORT[b.i]}
-              </span>
-            ))}
-          </div>
+                {content}
+              </button>
+            ) : (
+              <div key={b.i} title={b.title} className="relative min-w-0">
+                {content}
+              </div>
+            )
+          })}
         </div>
-      )}
+      </div>
+      <div />
+      <div className="grid grid-cols-12 pt-2" aria-hidden>
+        {bars.map((b) => (
+          <span
+            key={b.i}
+            className={cn(
+              'text-center font-ds-sans text-xs leading-4 sm:text-sm sm:leading-5',
+              selectedMonth === b.i || (selectedMonth == null && b.current)
+                ? 'font-semibold text-ds-brand'
+                : b.future
+                  ? 'text-ds-ink-faint'
+                  : 'text-ds-ink-muted',
+            )}
+          >
+            {MONTH_SHORT[b.i]}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

@@ -2,26 +2,29 @@
 
 import { useState } from 'react'
 
-import { Tabs } from '@/components/ui/tabs'
-import { ContiContent } from '@/app/(auth)/profit-tracker/conti/page'
-import { WalletsContent } from '@/app/(auth)/profit-tracker/wallets/page'
-import { CollaboratoriContent } from '@/app/(auth)/profit-tracker/collaboratori/page'
+import { GiocateDsShell, GTabs } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { ContiView } from '@/components/profit-tracker/gestione-conti/conti-view'
+import { WalletsView } from '@/components/profit-tracker/gestione-conti/wallets-view'
+import { CollaboratoriView } from '@/components/profit-tracker/gestione-conti/collaboratori-view'
 
-const tabs = [
-  { id: 'conti', label: 'Conti' },
-  { id: 'wallets', label: 'Wallets' },
-  { id: 'collaboratori', label: 'Collaboratori' },
+type GestioneTab = 'conti' | 'wallets' | 'collaboratori'
+
+const tabs: { value: GestioneTab; label: string }[] = [
+  { value: 'conti', label: 'Conti' },
+  { value: 'wallets', label: 'Wallets' },
+  { value: 'collaboratori', label: 'Collaboratori' },
 ]
 
+/** La voce «Gestione conti» del Tracker sul design OddWise (§14.350): conti, wallets e collaboratori. */
 export default function GestioneContiPage() {
-  const [activeTab, setActiveTab] = useState('conti')
+  const [activeTab, setActiveTab] = useState<GestioneTab>('conti')
 
   return (
-    <div className="space-y-4">
-      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-      {activeTab === 'conti' && <ContiContent />}
-      {activeTab === 'wallets' && <WalletsContent />}
-      {activeTab === 'collaboratori' && <CollaboratoriContent />}
-    </div>
+    <GiocateDsShell>
+      <GTabs label="Gestione conti" items={tabs} value={activeTab} onChange={setActiveTab} />
+      {activeTab === 'conti' && <ContiView />}
+      {activeTab === 'wallets' && <WalletsView />}
+      {activeTab === 'collaboratori' && <CollaboratoriView />}
+    </GiocateDsShell>
   )
 }

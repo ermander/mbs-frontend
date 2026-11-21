@@ -63,12 +63,9 @@ export const CALCULATOR_TOOLS: ReadonlyArray<CalculatorTool> = [
 
 /**
  * I calcolatori senza giocata da salvare: il guscio non mostra «Salva nel tracker». Il
- * condizionato (§14.349) per ora non salva: le sue gambe non hanno ancora un tipo di giocata.
+ * condizionato salva dal §14.352.
  */
-export const CALCULATORS_WITHOUT_SAVE: ReadonlySet<CalculatorSlug> = new Set([
-  'condizionato',
-  'fun-bonus',
-])
+export const CALCULATORS_WITHOUT_SAVE: ReadonlySet<CalculatorSlug> = new Set(['fun-bonus'])
 
 export function isCalculatorSlug(value: string | null | undefined): value is CalculatorSlug {
   return CALCULATOR_TOOLS.some((tool) => tool.slug === value)

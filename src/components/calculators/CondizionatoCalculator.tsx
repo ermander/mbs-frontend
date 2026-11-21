@@ -11,7 +11,8 @@ import {
   type CoverSectionInput,
 } from '@/lib/calculators/engines/condizionato-engine'
 import { parseNum } from '@/lib/calculators/engines/odds'
-import { CalculatorRating } from '@/components/calculators/calculator-panel'
+import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
+import { CondizionatoSaveModal } from '@/components/calculators/CondizionatoSaveModal'
 import {
   CalcFigure,
   CalcLayout,
@@ -28,7 +29,8 @@ import { dsButtonClass } from '@/components/landing/ds-primitives'
  * Calcolatore offline del rimborso condizionato (§14.349): il book rimborsa la qualificante solo
  * se perde e si verifica una condizione. Si copre la qualificante (in Banca o con una o due
  * Punte) e si scommette contro la condizione (in Banca o con una o due Punte), così il profitto
- * è lo stesso in ogni scenario. I conti stanno in `engines/condizionato-engine.ts`.
+ * è lo stesso in ogni scenario. I conti stanno in `engines/condizionato-engine.ts`; «Salva nel
+ * tracker» (§14.352) apre `CondizionatoSaveModal`.
  */
 
 const DEFAULT_COMMISSION = '4,5'
@@ -99,18 +101,21 @@ export function CondizionatoCalculator() {
   const [rimborso, setRimborso] = useState('')
   const [qualifier, setQualifier] = useState<SectionState>(INITIAL_SECTION)
   const [condition, setCondition] = useState<SectionState>(INITIAL_SECTION)
+  const [saveOpen, setSaveOpen] = useState(false)
 
   const stake = parseNum(puntata)
+  const odds = parseNum(quota)
+  const refund = parseNum(rimborso)
   const result = useMemo(
     () =>
       computeCondizionato({
         stake,
-        odds: parseNum(quota),
-        refund: parseNum(rimborso),
+        odds,
+        refund,
         qualifier: toInput(qualifier),
         condition: toInput(condition),
       }),
-    [stake, quota, rimborso, qualifier, condition],
+    [stake, odds, refund, qualifier, condition],
   )
 
   const legLabels = [
@@ -132,6 +137,17 @@ export function CondizionatoCalculator() {
   return (
     <div className="flex flex-col gap-8">
       <CalculatorRating label="CR" value={result ? result.crPercent : null} plain />
+      <CalculatorSaveAction onClick={() => setSaveOpen(true)} disabled={!result} />
+      {saveOpen && result && stake != null && odds != null && refund != null && (
+        <CondizionatoSaveModal
+          open
+          onOpenChange={setSaveOpen}
+          stake={stake}
+          odds={odds}
+          refund={refund}
+          result={result}
+        />
+      )}
 
       <CalcLayout
         outcomes={

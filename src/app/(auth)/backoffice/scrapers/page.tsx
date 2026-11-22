@@ -2,7 +2,20 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Container } from '@/components/ui/container'
+
+import {
+  BoChip,
+  BoDot,
+  BoMono,
+  BoMuted,
+  BoSwitch,
+  boLink,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { GTextArea } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DS_PANEL, DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   getScrapers,
   toggleScraper,
@@ -31,6 +44,9 @@ function formatDate(iso: string): string {
   })
 }
 
+// Lo scraping di ogni bookmaker: interruttore globale, interruttore per sito, sport, Palinsesto o
+// tutto il feed e la nota. Dal §14.365 sul design OddWise: riquadri surface-raised, BoSwitch (in
+// warning quando il sito è acceso ma lo scraping globale è in pausa), sport come chip.
 export default function BackofficeScrapersPage() {
   const [scrapers, setScrapers] = useState<BackofficeScraper[]>([])
   const [globalStatus, setGlobalStatus] = useState<GlobalScrapingStatus | null>(null)
@@ -162,111 +178,94 @@ export default function BackofficeScrapersPage() {
   const globalEnabled = globalStatus?.enabled ?? true
 
   return (
-    <Container>
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Gestione scraper</h2>
-        <p className="text-sm text-muted-foreground">
-          Attiva o disattiva lo scraping per ogni bookmaker, seleziona gli sport da scrapare e
-          annota lo stato di ogni integrazione.
-        </p>
-      </div>
+    <>
+      <DsPageHeader
+        title="Gestione scraper"
+        description="Attiva o disattiva lo scraping per ogni bookmaker, seleziona gli sport da scrapare e annota lo stato di ogni integrazione."
+      />
 
       {/* Global kill switch */}
       {globalStatus && (
         <div
-          className={`mb-6 rounded-lg border px-5 py-4 ${
-            globalEnabled ? 'border-border bg-card' : 'border-amber-500/40 bg-amber-500/5'
-          }`}
+          className={cn(
+            'rounded-ds-md border px-5 py-4 shadow-ds-sm',
+            globalEnabled
+              ? 'border-ds-line bg-ds-surface-raised'
+              : 'border-ds-loss/30 bg-ds-loss-soft',
+          )}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span
-                className={`h-3 w-3 shrink-0 rounded-full ${
-                  globalEnabled ? 'bg-green-500' : 'bg-red-500'
-                }`}
-              />
+              <BoDot tone={globalEnabled ? 'ok' : 'bad'} />
               <div>
-                <p className="font-medium text-foreground">
+                <p className="m-0 font-semibold text-ds-ink">
                   Scraping globale:{' '}
-                  <span className={globalEnabled ? 'text-green-400' : 'text-red-500'}>
+                  <span className={globalEnabled ? 'text-ds-profit' : 'text-ds-loss'}>
                     {globalEnabled ? 'ATTIVO' : 'IN PAUSA'}
                   </span>
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="ds-caption m-0 text-ds-ink-muted">
                   Aggiornato il {formatDate(globalStatus.updated_at)}
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
+            <BoSwitch
+              size="lg"
+              checked={globalEnabled}
               disabled={togglingGlobal}
-              onClick={handleGlobalToggle}
+              onChange={() => void handleGlobalToggle()}
+              label="Scraping globale"
               title={globalEnabled ? 'Metti in pausa tutto lo scraping' : 'Riattiva lo scraping'}
-              className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${
-                globalEnabled ? 'bg-green-500' : 'bg-red-500'
-              }`}
-            >
-              <span
-                className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-xs transition-transform ${
-                  globalEnabled ? 'translate-x-8' : 'translate-x-1'
-                }`}
-              />
-            </button>
+            />
           </div>
         </div>
       )}
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
       {/* Warning banner when globally paused */}
       {!globalEnabled && (
-        <div className="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+        <DsAlert tone="warning">
           Lo scraping è globalmente in pausa. I toggle dei singoli bookmaker restano modificabili ma
           non avranno effetto finché il globale non viene riattivato.
-        </div>
+        </DsAlert>
       )}
 
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         {loading ? (
-          <p className="py-6 text-center text-muted-foreground">Caricamento...</p>
+          <BoMuted className="py-6 text-center">Caricamento degli scraper…</BoMuted>
         ) : scrapers.length === 0 ? (
-          <p className="py-6 text-center text-muted-foreground">Nessun bookmaker configurato.</p>
+          <BoMuted className="py-6 text-center">Nessun bookmaker configurato.</BoMuted>
         ) : (
           scrapers.map((scraper) => {
             const isExpanded = expandedId === scraper.id
             const isEditingNote = editingNoteId === scraper.id
             const activeSports = getActiveSports(scraper)
             const mappedSports = scraper.mapped_sports
-            // When scraping is globally paused, an enabled scraper shows amber
-            // to communicate "configured but suspended"
-            const toggleColor = scraper.scrape_enabled
-              ? globalEnabled
-                ? 'bg-primary'
-                : 'bg-amber-400'
-              : 'bg-muted-foreground/30'
 
             return (
-              <div key={scraper.id} className="rounded-md border border-border bg-card">
-                <div className="flex items-center gap-4 px-4 py-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+              <div key={scraper.id} className={DS_PANEL}>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
+                  <div className="min-w-0 flex-1 basis-64">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/backoffice/scrapers/${scraper.slug}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
+                        className={cn(
+                          'rounded-ds-xs font-semibold text-ds-ink underline-offset-4 hover:text-ds-brand hover:underline',
+                          dsFocusRing,
+                        )}
                       >
                         {scraper.name}
                       </Link>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {scraper.slug}
-                      </span>
-                      <span className="inline-block rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      <BoMono>{scraper.slug}</BoMono>
+                      <DsBadge>
                         {ADAPTER_TYPE_LABELS[scraper.adapter_type] ?? scraper.adapter_type}
-                      </span>
+                      </DsBadge>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="ds-caption m-0 mt-0.5 text-ds-ink-muted">
                       {mappedSports.length === 0 ? (
-                        <span className="text-amber-500">Nessuno sport mappato</span>
+                        <span className="font-semibold text-ds-warning">Nessuno sport mappato</span>
                       ) : scraper.enabled_sports ? (
                         `${activeSports.length}/${mappedSports.length} sport mappati`
                       ) : (
@@ -278,91 +277,94 @@ export default function BackofficeScrapersPage() {
                     {scraper.note && !isEditingNote && (
                       <p
                         data-testid={`scraper-note-${scraper.slug}`}
-                        className="mt-1 text-xs whitespace-pre-line text-foreground/80"
+                        className="ds-body-sm m-0 mt-1.5 whitespace-pre-line text-ds-ink"
                       >
                         {scraper.note}
                       </p>
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={togglingAllId === scraper.id}
-                    onClick={() => handleAllCompetitionsToggle(scraper)}
-                    title={
-                      scraper.scrape_all_competitions
-                        ? 'Legge tutte le competizioni del feed, anche quelle spente nel Palinsesto. Clicca per tornare al Palinsesto.'
-                        : 'Legge solo le competizioni accese nel Palinsesto. Clicca per leggere tutto il feed (§14.125).'
-                    }
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
-                      scraper.scrape_all_competitions
-                        ? 'bg-amber-500/15 text-amber-500'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {scraper.scrape_all_competitions ? 'Tutto il feed' : 'Palinsesto'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={togglingAllId === scraper.id}
+                      onClick={() => handleAllCompetitionsToggle(scraper)}
+                      aria-pressed={scraper.scrape_all_competitions}
+                      title={
+                        scraper.scrape_all_competitions
+                          ? 'Legge tutte le competizioni del feed, anche quelle spente nel Palinsesto. Clicca per tornare al Palinsesto.'
+                          : 'Legge solo le competizioni accese nel Palinsesto. Clicca per leggere tutto il feed (§14.125).'
+                      }
+                      className={cn(
+                        'mr-1 inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold transition-colors disabled:cursor-wait disabled:opacity-60',
+                        dsFocusRing,
+                        scraper.scrape_all_competitions
+                          ? 'bg-ds-warning-soft text-ds-warning'
+                          : 'bg-ds-surface-sunken text-ds-ink-muted hover:text-ds-ink',
+                      )}
+                    >
+                      {scraper.scrape_all_competitions ? 'Tutto il feed' : 'Palinsesto'}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      isEditingNote ? setEditingNoteId(null) : openNoteEditor(scraper)
-                    }
-                    title={scraper.note ? 'Modifica la nota' : 'Aggiungi una nota'}
-                    className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    {isEditingNote ? 'Chiudi nota' : 'Nota'}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isEditingNote ? setEditingNoteId(null) : openNoteEditor(scraper)
+                      }
+                      aria-expanded={isEditingNote}
+                      title={scraper.note ? 'Modifica la nota' : 'Aggiungi una nota'}
+                      className={dsButtonClass('ghost', 'sm')}
+                    >
+                      {isEditingNote ? 'Chiudi nota' : 'Nota'}
+                    </button>
 
-                  <button
-                    type="button"
-                    disabled={mappedSports.length === 0}
-                    onClick={() => setExpandedId(isExpanded ? null : scraper.id)}
-                    className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isExpanded ? 'Chiudi' : 'Sport'}
-                  </button>
+                    <button
+                      type="button"
+                      disabled={mappedSports.length === 0}
+                      onClick={() => setExpandedId(isExpanded ? null : scraper.id)}
+                      aria-expanded={isExpanded}
+                      className={cn(
+                        dsButtonClass('ghost', 'sm'),
+                        'disabled:cursor-not-allowed disabled:opacity-50',
+                      )}
+                    >
+                      {isExpanded ? 'Chiudi' : 'Sport'}
+                    </button>
 
-                  <button
-                    type="button"
-                    disabled={togglingId === scraper.id || !scraper.is_active}
-                    onClick={() => handleToggle(scraper)}
-                    title={
-                      !scraper.is_active
-                        ? 'Bookmaker non attivo'
-                        : scraper.scrape_enabled
-                          ? 'Disattiva scraping'
-                          : 'Attiva scraping'
-                    }
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${toggleColor}`}
-                  >
-                    <span
-                      className={`pointer-events-none block h-4 w-4 rounded-full bg-white shadow-xs transition-transform ${
-                        scraper.scrape_enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
+                    <span className="ml-2 flex">
+                      <BoSwitch
+                        checked={scraper.scrape_enabled}
+                        disabled={togglingId === scraper.id || !scraper.is_active}
+                        onChange={() => void handleToggle(scraper)}
+                        // Con lo scraping globale in pausa uno scraper acceso resta in warning:
+                        // configurato ma sospeso.
+                        tone={globalEnabled ? 'brand' : 'warning'}
+                        label={`Scraping di ${scraper.name}`}
+                        title={
+                          !scraper.is_active
+                            ? 'Bookmaker non attivo'
+                            : scraper.scrape_enabled
+                              ? 'Disattiva scraping'
+                              : 'Attiva scraping'
+                        }
+                      />
+                    </span>
+                  </div>
                 </div>
 
                 {isEditingNote && (
-                  <div className="border-t border-border px-4 py-3">
-                    <label
-                      htmlFor={`note-${scraper.id}`}
-                      className="mb-1 block text-xs font-medium text-muted-foreground"
-                    >
-                      Nota su {scraper.name}
-                    </label>
-                    <textarea
+                  <div className="border-t border-ds-line px-5 py-4">
+                    <GTextArea
                       id={`note-${scraper.id}`}
+                      label={`Nota su ${scraper.name}`}
                       value={noteDraft}
                       maxLength={2000}
                       disabled={savingNoteId === scraper.id}
-                      onChange={(e) => setNoteDraft(e.target.value)}
+                      onChange={setNoteDraft}
                       placeholder="Perché è spento, cosa lo blocca, cosa è stato provato…"
-                      className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-50"
                     />
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <p className="text-xs text-muted-foreground">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                      <p className="ds-caption m-0 text-ds-ink-muted">
                         Lascia vuoto e salva per rimuovere la nota. {noteDraft.length}/2000
                       </p>
                       <div className="flex gap-2">
@@ -370,7 +372,7 @@ export default function BackofficeScrapersPage() {
                           type="button"
                           disabled={savingNoteId === scraper.id}
                           onClick={() => setEditingNoteId(null)}
-                          className="rounded px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                          className={cn(dsButtonClass('ghost', 'sm'), 'disabled:opacity-50')}
                         >
                           Annulla
                         </button>
@@ -378,7 +380,7 @@ export default function BackofficeScrapersPage() {
                           type="button"
                           disabled={savingNoteId === scraper.id}
                           onClick={() => handleNoteSave(scraper)}
-                          className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                          className={cn(dsButtonClass('primary', 'sm'), 'disabled:opacity-60')}
                         >
                           {savingNoteId === scraper.id ? 'Salvataggio…' : 'Salva nota'}
                         </button>
@@ -388,35 +390,31 @@ export default function BackofficeScrapersPage() {
                 )}
 
                 {isExpanded && (
-                  <div className="border-t border-border px-4 py-3">
+                  <div className="border-t border-ds-line px-5 py-4">
                     {mappedSports.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
+                      <BoMuted>
                         Nessuno sport mappato per questo bookmaker. Vai alla sezione{' '}
-                        <a href="/backoffice/sport-mappings" className="text-primary underline">
+                        <Link href="/backoffice/sport-mappings" className={boLink}>
                           Sport Mappings
-                        </a>{' '}
+                        </Link>{' '}
                         per aggiungere le mappature.
-                      </p>
+                      </BoMuted>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {mappedSports.map((sport) => {
-                          const isActive = activeSports.includes(sport)
-                          return (
-                            <button
-                              key={sport}
-                              type="button"
-                              disabled={savingSportsId === scraper.id}
-                              onClick={() => handleSportToggle(scraper, sport)}
-                              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
-                                isActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
-                            >
-                              {sport}
-                            </button>
-                          )
-                        })}
+                      <div
+                        role="group"
+                        aria-label={`Sport di ${scraper.name}`}
+                        className="flex flex-wrap gap-2"
+                      >
+                        {mappedSports.map((sport) => (
+                          <BoChip
+                            key={sport}
+                            pressed={activeSports.includes(sport)}
+                            disabled={savingSportsId === scraper.id}
+                            onClick={() => handleSportToggle(scraper, sport)}
+                          >
+                            {sport}
+                          </BoChip>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -426,6 +424,6 @@ export default function BackofficeScrapersPage() {
           })
         )}
       </div>
-    </Container>
+    </>
   )
 }

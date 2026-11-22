@@ -1,10 +1,29 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Container } from '@/components/ui/container'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoConfirmModal,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  DsModal,
+  GCheckbox,
+  GIconButton,
+  GSelect,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsBadgeToggle, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getErrorMessage, getResponseStatus } from '@/lib/error-utils'
 import {
   getGlobalMovementCategories,
@@ -14,8 +33,8 @@ import {
 } from '@/services/api/backoffice-movement-categories-client'
 import {
   DIREZIONE_LABELS,
-  NATURA_BADGE_CLASS,
   NATURA_LABELS,
+  NATURA_TONE,
 } from '@/lib/profit-tracker/movement-categories'
 import type {
   MovementCategory,
@@ -56,6 +75,9 @@ export default function BackofficeMovementCategoriesPage() {
   const [form, setForm] = useState<CategoryFormData>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<MovementCategory | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
   // com'è (loading parte già a true), i salvataggi passano da loadCategories, che riaccende il
@@ -117,8 +139,8 @@ export default function BackofficeMovementCategoriesPage() {
 
   const editingLocked = Boolean(editing && (editing.inUso ?? 0) > 0)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!form.nome.trim()) {
       setFormError('Il nome è obbligatorio.')
       return
@@ -158,216 +180,126 @@ export default function BackofficeMovementCategoriesPage() {
 
   const toggleAttivo = async (category: MovementCategory) => {
     setError(null)
+    setTogglingId(category.id)
     try {
       await updateGlobalMovementCategory(category.id, { attivo: !category.attivo })
       await loadCategories()
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Errore nel salvataggio.')
+    } finally {
+      setTogglingId(null)
     }
   }
 
-  const handleDelete = async (category: MovementCategory) => {
-    if (!confirm(`Eliminare la categoria "${category.nome}"?`)) return
+  // Elimina chiede conferma nel Modal del design (prima il confirm() del browser).
+  const handleDelete = async () => {
+    if (!toDelete) return
     setError(null)
+    setDeleting(true)
     try {
-      await deleteGlobalMovementCategory(category.id)
+      await deleteGlobalMovementCategory(toDelete.id)
       await loadCategories()
     } catch (err: unknown) {
       // 409 «usata da N movimenti: disattivala invece di eliminarla»: il messaggio del backend.
       setError(getErrorMessage(err) || 'Errore nella cancellazione della categoria.')
+    } finally {
+      setDeleting(false)
+      setToDelete(null)
     }
   }
 
   return (
-    <Container>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Categorie movimenti
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Ogni ricarica e ogni spesa di wallet porta una categoria: la natura decide in quale riga
-            del report finisce. Una categoria in uso si disattiva, non si elimina.
-          </p>
-        </div>
-        <Button onClick={openCreateForm}>Nuova categoria</Button>
-      </div>
+    <>
+      <DsPageHeader
+        title="Categorie movimenti"
+        description="Ogni ricarica e ogni spesa di wallet porta una categoria: la natura decide in quale riga del report finisce. Una categoria in uso si disattiva, non si elimina."
+        actions={
+          <button type="button" onClick={openCreateForm} className={dsButtonClass('primary', 'md')}>
+            <Plus className="h-5 w-5" aria-hidden />
+            Nuova categoria
+          </button>
+        }
+      />
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
-      {showForm && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-6">
-          <h3 className="mb-4 text-lg font-medium text-foreground">
-            {editing ? 'Modifica categoria' : 'Nuova categoria'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="mc-nome">Nome *</Label>
-                <Input
-                  id="mc-nome"
-                  value={form.nome}
-                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                  placeholder="es. Compenso identità"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mc-descrizione">Descrizione</Label>
-                <Input
-                  id="mc-descrizione"
-                  value={form.descrizione}
-                  onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mc-direzione">Direzione</Label>
-                <select
-                  id="mc-direzione"
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
-                  value={form.direzione}
-                  disabled={editingLocked}
-                  onChange={(e) => setDirezione(e.target.value as MovementCategoryDirezione)}
-                >
-                  {(Object.keys(DIREZIONE_LABELS) as MovementCategoryDirezione[]).map((d) => (
-                    <option key={d} value={d}>
-                      {DIREZIONE_LABELS[d]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mc-natura">Natura (riga del report)</Label>
-                <select
-                  id="mc-natura"
-                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
-                  value={form.natura}
-                  disabled={editingLocked}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, natura: e.target.value as MovementCategoryNatura }))
-                  }
-                >
-                  {NATURE_BY_DIREZIONE[form.direzione].map((n) => (
-                    <option key={n} value={n}>
-                      {NATURA_LABELS[n]}
-                    </option>
-                  ))}
-                </select>
-                {editingLocked && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Usata da {editing?.inUso} movimenti: direzione e natura non si cambiano, creane
-                    una nuova.
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="mc-attivo"
-                  type="checkbox"
-                  checked={form.attivo}
-                  onChange={(e) => setForm((f) => ({ ...f, attivo: e.target.checked }))}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="mc-attivo">Attiva (si può scegliere nelle modali)</Label>
-              </div>
-            </div>
-
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-            <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Salvataggio...' : editing ? 'Salva modifiche' : 'Crea'}
-              </Button>
-              <Button type="button" variant="outline" onClick={closeForm}>
-                Annulla
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/60">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Nome</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Slug</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Direzione</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Natura</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">In uso</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Attiva</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Azioni</th>
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
+          <thead>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Nome</th>
+              <th className={BO_TH}>Slug</th>
+              <th className={BO_TH}>Direzione</th>
+              <th className={BO_TH}>Natura</th>
+              <th className={cn(BO_TH, 'text-right')}>In uso</th>
+              <th className={BO_TH}>Stato</th>
+              <th className={cn(BO_TH, 'text-right')}>Azioni</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={7} className={BO_EMPTY_CELL}>
+                  Caricamento delle categorie…
                 </td>
               </tr>
             ) : categories.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={7} className={BO_EMPTY_CELL}>
                   Nessuna categoria nel catalogo.
                 </td>
               </tr>
             ) : (
               categories.map((category) => (
-                <tr
-                  key={category.id}
-                  className="border-t border-border transition-colors hover:bg-accent"
-                >
-                  <td className="px-4 py-2 font-medium text-foreground">
-                    {category.nome}
+                <tr key={category.id} className={BO_ROW}>
+                  <td className={BO_TD}>
+                    <span className="font-semibold text-ds-ink">{category.nome}</span>
                     {category.descrizione && (
-                      <span className="block text-xs font-normal text-muted-foreground">
+                      <span className="ds-body-sm block text-ds-ink-muted">
                         {category.descrizione}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                  <td className={cn(BO_TD, 'font-mono text-xs text-ds-ink-muted')}>
                     {category.slug}
                   </td>
-                  <td className="px-4 py-2 text-xs text-foreground">
+                  <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink')}>
                     {DIREZIONE_LABELS[category.direzione]}
                   </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium ${NATURA_BADGE_CLASS[category.natura]}`}
-                    >
+                  <td className={BO_TD}>
+                    <DsBadge tone={NATURA_TONE[category.natura]}>
                       {NATURA_LABELS[category.natura]}
-                    </span>
+                    </DsBadge>
                   </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs text-muted-foreground">
+                  <td className={cn(BO_TD, 'text-right text-ds-ink tabular-nums')}>
                     {category.inUso ?? 0}
                   </td>
-                  <td className="px-4 py-2">
-                    <button
-                      type="button"
-                      onClick={() => void toggleAttivo(category)}
-                      className={
-                        'rounded-pill border px-2 py-0.5 text-[11px] font-medium ' +
-                        (category.attivo
-                          ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                          : 'border-border bg-muted text-muted-foreground')
+                  <td className={BO_TD}>
+                    <DsBadgeToggle
+                      tone={category.attivo ? 'profit' : 'neutral'}
+                      label={category.attivo ? 'Attiva' : 'Disattivata'}
+                      actionLabel={
+                        category.attivo ? 'Disattiva la categoria' : 'Riattiva la categoria'
                       }
-                      title={category.attivo ? 'Clicca per disattivare' : 'Clicca per riattivare'}
-                    >
-                      {category.attivo ? 'Attiva' : 'Disattivata'}
-                    </button>
+                      disabled={togglingId === category.id}
+                      onClick={() => void toggleAttivo(category)}
+                    />
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditForm(category)}>
-                        Modifica
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => void handleDelete(category)}
+                  <td className={cn(BO_TD, 'text-right')}>
+                    <div className="flex justify-end gap-0.5">
+                      <GIconButton
+                        label={`Modifica la categoria «${category.nome}»`}
+                        onClick={() => openEditForm(category)}
                       >
-                        Elimina
-                      </Button>
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </GIconButton>
+                      <GIconButton
+                        label={`Elimina la categoria «${category.nome}»`}
+                        danger
+                        onClick={() => setToDelete(category)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </GIconButton>
                     </div>
                   </td>
                 </tr>
@@ -376,6 +308,102 @@ export default function BackofficeMovementCategoriesPage() {
           </tbody>
         </table>
       </div>
-    </Container>
+
+      <DsModal
+        open={showForm}
+        onOpenChange={(open) => !open && !saving && closeForm()}
+        title={editing ? 'Modifica categoria' : 'Nuova categoria'}
+        size="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeForm}
+              disabled={saving}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              form="bo-mc-form"
+              disabled={saving}
+              className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-60')}
+            >
+              {saving ? 'Salvataggio…' : editing ? 'Salva modifiche' : 'Crea'}
+            </button>
+          </>
+        }
+      >
+        <form id="bo-mc-form" onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+          <GTextField
+            id="mc-nome"
+            label="Nome"
+            value={form.nome}
+            onChange={(nome) => setForm((f) => ({ ...f, nome }))}
+            placeholder="es. Compenso identità"
+            inputProps={{ autoFocus: true }}
+          />
+          <GTextField
+            id="mc-descrizione"
+            label="Descrizione"
+            optional
+            value={form.descrizione}
+            onChange={(descrizione) => setForm((f) => ({ ...f, descrizione }))}
+          />
+          <GSelect
+            id="mc-direzione"
+            label="Direzione"
+            value={form.direzione}
+            disabled={editingLocked}
+            onChange={(v) => setDirezione(v as MovementCategoryDirezione)}
+            options={(Object.keys(DIREZIONE_LABELS) as MovementCategoryDirezione[]).map((d) => ({
+              value: d,
+              label: DIREZIONE_LABELS[d],
+            }))}
+          />
+          <GSelect
+            id="mc-natura"
+            label="Natura (riga del report)"
+            value={form.natura}
+            disabled={editingLocked}
+            onChange={(v) => setForm((f) => ({ ...f, natura: v as MovementCategoryNatura }))}
+            options={NATURE_BY_DIREZIONE[form.direzione].map((n) => ({
+              value: n,
+              label: NATURA_LABELS[n],
+            }))}
+          />
+          {editingLocked && (
+            <DsAlert tone="info" className="sm:col-span-2">
+              Usata da {editing?.inUso} movimenti: direzione e natura non si cambiano, creane una
+              nuova.
+            </DsAlert>
+          )}
+          <div className="sm:col-span-2">
+            <GCheckbox
+              id="mc-attivo"
+              label="Attiva"
+              hint="Si può scegliere nelle modali delle ricariche e delle spese."
+              checked={form.attivo}
+              onChange={(attivo) => setForm((f) => ({ ...f, attivo }))}
+            />
+          </div>
+          {formError && <DsAlert className="sm:col-span-2">{formError}</DsAlert>}
+        </form>
+      </DsModal>
+
+      <BoConfirmModal
+        open={toDelete !== null}
+        title="Eliminare la categoria?"
+        description={
+          toDelete
+            ? `«${toDelete.nome}» esce dal catalogo. Se qualche movimento la usa il backend rifiuta: va disattivata.`
+            : ''
+        }
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setToDelete(null)}
+      />
+    </>
   )
 }

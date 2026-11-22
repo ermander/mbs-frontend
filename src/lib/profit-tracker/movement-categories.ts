@@ -1,3 +1,4 @@
+import type { DsBadgeTone } from '@/components/landing/ds-data'
 import type { MovementCategoryDirezione, MovementCategoryNatura } from '@/types/profit-tracker'
 
 /** §14.111: etichette e resa delle categorie dei movimenti di wallet. */
@@ -25,6 +26,14 @@ export const NATURA_BADGE_CLASS: Record<MovementCategoryNatura, string> = {
   costo_attivita: 'border-destructive/30 bg-destructive/15 text-destructive',
   spesa_personale: 'border-orange-500/30 bg-orange-500/15 text-orange-400',
   capitale: 'border-white/10 bg-white/5 text-white/50',
+}
+
+/** §14.365: la stessa resa sul design OddWise (Backoffice), come tono del DsBadge. */
+export const NATURA_TONE: Record<MovementCategoryNatura, DsBadgeTone> = {
+  reddito: 'profit',
+  costo_attivita: 'loss',
+  spesa_personale: 'warning',
+  capitale: 'neutral',
 }
 
 /** La direzione che una categoria deve avere per un tipo di movimento. */

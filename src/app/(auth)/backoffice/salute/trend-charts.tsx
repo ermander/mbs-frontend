@@ -10,22 +10,28 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { BoMuted, BoPanel } from '@/components/backoffice/backoffice-ds'
+import { DsAlert, DsSegmented } from '@/components/profit-tracker/tracker-ds'
 import { getOddsHealthHistory } from '@/services/api/odds-collection-client'
 import type { MetricsHistory } from '@/types/odds-collection'
 
 const POLL_MS = 60_000
 
 // Colore per bookmaker fisso sull'entità (non sulla posizione): un filtro o un
-// bookmaker assente non ridipinge gli altri. Ordine validato per CVD sulla
-// superficie bianca delle card (chart-1..4 dei token dell'app).
+// bookmaker assente non ridipinge gli altri. Dal §14.365 i cinque colori categoriali
+// per il riquadro bianco del design (blu, arancio, acqua, giallo, magenta), validati
+// per CVD su #ffffff; i tre più chiari stanno sotto 3:1 col fondo, per cui l'identità
+// la portano anche la legenda e il tooltip coi nomi.
 const BOOKMAKER_COLORS: Record<string, string> = {
-  betfairsportsbook: 'hsl(var(--chart-1))',
-  betsson: 'hsl(var(--chart-2))',
-  bwin: 'hsl(var(--chart-3))',
-  sisal: 'hsl(var(--chart-4))',
+  betfairsportsbook: '#2a78d6',
+  betsson: '#eb6834',
+  bwin: '#1baf7a',
+  sisal: '#eda100',
 }
-const FALLBACK_COLOR = 'hsl(var(--chart-5))'
-const SINGLE_COLOR = 'hsl(var(--chart-2))'
+const FALLBACK_COLOR = '#e87ba4'
+const SINGLE_COLOR = '#2a78d6'
+const GRID_COLOR = 'var(--ds-line)'
+const TICK_COLOR = 'var(--ds-ink-muted)'
 
 const BOOKMAKER_LABELS: Record<string, string> = {
   betfairsportsbook: 'Betfair',
@@ -35,10 +41,10 @@ const BOOKMAKER_LABELS: Record<string, string> = {
 }
 
 const RANGES = [
-  { label: '6 h', hours: 6 },
-  { label: '24 h', hours: 24 },
-  { label: '7 g', hours: 168 },
-  { label: '14 g', hours: 336 },
+  { label: '6 h', value: '6' },
+  { label: '24 h', value: '24' },
+  { label: '7 g', value: '168' },
+  { label: '14 g', value: '336' },
 ]
 
 type Unit = 'count' | 'ms' | 's' | 'bytes'
@@ -168,8 +174,8 @@ function TrendTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
-      <p className="mb-1 font-medium text-foreground">
+    <div className="rounded-ds-sm border border-ds-line bg-ds-surface-raised px-3 py-2 text-xs text-ds-ink shadow-ds-md">
+      <p className="m-0 mb-1 font-semibold text-ds-ink">
         {label
           ? new Date(label).toLocaleString('it-IT', {
               day: '2-digit',
@@ -185,10 +191,10 @@ function TrendTooltip({
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: entry.stroke }}
           />
-          <span className="text-muted-foreground">
+          <span className="text-ds-ink-muted">
             {perBookmaker ? bookmakerLabel(String(entry.dataKey)) : 'Valore'}
           </span>
-          <span className="ml-auto pl-3 font-medium text-foreground tabular-nums">
+          <span className="ml-auto pl-3 font-semibold text-ds-ink tabular-nums">
             {typeof entry.value === 'number' ? formatValue(entry.value, unit) : '—'}
           </span>
         </div>
@@ -206,28 +212,28 @@ function TrendChart({ def, history }: { def: ChartDef; history: MetricsHistory }
 
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between">
-        <p className="text-xs font-medium text-foreground">{def.title}</p>
-        {def.hint && <p className="text-[11px] text-muted-foreground">{def.hint}</p>}
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <p className="m-0 text-sm font-semibold text-ds-ink">{def.title}</p>
+        {def.hint && <p className="ds-caption m-0 text-right text-ds-ink-muted">{def.hint}</p>}
       </div>
       {rows.length === 0 ? (
-        <div className="flex h-36 items-center justify-center text-xs text-muted-foreground">
+        <div className="flex h-36 items-center justify-center rounded-ds-sm bg-ds-surface-sunken/50 text-xs text-ds-ink-muted">
           Ancora nessun campione
         </div>
       ) : (
         <div className="h-36">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="0" />
+              <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeDasharray="0" />
               <XAxis
                 dataKey="t"
                 type="number"
                 domain={['dataMin', 'dataMax']}
                 scale="time"
-                axisLine={{ stroke: 'hsl(var(--border))' }}
+                axisLine={{ stroke: GRID_COLOR }}
                 tickLine={false}
                 minTickGap={40}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                tick={{ fill: TICK_COLOR, fontSize: 10 }}
                 tickFormatter={(t: number) =>
                   new Date(t).toLocaleString(
                     'it-IT',
@@ -241,7 +247,7 @@ function TrendChart({ def, history }: { def: ChartDef; history: MetricsHistory }
                 width={44}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                tick={{ fill: TICK_COLOR, fontSize: 10 }}
                 tickFormatter={(v: number) => formatValue(v, def.unit)}
               />
               <Tooltip content={<TrendTooltip unit={def.unit} perBookmaker={def.perBookmaker} />} />
@@ -265,7 +271,7 @@ function TrendChart({ def, history }: { def: ChartDef; history: MetricsHistory }
       {def.perBookmaker && keys.length > 1 && (
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
           {keys.map((key) => (
-            <span key={key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span key={key} className="flex items-center gap-1.5 text-xs text-ds-ink-muted">
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{ background: bookmakerColor(key) }}
@@ -304,49 +310,36 @@ export function TrendCharts() {
   }, [load, hours])
 
   return (
-    <section className="rounded-md border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <h3 className="text-sm font-semibold text-foreground">Andamento</h3>
-        <div className="flex items-center gap-1">
-          {RANGES.map((r) => (
-            <button
-              key={r.hours}
-              type="button"
-              onClick={() => setHours(r.hours)}
-              className={`rounded px-2 py-1 text-xs ${
-                hours === r.hours
-                  ? 'bg-muted font-medium text-foreground'
-                  : 'text-muted-foreground hover:bg-muted/60'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="px-4 py-3">
-        {error && (
-          <p className="mb-2 text-xs text-destructive">
-            Errore nel caricamento della storia delle metriche.
+    <BoPanel
+      title="Andamento"
+      actions={
+        <DsSegmented
+          label="Periodo"
+          items={RANGES}
+          value={String(hours)}
+          onChange={(v) => setHours(Number(v))}
+        />
+      }
+    >
+      {error && (
+        <DsAlert className="mb-3">Errore nel caricamento della storia delle metriche.</DsAlert>
+      )}
+      {!history && !error && (
+        <BoMuted className="py-6 text-center">Caricamento dell’andamento…</BoMuted>
+      )}
+      {history && (
+        <>
+          <div className="grid gap-x-6 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+            {CHARTS.map((def) => (
+              <TrendChart key={def.metric} def={def} history={history} />
+            ))}
+          </div>
+          <p className="ds-caption m-0 mt-4 text-ds-ink-muted">
+            Campioni ogni {history.sampleMinutes} min, aggregati a {history.stepMinutes} min ·
+            retention {history.retentionDays} giorni
           </p>
-        )}
-        {!history && !error && (
-          <p className="py-6 text-center text-xs text-muted-foreground">Caricamento...</p>
-        )}
-        {history && (
-          <>
-            <div className="grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
-              {CHARTS.map((def) => (
-                <TrendChart key={def.metric} def={def} history={history} />
-              ))}
-            </div>
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              Campioni ogni {history.sampleMinutes} min, aggregati a {history.stepMinutes} min ·
-              retention {history.retentionDays} giorni
-            </p>
-          </>
-        )}
-      </div>
-    </section>
+        </>
+      )}
+    </BoPanel>
   )
 }

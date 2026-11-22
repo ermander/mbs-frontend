@@ -8,9 +8,14 @@
  * §14.249: the user carries hasPassword (true by default); MOCK_USER_HAS_PASSWORD=0 starts
  * it as a Google-only account without one, and PATCH /api/__mock/user {"hasPassword":false}
  * flips it while running (any field of the user can be set that way).
+ * §14.366: the user carries `sections` (all of them); PATCH /api/__mock/user
+ * {"role":"USER_ROLE","sections":["offers"]} tries a plain user with one section: the member
+ * reads of the sections switched off answer 403 like the backend. Login with the password
+ * 'disattivato' answers the 403 of a NON ATTIVO account.
  */
 const http = require('http');
 const { URL } = require('url');
+const { createBackofficeMock } = require('./backoffice');
 
 const PORT = parseInt(process.argv[2] ?? '4000', 10);
 const now = Date.now();
@@ -22,12 +27,20 @@ const inDays = (d, hour = 18, minute = 45) => {
     return t.toISOString();
 };
 
-const user = { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', settings: {}, createdAt: '2026-03-01T10:00:00.000Z', tools: [], hasPassword: process.env.MOCK_USER_HAS_PASSWORD !== '0' };
-// §14.122: utenti del backoffice con gli strumenti abilitati (PATCH /backoffice/users/:id/tools).
+// §14.365: sport mappings, matchings, review queue, Palinsesto, Competizioni and the scraper drill-down.
+const backofficeMock = createBackofficeMock(now);
+// §14.366: every section of the site; a new account gets all of them but result_btts.
+const ALL_SECTIONS = ['offers', 'oddsmatcher', 'result_btts', 'calculators', 'tracker', 'guide', 'forum'];
+const BASE_SECTIONS = ALL_SECTIONS.filter((s) => s !== 'result_btts');
+const user = { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', settings: {}, createdAt: '2026-03-01T10:00:00.000Z', tools: [], sections: [...ALL_SECTIONS], hasPassword: process.env.MOCK_USER_HAS_PASSWORD !== '0' };
+/** §14.366: the 403 of a member read when the mock user is a plain user without that section. */
+const sectionOff = (section) => user.role !== 'ADMIN_ROLE' && Array.isArray(user.sections) && !user.sections.includes(section);
+// §14.122: utenti del backoffice con le sezioni abilitate (PATCH /backoffice/users/:id/sections, §14.366) e lo stato (PATCH /active).
 const USERS = [
-    { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', is_email_verified: true, created_at: '2026-03-01T10:00:00.000Z', enabled_tools: [] },
-    { id: '11111111-1111-4111-8111-111111111111', email: 'marco@example.com', name: 'Marco Rossi', username: 'marco', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-05-10T09:00:00.000Z', enabled_tools: ['result_btts'] },
-    { id: '22222222-2222-4222-8222-222222222222', email: 'giulia@example.com', name: 'Giulia Bianchi', username: 'giulia', role: 'USER_ROLE', is_email_verified: false, created_at: '2026-06-02T15:30:00.000Z', enabled_tools: [] },
+    { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', is_email_verified: true, created_at: '2026-03-01T10:00:00.000Z', enabled_tools: [...BASE_SECTIONS], is_active: true },
+    { id: '11111111-1111-4111-8111-111111111111', email: 'marco@example.com', name: 'Marco Rossi', username: 'marco', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-05-10T09:00:00.000Z', enabled_tools: ['result_btts', ...BASE_SECTIONS], is_active: true },
+    { id: '22222222-2222-4222-8222-222222222222', email: 'giulia@example.com', name: 'Giulia Bianchi', username: 'giulia', role: 'USER_ROLE', is_email_verified: false, created_at: '2026-06-02T15:30:00.000Z', enabled_tools: [...BASE_SECTIONS], is_active: true },
+    { id: '33333333-3333-4333-8333-333333333333', email: 'ottavio@example.com', name: 'Ottavio Gialli', username: 'ottavio', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-07-14T11:00:00.000Z', enabled_tools: ['offers', 'calculators'], is_active: false },
 ];
 // §14.124: pagina scraper del backoffice (toggle, sport, nota manuale), in memoria.
 // §14.145: pagina «Salute». Report di salute con i campi che la pagina legge e storia delle
@@ -756,6 +769,7 @@ const server = http.createServer(async (req, res) => {
         const body = await readBody(req);
         console.log('  login:', body.email, body.password === 'sbagliata' ? '(sbagliata)' : '***');
         if (body.password === 'sbagliata') return send(401, { message: 'Credenziali non valide' });
+        if (body.password === 'disattivato') return send(403, { message: 'Account disattivato: scrivici dalla pagina Contatti se pensi sia un errore.' });
         res.setHeader('Set-Cookie', SESSION_COOKIE);
         return send(200, { user });
     }
@@ -844,6 +858,15 @@ const server = http.createServer(async (req, res) => {
         return send(204);
     }
     // §14.122: strumenti per utente e il confronto Risultato + Goal.
+    // §14.366: le letture da iscritto delle sezioni spente rispondono 403 come il backend.
+    {
+        const gated =
+            (path.startsWith('/api/tools/') && 'result_btts') ||
+            ((path === '/api/odds-collection/matcher/results' || path === '/api/odds-collection/matcher/meta') && 'oddsmatcher') ||
+            ((path === '/api/offers' || (/^\/api\/offers\/[^/]+$/.test(path) && !path.startsWith('/api/offers/free'))) && 'offers') ||
+            (path.startsWith('/api/profit-tracker/') && 'tracker');
+        if (gated && sectionOff(gated)) return send(403, { message: 'Sezione non abilitata per questo utente' });
+    }
     if (path === '/api/tools/result-btts') return send(200, filterResultBtts(url.searchParams));
     if (path === '/api/tools/refund-zero') return send(200, filterRefundZero(url.searchParams));
     // §14.262: offerte e guide del backoffice, con la semantica del backend §14.261 (nuove in
@@ -972,6 +995,28 @@ const server = http.createServer(async (req, res) => {
         }
     }
     if (path === '/api/backoffice/users' && req.method === 'GET') return send(200, { users: USERS });
+    // §14.366: una sezione accesa o spenta, ATTIVO / NON ATTIVO (non sul proprio account).
+    const sectionsMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/sections$/);
+    if (sectionsMatch && req.method === 'PATCH') {
+        const body = await readBody(req);
+        const u = USERS.find((x) => x.id === sectionsMatch[1]);
+        if (!u) return send(404, { message: 'Utente non trovato' });
+        if (!ALL_SECTIONS.includes(body.section)) return send(400, { message: 'Sezione sconosciuta' });
+        console.log('  user section:', u.username, JSON.stringify(body));
+        u.enabled_tools = u.enabled_tools.filter((t) => t !== body.section);
+        if (body.enabled) u.enabled_tools.push(body.section);
+        return send(200, { user: u });
+    }
+    const activeMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/active$/);
+    if (activeMatch && req.method === 'PATCH') {
+        const body = await readBody(req);
+        const u = USERS.find((x) => x.id === activeMatch[1]);
+        if (!u) return send(404, { message: 'Utente non trovato' });
+        if (!body.active && u.id === user.id) return send(400, { message: 'Non puoi disattivare il tuo account' });
+        console.log('  user active:', u.username, JSON.stringify(body));
+        u.is_active = !!body.active;
+        return send(200, { user: u });
+    }
     const toolsMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/tools$/);
     if (toolsMatch && req.method === 'PATCH') {
         const body = await readBody(req);
@@ -1534,6 +1579,7 @@ const server = http.createServer(async (req, res) => {
     if (path === '/api/profit-tracker/tags') return send(200, TAGS);
     if (path === '/api/profit-tracker/global-books') return send(200, GLOBAL_BOOKS);
     if (path === '/__mock/saved') return send(200, saved);
+    if (await backofficeMock({ path, method: req.method, url, send, readBody: () => readBody(req), scrapers: SCRAPERS })) return;
     return send(404, { message: `mock: no route for ${req.method} ${path}` });
 });
 

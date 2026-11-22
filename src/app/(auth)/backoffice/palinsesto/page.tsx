@@ -2,12 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Container } from '@/components/ui/container'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { RefreshCw, Search, X } from 'lucide-react'
+
+import { BoChip, boLink } from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  GCheckbox,
+  GSelect,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DS_PANEL, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   extractMessage,
   getProviderFixtures,
@@ -109,6 +115,9 @@ interface Keyed<T> {
   error: string | null
 }
 
+// Il palinsesto di api-sports com'è nel catalogo canonico. Dal §14.365 sul design OddWise: filtri
+// coi campi del design e, sotto i 1024px, l'albero sopra la tabella invece che accanto (sul
+// telefono la tabella delle partite restava larga zero accanto all'albero da 352px).
 export default function PalinsestoPage() {
   // --- local clock: «oggi» for the window, «visto … fa» for the rows ---
   const [now, setNow] = useState(() => Date.now())
@@ -283,26 +292,31 @@ export default function PalinsestoPage() {
     preset === 'future' || (preset === 'custom' && parseLocalDateInput(fromInput) === null)
 
   return (
-    <Container className="max-w-none">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Palinsesto API-Football
-          </h2>
-          <p className="text-sm text-muted-foreground">
+    <>
+      <DsPageHeader
+        title="Palinsesto API-Football"
+        description={
+          <>
             Tutte le partite scaricate da api-sports.io così come stanno nel catalogo canonico, con
             i bookmaker che il matcher ha collegato a ciascuna. Le competizioni che gli scraper
             leggono si scelgono in{' '}
-            <Link href="/backoffice/competizioni" className="underline hover:text-foreground">
+            <Link href="/backoffice/competizioni" className={boLink}>
               Competizioni da leggere
             </Link>
             : qui il pallino grigio segna quelle spente.
-          </p>
-        </div>
-        <Button size="sm" variant="outline" onClick={handleRefresh}>
-          Ricarica tutto
-        </Button>
-      </div>
+          </>
+        }
+        actions={
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={dsButtonClass('secondary', 'md')}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            Ricarica tutto
+          </button>
+        }
+      />
 
       <ScheduleSummary
         summary={summary}
@@ -313,124 +327,106 @@ export default function PalinsestoPage() {
       />
 
       {/* Filters */}
-      <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+      <div className={cn(DS_PANEL, 'px-5 py-4')}>
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
           <div className="flex flex-col gap-1">
-            <Label className="text-xs text-muted-foreground">Finestra</Label>
-            <div className="flex flex-wrap gap-1">
+            <span id="pal-window" className="text-sm leading-5 font-semibold text-ds-ink">
+              Finestra
+            </span>
+            <div role="group" aria-labelledby="pal-window" className="flex flex-wrap gap-1.5">
               {PRESETS.map((p) => (
-                <Button
-                  key={p.id}
-                  size="sm"
-                  variant={preset === p.id ? 'default' : 'outline'}
-                  onClick={() => setPreset(p.id)}
-                >
+                <BoChip key={p.id} pressed={preset === p.id} onClick={() => setPreset(p.id)}>
                   {p.label}
-                </Button>
+                </BoChip>
               ))}
             </div>
           </div>
           {preset === 'custom' && (
             <>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="pal-from" className="text-xs text-muted-foreground">
-                  Dal
-                </Label>
-                <Input
-                  id="pal-from"
-                  type="date"
-                  value={fromInput}
-                  onChange={(e) => setFromInput(e.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="pal-to" className="text-xs text-muted-foreground">
-                  Al (incluso)
-                </Label>
-                <Input
-                  id="pal-to"
-                  type="date"
-                  value={toInput}
-                  onChange={(e) => setToInput(e.target.value)}
-                  className="w-40"
-                />
-              </div>
+              <GTextField
+                id="pal-from"
+                label="Dal"
+                type="date"
+                size="sm"
+                value={fromInput}
+                onChange={setFromInput}
+                className="w-40"
+              />
+              <GTextField
+                id="pal-to"
+                label="Al (incluso)"
+                type="date"
+                size="sm"
+                value={toInput}
+                onChange={setToInput}
+                className="w-40"
+              />
             </>
           )}
-          <div className="flex items-center gap-2 pb-2">
-            <Checkbox
+          <div
+            className="pb-1"
+            title="Toglie il limite inferiore: si vede tutto il catalogo, dalla partita più vecchia"
+          >
+            <GCheckbox
               id="pal-past"
+              label="Includi partite passate"
               checked={includePast}
               disabled={!includePastEnabled}
-              onChange={(e) => setIncludePast(e.target.checked)}
-            />
-            <Label
-              htmlFor="pal-past"
-              className={`text-xs ${includePastEnabled ? 'text-foreground' : 'text-muted-foreground'}`}
-              title="Toglie il limite inferiore: si vede tutto il catalogo, dalla partita più vecchia"
-            >
-              Includi partite passate
-            </Label>
-          </div>
-          <div className="w-44">
-            <SearchableSelect
-              id="pal-sport"
-              label="Sport"
-              placeholder="Tutti"
-              options={sportOptions}
-              value={sport}
-              onChange={handleSportChange}
-              size="sm"
+              onChange={setIncludePast}
             />
           </div>
-          <div className="w-44">
-            <SearchableSelect
-              id="pal-status"
-              label="Stato"
-              placeholder="Tutti"
-              options={STATUS_OPTIONS}
-              value={status}
-              onChange={setStatus}
-              size="sm"
-            />
-          </div>
-          <div className="flex min-w-[16rem] flex-1 flex-col gap-1">
-            <Label htmlFor="pal-q" className="text-xs text-muted-foreground">
-              Cerca squadra, competizione o id fixture
-            </Label>
-            <Input
-              id="pal-q"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="es. Milan, Serie A, 1234567"
-            />
-          </div>
+          <GSelect
+            id="pal-sport"
+            label="Sport"
+            size="sm"
+            value={sport}
+            onChange={handleSportChange}
+            options={[{ value: '', label: 'Tutti' }, ...sportOptions]}
+            className="w-44"
+          />
+          <GSelect
+            id="pal-status"
+            label="Stato"
+            size="sm"
+            value={status}
+            onChange={setStatus}
+            options={[{ value: '', label: 'Tutti' }, ...STATUS_OPTIONS]}
+            className="w-44"
+          />
+          <GTextField
+            id="pal-q"
+            label="Cerca squadra, competizione o id fixture"
+            type="search"
+            size="sm"
+            value={search}
+            onChange={setSearch}
+            placeholder="es. Milan, Serie A, 1234567"
+            prefix={<Search className="h-4 w-4" aria-hidden />}
+            className="min-w-[16rem] flex-1"
+          />
         </div>
         {effectiveScope && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="ds-body-sm mt-3 flex flex-wrap items-center gap-2 text-ds-ink-muted">
             Filtro attivo:
-            <span className="rounded-md bg-accent px-2 py-0.5 text-primary">
+            <DsBadge tone="brand">
               {effectiveScope.type === 'category' ? 'nazione' : 'competizione'} ·{' '}
               {effectiveScope.label}
-            </span>
+            </DsBadge>
             <button
               type="button"
-              className="underline hover:text-foreground"
+              className={cn(dsButtonClass('ghost', 'sm'), 'h-7 px-2')}
               onClick={() => setScope(null)}
             >
+              <X className="h-3.5 w-3.5" aria-hidden />
               togli
             </button>
           </div>
         )}
       </div>
 
-      {/* Master-detail */}
-      <div
-        className="flex gap-4"
-        style={{ height: 'calc(100vh - 220px - var(--topnav-h))', minHeight: '32rem' }}
-      >
-        <div className="w-88 shrink-0">
+      {/* Master-detail: albero accanto alla tabella da 1024px, sopra la tabella più stretto. */}
+      <div className="flex flex-col gap-4 lg:h-[calc(100vh-220px-var(--topnav-h))] lg:min-h-[32rem] lg:flex-row">
+        <div className="h-96 lg:h-auto lg:w-88 lg:shrink-0">
           <ScheduleTree
             tree={tree}
             loading={treeLoading}
@@ -440,7 +436,7 @@ export default function PalinsestoPage() {
             autoExpand={effectiveQ !== undefined}
           />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 lg:flex-1">
           <FixturesTable
             fixtures={list?.fixtures ?? []}
             total={list?.total ?? 0}
@@ -453,6 +449,6 @@ export default function PalinsestoPage() {
           />
         </div>
       </div>
-    </Container>
+    </>
   )
 }

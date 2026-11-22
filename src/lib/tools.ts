@@ -1,23 +1,63 @@
 import type { AuthUser, UserRole } from '@/services/api/auth-client'
 
 /**
- * Per-user tools (ADAPTER_STATUS §14.122). The backend gates each tool's API
- * with the same rule; here it decides the menu entries and the page guard.
- * `result_btts`: «Risultato + Goal», the Result & Both Teams To Score market
- * compared inside one bookmaker.
+ * Sections of the site an admin switches on or off per user from the backoffice (ADAPTER_STATUS
+ * §14.366; the first one, «Risultato + Goal», since §14.122). The backend refuses the API of a
+ * section switched off with the same rule; here it decides the menu entries and what a page
+ * shows (`SectionGuard`). The keys are the ones of users.enabled_tools.
+ */
+export const SECTIONS = [
+  { key: 'offers', label: 'Offerte' },
+  { key: 'oddsmatcher', label: 'Oddsmatcher' },
+  { key: 'result_btts', label: 'Risultato + Goal' },
+  { key: 'calculators', label: 'Calcolatori' },
+  { key: 'tracker', label: 'Tracker' },
+  { key: 'guide', label: 'Guide' },
+  { key: 'forum', label: 'Forum' },
+] as const
+
+export type SectionKey = (typeof SECTIONS)[number]['key']
+
+/** Where each section lives, for the links of «Sezione non abilitata» (the first page of the section). */
+export const SECTION_HOME: Record<SectionKey, string> = {
+  offers: '/offerte',
+  oddsmatcher: '/odds-scanner',
+  result_btts: '/risultato-goal',
+  calculators: '/calcolatori',
+  tracker: '/profit-tracker/dashboard',
+  guide: '/guide',
+  forum: '/forum',
+}
+
+export function sectionLabel(key: SectionKey): string {
+  return SECTIONS.find((s) => s.key === key)?.label ?? key
+}
+
+/**
+ * `result_btts`: «Risultato + Goal», the Result & Both Teams To Score market compared inside one
+ * bookmaker (§14.122). Kept with its old names: it was the first tool switched on per user.
  */
 export const TOOL_RESULT_BTTS = 'result_btts'
-export type ToolKey = typeof TOOL_RESULT_BTTS
+export type ToolKey = SectionKey
 
-/** An admin can use every tool; a user only the ones switched on for them from the backoffice. */
-export function canUseTool(
-  user: Pick<AuthUser, 'role' | 'tools'> | null | undefined,
-  tool: ToolKey,
+/**
+ * An admin opens every section; a user the ones switched on for them from the backoffice. On a
+ * backend older than §14.366 (no `sections` in the user) every section was open to everyone but
+ * «Risultato + Goal», which followed `tools`.
+ */
+export function canUseSection(
+  user: Pick<AuthUser, 'role' | 'tools' | 'sections'> | null | undefined,
+  section: SectionKey,
 ): boolean {
   if (!user) return false
   if (user.role === 'ADMIN_ROLE') return true
-  return Array.isArray(user.tools) && user.tools.includes(tool)
+  if (Array.isArray(user.sections)) return user.sections.includes(section)
+  if (section === TOOL_RESULT_BTTS) return Array.isArray(user.tools) && user.tools.includes(section)
+  return true
 }
+
+/** §14.122's name for the same rule, still used by the calculators catalog. */
+export const canUseTool = canUseSection
 
 /**
  * Whether the user has the role a page or a card asks for; nothing asked,

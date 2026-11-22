@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Container } from '@/components/ui/container'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { SearchableSelect } from '@/components/ui/searchable-select'
+import { RefreshCw, Search, X } from 'lucide-react'
+
+import { BoMuted, BoStatTile } from '@/components/backoffice/backoffice-ds'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { GSelect, GTextField } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DS_PANEL, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   extractMessage,
   getCompetitionCatalog,
@@ -68,6 +70,8 @@ function filterCatalog(
   }
 }
 
+// Il catalogo delle competizioni con l'interruttore di lettura per ciascuna. Dal §14.365 sul
+// design OddWise: numeri in riquadri, campi e BoSwitch del design nell'albero.
 export default function CompetizioniPage() {
   const [tick, setTick] = useState(0)
   const [result, setResult] = useState<Keyed | null>(null)
@@ -133,36 +137,35 @@ export default function CompetizioniPage() {
   }
 
   return (
-    <Container className="max-w-none">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Competizioni da leggere
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Tutto il catalogo, senza finestra temporale. Gli interruttori dicono agli scraper per
-            quali competizioni leggere le quote dei bookmaker: il catalogo delle partite resta
-            completo, cambia solo dove vanno a prendere le quote. Le leghe nuove entrano accese.
-          </p>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => setTick((t) => t + 1)}>
-          Ricarica
-        </Button>
-      </div>
+    <>
+      <DsPageHeader
+        title="Competizioni da leggere"
+        description="Tutto il catalogo, senza finestra temporale. Gli interruttori dicono agli scraper per quali competizioni leggere le quote dei bookmaker: il catalogo delle partite resta completo, cambia solo dove vanno a prendere le quote. Le leghe nuove entrano accese."
+        actions={
+          <button
+            type="button"
+            onClick={() => setTick((t) => t + 1)}
+            className={dsButtonClass('secondary', 'md')}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            Ricarica
+          </button>
+        }
+      />
 
       {catalog && (
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <BoStatTile
             label="Lette dagli scraper"
             value={`${num(catalog.scrapeEnabledCompetitions)} / ${num(catalog.totalCompetitions)}`}
             hint="Competizioni accese sul totale del catalogo"
           />
-          <Stat
+          <BoStatTile
             label="Con partite future"
             value={num(catalog.competitionsWithFutureFixtures)}
             hint="Competizioni con almeno una partita in programma"
           />
-          <Stat
+          <BoStatTile
             label="Spente"
             value={num(catalog.totalCompetitions - catalog.scrapeEnabledCompetitions)}
             hint="Competizioni che nessun bookmaker viene interrogato per"
@@ -170,58 +173,58 @@ export default function CompetizioniPage() {
         </div>
       )}
 
-      <div className="mb-4 rounded-lg border border-border bg-card px-4 py-3">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-          <div className="flex min-w-[16rem] flex-1 flex-col gap-1">
-            <Label htmlFor="comp-q" className="text-xs text-muted-foreground">
-              Cerca competizione o nazione
-            </Label>
-            <Input
-              id="comp-q"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="es. Serie A, Premier, Italy"
-            />
-          </div>
-          <div className="w-56">
-            <SearchableSelect
-              id="comp-mode"
-              label="Mostra"
-              options={MODES}
-              value={mode}
-              onChange={(value) => setMode((value as Mode) || 'all')}
-              size="sm"
-            />
-          </div>
+      <div className={cn(DS_PANEL, 'px-5 py-4')}>
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-4">
+          <GTextField
+            id="comp-q"
+            label="Cerca competizione o nazione"
+            type="search"
+            size="sm"
+            value={search}
+            onChange={setSearch}
+            placeholder="es. Serie A, Premier, Italy"
+            prefix={<Search className="h-4 w-4" aria-hidden />}
+            className="min-w-[16rem] flex-1"
+          />
+          <GSelect
+            id="comp-mode"
+            label="Mostra"
+            size="sm"
+            value={mode}
+            onChange={(value) => setMode((value as Mode) || 'all')}
+            options={MODES}
+            className="w-56"
+          />
         </div>
         {notice && (
           <div
-            className={`mt-2 flex items-center gap-2 text-xs ${
-              notice.error ? 'text-destructive' : 'text-muted-foreground'
-            }`}
+            role={notice.error ? 'alert' : 'status'}
+            className={cn(
+              'mt-3 flex items-center justify-between gap-2 rounded-ds-sm px-3 py-2 text-sm',
+              notice.error ? 'bg-ds-loss-soft text-ds-loss' : 'bg-ds-profit-soft text-ds-profit',
+            )}
           >
             <span>{notice.text}</span>
             <button
               type="button"
-              className="underline hover:text-foreground"
+              aria-label="Chiudi l'avviso"
+              className={cn(dsButtonClass('ghost', 'sm'), 'h-7 w-7 flex-none px-0 text-current')}
               onClick={() => setNotice(null)}
             >
-              ok
+              <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
         )}
       </div>
 
-      <div className="relative rounded-lg border border-border bg-card px-2 py-2">
+      <div className={cn(DS_PANEL, 'relative px-2 py-2 sm:px-3')}>
         {loading && (
-          <div className="absolute top-2 right-3 text-[11px] text-muted-foreground">aggiorno…</div>
+          <div className="ds-caption absolute top-2 right-3 text-ds-ink-muted">aggiorno…</div>
         )}
         {error ? (
-          <p className="px-2 py-4 text-sm text-destructive">{error}</p>
+          <p className="m-0 px-2 py-4 text-sm text-ds-loss">{error}</p>
         ) : !filtered ? (
-          <p className="px-2 py-4 text-sm text-muted-foreground">
-            {loading ? 'Caricamento...' : 'Nessun dato.'}
-          </p>
+          <BoMuted className="px-2 py-4">{loading ? 'Caricamento…' : 'Nessun dato.'}</BoMuted>
         ) : (
           <CatalogTree
             catalog={filtered}
@@ -231,15 +234,6 @@ export default function CompetizioniPage() {
           />
         )}
       </div>
-    </Container>
-  )
-}
-
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3" title={hint}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-foreground">{value}</div>
-    </div>
+    </>
   )
 }

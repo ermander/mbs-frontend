@@ -1,7 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { ChevronRight } from 'lucide-react'
+
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { DS_PANEL } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getCountryFlagUrl, getCountryFlagUrlFromIso } from '@/lib/country-flags'
 import type {
   ProviderScheduleTreeCategoryDto,
@@ -62,33 +66,33 @@ export function ScheduleTree({
   )
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-border bg-card">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-        <div className="text-sm font-medium text-foreground">
+    <div className={cn(DS_PANEL, 'flex h-full min-h-0 flex-col overflow-hidden')}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-ds-line px-4 py-2.5">
+        <div className="min-w-0 text-sm font-semibold text-ds-ink">
           Sport · Nazione · Competizione
-          <span className="ml-2 text-xs font-normal text-muted-foreground">{totalLabel}</span>
+          <span className="ds-caption block font-normal text-ds-ink-muted">{totalLabel}</span>
         </div>
-        <Button
-          size="sm"
-          variant={scope ? 'outline' : 'ghost'}
+        <button
+          type="button"
           disabled={!scope}
           onClick={() => onScopeChange(null)}
+          className={cn(dsButtonClass(scope ? 'secondary' : 'ghost', 'sm'), 'disabled:opacity-50')}
         >
           Tutte
-        </Button>
+        </button>
       </div>
       <div className="relative flex-1 overflow-y-auto px-2 py-2">
         {loading && (
-          <div className="absolute top-2 right-3 text-[11px] text-muted-foreground">aggiorno…</div>
+          <div className="ds-caption absolute top-2 right-3 text-ds-ink-muted">aggiorno…</div>
         )}
         {error ? (
-          <p className="px-2 py-4 text-sm text-destructive">{error}</p>
+          <p className="px-2 py-4 text-sm text-ds-loss">{error}</p>
         ) : !tree ? (
-          <p className="px-2 py-4 text-sm text-muted-foreground">
+          <p className="px-2 py-4 text-sm text-ds-ink-muted">
             {loading ? 'Caricamento...' : 'Nessun dato.'}
           </p>
         ) : tree.sports.length === 0 ? (
-          <p className="px-2 py-4 text-sm text-muted-foreground">
+          <p className="px-2 py-4 text-sm text-ds-ink-muted">
             Nessuna partita api-sports nella finestra scelta.
           </p>
         ) : (
@@ -98,29 +102,38 @@ export function ScheduleTree({
                 <button
                   type="button"
                   onClick={() => toggle(s.sportId, true)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-semibold text-foreground hover:bg-accent"
+                  aria-expanded={isSportOpen(s)}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-ds-sm px-2 py-1.5 text-left text-sm font-semibold text-ds-ink transition-colors hover:bg-ds-surface-sunken',
+                    dsFocusRing,
+                  )}
                 >
                   <Caret open={isSportOpen(s)} />
                   <span className="flex-1">{s.name}</span>
                   <Count n={s.fixtureCount} />
                 </button>
                 {isSportOpen(s) && (
-                  <ul className="space-y-0.5 ml-3 border-l border-border pl-2">
+                  <ul className="space-y-0.5 ml-3 border-l border-ds-line pl-2">
                     {s.categories.map((c) => {
                       const selected = scope?.type === 'category' && scope.id === c.categoryId
                       const open = isCategoryOpen(s, c)
                       return (
                         <li key={c.categoryId}>
                           <div
-                            className={`flex items-center gap-1 rounded-md pr-2 ${
-                              selected ? 'bg-accent text-primary' : 'text-foreground'
-                            }`}
+                            className={cn(
+                              'flex items-center gap-1 rounded-ds-sm pr-2',
+                              selected ? 'bg-ds-brand-soft text-ds-brand' : 'text-ds-ink',
+                            )}
                           >
                             <button
                               type="button"
-                              aria-label={open ? 'Chiudi' : 'Apri'}
+                              aria-label={`${open ? 'Chiudi' : 'Apri'} ${c.name}`}
+                              aria-expanded={open}
                               onClick={() => toggle(c.categoryId, categoryDefaultOpen(s))}
-                              className="rounded px-1 py-1 hover:bg-accent"
+                              className={cn(
+                                'rounded-ds-xs px-1 py-1 transition-colors hover:bg-ds-surface-sunken',
+                                dsFocusRing,
+                              )}
                             >
                               <Caret open={open} />
                             </button>
@@ -133,7 +146,11 @@ export function ScheduleTree({
                                     : { type: 'category', id: c.categoryId, label: c.name },
                                 )
                               }
-                              className="flex flex-1 items-center gap-2 py-1 text-left text-sm hover:underline"
+                              aria-pressed={selected}
+                              className={cn(
+                                'flex min-w-0 flex-1 items-center gap-2 rounded-ds-xs py-1 text-left text-sm underline-offset-4 hover:underline',
+                                dsFocusRing,
+                              )}
                               title="Filtra le partite di questa nazione"
                             >
                               <Flag countryCode={c.countryCode} name={c.name} />
@@ -142,7 +159,7 @@ export function ScheduleTree({
                             </button>
                           </div>
                           {open && (
-                            <ul className="space-y-0.5 ml-4 border-l border-border pl-2">
+                            <ul className="space-y-0.5 ml-4 border-l border-ds-line pl-2">
                               {c.competitions.map((comp) => {
                                 const sel =
                                   scope?.type === 'competition' && scope.id === comp.competitionId
@@ -161,9 +178,15 @@ export function ScheduleTree({
                                               },
                                         )
                                       }
-                                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent ${
-                                        sel ? 'bg-accent text-primary' : 'text-foreground'
-                                      } ${comp.scrapeEnabled ? '' : 'opacity-60'}`}
+                                      aria-pressed={sel}
+                                      className={cn(
+                                        'flex w-full items-center gap-2 rounded-ds-sm px-2 py-1 text-left text-sm transition-colors',
+                                        dsFocusRing,
+                                        sel
+                                          ? 'bg-ds-brand-soft text-ds-brand'
+                                          : 'text-ds-ink hover:bg-ds-surface-sunken',
+                                        !comp.scrapeEnabled && 'opacity-60',
+                                      )}
                                       title={
                                         comp.apisportsLeagueId !== null
                                           ? `league id api-sports ${comp.apisportsLeagueId}`
@@ -173,7 +196,7 @@ export function ScheduleTree({
                                       <ScrapeDot enabled={comp.scrapeEnabled} />
                                       <span className="flex-1 truncate">{comp.name}</span>
                                       {comp.apisportsLeagueId !== null && (
-                                        <span className="font-mono text-[10px] text-muted-foreground">
+                                        <span className="font-mono text-[11px] text-ds-ink-muted">
                                           #{comp.apisportsLeagueId}
                                         </span>
                                       )}
@@ -200,14 +223,10 @@ export function ScheduleTree({
 
 function Caret({ open }: { open: boolean }) {
   return (
-    <span
-      className={`inline-block w-3 text-xs text-muted-foreground transition-transform ${
-        open ? 'rotate-90' : ''
-      }`}
+    <ChevronRight
+      className={cn('h-4 w-4 shrink-0 text-ds-ink-muted transition-transform', open && 'rotate-90')}
       aria-hidden
-    >
-      ▸
-    </span>
+    />
   )
 }
 
@@ -219,9 +238,10 @@ function Caret({ open }: { open: boolean }) {
 function ScrapeDot({ enabled }: { enabled: boolean }) {
   return (
     <span
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-        enabled ? 'bg-emerald-500' : 'bg-muted-foreground/40'
-      }`}
+      className={cn(
+        'inline-block h-2 w-2 shrink-0 rounded-full',
+        enabled ? 'bg-ds-profit' : 'bg-ds-line-strong/60',
+      )}
       title={
         enabled
           ? 'Gli scraper leggono le quote di questa competizione'
@@ -234,7 +254,7 @@ function ScrapeDot({ enabled }: { enabled: boolean }) {
 
 function Count({ n }: { n: number }) {
   return (
-    <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+    <span className="rounded-full bg-ds-surface-sunken px-2 py-0.5 text-xs font-normal text-ds-ink-muted tabular-nums">
       {num(n)}
     </span>
   )
@@ -243,7 +263,14 @@ function Count({ n }: { n: number }) {
 export function Flag({ countryCode, name }: { countryCode: string | null; name: string }) {
   const url = getCountryFlagUrlFromIso(countryCode) ?? getCountryFlagUrl(name)
   if (!url)
-    return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover" />
+    return (
+      <span
+        className="inline-block h-3 w-4 shrink-0 rounded-ds-xs bg-ds-surface-sunken"
+        aria-hidden
+      />
+    )
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-ds-xs object-cover" />
+  )
 }

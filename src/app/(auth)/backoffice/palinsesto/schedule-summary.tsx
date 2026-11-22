@@ -1,8 +1,13 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { RefreshCw } from 'lucide-react'
+
+import { BO_TILE_GRID, BoMuted, BoStatTile } from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DS_PANEL } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import type {
   ProviderScheduleSummaryDto,
   ProviderSyncRunDto,
@@ -33,11 +38,11 @@ function runDetail(r: ProviderSyncRunDto): string {
   return `${num(r.fixturesUpserted)} fixture`
 }
 
-function runVariant(status: string): 'success' | 'destructive' | 'warning' | 'outline' {
-  if (status === 'success') return 'success'
-  if (status === 'failed') return 'destructive'
+function runTone(status: string): DsBadgeTone {
+  if (status === 'success') return 'profit'
+  if (status === 'failed') return 'loss'
   if (status === 'running' || status === 'partial') return 'warning'
-  return 'outline'
+  return 'neutral'
 }
 
 export function ScheduleSummary({
@@ -64,76 +69,75 @@ export function ScheduleSummary({
 
   if (error) {
     return (
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      <div
+        role="alert"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-ds-sm bg-ds-loss-soft px-3 py-2 text-sm text-ds-loss"
+      >
         <span>{error}</span>
-        <Button size="sm" variant="outline" onClick={onRefresh}>
+        <button type="button" onClick={onRefresh} className={dsButtonClass('secondary', 'sm')}>
           Riprova
-        </Button>
+        </button>
       </div>
     )
   }
 
   if (!summary) {
     return (
-      <p className="mb-4 text-sm text-muted-foreground">
-        {loading ? 'Caricamento del riepilogo...' : 'Riepilogo non disponibile.'}
-      </p>
+      <BoMuted>{loading ? 'Caricamento del riepilogo…' : 'Riepilogo non disponibile.'}</BoMuted>
     )
   }
 
   const t = summary.totals
 
   return (
-    <div className="space-y-3 mb-4">
+    <div className="flex flex-col gap-3">
       {/* Per-sport cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {summary.sports.map((s) => (
-          <div key={s.sportId} className="rounded-lg border border-border bg-card px-4 py-3">
+          <div key={s.sportId} className={cn(DS_PANEL, 'px-5 py-4')}>
             <div className="flex items-baseline justify-between gap-2">
-              <div className="text-sm font-semibold text-foreground">{s.sportName}</div>
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {s.sportKey ?? '—'}
-              </span>
+              <div className="font-semibold text-ds-ink">{s.sportName}</div>
+              <span className="font-mono text-xs text-ds-ink-muted">{s.sportKey ?? '—'}</span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-foreground">
+              <span className="text-2xl leading-8 font-semibold text-ds-ink tabular-nums">
                 {num(s.fixturesFuture)}
               </span>
-              <span className="text-xs text-muted-foreground">partite future</span>
+              <span className="text-xs text-ds-ink-muted">partite future</span>
             </div>
-            <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-              <dt className="text-muted-foreground">Prossimi 7 giorni</dt>
-              <dd className="text-right text-foreground">{num(s.fixturesNext7Days)}</dd>
-              <dt className="text-muted-foreground">Totale in catalogo</dt>
-              <dd className="text-right text-foreground">{num(s.fixturesTotal)}</dd>
-              <dt className="text-muted-foreground">Competizioni</dt>
-              <dd className="text-right text-foreground">
+            <dl className="m-0 mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
+              <dt className="text-ds-ink-muted">Prossimi 7 giorni</dt>
+              <dd className="m-0 text-right text-ds-ink">{num(s.fixturesNext7Days)}</dd>
+              <dt className="text-ds-ink-muted">Totale in catalogo</dt>
+              <dd className="m-0 text-right text-ds-ink">{num(s.fixturesTotal)}</dd>
+              <dt className="text-ds-ink-muted">Competizioni</dt>
+              <dd className="m-0 text-right text-ds-ink">
                 {num(s.competitionsWithFutureFixtures)}
-                <span className="text-muted-foreground"> / {num(s.competitions)}</span>
+                <span className="text-ds-ink-muted"> / {num(s.competitions)}</span>
               </dd>
               <dt
-                className="text-muted-foreground"
+                className="text-ds-ink-muted"
                 title="Competizioni per cui gli scraper leggono le quote dei bookmaker"
               >
                 Lette dagli scraper
               </dt>
-              <dd className="text-right text-foreground">
+              <dd className="m-0 text-right text-ds-ink">
                 {num(s.competitionsScrapeEnabled)}
-                <span className="text-muted-foreground"> / {num(s.competitions)}</span>
+                <span className="text-ds-ink-muted"> / {num(s.competitions)}</span>
               </dd>
-              <dt className="text-muted-foreground">Dal · al</dt>
-              <dd className="text-right text-foreground">
+              <dt className="text-ds-ink-muted">Dal · al</dt>
+              <dd className="m-0 text-right text-ds-ink">
                 {formatDate(s.firstStartTime)} · {formatDate(s.lastStartTime)}
               </dd>
-              <dt className="text-muted-foreground">Ultima conferma provider</dt>
-              <dd className="text-right text-foreground" title={formatDateTime(s.lastSeenAt)}>
+              <dt className="text-ds-ink-muted">Ultima conferma provider</dt>
+              <dd className="m-0 text-right text-ds-ink" title={formatDateTime(s.lastSeenAt)}>
                 {ago(s.lastSeenAt, now)}
               </dd>
             </dl>
           </div>
         ))}
         {summary.sports.length === 0 && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ds-ink-muted">
             Nessuno sport con chiave api-sports nel catalogo: il sync del catalogo non è ancora
             girato.
           </p>
@@ -141,23 +145,23 @@ export function ScheduleSummary({
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi
+      <div className={BO_TILE_GRID}>
+        <BoStatTile
           label="Partite future con almeno un bookmaker"
           value={`${num(t.futureWithBookmaker)} / ${num(t.fixturesFuture)}`}
           hint={pct(t.futureWithBookmaker, t.fixturesFuture)}
         />
-        <Kpi
+        <BoStatTile
           label="Eventi in catalogo non da api-sports"
           value={num(t.nonProviderEvents)}
           hint={`${num(t.nonProviderFutureEvents)} futuri`}
         />
-        <Kpi
+        <BoStatTile
           label="Leghe in whitelist"
           value={`${num(t.whitelistedLeaguesEnabled)} / ${num(t.whitelistedLeagues)}`}
           hint="abilitate / totali"
         />
-        <Kpi
+        <BoStatTile
           label="Chiamate api-sports oggi"
           value={
             summary.budget
@@ -173,94 +177,92 @@ export function ScheduleSummary({
       </div>
 
       {/* Sync runs + provider statuses */}
-      <details className="rounded-lg border border-border bg-card">
-        <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-foreground select-none">
-          Sincronizzazioni api-sports e stati delle partite future
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            (aggiornato {ago(summary.now, now)})
+      <details className={DS_PANEL}>
+        <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 font-semibold text-ds-ink select-none">
+          <span>Sincronizzazioni api-sports e stati delle partite future</span>
+          <span className="ds-caption font-normal text-ds-ink-muted">
+            aggiornato {ago(summary.now, now)}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-3"
+          <button
+            type="button"
             disabled={loading}
             onClick={(e) => {
               e.preventDefault()
               onRefresh()
             }}
+            className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-60')}
           >
-            {loading ? 'Aggiorno...' : 'Aggiorna'}
-          </Button>
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+            {loading ? 'Aggiorno…' : 'Aggiorna'}
+          </button>
         </summary>
-        <div className="grid grid-cols-1 gap-4 border-t border-border px-4 py-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-5 border-t border-ds-line px-5 py-4 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <div className="mb-1 font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
-              Ultimo run per tipo
-            </div>
+            <div className="ds-label mb-2 text-ds-ink-muted uppercase">Ultimo run per tipo</div>
             {runs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessun run registrato.</p>
+              <p className="text-sm text-ds-ink-muted">Nessun run registrato.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-muted-foreground">
-                    <th className="py-1 pr-3 font-medium">Sport</th>
-                    <th className="py-1 pr-3 font-medium">Tipo</th>
-                    <th className="py-1 pr-3 font-medium">Esito</th>
-                    <th className="py-1 pr-3 font-medium">Quando</th>
-                    <th className="py-1 pr-3 font-medium">Dettaglio</th>
-                    <th className="py-1 font-medium">Chiamate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((r) => (
-                    <tr key={`${r.sportKey}-${r.runType}`} className="border-t border-border">
-                      <td className="py-1.5 pr-3 font-mono text-xs text-foreground">
-                        {r.sportKey}
-                      </td>
-                      <td className="py-1.5 pr-3 text-foreground">
-                        {RUN_TYPE_LABELS[r.runType] ?? r.runType}
-                      </td>
-                      <td className="py-1.5 pr-3">
-                        <Badge variant={runVariant(r.status)}>{r.status}</Badge>
-                        {r.error && (
-                          <span className="ml-2 text-xs text-destructive" title={r.error}>
-                            {r.error.slice(0, 60)}
-                            {r.error.length > 60 ? '…' : ''}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="py-1.5 pr-3 text-muted-foreground"
-                        title={formatDateTime(r.completedAt ?? r.startedAt)}
-                      >
-                        {ago(r.completedAt ?? r.startedAt, now)}
-                      </td>
-                      <td className="py-1.5 pr-3 text-foreground">{runDetail(r)}</td>
-                      <td className="py-1.5 text-foreground">{num(r.apiCallsUsed)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-ds-ink-muted">
+                      <th className="py-1 pr-3 font-semibold">Sport</th>
+                      <th className="py-1 pr-3 font-semibold">Tipo</th>
+                      <th className="py-1 pr-3 font-semibold">Esito</th>
+                      <th className="py-1 pr-3 font-semibold">Quando</th>
+                      <th className="py-1 pr-3 font-semibold">Dettaglio</th>
+                      <th className="py-1 font-semibold">Chiamate</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {runs.map((r) => (
+                      <tr key={`${r.sportKey}-${r.runType}`} className="border-t border-ds-line">
+                        <td className="py-1.5 pr-3 font-mono text-xs text-ds-ink">{r.sportKey}</td>
+                        <td className="py-1.5 pr-3 text-ds-ink">
+                          {RUN_TYPE_LABELS[r.runType] ?? r.runType}
+                        </td>
+                        <td className="py-1.5 pr-3">
+                          <DsBadge tone={runTone(r.status)}>{r.status}</DsBadge>
+                          {r.error && (
+                            <span className="ml-2 text-xs text-ds-loss" title={r.error}>
+                              {r.error.slice(0, 60)}
+                              {r.error.length > 60 ? '…' : ''}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          className="py-1.5 pr-3 text-ds-ink-muted"
+                          title={formatDateTime(r.completedAt ?? r.startedAt)}
+                        >
+                          {ago(r.completedAt ?? r.startedAt, now)}
+                        </td>
+                        <td className="py-1.5 pr-3 text-ds-ink">{runDetail(r)}</td>
+                        <td className="py-1.5 text-ds-ink">{num(r.apiCallsUsed)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
           <div className="lg:col-span-2">
-            <div className="mb-1 font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
+            <div className="ds-label mb-2 text-ds-ink-muted uppercase">
               Partite future per stato (canonico / codice api-sports)
             </div>
             {summary.futureByStatus.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessuna partita futura.</p>
+              <p className="text-sm text-ds-ink-muted">Nessuna partita futura.</p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {summary.futureByStatus.map((r) => (
                   <li
                     key={`${r.status}-${r.providerStatus ?? 'null'}`}
-                    className="rounded-md border border-border bg-surface-1 px-2 py-1 text-xs"
+                    className="rounded-ds-sm border border-ds-line bg-ds-surface px-2 py-1 text-xs"
                   >
-                    <span className="text-foreground">{STATUS_LABELS[r.status] ?? r.status}</span>
-                    <span className="mx-1 font-mono text-muted-foreground">
+                    <span className="text-ds-ink">{STATUS_LABELS[r.status] ?? r.status}</span>
+                    <span className="mx-1 font-mono text-ds-ink-muted">
                       {r.providerStatus ?? '∅'}
                     </span>
-                    <span className="font-semibold text-foreground">{num(r.count)}</span>
+                    <span className="font-semibold text-ds-ink">{num(r.count)}</span>
                   </li>
                 ))}
               </ul>
@@ -268,16 +270,6 @@ export function ScheduleSummary({
           </div>
         </div>
       </details>
-    </div>
-  )
-}
-
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
-      <div className="text-lg font-semibold text-foreground">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-muted-foreground">{hint}</div>}
     </div>
   )
 }

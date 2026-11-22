@@ -2,8 +2,12 @@
 
 import Link from 'next/link'
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+
+import { BoCode, boLink, matchStatusTone } from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { DS_PANEL } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getEventBookmakers } from '@/services/api/odds-collection-client'
 import type { EventBookmaker } from '@/types/odds-collection'
 import type {
@@ -13,16 +17,13 @@ import type {
 import { Flag } from './schedule-tree'
 import { ago, formatDateTime, formatDayHeading, formatTime, localDayKey, num } from './format'
 
-const STATUS_VARIANT: Record<
-  OdEventStatus,
-  'info' | 'success' | 'outline' | 'destructive' | 'warning' | 'lavender'
-> = {
+const STATUS_TONE: Record<OdEventStatus, DsBadgeTone> = {
   scheduled: 'info',
-  live: 'success',
-  closed: 'outline',
-  cancelled: 'destructive',
+  live: 'profit',
+  closed: 'neutral',
+  cancelled: 'loss',
   postponed: 'warning',
-  rescheduled: 'lavender',
+  rescheduled: 'brand',
 }
 
 const STATUS_LABEL: Record<OdEventStatus, string> = {
@@ -32,17 +33,6 @@ const STATUS_LABEL: Record<OdEventStatus, string> = {
   cancelled: 'annullata',
   postponed: 'rinviata',
   rescheduled: 'riprogrammata',
-}
-
-const MATCH_STATUS_VARIANT: Record<
-  string,
-  'success' | 'info' | 'warning' | 'destructive' | 'outline'
-> = {
-  auto_confirmed: 'success',
-  high_confidence: 'info',
-  manual_confirmed: 'success',
-  review_needed: 'warning',
-  rejected: 'destructive',
 }
 
 const COLUMNS = 8
@@ -84,12 +74,12 @@ export function FixturesTable({
   const to = Math.min(offset + limit, total)
 
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 text-sm">
-        <span className="text-foreground">
+    <div className={cn(DS_PANEL, 'flex min-w-0 flex-col overflow-hidden lg:h-full')}>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-ds-line px-4 py-2.5 text-sm">
+        <span className="text-ds-ink">
           <span className="font-semibold">{num(total)}</span> partite
           {total > 0 && (
-            <span className="text-muted-foreground">
+            <span className="text-ds-ink-muted">
               {' '}
               · {num(from)}–{num(to)} in questa pagina, ordinate per calcio d’inizio
             </span>
@@ -100,13 +90,13 @@ export function FixturesTable({
 
       <div className="relative flex-1 overflow-auto">
         {loading && fixtures.length > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-background/60 py-1 text-center text-xs text-muted-foreground backdrop-blur-xs">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-ds-surface-raised/70 py-1 text-center text-xs text-ds-ink-muted backdrop-blur-xs">
             aggiorno…
           </div>
         )}
         <table className="min-w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-xs">
-            <tr className="text-left text-xs text-muted-foreground">
+          <thead className="sticky top-0 z-10 bg-ds-surface-sunken">
+            <tr className="text-left text-xs tracking-[0.02em] text-ds-ink-muted uppercase">
               <Th>Ora</Th>
               <Th>Competizione</Th>
               <Th>Partita</Th>
@@ -120,32 +110,32 @@ export function FixturesTable({
           <tbody>
             {error ? (
               <tr>
-                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-destructive">
+                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-ds-loss">
                   {error}
                 </td>
               </tr>
             ) : loading && fixtures.length === 0 ? (
               <tr>
-                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-ds-ink-muted">
+                  Caricamento delle partite…
                 </td>
               </tr>
             ) : fixtures.length === 0 ? (
               <tr>
-                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={COLUMNS} className="px-4 py-6 text-center text-ds-ink-muted">
                   Nessuna partita con questi filtri.
                 </td>
               </tr>
             ) : (
               groups.map((g) => (
                 <Fragment key={g.day}>
-                  <tr className="sticky top-[33px] z-5 bg-surface-1">
+                  <tr className="sticky top-[32px] z-5 bg-ds-surface">
                     <td
                       colSpan={COLUMNS}
-                      className="border-y border-border px-4 py-1.5 font-mono text-xs font-semibold tracking-[0.02em] text-foreground uppercase"
+                      className="ds-label border-y border-ds-line px-4 py-1.5 text-ds-ink uppercase"
                     >
                       {g.heading}
-                      <span className="ml-2 font-normal text-muted-foreground normal-case">
+                      <span className="ml-2 font-normal tracking-normal text-ds-ink-muted normal-case">
                         {num(g.rows.length)} in pagina
                       </span>
                     </td>
@@ -153,44 +143,54 @@ export function FixturesTable({
                   {g.rows.map((f) => (
                     <Fragment key={f.eventId}>
                       <tr
+                        // La riga si apre anche da tastiera (Invio o spazio): prima solo col clic.
+                        tabIndex={0}
+                        aria-expanded={expanded === f.eventId}
                         onClick={() => setExpandedId(expanded === f.eventId ? null : f.eventId)}
-                        className={`cursor-pointer border-t border-border transition-colors hover:bg-accent ${
-                          expanded === f.eventId ? 'bg-accent/60' : ''
-                        }`}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return
+                          e.preventDefault()
+                          setExpandedId(expanded === f.eventId ? null : f.eventId)
+                        }}
+                        className={cn(
+                          'cursor-pointer border-t border-ds-line transition-colors hover:bg-ds-surface-sunken/60',
+                          dsFocusRing,
+                          expanded === f.eventId && 'bg-ds-surface-sunken',
+                        )}
                       >
-                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-foreground">
+                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-ds-ink">
                           {formatTime(f.startTime)}
                         </td>
                         <td className="max-w-[16rem] px-4 py-2">
                           <div className="flex items-center gap-2">
                             <Flag countryCode={f.countryCode} name={f.categoryName} />
                             <span
-                              className="truncate text-foreground"
+                              className="truncate text-ds-ink"
                               title={`${f.categoryName} · ${f.competitionName}`}
                             >
                               {f.competitionName}
                             </span>
                           </div>
-                          <div className="truncate text-[11px] text-muted-foreground">
+                          <div className="ds-caption truncate text-ds-ink-muted">
                             {f.categoryName}
                             {f.sportSlug !== 'football' ? ` · ${f.sportName}` : ''}
                           </div>
                         </td>
-                        <td className="px-4 py-2 text-foreground">
+                        <td className="px-4 py-2 text-ds-ink">
                           <span className="font-medium">{f.homeName ?? '—'}</span>
-                          <span className="mx-1.5 text-muted-foreground">–</span>
+                          <span className="mx-1.5 text-ds-ink-muted">–</span>
                           <span className="font-medium">{f.awayName ?? '—'}</span>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
-                          <Badge variant={STATUS_VARIANT[f.status] ?? 'outline'}>
+                          <DsBadge tone={STATUS_TONE[f.status] ?? 'neutral'}>
                             {STATUS_LABEL[f.status] ?? f.status}
-                          </Badge>
-                          <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">
+                          </DsBadge>
+                          <span className="ml-1.5 font-mono text-[11px] text-ds-ink-muted">
                             {f.providerStatus ?? '∅'}
                           </span>
                         </td>
                         <td
-                          className="max-w-40 truncate px-4 py-2 text-xs text-muted-foreground"
+                          className="max-w-40 truncate px-4 py-2 text-xs text-ds-ink-muted"
                           title={f.round ?? undefined}
                         >
                           {f.round ?? '—'}
@@ -198,18 +198,18 @@ export function FixturesTable({
                         <td className="px-4 py-2 text-xs whitespace-nowrap">
                           <BookCount mapped={f.bookmakersMapped} withOdds={f.bookmakersWithOdds} />
                         </td>
-                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-muted-foreground">
+                        <td className="px-4 py-2 font-mono text-xs whitespace-nowrap text-ds-ink-muted">
                           {f.apisportsFixtureId}
                         </td>
                         <td
-                          className="px-4 py-2 text-xs whitespace-nowrap text-muted-foreground"
+                          className="px-4 py-2 text-xs whitespace-nowrap text-ds-ink-muted"
                           title={formatDateTime(f.lastSeenAt)}
                         >
                           {ago(f.lastSeenAt, now)}
                         </td>
                       </tr>
                       {expanded === f.eventId && (
-                        <tr className="border-t border-border bg-surface-1/60">
+                        <tr className="border-t border-ds-line bg-ds-surface-sunken/40">
                           <td colSpan={COLUMNS} className="px-4 py-3">
                             <FixtureDetails fixture={f} />
                           </td>
@@ -225,7 +225,7 @@ export function FixturesTable({
       </div>
 
       {total > limit && (
-        <div className="flex shrink-0 items-center justify-end border-t border-border px-4 py-2">
+        <div className="flex shrink-0 items-center justify-end border-t border-ds-line px-4 py-2.5">
           <Pager offset={offset} limit={limit} total={total} onPageChange={onPageChange} />
         </div>
       )}
@@ -235,7 +235,7 @@ export function FixturesTable({
 
 function Th({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <th className="px-4 py-2 font-medium" title={title}>
+    <th className="px-4 py-2 font-semibold whitespace-nowrap" title={title}>
       {children}
     </th>
   )
@@ -243,10 +243,14 @@ function Th({ children, title }: { children: ReactNode; title?: string }) {
 
 function BookCount({ mapped, withOdds }: { mapped: number; withOdds: number }) {
   const cls =
-    withOdds > 0 ? 'text-emerald-400' : mapped > 0 ? 'text-amber-400' : 'text-muted-foreground'
+    withOdds > 0
+      ? 'font-semibold text-ds-profit'
+      : mapped > 0
+        ? 'font-semibold text-ds-warning'
+        : 'text-ds-ink-muted'
   return (
     <span
-      className={`font-mono ${cls}`}
+      className={cn('font-mono', cls)}
       title={`${mapped} con mapping · ${withOdds} con quote attive`}
     >
       {mapped} · {withOdds}
@@ -269,26 +273,26 @@ function Pager({
   const page = Math.floor(offset / limit) + 1
   const pages = Math.max(1, Math.ceil(total / limit))
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <div className="flex items-center gap-2 text-xs text-ds-ink-muted tabular-nums">
       <span>
         pagina {num(page)} di {num(pages)}
       </span>
-      <Button
-        size="sm"
-        variant="outline"
+      <button
+        type="button"
         disabled={offset === 0}
         onClick={() => onPageChange(Math.max(0, offset - limit))}
+        className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
       >
         Precedenti
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
+      </button>
+      <button
+        type="button"
         disabled={offset + limit >= total}
         onClick={() => onPageChange(offset + limit)}
+        className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
       >
         Successive
-      </Button>
+      </button>
     </div>
   )
 }
@@ -333,7 +337,7 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 text-xs lg:grid-cols-3">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
         <Dt>Fixture api-sports</Dt>
         <Dd mono>{fixture.apisportsFixtureId}</Dd>
         <Dt>Lega api-sports</Dt>
@@ -357,61 +361,60 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
       </dl>
       <div className="lg:col-span-2">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-mono tracking-[0.02em] text-muted-foreground uppercase">
+          <span className="ds-label text-ds-ink-muted uppercase">
             Bookmaker collegati dal matcher
           </span>
-          {bookmakers && <span className="text-muted-foreground">({num(bookmakers.length)})</span>}
+          {bookmakers && <span className="text-ds-ink-muted">({num(bookmakers.length)})</span>}
         </div>
         {loading ? (
-          <p className="text-muted-foreground">Caricamento...</p>
+          <p className="text-ds-ink-muted">Caricamento…</p>
         ) : error ? (
-          <p className="text-destructive">{error}</p>
+          <p className="text-ds-loss">{error}</p>
         ) : !bookmakers || bookmakers.length === 0 ? (
-          <p className="text-muted-foreground">
+          <p className="text-ds-ink-muted">
             Nessun bookmaker ha ancora un mapping su questa partita.
           </p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-muted-foreground">
-                <th className="py-1 pr-3 font-medium">Bookmaker</th>
-                <th className="py-1 pr-3 font-medium">Nomi del bookmaker</th>
-                <th className="py-1 pr-3 font-medium">Competizione del bookmaker</th>
-                <th className="py-1 pr-3 font-medium">Mapping</th>
-                <th className="py-1 pr-3 font-medium">Metodo</th>
-                <th className="py-1 font-medium">Conf.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookmakers.map((b) => (
-                <tr key={b.id} className="border-t border-border">
-                  <td className="py-1 pr-3">
-                    <Link
-                      href={`/backoffice/scrapers/${b.bookmakerSlug}`}
-                      className="text-primary hover:underline"
-                    >
-                      {b.bookmakerName}
-                    </Link>
-                  </td>
-                  <td className="py-1 pr-3 text-foreground">
-                    {b.bookmakerHomeName ?? '—'} – {b.bookmakerAwayName ?? '—'}
-                  </td>
-                  <td className="py-1 pr-3 text-muted-foreground">
-                    {b.bookmakerCompetitionName ?? '—'}
-                  </td>
-                  <td className="py-1 pr-3">
-                    <Badge variant={MATCH_STATUS_VARIANT[b.matchStatus] ?? 'outline'}>
-                      {b.matchStatus}
-                    </Badge>
-                  </td>
-                  <td className="py-1 pr-3 font-mono text-muted-foreground">{b.matchMethod}</td>
-                  <td className="py-1 font-mono text-muted-foreground">
-                    {Number.isFinite(b.matchConfidence) ? b.matchConfidence.toFixed(2) : '—'}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-ds-ink-muted">
+                  <th className="py-1 pr-3 font-semibold">Bookmaker</th>
+                  <th className="py-1 pr-3 font-semibold">Nomi del bookmaker</th>
+                  <th className="py-1 pr-3 font-semibold">Competizione del bookmaker</th>
+                  <th className="py-1 pr-3 font-semibold">Mapping</th>
+                  <th className="py-1 pr-3 font-semibold">Metodo</th>
+                  <th className="py-1 font-semibold">Conf.</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {bookmakers.map((b) => (
+                  <tr key={b.id} className="border-t border-ds-line">
+                    <td className="py-1 pr-3">
+                      <Link href={`/backoffice/scrapers/${b.bookmakerSlug}`} className={boLink}>
+                        {b.bookmakerName}
+                      </Link>
+                    </td>
+                    <td className="py-1 pr-3 text-ds-ink">
+                      {b.bookmakerHomeName ?? '—'} – {b.bookmakerAwayName ?? '—'}
+                    </td>
+                    <td className="py-1 pr-3 text-ds-ink-muted">
+                      {b.bookmakerCompetitionName ?? '—'}
+                    </td>
+                    <td className="py-1 pr-3">
+                      <DsBadge tone={matchStatusTone(b.matchStatus)}>{b.matchStatus}</DsBadge>
+                    </td>
+                    <td className="py-1 pr-3">
+                      <BoCode>{b.matchMethod}</BoCode>
+                    </td>
+                    <td className="py-1 font-mono text-ds-ink-muted">
+                      {Number.isFinite(b.matchConfidence) ? b.matchConfidence.toFixed(2) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -419,9 +422,9 @@ function FixtureDetails({ fixture }: { fixture: ProviderFixtureDto }) {
 }
 
 function Dt({ children }: { children: ReactNode }) {
-  return <dt className="text-muted-foreground">{children}</dt>
+  return <dt className="text-ds-ink-muted">{children}</dt>
 }
 
 function Dd({ children, mono }: { children: ReactNode; mono?: boolean }) {
-  return <dd className={`text-foreground ${mono ? 'font-mono' : ''}`}>{children}</dd>
+  return <dd className={cn('m-0 text-ds-ink', mono && 'font-mono')}>{children}</dd>
 }

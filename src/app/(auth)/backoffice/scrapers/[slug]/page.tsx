@@ -3,9 +3,19 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'next/navigation'
-import { Container } from '@/components/ui/container'
-import { Tabs } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+import { ChevronDown, ChevronRight, RefreshCw, Search } from 'lucide-react'
+
+import { BoBackLink, BoMono, BoMuted, boLink } from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  GCheckbox,
+  GSelect,
+  GTabs,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DS_PANEL, DsAlert } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   getCountryFlagUrl,
   getCountryFlagUrlFromIso,
@@ -35,10 +45,20 @@ const ADAPTER_TYPE_LABELS: Record<string, string> = {
   websocket: 'WebSocket',
 }
 
-const TABS = [
-  { id: 'config', label: 'Configurazione' },
-  { id: 'data', label: 'Dati scrapati' },
-] as const
+const TABS: { value: 'config' | 'data'; label: string }[] = [
+  { value: 'config', label: 'Configurazione' },
+  { value: 'data', label: 'Dati scrapati' },
+]
+
+/** La freccia di un nodo dell'albero: giù se è aperto. */
+function TreeChevron({ open, className }: { open: boolean; className?: string }) {
+  const Icon = open ? ChevronDown : ChevronRight
+  return <Icon className={cn('h-4 w-4 shrink-0 text-ds-ink-muted', className)} aria-hidden />
+}
+
+/** Il bottone che apre un nodo dell'albero: tutta la riga, sunken al passaggio. */
+const TREE_ROW =
+  'flex w-full items-center gap-2 rounded-ds-sm px-2 text-left transition-colors hover:bg-ds-surface-sunken focus-visible:shadow-ds-focus focus-visible:outline-hidden'
 
 const SEARCH_DEBOUNCE_MS = 350
 const SEARCH_MIN_LENGTH = 2
@@ -47,6 +67,9 @@ const SEARCH_MIN_LENGTH = 2
 // Page
 // =====================================================================
 
+// Il dettaglio di uno scraper: configurazione e albero dei dati letti (sport, nazione,
+// competizione, evento, mercato, esiti). Dal §14.365 sul design OddWise: Tabs, badge e riquadri
+// del design, albero con le frecce lucide e il sunken al passaggio.
 export default function ScraperDetailPage() {
   const params = useParams<{ slug: string }>()
   const slug = params?.slug ?? ''
@@ -91,43 +114,31 @@ export default function ScraperDetailPage() {
   }, [summary])
 
   return (
-    <Container>
-      <div className="mb-4">
-        <Link
-          href="/backoffice/scrapers"
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          ← Torna alla lista scraper
-        </Link>
-      </div>
+    <>
+      <BoBackLink href="/backoffice/scrapers">Torna alla lista scraper</BoBackLink>
 
       {summaryLoading ? (
-        <p className="py-6 text-center text-muted-foreground">Caricamento bookmaker...</p>
+        <BoMuted className="py-6 text-center">Caricamento del bookmaker…</BoMuted>
       ) : summaryError ? (
-        <p className="py-6 text-center text-destructive">{summaryError}</p>
+        <DsAlert>{summaryError}</DsAlert>
       ) : summary ? (
         <>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              {summary.name}
-            </h2>
-            <Badge variant="outline">
-              {ADAPTER_TYPE_LABELS[summary.adapterType] ?? summary.adapterType}
-            </Badge>
-            <Badge variant={summary.scrapeEnabled ? 'success' : 'outline'}>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="ds-title m-0">{summary.name}</h1>
+            <DsBadge>{ADAPTER_TYPE_LABELS[summary.adapterType] ?? summary.adapterType}</DsBadge>
+            <DsBadge tone={summary.scrapeEnabled ? 'profit' : 'neutral'}>
               {summary.scrapeEnabled ? 'Scraping ON' : 'Scraping OFF'}
-            </Badge>
-            {!summary.isActive && <Badge variant="destructive">Non attivo</Badge>}
-            <span className="ml-auto font-mono text-xs text-muted-foreground">{summary.slug}</span>
+            </DsBadge>
+            {!summary.isActive && <DsBadge tone="loss">Non attivo</DsBadge>}
+            <BoMono className="ml-auto">{summary.slug}</BoMono>
           </div>
 
-          <div className="mb-4">
-            <Tabs
-              tabs={[...TABS]}
-              activeTab={activeTab}
-              onTabChange={(id) => setActiveTab(id as 'config' | 'data')}
-            />
-          </div>
+          <GTabs
+            label="Sezioni dello scraper"
+            items={TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
 
           {activeTab === 'config' ? (
             <ConfigurationTab summary={summary} enabledSportsLabel={enabledSportsLabel} />
@@ -136,7 +147,7 @@ export default function ScraperDetailPage() {
           )}
         </>
       ) : null}
-    </Container>
+    </>
   )
 }
 
@@ -152,10 +163,10 @@ function ConfigurationTab({
   enabledSportsLabel: string
 }) {
   return (
-    <div className="rounded-md border border-border bg-card p-4">
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+    <div className={cn(DS_PANEL, 'p-5')}>
+      <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
         <Row label="Nome" value={summary.name} />
-        <Row label="Slug" value={<span className="font-mono text-xs">{summary.slug}</span>} />
+        <Row label="Slug" value={<span className="font-mono text-sm">{summary.slug}</span>} />
         <Row
           label="Adapter type"
           value={ADAPTER_TYPE_LABELS[summary.adapterType] ?? summary.adapterType}
@@ -181,9 +192,9 @@ function ConfigurationTab({
         <Row label="Competizioni future scrapate" value={String(summary.futureCompetitionCount)} />
         <Row label="Eventi futuri scrapati" value={String(summary.futureEventCount)} />
       </dl>
-      <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+      <p className="ds-body-sm m-0 mt-5 border-t border-ds-line pt-4 text-ds-ink-muted">
         Per modificare queste impostazioni torna alla{' '}
-        <Link href="/backoffice/scrapers" className="text-primary underline">
+        <Link href="/backoffice/scrapers" className={boLink}>
           lista scraper
         </Link>
         .
@@ -194,11 +205,9 @@ function ConfigurationTab({
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex flex-col">
-      <dt className="font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">{value}</dd>
+    <div className="flex flex-col gap-0.5">
+      <dt className="ds-label text-ds-ink-muted uppercase">{label}</dt>
+      <dd className="m-0 text-sm text-ds-ink">{value}</dd>
     </div>
   )
 }
@@ -447,49 +456,47 @@ function ScrapedDataTree({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="rounded-md border border-border bg-card">
+    <div className={DS_PANEL}>
       {/* Controls bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-        <select
+      <div className="flex flex-wrap items-center gap-3 border-b border-ds-line px-5 py-3">
+        <GSelect
+          id="bo-scraper-sport"
+          ariaLabel="Sport"
+          size="sm"
           value={filterSport}
-          onChange={(e) => setFilterSport(e.target.value)}
-          className="rounded border border-border bg-surface-1 px-2 py-1 text-xs text-foreground"
-        >
-          <option value="">Tutti gli sport</option>
-          {availableSports.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={setFilterSport}
+          options={[
+            { value: '', label: 'Tutti gli sport' },
+            ...availableSports.map((s) => ({ value: s, label: s })),
+          ]}
+          className="w-40"
+        />
 
-        <select
+        <GSelect
+          id="bo-scraper-country"
+          ariaLabel="Nazione"
+          size="sm"
           value={filterCountry}
-          onChange={(e) => setFilterCountry(e.target.value)}
-          className="rounded border border-border bg-surface-1 px-2 py-1 text-xs text-foreground"
-        >
-          <option value="">Tutte le nazioni</option>
-          {availableCountries.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          onChange={setFilterCountry}
+          options={[
+            { value: '', label: 'Tutte le nazioni' },
+            ...availableCountries.map((c) => ({ value: c, label: c })),
+          ]}
+          className="w-44"
+        />
 
-        <div className="relative flex min-w-[160px] flex-1 items-center">
-          <input
-            type="text"
-            value={filterName}
-            onChange={(e) => setFilterName(e.target.value)}
-            placeholder="Cerca competizione o evento..."
-            className="w-full rounded border border-border bg-surface-1 px-2 py-1 pr-7 text-xs text-foreground placeholder:text-muted-foreground"
-          />
-          {searchLoading && (
-            <span className="absolute right-2 text-xs text-muted-foreground" aria-hidden>
-              ...
-            </span>
-          )}
-        </div>
+        <GTextField
+          id="bo-scraper-search"
+          ariaLabel="Cerca competizione o evento"
+          type="search"
+          size="sm"
+          value={filterName}
+          onChange={setFilterName}
+          placeholder="Cerca competizione o evento…"
+          prefix={<Search className="h-4 w-4" aria-hidden />}
+          suffix={searchLoading ? '…' : undefined}
+          className="min-w-[180px] flex-1"
+        />
 
         {hasFilter && (
           <button
@@ -500,13 +507,13 @@ function ScrapedDataTree({ slug }: { slug: string }) {
               setFilterName('')
               setDebouncedFilterName('')
             }}
-            className="rounded border border-border bg-transparent px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            className={dsButtonClass('ghost', 'sm')}
           >
             Reset
           </button>
         )}
 
-        <span className="text-xs text-muted-foreground">
+        <span className="ds-body-sm text-ds-ink-muted tabular-nums">
           {totals ? (
             <>
               {filteredCompetitions.length} / {totals.totalCompetitions} comp.
@@ -520,40 +527,38 @@ function ScrapedDataTree({ slug }: { slug: string }) {
           )}
         </span>
 
-        <div className="ml-auto flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={includePast}
-              onChange={(e) => setIncludePast(e.target.checked)}
-              className="h-3 w-3"
-            />
-            Mostra anche conclusi
-          </label>
+        <div className="ml-auto flex items-center gap-4">
+          <GCheckbox
+            id="bo-scraper-past"
+            label="Mostra anche conclusi"
+            checked={includePast}
+            onChange={setIncludePast}
+          />
           <button
             type="button"
             onClick={handleRefresh}
             disabled={loading}
-            className="rounded border border-border bg-transparent px-3 py-1 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+            className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-60')}
           >
-            {loading ? 'Caricamento...' : 'Aggiorna'}
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+            {loading ? 'Caricamento…' : 'Aggiorna'}
           </button>
         </div>
       </div>
 
       {/* Tree body */}
-      <div className="px-4 py-3">
-        {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
+      <div className="px-3 py-3 sm:px-4">
+        {error && <DsAlert className="mb-3">{error}</DsAlert>}
 
         {loading && competitions === null ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Caricamento...</p>
+          <BoMuted className="py-6 text-center">Caricamento delle competizioni…</BoMuted>
         ) : totals && totals.totalCompetitions === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-sm text-ds-ink-muted">
             Nessuna competizione. Prova ad abilitare &apos;Mostra anche conclusi&apos; o verifica la
             configurazione.
           </p>
         ) : !competitions || filteredCompetitions.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-sm text-ds-ink-muted">
             Nessuna competizione corrisponde ai filtri applicati.
           </p>
         ) : (
@@ -567,14 +572,12 @@ function ScrapedDataTree({ slug }: { slug: string }) {
                     onClick={() => {
                       if (!autoExpandAll) toggleSport(sport.sportName)
                     }}
-                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-muted"
+                    className={cn(TREE_ROW, 'py-2')}
                     aria-expanded={sportExpanded}
                   >
-                    <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
-                      {sportExpanded ? '▾' : '▸'}
-                    </span>
-                    <span className="font-semibold text-foreground">{sport.sportName}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <TreeChevron open={sportExpanded} />
+                    <span className="font-semibold text-ds-ink">{sport.sportName}</span>
+                    <span className="text-xs text-ds-ink-muted">
                       · {sport.totalCompetitionCount} comp. · {sport.totalEventCount} eventi
                     </span>
                   </button>
@@ -594,16 +597,11 @@ function ScrapedDataTree({ slug }: { slug: string }) {
                               onClick={() => {
                                 if (!autoExpandAll) toggleCountry(countryKey)
                               }}
-                              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-muted"
+                              className={cn(TREE_ROW, 'py-1.5')}
                               aria-expanded={countryExpanded}
                             >
-                              <span
-                                className="w-3 shrink-0 text-xs text-muted-foreground"
-                                aria-hidden
-                              >
-                                {countryExpanded ? '▾' : '▸'}
-                              </span>
-                              <span className="inline-flex h-3.5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-sm">
+                              <TreeChevron open={countryExpanded} />
+                              <span className="inline-flex h-3.5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-ds-xs">
                                 {flagUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
@@ -617,10 +615,10 @@ function ScrapedDataTree({ slug }: { slug: string }) {
                                   />
                                 ) : null}
                               </span>
-                              <span className="font-medium text-foreground">
+                              <span className="font-medium text-ds-ink">
                                 {country.categoryName}
                               </span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-ds-ink-muted">
                                 · {country.competitions.length} comp. · {country.totalEventCount}{' '}
                                 eventi
                               </span>
@@ -699,41 +697,39 @@ function CompetitionNode({
   }
 
   return (
-    <li className="rounded border border-border/50 bg-background">
+    <li className="rounded-ds-sm border border-ds-line bg-ds-surface-raised">
       <button
         type="button"
         onClick={() => {
           void toggle()
         }}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted"
+        className={cn(TREE_ROW, 'rounded-ds-sm px-3 py-2')}
         aria-expanded={expanded}
       >
-        <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
-          {expanded ? '▾' : '▸'}
-        </span>
+        <TreeChevron open={expanded} />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <span className="font-medium text-foreground">{competition.competitionName}</span>
+          <span className="font-medium text-ds-ink">{competition.competitionName}</span>
           {competition.rawCompetitionName &&
             competition.rawCompetitionName !== competition.competitionName && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-ds-ink-muted">
                 raw: &quot;{competition.rawCompetitionName}&quot;
               </span>
             )}
         </div>
-        <Badge variant="outline">{competition.eventCount} eventi</Badge>
-        {hasPreloaded && <Badge variant="success">{preloadedEvents!.length} matchanti</Badge>}
-        {loading && <span className="shrink-0 text-xs text-muted-foreground">...</span>}
+        <DsBadge>{competition.eventCount} eventi</DsBadge>
+        {hasPreloaded && <DsBadge tone="profit">{preloadedEvents!.length} matchanti</DsBadge>}
+        {loading && <span className="shrink-0 text-xs text-ds-ink-muted">...</span>}
       </button>
 
       {expanded && (
-        <div className="border-t border-border/50 px-3 py-2">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="border-t border-ds-line px-3 py-2">
+          {error && <p className="text-sm text-ds-loss">{error}</p>}
           {loading && events === null && (
-            <p className="py-3 text-center text-xs text-muted-foreground">Caricamento eventi...</p>
+            <p className="py-3 text-center text-xs text-ds-ink-muted">Caricamento degli eventi…</p>
           )}
           {events !== null &&
             (events.length === 0 ? (
-              <p className="py-3 text-center text-xs text-muted-foreground">
+              <p className="py-3 text-center text-xs text-ds-ink-muted">
                 Nessun evento per questa competizione.
               </p>
             ) : (
@@ -777,49 +773,47 @@ function EventNode({ slug, event }: { slug: string; event: EventDrilldownItemDto
   }
 
   return (
-    <li className="rounded border border-border/30 bg-surface-1">
+    <li className="rounded-ds-sm border border-ds-line bg-ds-surface">
       <button
         type="button"
         onClick={() => {
           void toggle()
         }}
-        className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-muted"
+        className={cn(TREE_ROW, 'items-start px-3 py-2')}
         aria-expanded={expanded}
       >
-        <span className="mt-0.5 w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
-          {expanded ? '▾' : '▸'}
-        </span>
-        <div className="min-w-[96px] shrink-0 text-xs text-muted-foreground">
+        <TreeChevron open={expanded} className="mt-0.5" />
+        <div className="min-w-[96px] shrink-0 text-xs text-ds-ink-muted">
           {formatDateTime(event.startTime)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-foreground">
+            <span className="font-medium text-ds-ink">
               {event.homeName ?? '?'} — {event.awayName ?? '?'}
             </span>
-            <Badge variant="outline">{event.status}</Badge>
-            <Badge variant={matchStatusVariant(event.matchStatus)}>
+            <DsBadge>{event.status}</DsBadge>
+            <DsBadge tone={matchStatusVariant(event.matchStatus)}>
               {event.matchStatus} · {formatConfidence(event.matchConfidence)}
-            </Badge>
+            </DsBadge>
           </div>
           {(event.rawHomeName || event.rawAwayName) && (
-            <div className="mt-0.5 text-xs text-muted-foreground">
+            <div className="mt-0.5 text-xs text-ds-ink-muted">
               Raw: &quot;{event.rawHomeName ?? '?'}&quot; vs &quot;{event.rawAwayName ?? '?'}&quot;
             </div>
           )}
         </div>
-        {loading && <span className="shrink-0 text-xs text-muted-foreground">...</span>}
+        {loading && <span className="shrink-0 text-xs text-ds-ink-muted">...</span>}
       </button>
 
       {expanded && (
-        <div className="border-t border-border/30 px-3 py-2">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="border-t border-ds-line px-3 py-2">
+          {error && <p className="text-sm text-ds-loss">{error}</p>}
           {loading && markets === null && (
-            <p className="py-2 text-center text-xs text-muted-foreground">Caricamento mercati...</p>
+            <p className="py-2 text-center text-xs text-ds-ink-muted">Caricamento dei mercati…</p>
           )}
           {markets !== null &&
             (markets.length === 0 ? (
-              <p className="py-2 text-center text-xs text-muted-foreground">
+              <p className="py-2 text-center text-xs text-ds-ink-muted">
                 Nessun mercato per questo evento.
               </p>
             ) : (
@@ -869,30 +863,28 @@ function MarketNode({ slug, market }: { slug: string; market: MarketDrilldownIte
         onClick={() => {
           void toggle()
         }}
-        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+        className={cn(TREE_ROW, 'py-1.5 text-sm')}
         aria-expanded={expanded}
       >
-        <span className="w-3 shrink-0 text-xs text-muted-foreground" aria-hidden>
-          {expanded ? '▾' : '▸'}
-        </span>
-        <Badge variant="lavender">{market.marketTypeKey}</Badge>
-        <span className="font-medium text-foreground">{market.marketTypeName}</span>
-        <Badge variant={marketStatusVariant(market.marketStatus)}>{market.marketStatus}</Badge>
-        <span className="text-xs text-muted-foreground">
+        <TreeChevron open={expanded} />
+        <DsBadge tone="info">{market.marketTypeKey}</DsBadge>
+        <span className="font-medium text-ds-ink">{market.marketTypeName}</span>
+        <DsBadge tone={marketStatusVariant(market.marketStatus)}>{market.marketStatus}</DsBadge>
+        <span className="text-xs text-ds-ink-muted">
           {formatMarketParams(market)} · {market.activeOutcomeCount}/{market.outcomeCount} esiti
         </span>
-        {loading && <span className="ml-auto shrink-0 text-xs text-muted-foreground">...</span>}
+        {loading && <span className="ml-auto shrink-0 text-xs text-ds-ink-muted">...</span>}
       </button>
 
       {expanded && (
         <div className="mt-1 mb-1.5 ml-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-ds-loss">{error}</p>}
           {loading && outcomes === null && (
-            <p className="py-2 text-center text-xs text-muted-foreground">Caricamento esiti...</p>
+            <p className="py-2 text-center text-xs text-ds-ink-muted">Caricamento degli esiti…</p>
           )}
           {outcomes !== null &&
             (outcomes.length === 0 ? (
-              <p className="py-2 text-xs text-muted-foreground">Nessun esito configurato.</p>
+              <p className="py-2 text-xs text-ds-ink-muted">Nessun esito configurato.</p>
             ) : (
               <OutcomesInlineTable outcomes={outcomes} />
             ))}
@@ -908,9 +900,9 @@ function MarketNode({ slug, market }: { slug: string; market: MarketDrilldownIte
 
 function OutcomesInlineTable({ outcomes }: { outcomes: OutcomeDrilldownItemDto[] }) {
   return (
-    <div className="overflow-x-auto rounded border border-border/50 bg-background">
+    <div className="overflow-x-auto rounded-ds-sm border border-ds-line bg-ds-surface-raised">
       <table className="w-full text-xs">
-        <thead className="border-b border-border/50 text-left text-muted-foreground uppercase">
+        <thead className="ds-label border-b border-ds-line bg-ds-surface-sunken text-left text-ds-ink-muted uppercase">
           <tr>
             <th className="px-3 py-1.5 pr-4">Esito</th>
             <th className="py-1.5 pr-4">Raw</th>
@@ -921,27 +913,27 @@ function OutcomesInlineTable({ outcomes }: { outcomes: OutcomeDrilldownItemDto[]
         </thead>
         <tbody>
           {outcomes.map((o) => (
-            <tr key={o.canonicalOutcomeId} className="border-b border-border/30 last:border-0">
+            <tr key={o.canonicalOutcomeId} className="border-b border-ds-line last:border-0">
               <td className="px-3 py-1.5 pr-4">
                 <span className="font-mono">{o.canonicalKey}</span>{' '}
-                <span className="text-foreground">{o.canonicalLabel}</span>
+                <span className="text-ds-ink">{o.canonicalLabel}</span>
               </td>
-              <td className="py-1.5 pr-4 text-muted-foreground">{o.rawOutcomeLabel ?? '—'}</td>
+              <td className="py-1.5 pr-4 text-ds-ink-muted">{o.rawOutcomeLabel ?? '—'}</td>
               <td className="py-1.5 pr-4">
                 {o.decimalValue !== null ? (
-                  <span className="font-mono font-medium text-foreground">
+                  <span className="font-mono font-medium text-ds-ink">
                     {o.decimalValue.toFixed(2)}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-ds-ink-muted">—</span>
                 )}
               </td>
               <td className="py-1.5 pr-4">
-                <Badge variant={outcomeStatusVariant(o.oddsStatus ?? o.outcomeStatus)}>
+                <DsBadge tone={outcomeStatusVariant(o.oddsStatus ?? o.outcomeStatus)}>
                   {o.oddsStatus ?? o.outcomeStatus}
-                </Badge>
+                </DsBadge>
               </td>
-              <td className="py-1.5 text-muted-foreground">
+              <td className="py-1.5 text-ds-ink-muted">
                 {o.lastSeenAt ? formatDateTime(o.lastSeenAt) : '—'}
               </td>
             </tr>
@@ -983,51 +975,45 @@ function formatMarketParams(m: MarketDrilldownItemDto): string {
   return parts.length > 0 ? parts.join(' · ') : 'nessun parametro'
 }
 
-function matchStatusVariant(
-  status: OdMatchStatus,
-): 'success' | 'warning' | 'destructive' | 'outline' {
+function matchStatusVariant(status: OdMatchStatus): DsBadgeTone {
   switch (status) {
     case 'auto_confirmed':
     case 'manual_confirmed':
     case 'high_confidence':
-      return 'success'
+      return 'profit'
     case 'review_needed':
       return 'warning'
     case 'rejected':
-      return 'destructive'
+      return 'loss'
     default:
-      return 'outline'
+      return 'neutral'
   }
 }
 
-function marketStatusVariant(
-  status: OdMarketStatus,
-): 'success' | 'warning' | 'destructive' | 'outline' {
+function marketStatusVariant(status: OdMarketStatus): DsBadgeTone {
   switch (status) {
     case 'active':
-      return 'success'
+      return 'profit'
     case 'suspended':
       return 'warning'
     case 'removed':
-      return 'destructive'
+      return 'loss'
     default:
-      return 'outline'
+      return 'neutral'
   }
 }
 
-function outcomeStatusVariant(
-  status: OdOutcomeStatus,
-): 'success' | 'warning' | 'destructive' | 'outline' {
+function outcomeStatusVariant(status: OdOutcomeStatus): DsBadgeTone {
   switch (status) {
     case 'active':
     case 'won':
-      return 'success'
+      return 'profit'
     case 'suspended':
       return 'warning'
     case 'removed':
     case 'lost':
-      return 'destructive'
+      return 'loss'
     default:
-      return 'outline'
+      return 'neutral'
   }
 }

@@ -1,7 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Container } from '@/components/ui/container'
+import { RefreshCw } from 'lucide-react'
+
+import { BoDot, BoPanel, BoStat, BoMuted, type BoTone } from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getOddsHealth } from '@/services/api/odds-collection-client'
 import type { HealthCron, HealthReport } from '@/types/odds-collection'
 import { TrendCharts } from './trend-charts'
@@ -79,53 +85,10 @@ function bytes(n: number): string {
 
 const num = (n: number) => n.toLocaleString('it-IT')
 
-function Dot({ tone }: { tone: 'ok' | 'warn' | 'bad' | 'off' }) {
-  const color =
-    tone === 'ok'
-      ? 'bg-green-500'
-      : tone === 'warn'
-        ? 'bg-amber-500'
-        : tone === 'bad'
-          ? 'bg-red-500'
-          : 'bg-muted-foreground/40'
-  return <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${color}`} />
-}
+/** L'intestazione delle tabelle dentro i riquadri: piccola, in ink-muted. */
+const INNER_THEAD = 'text-xs text-ds-ink-muted'
 
-function Card({
-  title,
-  children,
-  aside,
-}: {
-  title: string
-  children: React.ReactNode
-  aside?: React.ReactNode
-}) {
-  return (
-    <section className="rounded-md border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        {aside && <div className="text-xs text-muted-foreground">{aside}</div>}
-      </div>
-      <div className="px-4 py-3">{children}</div>
-    </section>
-  )
-}
-
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
-
-function cronTone(
-  c: HealthCron | null,
-  now: number,
-  staleMinutes: number,
-): 'ok' | 'warn' | 'bad' | 'off' {
+function cronTone(c: HealthCron | null, now: number, staleMinutes: number): BoTone {
   if (!c || !c.scheduledAt) return 'off'
   if (
     c.lastFailureAt &&
@@ -136,6 +99,8 @@ function cronTone(
   return now - new Date(c.lastSuccessAt).getTime() > staleMinutes * 60_000 ? 'warn' : 'ok'
 }
 
+// Lo stato di salute della raccolta quote, letto ogni 30 secondi. Dal §14.365 sul design OddWise:
+// riquadri surface-raised, pallini e badge nei colori di stato del design, grafici sui token.
 export default function BackofficeSalutePage() {
   const [report, setReport] = useState<HealthReport | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -171,57 +136,54 @@ export default function BackofficeSalutePage() {
   const now = clock
 
   return (
-    <Container>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Salute della raccolta quote
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Adapter, cron, matcher, catalogo api-sports e coda di revisione: la stessa lettura degli
-            alert Telegram, aggiornata ogni 30 secondi.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {report && (
-            <span>
-              Letto {ago(report.now, now)} · backend avviato {ago(report.bootedAt, now)}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-          >
-            Aggiorna
-          </button>
-        </div>
-      </div>
+    <>
+      <DsPageHeader
+        title="Salute della raccolta quote"
+        description="Adapter, cron, matcher, catalogo api-sports e coda di revisione: la stessa lettura degli alert Telegram, aggiornata ogni 30 secondi."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            {report && (
+              <span className="ds-body-sm text-ds-ink-muted">
+                Letto {ago(report.now, now)} · backend avviato {ago(report.bootedAt, now)}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => void load()}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              Aggiorna
+            </button>
+          </div>
+        }
+      />
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
       {loading && !report && (
-        <p className="py-6 text-center text-muted-foreground">Caricamento...</p>
+        <BoMuted className="py-6 text-center">Caricamento dello stato di salute…</BoMuted>
       )}
 
       {report && (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {/* Global state + alerts */}
           <div
-            className={`rounded-lg border px-5 py-4 ${
+            className={cn(
+              'rounded-ds-md border px-5 py-4 shadow-ds-sm',
               report.scrapingGloballyEnabled
-                ? 'border-border bg-card'
-                : 'border-amber-500/40 bg-amber-500/5'
-            }`}
+                ? 'border-ds-line bg-ds-surface-raised'
+                : 'border-ds-warning/40 bg-ds-warning-soft',
+            )}
           >
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <div className="flex items-center gap-2">
-                <Dot tone={report.scrapingGloballyEnabled ? 'ok' : 'bad'} />
-                <span className="text-sm font-medium text-foreground">
+                <BoDot tone={report.scrapingGloballyEnabled ? 'ok' : 'bad'} />
+                <span className="text-sm font-medium text-ds-ink">
                   Scraping globale {report.scrapingGloballyEnabled ? 'attivo' : 'in pausa'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Dot
+                <BoDot
                   tone={
                     report.alerts.length === 0
                       ? 'ok'
@@ -230,13 +192,13 @@ export default function BackofficeSalutePage() {
                         : 'warn'
                   }
                 />
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-ds-ink">
                   {report.alerts.length === 0
                     ? 'Nessun alert attivo'
                     : `${report.alerts.length} alert attivi`}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-ds-ink-muted">
                 Soglie: silenzio {report.thresholds.adapterSilenceMinutes} min · finestra ingestione{' '}
                 {report.thresholds.ingestionWindowMinutes} min · matcher stantio{' '}
                 {report.thresholds.matcherStaleMinutes} min
@@ -246,18 +208,12 @@ export default function BackofficeSalutePage() {
               <ul className="space-y-1.5 mt-3">
                 {report.alerts.map((a) => (
                   <li key={a.key} className="flex flex-wrap items-baseline gap-2 text-sm">
-                    <span
-                      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                        a.severity === 'critical'
-                          ? 'bg-red-500/15 text-red-500'
-                          : 'bg-amber-500/15 text-amber-500'
-                      }`}
-                    >
+                    <DsBadge tone={a.severity === 'critical' ? 'loss' : 'warning'}>
                       {a.severity === 'critical' ? 'critico' : 'avviso'}
-                    </span>
-                    <span className="font-medium text-foreground">{a.title}</span>
-                    {a.detail && <span className="text-muted-foreground">{a.detail}</span>}
-                    <span className="text-xs text-muted-foreground">da {ago(a.since, now)}</span>
+                    </DsBadge>
+                    <span className="font-medium text-ds-ink">{a.title}</span>
+                    {a.detail && <span className="text-ds-ink-muted">{a.detail}</span>}
+                    <span className="text-xs text-ds-ink-muted">da {ago(a.since, now)}</span>
                   </li>
                 ))}
               </ul>
@@ -265,31 +221,31 @@ export default function BackofficeSalutePage() {
           </div>
 
           {/* Adapters */}
-          <Card
+          <BoPanel
             title="Adapter"
             aside={`finestra ${report.thresholds.ingestionWindowMinutes} min · run ultime ${report.hoursBack} h`}
           >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
+                <thead className={INNER_THEAD}>
                   <tr className="text-left">
-                    <th className="pr-3 pb-2 font-medium">Bookmaker</th>
-                    <th className="pr-3 pb-2 font-medium">Stato</th>
-                    <th className="pr-3 pb-2 font-medium">Ultimo run</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Silenzio</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Run</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Eventi</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Abbinati</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Orfani</th>
+                    <th className="pr-3 pb-2 font-semibold">Bookmaker</th>
+                    <th className="pr-3 pb-2 font-semibold">Stato</th>
+                    <th className="pr-3 pb-2 font-semibold">Ultimo run</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Silenzio</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Run</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Eventi</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Abbinati</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Orfani</th>
                     <th
-                      className="pr-3 pb-2 text-right font-medium"
+                      className="pr-3 pb-2 text-right font-semibold"
                       title="Eventi di sport senza fixture a catalogo, messi da parte: né abbinati né orfani"
                     >
                       Fuori catalogo
                     </th>
-                    <th className="pr-3 pb-2 text-right font-medium">Quote</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Run 24 h</th>
-                    <th className="pb-2 font-medium">Circuito</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Quote</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Run 24 h</th>
+                    <th className="pb-2 font-semibold">Circuito</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -306,17 +262,15 @@ export default function BackofficeSalutePage() {
                             ? 'warn'
                             : 'ok'
                     return (
-                      <tr key={a.slug} className="border-t border-border">
+                      <tr key={a.slug} className="border-t border-ds-line">
                         <td className="py-2 pr-3">
                           <div className="flex items-center gap-2">
-                            <Dot tone={tone} />
-                            <span className="font-medium text-foreground">{a.name}</span>
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {a.slug}
-                            </span>
+                            <BoDot tone={tone} />
+                            <span className="font-medium text-ds-ink">{a.name}</span>
+                            <span className="font-mono text-xs text-ds-ink-muted">{a.slug}</span>
                           </div>
                         </td>
-                        <td className="py-2 pr-3 text-xs text-muted-foreground">
+                        <td className="py-2 pr-3 text-xs text-ds-ink-muted">
                           {a.schedulable
                             ? a.initialized
                               ? 'schedulato'
@@ -326,20 +280,23 @@ export default function BackofficeSalutePage() {
                         <td className="py-2 pr-3 text-xs">
                           <span
                             className={
-                              a.lastRunStatus === 'failed' ? 'text-red-500' : 'text-foreground'
+                              a.lastRunStatus === 'failed' ? 'text-ds-loss' : 'text-ds-ink'
                             }
                           >
                             {a.lastRunStatus ?? '—'}
                           </span>
-                          <span className="text-muted-foreground"> · {ago(a.lastRunAt, now)}</span>
+                          <span className="text-ds-ink-muted"> · {ago(a.lastRunAt, now)}</span>
                           {a.lastError && (
-                            <div className="max-w-xs truncate text-red-500" title={a.lastError}>
+                            <div className="max-w-xs truncate text-ds-loss" title={a.lastError}>
                               {a.lastError}
                             </div>
                           )}
                         </td>
                         <td
-                          className={`py-2 pr-3 text-right tabular-nums ${silent ? 'text-red-500' : 'text-foreground'}`}
+                          className={cn(
+                            'py-2 pr-3 text-right tabular-nums',
+                            silent ? 'text-ds-loss' : 'text-ds-ink',
+                          )}
                         >
                           {a.silentForMinutes} min
                         </td>
@@ -352,29 +309,40 @@ export default function BackofficeSalutePage() {
                           {num(a.windowOrphaned)}
                         </td>
                         <td
-                          className={`py-2 pr-3 text-right tabular-nums ${(a.windowOffCatalog ?? 0) > 0 ? 'text-muted-foreground' : 'text-muted-foreground/50'}`}
+                          className={cn(
+                            'py-2 pr-3 text-right tabular-nums',
+                            (a.windowOffCatalog ?? 0) > 0
+                              ? 'text-ds-ink-muted'
+                              : 'text-ds-ink-faint',
+                          )}
                         >
                           {num(a.windowOffCatalog ?? 0)}
                         </td>
                         <td
-                          className={`py-2 pr-3 text-right tabular-nums ${a.windowRuns > 0 && a.windowEvents - (a.windowOffCatalog ?? 0) > 0 && a.windowOdds === 0 ? 'text-amber-500' : ''}`}
+                          className={cn(
+                            'py-2 pr-3 text-right tabular-nums',
+                            a.windowRuns > 0 &&
+                              a.windowEvents - (a.windowOffCatalog ?? 0) > 0 &&
+                              a.windowOdds === 0 &&
+                              'font-semibold text-ds-warning',
+                          )}
                         >
                           {num(a.windowOdds)}
                         </td>
-                        <td className="py-2 pr-3 text-right text-xs text-muted-foreground tabular-nums">
+                        <td className="py-2 pr-3 text-right text-xs text-ds-ink-muted tabular-nums">
                           {runs ? `${num(runs.successRuns)} ok / ${num(runs.failedRuns)} ko` : '—'}
                         </td>
                         <td className="py-2 text-xs">
                           {a.circuitPhase === 'open' ? (
-                            <span className="text-amber-500">
+                            <span className="text-ds-warning">
                               aperto, riprova tra {until(a.circuitOpenUntil, now)}
                             </span>
                           ) : a.circuitPhase === 'probing' ? (
-                            <span className="text-amber-500">
+                            <span className="text-ds-warning">
                               in prova, cooldown finito {ago(a.circuitOpenUntil, now)}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">chiuso</span>
+                            <span className="text-ds-ink-muted">chiuso</span>
                           )}
                         </td>
                       </tr>
@@ -382,7 +350,7 @@ export default function BackofficeSalutePage() {
                   })}
                   {report.adapters.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="py-4 text-center text-muted-foreground">
+                      <td colSpan={12} className="py-4 text-center text-ds-ink-muted">
                         Nessun adapter abilitato.
                       </td>
                     </tr>
@@ -390,18 +358,18 @@ export default function BackofficeSalutePage() {
                 </tbody>
               </table>
             </div>
-          </Card>
+          </BoPanel>
 
           {/* Browser sidecar (ADAPTER_STATUS §14.54) */}
-          <Card title="Browser" aside={report.browser.endpoint ?? 'nessun sidecar configurato'}>
+          <BoPanel title="Browser" aside={report.browser.endpoint ?? 'nessun sidecar configurato'}>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <div className="flex items-center gap-2">
-                <Dot
+                <BoDot
                   tone={
                     !report.browser.configured ? 'off' : report.browser.connected ? 'ok' : 'bad'
                   }
                 />
-                <span className="text-sm text-foreground">
+                <span className="text-sm text-ds-ink">
                   {!report.browser.configured
                     ? 'Nessun sidecar Chromium: gli adapter browser non vengono schedulati'
                     : report.browser.connected
@@ -410,7 +378,7 @@ export default function BackofficeSalutePage() {
                 </span>
               </div>
               {report.browser.configured && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-ds-ink-muted">
                   {report.browser.pages.length === 0
                     ? 'nessuna pagina aperta'
                     : `${report.browser.pages.length} pagine aperte`}
@@ -421,45 +389,45 @@ export default function BackofficeSalutePage() {
               <ul className="space-y-1 mt-3 text-xs">
                 {report.browser.pages.map((p) => (
                   <li key={p.slug} className="flex flex-wrap items-baseline gap-2">
-                    <span className="font-mono text-foreground">{p.slug}</span>
-                    <span className="max-w-md truncate text-muted-foreground" title={p.url}>
+                    <span className="font-mono text-ds-ink">{p.slug}</span>
+                    <span className="max-w-md truncate text-ds-ink-muted" title={p.url}>
                       {p.url || '—'}
                     </span>
-                    <span className="text-muted-foreground tabular-nums">
+                    <span className="text-ds-ink-muted tabular-nums">
                       aperta da {p.ageMinutes} min
                     </span>
                   </li>
                 ))}
               </ul>
             )}
-          </Card>
+          </BoPanel>
 
           {/* Andamento (storia delle metriche) */}
           <TrendCharts />
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Crons */}
-            <Card title="Cron">
+            <BoPanel title="Cron">
               <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
+                <thead className={INNER_THEAD}>
                   <tr className="text-left">
-                    <th className="pr-3 pb-2 font-medium">Job</th>
-                    <th className="pr-3 pb-2 font-medium">Ultimo successo</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Durata</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Run / errori</th>
-                    <th className="pb-2 font-medium">Ultimo errore</th>
+                    <th className="pr-3 pb-2 font-semibold">Job</th>
+                    <th className="pr-3 pb-2 font-semibold">Ultimo successo</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Durata</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Run / errori</th>
+                    <th className="pb-2 font-semibold">Ultimo errore</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.crons.map((c) => (
-                    <tr key={c.name} className="border-t border-border">
+                    <tr key={c.name} className="border-t border-ds-line">
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2">
-                          <Dot tone={cronTone(c, now, 45)} />
-                          <span className="text-foreground">{CRON_LABELS[c.name] ?? c.name}</span>
+                          <BoDot tone={cronTone(c, now, 45)} />
+                          <span className="text-ds-ink">{CRON_LABELS[c.name] ?? c.name}</span>
                         </div>
                       </td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">
+                      <td className="py-2 pr-3 text-xs text-ds-ink-muted">
                         {ago(c.lastSuccessAt, now)}
                       </td>
                       <td className="py-2 pr-3 text-right text-xs tabular-nums">
@@ -467,12 +435,12 @@ export default function BackofficeSalutePage() {
                       </td>
                       <td className="py-2 pr-3 text-right text-xs tabular-nums">
                         {num(c.runs)} /{' '}
-                        <span className={c.failures > 0 ? 'text-red-500' : ''}>
+                        <span className={c.failures > 0 ? 'text-ds-loss' : ''}>
                           {num(c.failures)}
                         </span>
                       </td>
                       <td
-                        className="max-w-xs truncate py-2 text-xs text-red-500"
+                        className="max-w-xs truncate py-2 text-xs text-ds-loss"
                         title={c.lastError ?? undefined}
                       >
                         {c.lastError ? `${ago(c.lastFailureAt, now)}: ${c.lastError}` : ''}
@@ -481,64 +449,65 @@ export default function BackofficeSalutePage() {
                   ))}
                 </tbody>
               </table>
-            </Card>
+            </BoPanel>
 
             {/* Matcher + refresh */}
-            <Card title="Matcher e refresh">
+            <BoPanel title="Matcher e refresh">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <Stat label="Righe nel matcher" value={num(report.matcher.rows)} />
-                <Stat
+                <BoStat label="Righe nel matcher" value={num(report.matcher.rows)} />
+                <BoStat
                   label="Ultimo calcolo"
                   value={ago(report.matcher.calculatedAt, now)}
                   hint={formatDateTime(report.matcher.calculatedAt)}
                 />
-                <Stat
+                <BoStat
                   label="Mercati in coda incrementale"
                   value={num(report.matcher.pendingMarkets ?? report.matcher.pendingEvents)}
                 />
-                <Stat
+                <BoStat
                   label="Rebuild completo"
                   value={ago(report.matcher.rebuild?.lastSuccessAt ?? null, now)}
                   hint={`durata ${duration(report.matcher.rebuild?.lastDurationMs ?? null)}`}
                 />
-                <Stat
+                <BoStat
                   label="Tick (sweep + purge)"
                   value={ago(report.matcher.tick?.lastSuccessAt ?? null, now)}
                   hint={`durata ${duration(report.matcher.tick?.lastDurationMs ?? null)}`}
                 />
-                <Stat
+                <BoStat
                   label="Refresh adattivo"
                   value={`${num(report.refresh.trackedPairs)} coppie`}
                   hint={`ultimo passaggio ${ago(report.refresh.heartbeat?.lastSuccessAt ?? null, now)}, ${duration(report.refresh.heartbeat?.lastDurationMs ?? null)}`}
                 />
               </div>
-            </Card>
+            </BoPanel>
 
             {/* Provider */}
-            <Card title="Catalogo api-sports">
+            <BoPanel title="Catalogo api-sports">
               {report.provider.budget ? (
                 <div className="mb-3">
                   <div className="flex items-baseline justify-between text-sm">
-                    <span className="text-foreground">
+                    <span className="text-ds-ink">
                       Budget del giorno:{' '}
                       <span className="font-semibold tabular-nums">
                         {num(report.provider.budget.callsUsed)}
                       </span>{' '}
                       / {num(report.provider.budget.planDailyLimit)} chiamate
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-ds-ink-muted">
                       ultima {ago(report.provider.budget.lastCallAt, now)}
                     </span>
                   </div>
-                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-ds-surface-sunken">
                     <div
-                      className={`h-2 rounded-full ${
+                      className={cn(
+                        'h-2 rounded-full',
                         report.provider.budget.callsUsed /
                           Math.max(1, report.provider.budget.planDailyLimit) >
-                        0.9
-                          ? 'bg-red-500'
-                          : 'bg-primary'
-                      }`}
+                          0.9
+                          ? 'bg-ds-loss'
+                          : 'bg-ds-brand',
+                      )}
                       style={{
                         width: `${Math.min(100, (100 * report.provider.budget.callsUsed) / Math.max(1, report.provider.budget.planDailyLimit))}%`,
                       }}
@@ -546,38 +515,36 @@ export default function BackofficeSalutePage() {
                   </div>
                 </div>
               ) : (
-                <p className="mb-3 text-sm text-muted-foreground">
-                  Nessuna chiamata registrata oggi.
-                </p>
+                <p className="mb-3 text-sm text-ds-ink-muted">Nessuna chiamata registrata oggi.</p>
               )}
               <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
+                <thead className={INNER_THEAD}>
                   <tr className="text-left">
-                    <th className="pr-3 pb-2 font-medium">Sync</th>
-                    <th className="pr-3 pb-2 font-medium">Esito</th>
-                    <th className="pr-3 pb-2 font-medium">Quando</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Righe</th>
-                    <th className="pb-2 text-right font-medium">Chiamate</th>
+                    <th className="pr-3 pb-2 font-semibold">Sync</th>
+                    <th className="pr-3 pb-2 font-semibold">Esito</th>
+                    <th className="pr-3 pb-2 font-semibold">Quando</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Righe</th>
+                    <th className="pb-2 text-right font-semibold">Chiamate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.provider.lastRuns.map((r) => (
-                    <tr key={r.runType} className="border-t border-border">
-                      <td className="py-2 pr-3 text-foreground">
+                    <tr key={r.runType} className="border-t border-ds-line">
+                      <td className="py-2 pr-3 text-ds-ink">
                         {RUN_TYPE_LABELS[r.runType] ?? r.runType}
                       </td>
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2">
-                          <Dot tone={r.status === 'success' ? 'ok' : 'bad'} />
+                          <BoDot tone={r.status === 'success' ? 'ok' : 'bad'} />
                           <span className="text-xs">{r.status}</span>
                         </div>
                         {r.error && (
-                          <div className="max-w-xs truncate text-xs text-red-500" title={r.error}>
+                          <div className="max-w-xs truncate text-xs text-ds-loss" title={r.error}>
                             {r.error}
                           </div>
                         )}
                       </td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">
+                      <td className="py-2 pr-3 text-xs text-ds-ink-muted">
                         {ago(r.startedAt, now)}
                       </td>
                       <td className="py-2 pr-3 text-right text-xs tabular-nums">
@@ -594,22 +561,22 @@ export default function BackofficeSalutePage() {
                   ))}
                   {report.provider.lastRuns.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-3 text-center text-muted-foreground">
+                      <td colSpan={5} className="py-3 text-center text-ds-ink-muted">
                         Nessun sync eseguito.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </Card>
+            </BoPanel>
 
             {/* Review queue + coverage */}
-            <Card title="Coda di revisione e copertura">
+            <BoPanel title="Coda di revisione e copertura">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {Object.entries(report.reviewQueue).map(([status, n]) => (
-                  <Stat key={status} label={QUEUE_LABELS[status] ?? status} value={num(n)} />
+                  <BoStat key={status} label={QUEUE_LABELS[status] ?? status} value={num(n)} />
                 ))}
-                <Stat
+                <BoStat
                   label="Fixture nelle 48 h con quote"
                   value={`${num(report.coverage.mappedNext48h)} / ${num(report.coverage.fixturesNext48h)}`}
                   hint={
@@ -619,25 +586,30 @@ export default function BackofficeSalutePage() {
                   }
                 />
               </div>
-            </Card>
+            </BoPanel>
 
             {/* Odds */}
-            <Card title="Quote in tabella">
+            <BoPanel title="Quote in tabella">
               <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
+                <thead className={INNER_THEAD}>
                   <tr className="text-left">
-                    <th className="pr-3 pb-2 font-medium">Bookmaker</th>
-                    <th className="pr-3 pb-2 font-medium">Stato</th>
-                    <th className="pr-3 pb-2 text-right font-medium">Quote</th>
-                    <th className="pb-2 text-right font-medium">Eventi</th>
+                    <th className="pr-3 pb-2 font-semibold">Bookmaker</th>
+                    <th className="pr-3 pb-2 font-semibold">Stato</th>
+                    <th className="pr-3 pb-2 text-right font-semibold">Quote</th>
+                    <th className="pb-2 text-right font-semibold">Eventi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.odds.map((o) => (
-                    <tr key={`${o.slug}-${o.status}`} className="border-t border-border">
-                      <td className="py-2 pr-3 font-mono text-xs text-foreground">{o.slug}</td>
+                    <tr key={`${o.slug}-${o.status}`} className="border-t border-ds-line">
+                      <td className="py-2 pr-3 font-mono text-xs text-ds-ink">{o.slug}</td>
                       <td
-                        className={`py-2 pr-3 text-xs ${o.status === 'active' ? 'text-green-400' : 'text-muted-foreground'}`}
+                        className={cn(
+                          'py-2 pr-3 text-xs',
+                          o.status === 'active'
+                            ? 'font-semibold text-ds-profit'
+                            : 'text-ds-ink-muted',
+                        )}
                       >
                         {o.status}
                       </td>
@@ -647,17 +619,17 @@ export default function BackofficeSalutePage() {
                   ))}
                   {report.odds.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-3 text-center text-muted-foreground">
+                      <td colSpan={4} className="py-3 text-center text-ds-ink-muted">
                         Nessuna quota in tabella.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </Card>
+            </BoPanel>
 
             {/* Storage */}
-            <Card
+            <BoPanel
               title="Spazio nel database"
               aside={`totale ${bytes(report.storage.databaseBytes)}`}
             >
@@ -670,14 +642,17 @@ export default function BackofficeSalutePage() {
                   return (
                     <li key={t.name} className="text-xs">
                       <div className="flex items-baseline justify-between">
-                        <span className="font-mono text-foreground">{t.name}</span>
-                        <span className="text-muted-foreground tabular-nums">
+                        <span className="font-mono text-ds-ink">{t.name}</span>
+                        <span className="text-ds-ink-muted tabular-nums">
                           {bytes(t.bytes)} · {num(t.liveRows)} righe
                         </span>
                       </div>
-                      <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-ds-surface-sunken">
                         <div
-                          className={`h-1.5 rounded-full ${share > 50 ? 'bg-amber-500' : 'bg-primary/60'}`}
+                          className={cn(
+                            'h-1.5 rounded-full',
+                            share > 50 ? 'bg-ds-warning' : 'bg-ds-brand/60',
+                          )}
                           style={{ width: `${Math.min(100, share)}%` }}
                         />
                       </div>
@@ -685,10 +660,10 @@ export default function BackofficeSalutePage() {
                   )
                 })}
               </ul>
-            </Card>
+            </BoPanel>
           </div>
         </div>
       )}
-    </Container>
+    </>
   )
 }

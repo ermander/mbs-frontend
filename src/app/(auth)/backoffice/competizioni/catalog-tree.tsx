@@ -1,7 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+
+import { BoSwitch } from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import { getCountryFlagUrl, getCountryFlagUrlFromIso } from '@/lib/country-flags'
+import { cn } from '@/lib/utils'
 import type {
   CompetitionCatalogCategoryDto,
   CompetitionCatalogDto,
@@ -15,7 +21,8 @@ import { formatDate, num } from '../palinsesto/format'
  * no time window, one switch each, and two explicit bulk actions per country
  * and per sport («Accendi tutte» / «Spegni tutte»). The counts on a node are
  * the catalog's, not the filtered view's: a bulk action always applies to
- * the whole node, and the label says how many rows that is.
+ * the whole node, and the label says how many rows that is. Since §14.365 on the OddWise design:
+ * BoSwitch, DS badges and buttons; on a phone the bulk actions wrap under the node.
  */
 export function CatalogTree({
   catalog,
@@ -47,7 +54,7 @@ export function CatalogTree({
 
   if (catalog.sports.length === 0) {
     return (
-      <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+      <p className="m-0 px-2 py-6 text-center text-sm text-ds-ink-muted">
         Nessuna competizione corrisponde alla ricerca o al filtro.
       </p>
     )
@@ -57,11 +64,15 @@ export function CatalogTree({
     <ul className="space-y-1">
       {catalog.sports.map((s) => (
         <li key={s.sportId}>
-          <div className="flex items-center gap-2 rounded-md pr-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-ds-sm pr-2">
             <button
               type="button"
+              aria-expanded={isSportOpen(s)}
               onClick={() => toggle(s.sportId, true)}
-              className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-semibold text-foreground hover:bg-accent"
+              className={cn(
+                'flex min-w-0 flex-1 basis-56 items-center gap-2 rounded-ds-sm px-2 py-1.5 text-left text-sm font-semibold text-ds-ink transition-colors hover:bg-ds-surface-sunken',
+                dsFocusRing,
+              )}
             >
               <Caret open={isSportOpen(s)} />
               <span className="flex-1">{s.name}</span>
@@ -77,21 +88,28 @@ export function CatalogTree({
             />
           </div>
           {isSportOpen(s) && (
-            <ul className="space-y-0.5 ml-3 border-l border-border pl-2">
+            <ul className="space-y-0.5 ml-3 border-l border-ds-line pl-2">
               {s.categories.map((c) => {
                 const open = isCategoryOpen(c)
                 return (
                   <li key={c.categoryId}>
-                    <div className="flex items-center gap-2 rounded-md pr-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-ds-sm pr-2">
                       <button
                         type="button"
+                        aria-expanded={open}
                         onClick={() => toggle(c.categoryId, false)}
-                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left text-sm text-foreground hover:bg-accent"
+                        className={cn(
+                          'flex min-w-0 flex-1 basis-56 items-center gap-2 rounded-ds-sm px-1 py-1 text-left text-sm text-ds-ink transition-colors hover:bg-ds-surface-sunken',
+                          dsFocusRing,
+                        )}
                       >
                         <Caret open={open} />
                         <Flag countryCode={c.countryCode} name={c.name} />
                         <span className="flex-1 truncate">{c.name}</span>
-                        <span className="text-[11px] text-muted-foreground" title="Partite future">
+                        <span
+                          className="text-xs whitespace-nowrap text-ds-ink-muted"
+                          title="Partite future"
+                        >
                           {num(c.futureFixtures)} partite
                         </span>
                         <OnCount enabled={c.scrapeEnabledCount} total={c.competitionCount} />
@@ -106,13 +124,14 @@ export function CatalogTree({
                       />
                     </div>
                     {open && (
-                      <ul className="space-y-0.5 ml-4 border-l border-border pl-2">
+                      <ul className="space-y-0.5 ml-4 border-l border-ds-line pl-2">
                         {c.competitions.map((comp) => (
                           <li
                             key={comp.competitionId}
-                            className={`flex items-center gap-2 rounded-md px-2 py-1 text-sm ${
-                              comp.scrapeEnabled ? 'text-foreground' : 'text-muted-foreground'
-                            }`}
+                            className={cn(
+                              'flex items-center gap-2 rounded-ds-sm px-2 py-1 text-sm',
+                              comp.scrapeEnabled ? 'text-ds-ink' : 'text-ds-ink-muted',
+                            )}
                           >
                             <ScrapeSwitch
                               checked={comp.scrapeEnabled}
@@ -128,14 +147,14 @@ export function CatalogTree({
                             <span className="min-w-0 flex-1 truncate">{comp.name}</span>
                             {comp.apisportsLeagueId !== null && (
                               <span
-                                className="font-mono text-[10px] text-muted-foreground"
+                                className="hidden font-mono text-[11px] text-ds-ink-muted sm:inline"
                                 title="league id api-sports"
                               >
                                 #{comp.apisportsLeagueId}
                               </span>
                             )}
                             <span
-                              className="w-24 text-right text-[11px] text-muted-foreground tabular-nums"
+                              className="w-24 shrink-0 text-right text-xs text-ds-ink-muted tabular-nums"
                               title={
                                 comp.nextKickoff
                                   ? `Prossima partita ${formatDate(comp.nextKickoff)}`
@@ -147,11 +166,12 @@ export function CatalogTree({
                                 : 'nessuna partita'}
                             </span>
                             <span
-                              className={`w-16 text-right text-[11px] tabular-nums ${
+                              className={cn(
+                                'hidden w-16 shrink-0 text-right text-xs tabular-nums sm:inline',
                                 comp.bookmakersMapped > 0
-                                  ? 'text-foreground'
-                                  : 'text-muted-foreground'
-                              }`}
+                                  ? 'font-semibold text-ds-ink'
+                                  : 'text-ds-ink-muted',
+                              )}
                               title="Bookmaker con partite collegate"
                             >
                               {num(comp.bookmakersMapped)} book
@@ -171,7 +191,7 @@ export function CatalogTree({
   )
 }
 
-/** The switch of one competition: a plain button with the switch role. */
+/** The switch of one competition: the design's BoSwitch, small. */
 export function ScrapeSwitch({
   checked,
   name,
@@ -184,28 +204,18 @@ export function ScrapeSwitch({
   onChange: (enabled: boolean) => void
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={`${checked ? 'Smetti di leggere' : 'Leggi'} le quote di ${name}`}
+    <BoSwitch
+      size="sm"
+      checked={checked}
+      disabled={disabled}
+      onChange={onChange}
+      label={`${checked ? 'Smetti di leggere' : 'Leggi'} le quote di ${name}`}
       title={
         checked
           ? 'Gli scraper leggono le quote di questa competizione: clicca per fermarli'
           : 'Gli scraper non leggono questa competizione: clicca per riprendere'
       }
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked ? 'bg-emerald-500' : 'bg-muted-foreground/40'
-      }`}
-    >
-      <span
-        className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
-          checked ? 'translate-x-3.5' : 'translate-x-0.5'
-        }`}
-      />
-    </button>
+    />
   )
 }
 
@@ -225,13 +235,15 @@ function BulkActions({
   busy: boolean
   onChange: (enabled: boolean) => void
 }) {
-  const base =
-    'shrink-0 rounded-md border px-2 py-0.5 text-[11px] transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40'
+  const base = cn(
+    dsButtonClass('ghost', 'sm'),
+    'h-7 px-2 text-xs disabled:cursor-not-allowed disabled:opacity-40',
+  )
   return (
     <span className="flex shrink-0 items-center gap-1">
       <button
         type="button"
-        className={`${base} border-emerald-500/40 text-emerald-500`}
+        className={cn(base, 'text-ds-profit hover:bg-ds-profit-soft hover:text-ds-profit')}
         disabled={busy || enabled === total}
         title={`Leggi tutte le ${num(total)} competizioni di questo nodo`}
         onClick={() => onChange(true)}
@@ -240,7 +252,7 @@ function BulkActions({
       </button>
       <button
         type="button"
-        className={`${base} border-border text-muted-foreground`}
+        className={cn(base, 'text-ds-ink-muted hover:bg-ds-surface-sunken hover:text-ds-ink')}
         disabled={busy || enabled === 0}
         title={`Smetti di leggere tutte le ${num(total)} competizioni di questo nodo`}
         onClick={() => onChange(false)}
@@ -252,39 +264,35 @@ function BulkActions({
 }
 
 function OnCount({ enabled, total }: { enabled: number; total: number }) {
-  const tone =
-    total > 0 && enabled === total
-      ? 'bg-emerald-500/15 text-emerald-500'
-      : enabled === 0
-        ? 'bg-muted text-muted-foreground'
-        : 'bg-amber-500/15 text-amber-500'
+  const tone: DsBadgeTone =
+    total > 0 && enabled === total ? 'profit' : enabled === 0 ? 'neutral' : 'warning'
   return (
-    <span
-      className={`rounded px-2 py-0.5 font-mono text-[11px] font-normal tabular-nums ${tone}`}
-      title="Competizioni lette / totali"
-    >
+    <DsBadge tone={tone} title="Competizioni lette / totali" className="tabular-nums">
       {num(enabled)}/{num(total)}
-    </span>
+    </DsBadge>
   )
 }
 
 function Caret({ open }: { open: boolean }) {
   return (
-    <span
-      className={`inline-block w-3 text-xs text-muted-foreground transition-transform ${
-        open ? 'rotate-90' : ''
-      }`}
+    <ChevronRight
+      className={cn('h-4 w-4 shrink-0 text-ds-ink-muted transition-transform', open && 'rotate-90')}
       aria-hidden
-    >
-      ▸
-    </span>
+    />
   )
 }
 
 function Flag({ countryCode, name }: { countryCode: string | null; name: string }) {
   const url = getCountryFlagUrlFromIso(countryCode) ?? getCountryFlagUrl(name)
   if (!url)
-    return <span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-muted" aria-hidden />
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-sm object-cover" />
+    return (
+      <span
+        className="inline-block h-3 w-4 shrink-0 rounded-ds-xs bg-ds-surface-sunken"
+        aria-hidden
+      />
+    )
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="inline-block h-3 w-4 shrink-0 rounded-ds-xs object-cover" />
+  )
 }

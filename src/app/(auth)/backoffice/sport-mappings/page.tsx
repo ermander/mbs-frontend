@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { Container } from '@/components/ui/container'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+
+import { BoCode, BoConfirmModal, BoMuted, BoPanel } from '@/components/backoffice/backoffice-ds'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  DsModal,
+  GIconButton,
+  GSelect,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   getScrapers,
   getSportMappings,
@@ -35,6 +46,8 @@ const EMPTY_NEW: NewMapping = {
   bookmaker_sport_name: '',
 }
 
+// I codici sport di ogni bookmaker sugli sport canonici, raggruppati per sport. Dal §14.365 sul
+// design OddWise: la nuova mappatura nel Modal, ogni sport in un riquadro, Elimina con conferma.
 export default function SportMappingsPage() {
   const [mappings, setMappings] = useState<SportMapping[]>([])
   const [sports, setSports] = useState<CanonicalSport[]>([])
@@ -49,6 +62,8 @@ export default function SportMappingsPage() {
   // New mapping form
   const [showNew, setShowNew] = useState(false)
   const [newMapping, setNewMapping] = useState<NewMapping>(EMPTY_NEW)
+  const [newError, setNewError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<SportMapping | null>(null)
 
   // Filter
   const [filterBookmaker, setFilterBookmaker] = useState<string>('all')
@@ -93,13 +108,20 @@ export default function SportMappingsPage() {
     })
     .sort()
 
-  const handleCreate = async () => {
+  const openNew = () => {
+    setNewMapping(EMPTY_NEW)
+    setNewError(null)
+    setShowNew(true)
+  }
+
+  const handleCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!newMapping.sport_id || !newMapping.bookmaker_id || !newMapping.bookmaker_sport_code) {
-      setError('Compila tutti i campi obbligatori.')
+      setNewError('Compila tutti i campi obbligatori.')
       return
     }
     setSaving(true)
-    setError(null)
+    setNewError(null)
     try {
       await createSportMapping({
         sport_id: newMapping.sport_id,
@@ -112,7 +134,7 @@ export default function SportMappingsPage() {
       await loadData()
     } catch (err: unknown) {
       const msg = isAxiosError(err) ? err.response?.data?.message : null
-      setError(msg ?? 'Errore nella creazione della mappatura.')
+      setNewError(msg ?? 'Errore nella creazione della mappatura.')
     } finally {
       setSaving(false)
     }
@@ -137,198 +159,152 @@ export default function SportMappingsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  // Elimina chiede conferma nel Modal del design (prima toglieva la mappatura al primo clic).
+  const handleDelete = async () => {
+    if (!toDelete) return
     setSaving(true)
     setError(null)
     try {
-      await deleteSportMapping(id)
+      await deleteSportMapping(toDelete.id)
       await loadData()
     } catch {
       setError('Errore nella rimozione della mappatura.')
     } finally {
       setSaving(false)
+      setToDelete(null)
     }
   }
 
+  const shownCount = filteredSportNames.reduce(
+    (n, sportName) =>
+      n +
+      groupedBySport[sportName].filter(
+        (m) => filterBookmaker === 'all' || m.bookmaker_id === filterBookmaker,
+      ).length,
+    0,
+  )
+
   return (
-    <Container>
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Sport Mappings</h2>
-        <p className="text-sm text-muted-foreground">
-          Mappa i codici sport di ogni bookmaker agli sport canonici del sistema.
-        </p>
-      </div>
-
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-
-      {/* Toolbar */}
-      <div className="mb-4 flex items-center gap-3">
-        <select
-          value={filterBookmaker}
-          onChange={(e) => setFilterBookmaker(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
-        >
-          <option value="all">Tutti i bookmaker</option>
-          {bookmakers.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-
-        <button
-          type="button"
-          onClick={() => setShowNew(!showNew)}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          {showNew ? 'Annulla' : 'Nuova mappatura'}
-        </button>
-      </div>
-
-      {/* New mapping form */}
-      {showNew && (
-        <div className="mb-4 rounded-md border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-medium text-foreground">Nuova mappatura</h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">Sport canonico *</label>
-              <select
-                value={newMapping.sport_id}
-                onChange={(e) => setNewMapping({ ...newMapping, sport_id: e.target.value })}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              >
-                <option value="">Seleziona...</option>
-                {sports.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">Bookmaker *</label>
-              <select
-                value={newMapping.bookmaker_id}
-                onChange={(e) => setNewMapping({ ...newMapping, bookmaker_id: e.target.value })}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              >
-                <option value="">Seleziona...</option>
-                {bookmakers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">Codice sport *</label>
-              <input
-                type="text"
-                value={newMapping.bookmaker_sport_code}
-                onChange={(e) =>
-                  setNewMapping({ ...newMapping, bookmaker_sport_code: e.target.value })
-                }
-                placeholder="es. CALCIO, Soccer, 1"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">Nome bookmaker</label>
-              <input
-                type="text"
-                value={newMapping.bookmaker_sport_name}
-                onChange={(e) =>
-                  setNewMapping({ ...newMapping, bookmaker_sport_name: e.target.value })
-                }
-                placeholder="es. Calcio, Soccer"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={handleCreate}
-            className="mt-3 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            Salva
+    <>
+      <DsPageHeader
+        title="Sport Mappings"
+        description="Mappa i codici sport di ogni bookmaker agli sport canonici del sistema."
+        actions={
+          <button type="button" onClick={openNew} className={dsButtonClass('primary', 'md')}>
+            <Plus className="h-5 w-5" aria-hidden />
+            Nuova mappatura
           </button>
-        </div>
-      )}
+        }
+      />
 
-      {/* Mappings table grouped by sport */}
+      <div className="flex flex-wrap items-center gap-3">
+        <GSelect
+          id="bo-sm-bookmaker"
+          ariaLabel="Bookmaker"
+          size="sm"
+          value={filterBookmaker}
+          onChange={setFilterBookmaker}
+          options={[
+            { value: 'all', label: 'Tutti i bookmaker' },
+            ...bookmakers.map((b) => ({ value: b.id, label: b.name })),
+          ]}
+          className="w-56"
+        />
+        {!loading && (
+          <span className="ds-body-sm text-ds-ink-muted tabular-nums">
+            {shownCount} {shownCount === 1 ? 'mappatura' : 'mappature'}
+          </span>
+        )}
+      </div>
+
+      {error && <DsAlert>{error}</DsAlert>}
+
       {loading ? (
-        <p className="py-6 text-center text-muted-foreground">Caricamento...</p>
+        <BoMuted className="py-6 text-center">Caricamento delle mappature…</BoMuted>
       ) : filteredSportNames.length === 0 ? (
-        <p className="py-6 text-center text-muted-foreground">Nessuna mappatura trovata.</p>
+        <BoMuted className="py-6 text-center">Nessuna mappatura trovata.</BoMuted>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           {filteredSportNames.map((sportName) => {
             const sportMappings = groupedBySport[sportName].filter(
               (m) => filterBookmaker === 'all' || m.bookmaker_id === filterBookmaker,
             )
             return (
-              <div key={sportName} className="rounded-md border border-border bg-card">
-                <div className="border-b border-border bg-muted/40 px-4 py-2">
-                  <span className="text-sm font-semibold text-foreground">{sportName}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {sportMappings.length} bookmaker
-                  </span>
-                </div>
-                <div className="divide-y divide-border">
+              <BoPanel
+                key={sportName}
+                title={sportName}
+                aside={`${sportMappings.length} bookmaker`}
+                flush
+              >
+                <ul className="m-0 list-none divide-y divide-ds-line p-0">
                   {sportMappings.map((m) => {
                     const isEditing = editing?.id === m.id
                     return (
-                      <div key={m.id} className="flex items-center gap-3 px-4 py-2">
-                        <span className="w-40 text-sm text-foreground">{m.bookmaker_name}</span>
+                      <li
+                        key={m.id}
+                        className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2"
+                      >
+                        <span className="w-40 shrink-0 text-sm font-semibold text-ds-ink">
+                          {m.bookmaker_name}
+                        </span>
                         {isEditing ? (
                           <>
-                            <input
-                              type="text"
+                            <GTextField
+                              id={`bo-sm-code-${m.id}`}
+                              ariaLabel={`Codice sport di ${m.bookmaker_name}`}
+                              size="sm"
                               value={editing.bookmaker_sport_code}
-                              onChange={(e) =>
-                                setEditing({ ...editing, bookmaker_sport_code: e.target.value })
+                              onChange={(code) =>
+                                setEditing({ ...editing, bookmaker_sport_code: code })
                               }
-                              className="w-32 rounded border border-border bg-background px-2 py-1 text-sm"
+                              onEnter={() => void handleUpdate()}
+                              inputProps={{ autoFocus: true }}
+                              className="w-36"
                             />
-                            <input
-                              type="text"
+                            <GTextField
+                              id={`bo-sm-name-${m.id}`}
+                              ariaLabel={`Nome dello sport su ${m.bookmaker_name}`}
+                              size="sm"
                               value={editing.bookmaker_sport_name}
-                              onChange={(e) =>
-                                setEditing({ ...editing, bookmaker_sport_name: e.target.value })
+                              onChange={(name) =>
+                                setEditing({ ...editing, bookmaker_sport_name: name })
                               }
-                              className="w-40 rounded border border-border bg-background px-2 py-1 text-sm"
-                              placeholder="Nome (opz.)"
+                              onEnter={() => void handleUpdate()}
+                              placeholder="Nome (facoltativo)"
+                              className="w-44"
                             />
-                            <button
-                              type="button"
-                              disabled={saving}
-                              onClick={handleUpdate}
-                              className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-accent disabled:opacity-50"
-                            >
-                              Salva
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditing(null)}
-                              className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                            >
-                              Annulla
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void handleUpdate()}
+                                className={cn(
+                                  dsButtonClass('primary', 'sm'),
+                                  'disabled:opacity-60',
+                                )}
+                              >
+                                Salva
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditing(null)}
+                                className={dsButtonClass('ghost', 'sm')}
+                              >
+                                Annulla
+                              </button>
+                            </div>
                           </>
                         ) : (
                           <>
-                            <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-foreground">
-                              {m.bookmaker_sport_code}
-                            </code>
+                            <BoCode>{m.bookmaker_sport_code}</BoCode>
                             {m.bookmaker_sport_name && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="ds-body-sm text-ds-ink-muted">
                                 {m.bookmaker_sport_name}
                               </span>
                             )}
-                            <div className="ml-auto flex gap-1">
-                              <button
-                                type="button"
+                            <div className="ml-auto flex gap-0.5">
+                              <GIconButton
+                                label={`Modifica la mappatura di ${m.bookmaker_name}`}
                                 onClick={() =>
                                   setEditing({
                                     id: m.id,
@@ -336,30 +312,112 @@ export default function SportMappingsPage() {
                                     bookmaker_sport_name: m.bookmaker_sport_name ?? '',
                                   })
                                 }
-                                className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                               >
-                                Modifica
-                              </button>
-                              <button
-                                type="button"
+                                <Pencil className="h-4 w-4" aria-hidden />
+                              </GIconButton>
+                              <GIconButton
+                                label={`Elimina la mappatura di ${m.bookmaker_name}`}
+                                danger
                                 disabled={saving}
-                                onClick={() => handleDelete(m.id)}
-                                className="rounded px-2 py-1 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                                onClick={() => setToDelete(m)}
                               >
-                                Elimina
-                              </button>
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              </GIconButton>
                             </div>
                           </>
                         )}
-                      </div>
+                      </li>
                     )
                   })}
-                </div>
-              </div>
+                </ul>
+              </BoPanel>
             )
           })}
         </div>
       )}
-    </Container>
+
+      <DsModal
+        open={showNew}
+        onOpenChange={(open) => !open && !saving && setShowNew(false)}
+        title="Nuova mappatura"
+        size="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowNew(false)}
+              disabled={saving}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              form="bo-sm-form"
+              disabled={saving}
+              className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-60')}
+            >
+              {saving ? 'Salvataggio…' : 'Salva'}
+            </button>
+          </>
+        }
+      >
+        <form id="bo-sm-form" onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
+          <GSelect
+            id="bo-sm-new-sport"
+            label="Sport canonico"
+            value={newMapping.sport_id}
+            onChange={(sport_id) => setNewMapping({ ...newMapping, sport_id })}
+            options={[
+              { value: '', label: 'Seleziona…' },
+              ...sports.map((s) => ({ value: s.id, label: s.name })),
+            ]}
+          />
+          <GSelect
+            id="bo-sm-new-bookmaker"
+            label="Bookmaker"
+            value={newMapping.bookmaker_id}
+            onChange={(bookmaker_id) => setNewMapping({ ...newMapping, bookmaker_id })}
+            options={[
+              { value: '', label: 'Seleziona…' },
+              ...bookmakers.map((b) => ({ value: b.id, label: b.name })),
+            ]}
+          />
+          <GTextField
+            id="bo-sm-new-code"
+            label="Codice sport"
+            value={newMapping.bookmaker_sport_code}
+            onChange={(bookmaker_sport_code) =>
+              setNewMapping({ ...newMapping, bookmaker_sport_code })
+            }
+            placeholder="es. CALCIO, Soccer, 1"
+          />
+          <GTextField
+            id="bo-sm-new-name"
+            label="Nome sul bookmaker"
+            optional
+            value={newMapping.bookmaker_sport_name}
+            onChange={(bookmaker_sport_name) =>
+              setNewMapping({ ...newMapping, bookmaker_sport_name })
+            }
+            placeholder="es. Calcio, Soccer"
+          />
+          {newError && <DsAlert className="sm:col-span-2">{newError}</DsAlert>}
+        </form>
+      </DsModal>
+
+      <BoConfirmModal
+        open={toDelete !== null}
+        title="Eliminare la mappatura?"
+        description={
+          toDelete
+            ? `Il codice «${toDelete.bookmaker_sport_code}» di ${toDelete.bookmaker_name} non sarà più letto come ${toDelete.sport_name}.`
+            : ''
+        }
+        busy={saving}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setToDelete(null)}
+      />
+    </>
   )
 }

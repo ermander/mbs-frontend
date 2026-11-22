@@ -7,7 +7,7 @@ import { ResultBttsTool } from '@/components/strumenti/result-btts/result-btts-t
 
 export default function RisultatoGoalPage() {
   return (
-    <Container className="max-w-[108rem]">
+    <Container>
       <ToolAuthGuard tool="result_btts">
         <ToolPageShell
           toolName="Risultato + Goal"

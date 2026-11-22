@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { offerFromCard, romeToday } from '@/lib/offer-editor'
 import { fetchFreeOffer, fetchPublishedOffer, type ApiRead } from '@/lib/offers-api'
 import { OFFERS_COPY } from '@/lib/offers-content'
+import { PAGE_COLUMN } from '@/lib/page-column'
+import { cn } from '@/lib/utils'
 import type { OfferDetailApi } from '@/types/offers'
 import { DsPageShell } from '@/components/landing/ds-page-shell'
 import { DsContainer } from '@/components/landing/ds-primitives'
@@ -68,7 +70,7 @@ export default async function OffertaPage({ params }: Params) {
   return (
     <DsPageShell>
       {guest ? (
-        <OffersGuestGate renewalClassName="mx-auto w-full max-w-[1200px] px-5 pt-10 pb-24 sm:px-6">
+        <OffersGuestGate renewalClassName={cn(PAGE_COLUMN, 'px-5 pt-10 pb-24')}>
           {detail}
         </OffersGuestGate>
       ) : (

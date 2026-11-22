@@ -30,7 +30,7 @@ export function LegalPage({
 }) {
   return (
     <DsContainer className="pt-16 pb-24">
-      <div className="grid gap-y-10 [grid-template-areas:'head'_'toc'_'body'] lg:grid-cols-[minmax(0,720px)_280px] lg:justify-between lg:gap-x-16 lg:gap-y-0 lg:[grid-template-areas:'head_toc'_'body_toc']">
+      <div className="grid gap-y-10 [grid-template-areas:'head'_'toc'_'body'] lg:grid-cols-[minmax(0,720px)_280px] lg:gap-x-16 lg:gap-y-0 lg:[grid-template-areas:'head_toc'_'body_toc'] xl:gap-x-24">
         <header className="min-w-0 [grid-area:head]">
           <DsEyebrow>{eyebrow}</DsEyebrow>
           <h1 className="ds-display mt-3 text-pretty">{title}</h1>

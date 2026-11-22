@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
   Bell,
   ChevronRight,
+  CircleCheck,
   Gift,
   ListChecks,
   Wrench,
@@ -22,7 +23,7 @@ import { useNavSections } from '@/components/topnav/use-nav-sections'
 import { calculatorGroups } from '@/lib/calculators/catalog'
 import { OFFERS_NAV_ITEMS } from '@/lib/nav-config'
 import { offerFromCard } from '@/lib/offer-editor'
-import { OFFER_TYPES, offerBadge, offerHref, type Offer } from '@/lib/offers-content'
+import { OFFER_TYPES, offerBadge, offerHref } from '@/lib/offers-content'
 import {
   MONTH_FULL,
   dashMoney,
@@ -32,7 +33,7 @@ import {
 } from '@/lib/profit-tracker/dashboard'
 import { bookLogoSlug, displayName, eventWhen } from '@/lib/profit-tracker/ongoing-bets'
 import { cn } from '@/lib/utils'
-import { apiClient } from '@/services/api/client'
+import { getOffersTodo, markOfferDone } from '@/services/api/offers-client'
 import {
   getPuntateInCorsoTotale,
   getReminders,
@@ -40,11 +41,11 @@ import {
 } from '@/services/api/profit-tracker-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { OfferCardPageApi, OfferType } from '@/types/offers'
+import type { OffersTodoApi } from '@/types/offers'
 import type { Reminder } from '@/types/profit-tracker'
 
 /**
- * MOCKUP (ADAPTER_STATUS da assegnare): la Dashboard come pagina delle scorciatoie. In alto una riga
+ * La Dashboard come pagina delle scorciatoie (§14.367, richiesta di Emanuele). In alto una riga
  * piccola con saldo totale e profitto del mese (il resto dei saldi e l'andamento stanno nel Report);
  * a sinistra le sezioni (Offerte, strumenti online, calcolatori, Profit Tracker), a destra quello
  * che è in corso (giocate aperte e promemoria). Ogni scorciatoia esiste solo se la voce della barra
@@ -369,100 +370,117 @@ function CardRow({ href, children }: { href: string; children: ReactNode }) {
 
 /* ---------- Offerte ---------- */
 
-type OffersState = {
-  counts: Record<OfferType, number> | null
-  highlights: Offer[]
-}
-
 /**
- * Le tre pagine delle offerte con le attive di ognuna, e sotto le novità e quelle in scadenza.
- * Il backend non sa ancora quali offerte un utente ha già fatto: per ora «nuove» è il segno
- * «Nuova» del backoffice.
+ * §14.367: le tre pagine delle offerte con quante restano da fare in ognuna, e sotto le prime da
+ * fare (quelle che scadono, poi le «Nuova», poi il profitto più alto), ognuna col suo «Fatta».
+ * Una ricorrente spuntata torna da fare il giorno, la settimana o il mese dopo (lo decide il
+ * backend).
  */
 function OffersCard() {
-  const [state, setState] = useState<OffersState>({ counts: null, highlights: [] })
+  const [todo, setTodo] = useState<OffersTodoApi | null>(null)
+  const [failed, setFailed] = useState(false)
 
-  useEffect(() => {
-    let alive = true
-    Promise.all(
-      OFFER_TYPES.map((t) =>
-        apiClient
-          .get<OfferCardPageApi>('/offers', { params: { type: t.value, page: 1, limit: 50 } })
-          .then((r) => r.data),
-      ),
-    )
-      .then((pages) => {
-        if (!alive) return
-        const active = pages.flatMap((p) => p.offers).filter((o) => !o.expired)
-        const soon = (o: (typeof active)[number]) => (o.daysLeft ?? 99) <= 3
-        const highlights = active
-          .filter((o) => o.isNew || soon(o))
-          .sort((a, b) => (a.daysLeft ?? 99) - (b.daysLeft ?? 99))
-          .slice(0, MAX_OFFERS)
-          .map(offerFromCard)
-        setState({ counts: pages[0]?.activeByType ?? null, highlights })
+  const load = useCallback(() => {
+    getOffersTodo(MAX_OFFERS)
+      .then((t) => {
+        setTodo(t)
+        setFailed(false)
       })
-      .catch(() => alive && setState({ counts: null, highlights: [] }))
-    return () => {
-      alive = false
-    }
+      .catch(() => setFailed(true))
   }, [])
 
-  const total = state.counts ? Object.values(state.counts).reduce((s, n) => s + n, 0) : null
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const markDone = async (slug: string) => {
+    // Sparisce subito dall'elenco; il conteggio e la prossima da fare arrivano con la rilettura.
+    setTodo((t) => (t ? { ...t, offers: t.offers.filter((o) => o.slug !== slug) } : t))
+    try {
+      await markOfferDone(slug)
+    } finally {
+      load()
+    }
+  }
+
+  const offers = (todo?.offers ?? []).map(offerFromCard)
 
   return (
     <HubCard
       icon={Gift}
       title="Offerte"
       description="Benvenuto, ricorrenti ed esclusive, con la guida passo passo."
-      aside={total !== null ? <DsBadge tone="brand">{total} attive</DsBadge> : undefined}
+      aside={todo ? <DsBadge tone="brand">{todo.total} da fare</DsBadge> : undefined}
     >
       <ul className="m-0 flex list-none flex-col p-0">
         {OFFERS_NAV_ITEMS.map((item) => {
           const type = OFFER_TYPES.find((t) => item.href.endsWith(`/${t.value}`))?.value
-          const n = type && state.counts ? state.counts[type] : null
+          const n = type && todo ? todo.counts[type] : null
           return (
             <CardRow key={item.href} href={item.href}>
               <item.icon className="h-4 w-4 shrink-0 text-ds-brand" aria-hidden />
               <span className="flex-1 font-medium text-ds-ink">{item.label}</span>
-              {n !== null && (
-                <span className="ds-num-sm text-ds-ink-muted">
-                  {n} {n === 1 ? 'attiva' : 'attive'}
-                </span>
-              )}
+              {n !== null && <span className="ds-num-sm text-ds-ink-muted">{n} da fare</span>}
               <ChevronRight className="h-4 w-4 shrink-0 text-ds-ink-faint" aria-hidden />
             </CardRow>
           )
         })}
       </ul>
 
-      {state.highlights.length > 0 && (
+      {failed && (
+        <p className="ds-body-sm m-0 text-ds-ink-muted">
+          Non riusciamo a leggere le offerte da fare in questo momento.
+        </p>
+      )}
+
+      {todo && (
         <div className="flex flex-col gap-2 rounded-ds-sm bg-ds-surface-sunken p-3">
-          <span className="ds-caption text-ds-ink-muted uppercase">Novità e in scadenza</span>
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {state.highlights.map((offer) => {
-              const badge = offerBadge(offer)
-              return (
-                <li key={offer.id}>
-                  <Link
-                    href={offerHref(offer)}
-                    className={cn(
-                      'flex min-w-0 items-center gap-3 rounded-ds-sm bg-ds-surface-raised px-3 py-2 shadow-ds-sm transition-colors hover:bg-ds-brand-soft/40',
-                      dsFocusRing,
-                    )}
+          <span className="ds-caption text-ds-ink-muted uppercase">Da fare per prime</span>
+          {offers.length === 0 ? (
+            <p className="ds-body-sm m-0 px-1 py-2 text-ds-ink-muted">
+              Hai fatto tutte le offerte attive. Le ricorrenti tornano qui al giro dopo.
+            </p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {offers.map((offer) => {
+                const badge = offerBadge(offer)
+                return (
+                  <li
+                    key={offer.id}
+                    className="flex min-w-0 items-center gap-2 rounded-ds-sm bg-ds-surface-raised py-2 pr-2 pl-3 shadow-ds-sm"
                   >
-                    <OmBookLogo slug={offer.bookSlug} name={offer.bookName} size="sm" />
-                    <span className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
-                      <span className="ds-body-sm line-clamp-2 min-w-0 flex-1 text-ds-ink">
-                        {offer.title}
+                    <Link
+                      href={offerHref(offer)}
+                      className={cn(
+                        'flex min-w-0 flex-1 items-center gap-3 rounded-ds-xs hover:text-ds-brand',
+                        dsFocusRing,
+                      )}
+                    >
+                      <OmBookLogo slug={offer.bookSlug} name={offer.bookName} size="sm" />
+                      <span className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
+                        <span className="ds-body-sm line-clamp-2 min-w-0 flex-1 text-ds-ink">
+                          {offer.title}
+                        </span>
+                        <DsBadge tone={badge.tone}>{badge.label}</DsBadge>
                       </span>
-                      <DsBadge tone={badge.tone}>{badge.label}</DsBadge>
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void markDone(offer.id)}
+                      title={`Segna come fatta: ${offer.title}`}
+                      aria-label={`Segna come fatta: ${offer.title}`}
+                      className={cn(
+                        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ds-sm text-ds-ink-muted transition-colors hover:bg-ds-profit-soft hover:text-ds-profit',
+                        dsFocusRing,
+                      )}
+                    >
+                      <CircleCheck aria-hidden className="h-5 w-5" />
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       )}
     </HubCard>

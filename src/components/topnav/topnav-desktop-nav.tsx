@@ -24,7 +24,9 @@ export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
 
   return (
     <nav aria-label="Principale" className={className}>
-      <ul className="flex h-full items-center gap-1">
+      {/* §14.367: sotto i 1280px voci più strette (8px ai lati invece di 12), così con la Dashboard
+          in più le voci di un admin stanno ancora a 1024px. */}
+      <ul className="flex h-full items-center gap-1 max-xl:gap-0 max-xl:[&_:is(a,button)]:px-2">
         {sections.map((section) =>
           section.display === 'links' ? (
             section.items.map((item) => (
@@ -62,9 +64,17 @@ function TopnavLink({ item, active }: { item: AuthNavItem; active: boolean }) {
     <Link
       href={item.href}
       aria-current={active ? 'page' : undefined}
+      title={item.compact ? item.label : undefined}
       className={cn(dsNavLinkClass(active), 'whitespace-nowrap')}
     >
-      {item.label}
+      {item.compact ? (
+        <>
+          <item.icon aria-hidden className="h-5 w-5 shrink-0 xl:hidden" />
+          <span className="max-xl:sr-only">{item.label}</span>
+        </>
+      ) : (
+        item.label
+      )}
     </Link>
   )
 }

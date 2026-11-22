@@ -91,6 +91,20 @@ export interface OfferCardApi {
   daysLeft: number | null
   hasGuide: boolean
   sortOrder: number
+  /**
+   * §14.367: l'utente l'ha segnata «Fatta» e la spunta vale ancora (una ricorrente torna da fare
+   * il giorno, la settimana o il mese dopo). Solo nelle letture di chi è entrato.
+   */
+  done?: boolean
+}
+
+/** §14.367: GET /offers/todo, le offerte ancora da fare per la Dashboard. */
+export interface OffersTodoApi {
+  /** Le attive non fatte, per tipo. */
+  counts: Record<OfferType, number>
+  total: number
+  /** Le prime da fare: quelle che scadono, poi le «Nuova», poi il profitto più alto. */
+  offers: OfferCardApi[]
 }
 
 /** Una sezione dell'elenco pubblico (§14.345): un gruppo delle attive, o tutte le scadute insieme. */

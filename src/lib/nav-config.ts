@@ -216,7 +216,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
   },
 ]
 
-/** Direct links (no dropdown); order: HOME, GUIDE, then dropdowns go in between, then AGENDA, FORUM */
+/** Direct links (no dropdown), shown before and after the dropdowns. */
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },

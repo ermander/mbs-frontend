@@ -30,6 +30,9 @@ const MENU_ROW =
  *
  * §14.358: «Offerte» ha sotto le tre pagine (benvenuto, ricorrenti, esclusive), come nella barra
  * dell'app: una tendina al passaggio del mouse, una riga che si espande nel menu del telefono.
+ *
+ * §14.360: come nella barra dell'app, le voci stanno a destra accanto ad Accedi e Inizia gratis
+ * (o in fondo alla barra, quando le due azioni non ci sono).
  */
 export function LandingNav({ accountActions = true }: { accountActions?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -47,8 +50,8 @@ export function LandingNav({ accountActions = true }: { accountActions?: boolean
           <DsWordmark size="sm" />
         </Link>
 
-        <nav aria-label="Principale" className="hidden flex-1 lg:block">
-          <ul className="flex items-center gap-1">
+        <nav aria-label="Principale" className="hidden min-w-0 flex-1 lg:block">
+          <ul className="flex items-center justify-end-safe gap-1">
             {LANDING_NAV_LINKS.map((link) => {
               const active = isCurrentSection(link.href, pathname)
               return (
@@ -76,7 +79,7 @@ export function LandingNav({ accountActions = true }: { accountActions?: boolean
         </nav>
 
         {accountActions && (
-          <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <div className="hidden shrink-0 items-center gap-2 lg:flex">
             <DsButton href={LANDING_ROUTES.login} variant="ghost">
               {BRAND.login}
             </DsButton>

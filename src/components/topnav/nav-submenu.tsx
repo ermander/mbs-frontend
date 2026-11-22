@@ -54,6 +54,7 @@ export function NavHoverMenu({
           {...hoverProps}
           align="start"
           sideOffset={4}
+          collisionPadding={16}
           className={cn(
             topnavMenuPanel,
             'max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-56 overflow-y-auto',

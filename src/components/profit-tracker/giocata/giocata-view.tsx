@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { notFound, useRouter } from 'next/navigation'
-import { Archive, ArchiveRestore, ChevronLeft, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { dsButtonClass } from '@/components/landing/ds-primitives'
@@ -32,6 +32,7 @@ import {
   STATO_LABEL,
   STATO_TONE,
   TIPO_BONUS_LABEL,
+  betDetailBack,
   betSummary,
   isMultiplaLegs,
   legRisk,
@@ -63,12 +64,13 @@ import type { BetLeg, BetStatus } from '@/types/profit-tracker'
  * lettura, come quella di prima. Briciola verso l'Archivio, data dell'evento senza «Iniziata»,
  * stato delle gambe come badge, tag e nota da leggere; Ripristina porta al dettaglio in corso,
  * Elimina solo se il backend la lascia eliminare (nessuna gamba in corso, vinta o persa).
+ *
+ * In cima, anche durante il caricamento, il pulsante «Torna alle giocate archiviate» o «Torna alle
+ * giocate in corso» (§14.354): prima c'era solo la briciola, che non si leggeva come un pulsante.
  */
 
 const NOTICE_MS = 7000
 const FLASH_MS = 1500
-const BACK_HREF = '/profit-tracker/giocate'
-const ARCHIVE_HREF = '/profit-tracker/archivio'
 /** Le gambe che il backend non lascia eliminare con la giocata (come `eliminabile` della lista). */
 const UNDELETABLE_STATES = new Set<BetStatus>(['in_corso', 'vinto', 'perso'])
 const NOT_DELETABLE = 'Non si può: la giocata ha gambe vinte o perse che contano nei saldi'
@@ -111,6 +113,13 @@ export function GiocataView({
 }) {
   const router = useRouter()
   const now = useNow(60_000)
+  const back = betDetailBack(archivedView)
+  const backButton = (
+    <Link href={back.href} className={cn(dsButtonClass('secondary', 'sm'), 'pl-2.5')}>
+      <ArrowLeft className="h-4 w-4" aria-hidden />
+      {back.label}
+    </Link>
+  )
 
   const ongoingBets = useProfitTrackerStore((s) => s.ongoingBets)
   const allLegs = useProfitTrackerStore((s) => s.betLegs)
@@ -216,7 +225,12 @@ export function GiocataView({
 
   if (!navigatingAway && (loadError || (!loading && !bet))) notFound()
   if (loading || !bet) {
-    return <p className="ds-body-sm m-0 text-ds-ink-muted">Caricamento della giocata…</p>
+    return (
+      <>
+        <div>{backButton}</div>
+        <p className="ds-body-sm m-0 text-ds-ink-muted">Caricamento della giocata…</p>
+      </>
+    )
   }
 
   const fail = (err: unknown, fallback: string) => toast.error(getErrorMessage(err) ?? fallback)
@@ -281,7 +295,7 @@ export function GiocataView({
     try {
       setNavigatingAway(true)
       await removeOngoingBet(bet.id)
-      router.push(archivedView ? ARCHIVE_HREF : BACK_HREF)
+      router.push(back.href)
     } catch (err) {
       setNavigatingAway(false)
       setBusy(false)
@@ -567,13 +581,7 @@ export function GiocataView({
   return (
     <>
       <div className="ds-body-sm flex flex-wrap items-center gap-3 text-ds-ink-muted">
-        <Link
-          href={archivedView ? ARCHIVE_HREF : BACK_HREF}
-          className={cn(dsButtonClass('ghost', 'sm'), 'pl-1.5')}
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-          {archivedView ? 'Giocate archiviate' : 'Giocate in corso'}
-        </Link>
+        {backButton}
         <span className="h-4 w-px bg-ds-line" aria-hidden />
         <span className="ds-label uppercase">Giocata</span>
         <span className="font-mono text-[13px] leading-4 font-medium text-ds-ink">{bet.id}</span>

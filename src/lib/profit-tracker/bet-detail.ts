@@ -8,6 +8,18 @@ import type { BetLeg, BetStatus, ModalitaSaldo } from '@/types/profit-tracker'
  * qui per poterle provare.
  */
 
+/**
+ * Il pulsante «Torna» in cima al dettaglio (§14.354): riporta alla lista senza le frecce del
+ * browser. Dalla giocata archiviata l'Archivio, che apre sulla scheda «Giocate archiviate»; dalla
+ * giocata in corso la voce Giocate, che apre sulla scheda «In corso», anche quando il dettaglio
+ * si è aperto da un calcolatore. Stessa meta dopo «Elimina».
+ */
+export function betDetailBack(archivedView: boolean): { href: string; label: string } {
+  return archivedView
+    ? { href: '/profit-tracker/archivio', label: 'Torna alle giocate archiviate' }
+    : { href: '/profit-tracker/giocate', label: 'Torna alle giocate in corso' }
+}
+
 export const FINAL_STATES = new Set<BetStatus>(['vinto', 'perso', 'annullato'])
 
 export const STATO_LABEL: Record<BetStatus, string> = {

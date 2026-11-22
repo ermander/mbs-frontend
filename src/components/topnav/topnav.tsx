@@ -10,16 +10,20 @@ import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import { DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
 import { TopnavDesktopNav } from './topnav-desktop-nav'
 import { TopnavMobileSheet } from './topnav-mobile-sheet'
-import { TopnavNotifications } from './topnav-notifications'
+import { NOTIFICATIONS_IN_TOPNAV, TopnavNotifications } from './topnav-notifications'
 import { TopnavUserMenu } from './topnav-user-menu'
 import { topnavDsScope } from './topnav-ds'
 
 /**
  * Barra di navigazione dell'area autenticata, dalla Navbar del design OddWise (§14.275): 64px su
- * surface-raised con hairline sotto, marchio, voci allineate a sinistra, campanella e account a
- * destra, nella colonna delle pagine (PAGE_COLUMN). Sotto `lg` le voci passano in un cassetto aperto
- * dal pulsante a destra. È alta `--topnav-h` (globals.css): le pagine che dimensionano le tabelle
- * sull'altezza della finestra la sottraggono.
+ * surface-raised con hairline sotto, marchio a sinistra, voci e account a destra, nella colonna delle
+ * pagine (PAGE_COLUMN). Sotto `lg` le voci passano in un cassetto aperto dal pulsante a destra. È
+ * alta `--topnav-h` (globals.css): le pagine che dimensionano le tabelle sull'altezza della finestra
+ * la sottraggono.
+ *
+ * §14.360 (richiesta di Emanuele): le voci stanno a destra, accanto all'account, e la campanella è
+ * nascosta finché non ci sono notifiche vere (`NOTIFICATIONS_IN_TOPNAV`). Se le voci non ci stanno,
+ * `justify-end-safe` le fa ripartire dal marchio invece di farle finire sotto di esso.
  */
 export function Topnav() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
@@ -40,10 +44,10 @@ export function Topnav() {
           <DsWordmark size="sm" />
         </Link>
 
-        <TopnavDesktopNav className="hidden min-w-0 flex-1 lg:flex" />
+        <TopnavDesktopNav className="hidden min-w-0 flex-1 justify-end-safe lg:flex" />
 
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
-          <TopnavNotifications />
+          {NOTIFICATIONS_IN_TOPNAV && <TopnavNotifications />}
           <TopnavUserMenu />
           <button
             type="button"

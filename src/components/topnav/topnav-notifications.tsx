@@ -6,6 +6,12 @@ import { cn } from '@/lib/utils'
 import { dsFocusRing } from '@/components/landing/ds-primitives'
 
 /**
+ * La campanella è nascosta dal §14.360 (richiesta di Emanuele: per ora non serve). Il componente
+ * resta com'è: per riportarla nella barra basta rimettere `true`.
+ */
+export const NOTIFICATIONS_IN_TOPNAV = false
+
+/**
  * Contatore FINTO (§14.275): le notifiche non esistono ancora, il numero è quello del design.
  * Va sostituito dal conteggio vero quando ci sarà un servizio di notifiche.
  */

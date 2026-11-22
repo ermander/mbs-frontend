@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { SECTIONS } from './tools'
 import {
+  NAV_ITEM_SECTIONS,
   OFFERS_NAV_ITEMS,
   accountNavItem,
   authNavSections,
@@ -67,6 +69,15 @@ describe('visibleNavSections', () => {
       'Community',
       'Backoffice',
     ])
+  })
+  it('every section but the Tracker group has its bar entry, and every mapped href is an entry', () => {
+    const hrefs = authNavSections.flatMap((s) => s.items.map((i) => i.href))
+    for (const href of Object.keys(NAV_ITEM_SECTIONS)) expect(hrefs).toContain(href)
+    const mapped = [
+      ...Object.values(NAV_ITEM_SECTIONS),
+      ...authNavSections.flatMap((s) => (s.requiresSection ? [s.requiresSection] : [])),
+    ]
+    expect([...mapped].sort()).toEqual(SECTIONS.map((s) => s.key).sort())
   })
   it('does not mutate the config', () => {
     visibleNavSections({ role: 'USER_ROLE', tools: [] })

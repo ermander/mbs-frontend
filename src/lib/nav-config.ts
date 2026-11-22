@@ -68,11 +68,6 @@ export interface AuthNavItem {
   /** Se presente, la voce viene mostrata solo agli utenti con quel ruolo */
   requiresRole?: UserRole
   /**
-   * Se presente, la voce è visibile solo a chi ha quella sezione del sito: admin o utente
-   * abilitato dal backoffice (§14.122 per Risultato + Goal, ogni voce dal §14.366).
-   */
-  requiresSection?: SectionKey
-  /**
    * §14.358: le pagine dentro la voce. Nella barra la voce diventa una tendina che si apre al
    * passaggio del mouse, nel cassetto mobile una riga che si espande; `href` resta la radice
    * della sezione e la segna come attiva anche sulle pagine sotto (il dettaglio di un'offerta).
@@ -123,30 +118,13 @@ export const authNavSections: AuthNavSection[] = [
     label: 'Sezioni',
     display: 'links',
     items: [
-      // §14.366: ogni voce è una sezione che l'admin accende o spegne per utente dal backoffice.
-      { label: 'Guide', href: '/guide', icon: BookOpen, requiresSection: 'guide' },
-      {
-        label: 'Offerte',
-        href: '/offerte',
-        icon: Gift,
-        children: OFFERS_NAV_ITEMS,
-        requiresSection: 'offers',
-      },
-      { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar, requiresSection: 'oddsmatcher' },
+      { label: 'Guide', href: '/guide', icon: BookOpen },
+      { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
+      { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
-      {
-        label: 'Risultato + Goal',
-        href: '/risultato-goal',
-        icon: Goal,
-        requiresSection: 'result_btts',
-      },
+      { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal },
       // §14.347: «Rimborso 0-0» (§14.288) is out of the menu; its page stays at /rimborso-zero.
-      {
-        label: 'Calcolatori',
-        href: '/calcolatori',
-        icon: Calculator,
-        requiresSection: 'calculators',
-      },
+      { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
     ],
   },
   {
@@ -166,7 +144,7 @@ export const authNavSections: AuthNavSection[] = [
   {
     label: 'Community',
     display: 'links',
-    items: [{ label: 'Forum', href: '/forum', icon: MessageSquare, requiresSection: 'forum' }],
+    items: [{ label: 'Forum', href: '/forum', icon: MessageSquare }],
   },
   {
     label: 'Backoffice',
@@ -190,6 +168,20 @@ export const authNavSections: AuthNavSection[] = [
   },
 ]
 
+/**
+ * §14.366: la sezione del sito di ogni voce della barra, per indirizzo. Una voce la vede solo chi
+ * ha la sezione: admin o utente abilitato dal backoffice (Risultato + Goal dal §14.122, quando
+ * la voce aveva `requiresTool`). Il gruppo Tracker ha la sua `requiresSection`.
+ */
+export const NAV_ITEM_SECTIONS: Readonly<Record<string, SectionKey>> = {
+  '/guide': 'guide',
+  '/offerte': 'offers',
+  '/odds-scanner': 'oddsmatcher',
+  '/risultato-goal': 'result_btts',
+  '/calcolatori': 'calculators',
+  '/forum': 'forum',
+}
+
 /** La pagina del profilo vive nel menu dell'account (avatar a destra nella barra), con il logout. */
 export const accountNavItem: AuthNavItem = {
   label: 'Profilo',
@@ -212,7 +204,8 @@ export function visibleNavSections(
     if (section.requiresSection && !canUseSection(viewer, section.requiresSection)) return []
     const items = section.items.filter((item) => {
       if (item.requiresRole && item.requiresRole !== user?.role) return false
-      if (item.requiresSection && !canUseSection(viewer, item.requiresSection)) return false
+      const itemSection = NAV_ITEM_SECTIONS[item.href]
+      if (itemSection && !canUseSection(viewer, itemSection)) return false
       return true
     })
     return items.length > 0 ? [{ ...section, items }] : []

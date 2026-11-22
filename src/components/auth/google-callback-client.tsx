@@ -22,6 +22,9 @@ const ERROR_MESSAGES: Record<string, string> = {
     "L'indirizzo email del tuo account Google non risulta verificato da Google: verificalo e riprova, oppure registrati con email e password.",
   google_failed:
     "Non siamo riusciti a completare l'accesso con Google. Riprova fra qualche istante.",
+  // §14.366: l'account è NON ATTIVO, disattivato dal backoffice.
+  google_account_disabled:
+    'Il tuo account è disattivato: scrivici dalla pagina Contatti se pensi che sia un errore.',
 }
 
 /**

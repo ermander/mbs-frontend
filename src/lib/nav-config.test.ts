@@ -46,6 +46,28 @@ describe('visibleNavSections', () => {
       expect(sections[0][1]).toEqual(['Guide', 'Offerte', 'Oddsmatcher', 'Calcolatori'])
     }
   })
+  // §14.366: ogni voce è una sezione che l'admin accende o spegne per utente.
+  it('a user sees only the sections switched on for them', () => {
+    const sections = outline({ role: 'USER_ROLE', sections: ['offers', 'calculators'] })
+    expect(sections).toEqual([['Sezioni', ['Offerte', 'Calcolatori']]])
+  })
+  it('the Tracker group follows the tracker section, Forum the forum one', () => {
+    const sections = outline({
+      role: 'USER_ROLE',
+      sections: ['oddsmatcher', 'result_btts', 'tracker', 'forum'],
+    })
+    expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
+    expect(sections[0][1]).toEqual(['Oddsmatcher', 'Risultato + Goal'])
+  })
+  it('no section at all: an empty bar; an admin with no section stored still sees everything', () => {
+    expect(outline({ role: 'USER_ROLE', sections: [] })).toEqual([])
+    expect(outline({ role: 'ADMIN_ROLE', sections: [] }).map(([label]) => label)).toEqual([
+      'Sezioni',
+      'Tracker',
+      'Community',
+      'Backoffice',
+    ])
+  })
   it('does not mutate the config', () => {
     visibleNavSections({ role: 'USER_ROLE', tools: [] })
     expect(authNavSections[0].items).toHaveLength(5)

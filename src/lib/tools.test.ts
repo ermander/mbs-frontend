@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canUseTool, hasRole } from './tools'
+import { SECTIONS, SECTION_HOME, canUseSection, canUseTool, hasRole } from './tools'
 
 describe('canUseTool', () => {
   it('an admin can use every tool, whatever the array says', () => {
@@ -12,6 +12,43 @@ describe('canUseTool', () => {
     expect(canUseTool({ role: 'USER_ROLE' }, 'result_btts')).toBe(false)
     expect(canUseTool(null, 'result_btts')).toBe(false)
     expect(canUseTool(undefined, 'result_btts')).toBe(false)
+  })
+})
+
+// §14.366: ogni sezione del sito si accende o si spegne per utente.
+describe('canUseSection', () => {
+  it('a user with `sections` opens exactly those', () => {
+    const user = { role: 'USER_ROLE' as const, sections: ['offers', 'tracker'] }
+    expect(canUseSection(user, 'offers')).toBe(true)
+    expect(canUseSection(user, 'tracker')).toBe(true)
+    expect(canUseSection(user, 'oddsmatcher')).toBe(false)
+    expect(canUseSection(user, 'result_btts')).toBe(false)
+  })
+  it('an admin opens every section, whatever is stored', () => {
+    for (const { key } of SECTIONS) {
+      expect(canUseSection({ role: 'ADMIN_ROLE', sections: [] }, key)).toBe(true)
+    }
+  })
+  it('a backend before §14.366 (no `sections`): everything open but Risultato + Goal, which follows `tools`', () => {
+    for (const { key } of SECTIONS) {
+      expect(canUseSection({ role: 'USER_ROLE', tools: [] }, key)).toBe(key !== 'result_btts')
+    }
+    expect(canUseSection({ role: 'USER_ROLE', tools: ['result_btts'] }, 'result_btts')).toBe(true)
+  })
+  it('nothing without a user', () => {
+    expect(canUseSection(null, 'offers')).toBe(false)
+  })
+  it('every section has a home page and a label, in the order of the top bar', () => {
+    expect(SECTIONS.map((s) => s.label)).toEqual([
+      'Offerte',
+      'Oddsmatcher',
+      'Risultato + Goal',
+      'Calcolatori',
+      'Tracker',
+      'Guide',
+      'Forum',
+    ])
+    for (const { key } of SECTIONS) expect(SECTION_HOME[key]).toMatch(/^\/[a-z-]+/)
   })
 })
 

@@ -1,7 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Container } from '@/components/ui/container'
+import { RefreshCw } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BO_TILE_GRID,
+  BoPagination,
+  BoPanel,
+  BoStatTile,
+  codeLabel,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { GSelect, GTextField } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   getReviewQueue,
   getReviewQueueStats,
@@ -52,20 +72,21 @@ function formatDate(iso: string | null) {
   })
 }
 
-function statusBadge(status: ReviewQueueStatus) {
-  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
-  switch (status) {
-    case 'pending':
-      return `${base} bg-amber-500/15 text-amber-400`
-    case 'attached':
-      return `${base} bg-emerald-500/15 text-emerald-400`
-    case 'rejected':
-      return `${base} bg-red-500/15 text-red-400`
-    case 'created_canonical':
-      return `${base} bg-blue-500/15 text-blue-400`
-  }
+const STATUS_TONE: Record<ReviewQueueStatus, DsBadgeTone> = {
+  pending: 'warning',
+  attached: 'profit',
+  rejected: 'loss',
+  created_canonical: 'info',
 }
 
+const SYNC_TYPES: Array<{ value: 'catalog' | 'fixtures' | 'status'; label: string }> = [
+  { value: 'catalog', label: 'catalog (leagues+teams)' },
+  { value: 'fixtures', label: 'fixtures (next 14d)' },
+  { value: 'status', label: 'status (live window)' },
+]
+
+// La coda degli eventi dei bookmaker senza un evento canonico. Dal §14.365 sul design OddWise:
+// numeri in riquadri, sync nel riquadro con titolo, tabella e paginazione del Backoffice.
 export default function ReviewQueuePage() {
   const [items, setItems] = useState<ReviewQueueItem[]>([])
   const [stats, setStats] = useState<ReviewQueueStats | null>(null)
@@ -164,163 +185,154 @@ export default function ReviewQueuePage() {
   }
 
   return (
-    <Container className="py-8">
-      <h1 className="mb-6 text-2xl font-semibold">Review Queue — Eventi orfani bookmaker</h1>
+    <>
+      <DsPageHeader
+        title="Review Queue"
+        description="Eventi orfani dei bookmaker: da collegare a un evento canonico o da rifiutare."
+      />
 
       {/* Stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <div className="rounded-lg border border-border p-3">
-          <div className="text-xs text-muted-foreground">In attesa</div>
-          <div className="text-xl font-medium">{stats?.pending ?? '—'}</div>
-        </div>
-        <div className="rounded-lg border border-border p-3">
-          <div className="text-xs text-muted-foreground">Collegati</div>
-          <div className="text-xl font-medium">{stats?.attached ?? '—'}</div>
-        </div>
-        <div className="rounded-lg border border-border p-3">
-          <div className="text-xs text-muted-foreground">Rifiutati</div>
-          <div className="text-xl font-medium">{stats?.rejected ?? '—'}</div>
-        </div>
-        <div className="rounded-lg border border-border p-3">
-          <div className="text-xs text-muted-foreground">Canonici manuali</div>
-          <div className="text-xl font-medium">{stats?.createdCanonical ?? '—'}</div>
-        </div>
-        <div className="rounded-lg border border-border p-3">
-          <div className="text-xs text-muted-foreground">Budget api-sports</div>
-          <div className="text-xl font-medium">
-            {budget ? `${budget.callsUsed} / ${budget.planDailyLimit}` : '—'}
-          </div>
-        </div>
+      <div className={BO_TILE_GRID}>
+        <BoStatTile label="In attesa" value={stats?.pending ?? '—'} />
+        <BoStatTile label="Collegati" value={stats?.attached ?? '—'} />
+        <BoStatTile label="Rifiutati" value={stats?.rejected ?? '—'} />
+        <BoStatTile label="Canonici manuali" value={stats?.createdCanonical ?? '—'} />
+        <BoStatTile
+          label="Budget api-sports"
+          value={budget ? `${budget.callsUsed} / ${budget.planDailyLimit}` : '—'}
+        />
       </div>
 
       {/* Provider sync trigger */}
-      <div className="mb-6 rounded-lg border border-border p-4">
-        <h2 className="mb-3 font-medium">Trigger manuale sync provider</h2>
+      <BoPanel title="Trigger manuale sync provider">
         <div className="flex flex-wrap items-center gap-3">
-          <select
+          <GSelect
+            id="rq-sync-sport"
+            ariaLabel="Sport"
+            size="sm"
             value={syncSport}
-            onChange={(e) => setSyncSport(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            {SPORT_KEYS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select
+            onChange={setSyncSport}
+            options={SPORT_KEYS.map((s) => ({ value: s, label: s }))}
+            className="w-40"
+          />
+          <GSelect
+            id="rq-sync-type"
+            ariaLabel="Tipo di sync"
+            size="sm"
             value={syncType}
-            onChange={(e) => setSyncType(e.target.value as 'catalog' | 'fixtures' | 'status')}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="catalog">catalog (leagues+teams)</option>
-            <option value="fixtures">fixtures (next 14d)</option>
-            <option value="status">status (live window)</option>
-          </select>
+            onChange={(v) => setSyncType(v as 'catalog' | 'fixtures' | 'status')}
+            options={SYNC_TYPES}
+            className="w-56"
+          />
           <button
             type="button"
             onClick={handleTriggerSync}
             disabled={syncing}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className={cn(dsButtonClass('primary', 'sm'), 'disabled:opacity-60')}
           >
             {syncing ? 'Sincronizzazione…' : 'Avvia sync'}
           </button>
         </div>
-      </div>
+      </BoPanel>
 
       {/* Filter */}
-      <div className="mb-4 flex items-center gap-3">
-        <select
+      <div className="flex flex-wrap items-center gap-3">
+        <GSelect
+          id="rq-status"
+          ariaLabel="Stato"
+          size="sm"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as ReviewQueueStatus)
+          onChange={(v) => {
+            setStatus(v as ReviewQueueStatus)
             setOffset(0)
           }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => load()}
-          className="rounded-md border border-border px-3 py-2 text-sm"
-        >
+          options={STATUS_OPTIONS}
+          className="w-56"
+        />
+        <button type="button" onClick={() => load()} className={dsButtonClass('secondary', 'sm')}>
+          <RefreshCw className="h-4 w-4" aria-hidden />
           Aggiorna
         </button>
       </div>
 
-      {!loading && error && (
-        <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
+      {!loading && error && <DsAlert>{error}</DsAlert>}
 
-      {loading ? (
-        <div className="text-sm text-muted-foreground">Caricamento…</div>
-      ) : items.length === 0 ? (
-        <div className="text-sm text-muted-foreground">Nessun elemento.</div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted text-left font-mono text-xs tracking-[0.02em] text-muted-foreground uppercase">
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
+          <thead>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Status</th>
+              <th className={BO_TH}>Bookmaker</th>
+              <th className={BO_TH}>Sport / Lega</th>
+              <th className={BO_TH}>Match</th>
+              <th className={BO_TH}>Inizio</th>
+              <th className={BO_TH}>Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th className="p-2">Status</th>
-                <th className="p-2">Bookmaker</th>
-                <th className="p-2">Sport / Lega</th>
-                <th className="p-2">Match</th>
-                <th className="p-2">Inizio</th>
-                <th className="p-2">Azioni</th>
+                <td colSpan={6} className={BO_EMPTY_CELL}>
+                  Caricamento della coda…
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id} className="border-t border-border">
-                  <td className="p-2 align-top">
-                    <span className={statusBadge(it.status)}>{it.status}</span>
+            ) : items.length === 0 ? (
+              <tr>
+                <td colSpan={6} className={BO_EMPTY_CELL}>
+                  Nessun elemento.
+                </td>
+              </tr>
+            ) : (
+              items.map((it) => (
+                <tr key={it.id} className={cn(BO_ROW, 'align-top')}>
+                  <td className={cn(BO_TD, 'align-top')}>
+                    <DsBadge tone={STATUS_TONE[it.status]}>{codeLabel(it.status)}</DsBadge>
                   </td>
-                  <td className="p-2 align-top">
-                    <div>{it.bookmakerSlug}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <td className={cn(BO_TD, 'align-top')}>
+                    <div className="font-semibold text-ds-ink">{it.bookmakerSlug}</div>
+                    <div className="font-mono text-xs text-ds-ink-muted">
                       {it.bookmakerExternalId ?? '—'}
                     </div>
                   </td>
-                  <td className="p-2 align-top">
-                    <div>{it.bookmakerSportName ?? '—'}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <td className={cn(BO_TD, 'align-top')}>
+                    <div className="text-ds-ink">{it.bookmakerSportName ?? '—'}</div>
+                    <div className="ds-caption text-ds-ink-muted">
                       {it.bookmakerCompetitionName ?? '—'}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="ds-caption text-ds-ink-muted">
                       {it.bookmakerCountryName ?? ''}
                     </div>
                   </td>
-                  <td className="p-2 align-top">
+                  <td className={cn(BO_TD, 'align-top text-ds-ink')}>
                     <div>{it.bookmakerHomeName ?? '—'}</div>
-                    <div className="text-muted-foreground">vs</div>
+                    <div className="text-ds-ink-muted">vs</div>
                     <div>{it.bookmakerAwayName ?? '—'}</div>
                   </td>
-                  <td className="p-2 align-top">{formatDate(it.startTime)}</td>
-                  <td className="p-2 align-top">
+                  <td
+                    className={cn(
+                      BO_TD,
+                      'align-top whitespace-nowrap text-ds-ink-muted tabular-nums',
+                    )}
+                  >
+                    {formatDate(it.startTime)}
+                  </td>
+                  <td className={cn(BO_TD, 'align-top')}>
                     {it.status === 'pending' ? (
                       <div className="flex min-w-[260px] flex-col gap-2">
-                        <input
-                          type="text"
+                        <GTextField
+                          id={`rq-event-${it.id}`}
+                          ariaLabel="UUID dell'evento canonico"
+                          size="sm"
                           placeholder="canonical event UUID"
                           value={eventIdInputs[it.id] ?? ''}
-                          onChange={(e) =>
-                            setEventIdInputs((s) => ({ ...s, [it.id]: e.target.value }))
-                          }
-                          className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+                          onChange={(v) => setEventIdInputs((s) => ({ ...s, [it.id]: v }))}
                         />
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => handleAttach(it.id)}
                             disabled={actionState[it.id] === 'attaching'}
-                            className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
+                            className={cn(dsButtonClass('primary', 'sm'), 'disabled:opacity-60')}
                           >
                             {actionState[it.id] === 'attaching' ? '…' : 'Collega'}
                           </button>
@@ -328,43 +340,35 @@ export default function ReviewQueuePage() {
                             type="button"
                             onClick={() => handleReject(it.id)}
                             disabled={actionState[it.id] === 'rejecting'}
-                            className="rounded-md border border-border px-2 py-1 text-xs disabled:opacity-50"
+                            className={cn(
+                              dsButtonClass('secondary', 'sm'),
+                              'text-ds-loss disabled:opacity-50',
+                            )}
                           >
                             {actionState[it.id] === 'rejecting' ? '…' : 'Rifiuta'}
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="ds-caption text-ds-ink-muted">
                         {it.resolvedBy ? `${it.resolvedBy} · ${formatDate(it.resolvedAt)}` : '—'}
                       </div>
                     )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          disabled={offset === 0 || loading}
-          onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-          className="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-50"
-        >
-          ← Precedente
-        </button>
-        <button
-          type="button"
-          disabled={items.length < PAGE_SIZE || loading}
-          onClick={() => setOffset(offset + PAGE_SIZE)}
-          className="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-50"
-        >
-          Successiva →
-        </button>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    </Container>
+
+      <BoPagination
+        label={`${items.length} in questa pagina`}
+        prevDisabled={offset === 0 || loading}
+        nextDisabled={items.length < PAGE_SIZE || loading}
+        onPrev={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+        onNext={() => setOffset(offset + PAGE_SIZE)}
+      />
+    </>
   )
 }

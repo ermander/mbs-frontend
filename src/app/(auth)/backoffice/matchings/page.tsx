@@ -1,7 +1,26 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Container } from '@/components/ui/container'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoCode,
+  BoMuted,
+  BoPagination,
+  codeLabel,
+  matchStatusTone,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { GIconButton, GSelect } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getMatchings, getEventBookmakers } from '@/services/api/odds-collection-client'
 import {
   getScrapers,
@@ -34,21 +53,8 @@ const MATCH_METHODS = [
 
 const PAGE_SIZE = 50
 
-function statusBadge(status: string) {
-  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
-  switch (status) {
-    case 'auto_confirmed':
-    case 'manual_confirmed':
-      return `${base} bg-emerald-500/15 text-emerald-400`
-    case 'high_confidence':
-      return `${base} bg-blue-500/15 text-blue-400`
-    case 'review_needed':
-      return `${base} bg-amber-500/15 text-amber-400`
-    case 'rejected':
-      return `${base} bg-red-500/15 text-red-400`
-    default:
-      return `${base} bg-muted text-muted-foreground`
-  }
+function StatusBadge({ status }: { status: string }) {
+  return <DsBadge tone={matchStatusTone(status)}>{codeLabel(status)}</DsBadge>
 }
 
 function formatDate(iso: string) {
@@ -61,6 +67,9 @@ function formatDate(iso: string) {
   })
 }
 
+// Tutti gli abbinamenti fra eventi dei bookmaker ed eventi canonici. Dal §14.365 sul design
+// OddWise: filtri GSelect, tabella del Backoffice e il dettaglio dei bookmaker dell'evento che si
+// apre anche col pulsante a inizio riga (prima solo col doppio clic, fuori dalla tastiera).
 export default function MatchingsPage() {
   const [matchings, setMatchings] = useState<EventMatching[]>([])
   const [total, setTotal] = useState(0)
@@ -134,7 +143,7 @@ export default function MatchingsPage() {
     setOffset(0)
   }
 
-  const handleRowDoubleClick = async (eventId: string) => {
+  const toggleEvent = async (eventId: string) => {
     if (expandedEventId === eventId) {
       setExpandedEventId(null)
       return
@@ -154,148 +163,128 @@ export default function MatchingsPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
 
+  const filters = [
+    {
+      id: 'bo-mt-bookmaker',
+      label: 'Bookmaker',
+      value: bookmaker,
+      set: setBookmaker,
+      options: [
+        { value: '', label: 'Tutti i bookmaker' },
+        ...bookmakers.map((b) => ({ value: b.slug, label: b.name })),
+      ],
+    },
+    {
+      id: 'bo-mt-status',
+      label: 'Status',
+      value: matchStatus,
+      set: setMatchStatus,
+      options: MATCH_STATUSES,
+    },
+    {
+      id: 'bo-mt-method',
+      label: 'Metodo',
+      value: matchMethod,
+      set: setMatchMethod,
+      options: MATCH_METHODS,
+    },
+    {
+      id: 'bo-mt-sport',
+      label: 'Sport',
+      value: sport,
+      set: setSport,
+      options: [
+        { value: '', label: 'Tutti gli sport' },
+        ...sports.map((s) => ({ value: s.name, label: s.name })),
+      ],
+    },
+  ]
+
   return (
-    <Container>
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Event Matchings</h2>
-        <p className="text-sm text-muted-foreground">
-          Tutti i matching tra eventi bookmaker ed eventi canonici. Doppio click su una riga per
-          vedere tutti i bookmaker associati.
-          {!loading && <span className="ml-2 font-medium text-foreground">{total} risultati</span>}
-        </p>
+    <>
+      <DsPageHeader
+        title="Event Matchings"
+        description="Tutti i matching tra eventi bookmaker ed eventi canonici. Apri una riga per vedere tutti i bookmaker associati all'evento."
+      />
+
+      <div className="flex flex-wrap items-center gap-3">
+        {filters.map((f) => (
+          <GSelect
+            key={f.id}
+            id={f.id}
+            ariaLabel={f.label}
+            size="sm"
+            value={f.value}
+            onChange={handleFilterChange(f.set)}
+            options={f.options}
+            className="w-52"
+          />
+        ))}
+        {!loading && (
+          <span className="ds-body-sm text-ds-ink-muted tabular-nums">{total} risultati</span>
+        )}
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
-      {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
-          value={bookmaker}
-          onChange={(e) => handleFilterChange(setBookmaker)(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
-        >
-          <option value="">Tutti i bookmaker</option>
-          {bookmakers.map((b) => (
-            <option key={b.id} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={matchStatus}
-          onChange={(e) => handleFilterChange(setMatchStatus)(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
-        >
-          {MATCH_STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={matchMethod}
-          onChange={(e) => handleFilterChange(setMatchMethod)(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
-        >
-          {MATCH_METHODS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={sport}
-          onChange={(e) => handleFilterChange(setSport)(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
-        >
-          <option value="">Tutti gli sport</option>
-          {sports.map((s) => (
-            <option key={s.id} value={s.name}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <table className="min-w-full text-sm">
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
           <thead>
-            <tr className="border-b border-border bg-muted/40 text-left font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
-              <th className="px-3 py-2">Evento Canonico</th>
-              <th className="px-3 py-2">Bookmaker</th>
-              <th className="px-3 py-2">Nomi Bookmaker</th>
-              <th className="px-3 py-2">Competizione</th>
-              <th className="px-3 py-2">Sport</th>
-              <th className="px-3 py-2">Data Evento</th>
-              <th className="px-3 py-2">Metodo</th>
-              <th className="px-3 py-2 text-center">Confidence</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Matched At</th>
+            <tr className={BO_THEAD_ROW}>
+              <th className={cn(BO_TH, 'w-10 pr-0')}>
+                <span className="sr-only">Dettaglio</span>
+              </th>
+              <th className={BO_TH}>Evento canonico</th>
+              <th className={BO_TH}>Bookmaker</th>
+              <th className={BO_TH}>Nomi bookmaker</th>
+              <th className={BO_TH}>Competizione</th>
+              <th className={BO_TH}>Sport</th>
+              <th className={BO_TH}>Data evento</th>
+              <th className={BO_TH}>Metodo</th>
+              <th className={cn(BO_TH, 'text-right')}>Confidence</th>
+              <th className={BO_TH}>Status</th>
+              <th className={BO_TH}>Matched at</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={11} className={BO_EMPTY_CELL}>
+                  Caricamento dei matchings…
                 </td>
               </tr>
             ) : matchings.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={11} className={BO_EMPTY_CELL}>
                   Nessun matching trovato.
                 </td>
               </tr>
             ) : (
-              matchings.map((m) => {
-                const isExpanded = expandedEventId === m.eventId
-                return (
-                  <MatchingRow
-                    key={m.id}
-                    matching={m}
-                    isExpanded={isExpanded}
-                    loadingDetail={loadingDetail}
-                    eventBookmakers={eventBookmakers}
-                    onDoubleClick={() => handleRowDoubleClick(m.eventId)}
-                  />
-                )
-              })
+              matchings.map((m) => (
+                <MatchingRow
+                  key={m.id}
+                  matching={m}
+                  isExpanded={expandedEventId === m.eventId}
+                  loadingDetail={loadingDetail}
+                  eventBookmakers={eventBookmakers}
+                  onToggle={() => void toggleEvent(m.eventId)}
+                />
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Pagina {currentPage} di {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-              className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-40"
-            >
-              Precedente
-            </button>
-            <button
-              type="button"
-              disabled={offset + PAGE_SIZE >= total}
-              onClick={() => setOffset(offset + PAGE_SIZE)}
-              className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-40"
-            >
-              Successiva
-            </button>
-          </div>
-        </div>
+        <BoPagination
+          label={`Pagina ${currentPage} di ${totalPages}`}
+          prevDisabled={offset === 0}
+          nextDisabled={offset + PAGE_SIZE >= total}
+          onPrev={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+          onNext={() => setOffset(offset + PAGE_SIZE)}
+        />
       )}
-    </Container>
+    </>
   )
 }
 
@@ -306,99 +295,109 @@ function MatchingRow({
   isExpanded,
   loadingDetail,
   eventBookmakers,
-  onDoubleClick,
+  onToggle,
 }: {
   matching: EventMatching
   isExpanded: boolean
   loadingDetail: boolean
   eventBookmakers: EventBookmaker[]
-  onDoubleClick: () => void
+  onToggle: () => void
 }) {
+  const eventName = `${m.canonicalHome ?? '?'} - ${m.canonicalAway ?? '?'}`
+  const Chevron = isExpanded ? ChevronDown : ChevronRight
   return (
     <>
-      <tr className="cursor-pointer hover:bg-muted/20" onDoubleClick={onDoubleClick}>
-        <td className="px-3 py-2 font-medium whitespace-nowrap text-foreground">
-          {m.canonicalHome ?? '?'} - {m.canonicalAway ?? '?'}
+      <tr
+        className={cn(BO_ROW, 'cursor-pointer', isExpanded && 'bg-ds-surface-sunken/60')}
+        onDoubleClick={onToggle}
+      >
+        <td className={cn(BO_TD, 'w-10 py-1.5 pr-0')}>
+          <GIconButton
+            label={`${isExpanded ? 'Chiudi' : 'Apri'} i bookmaker di ${eventName}`}
+            onClick={onToggle}
+          >
+            <Chevron className="h-4 w-4" aria-hidden />
+          </GIconButton>
         </td>
-        <td className="px-3 py-2 whitespace-nowrap text-foreground">{m.bookmakerName}</td>
-        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+        <td className={cn(BO_TD, 'font-semibold whitespace-nowrap text-ds-ink')}>{eventName}</td>
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink')}>{m.bookmakerName}</td>
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted')}>
           {m.bookmakerHomeName ?? '?'} - {m.bookmakerAwayName ?? '?'}
         </td>
-        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{m.competitionName}</td>
-        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{m.sportName}</td>
-        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted')}>{m.competitionName}</td>
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted')}>{m.sportName}</td>
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted tabular-nums')}>
           {formatDate(m.startTime)}
         </td>
-        <td className="px-3 py-2 whitespace-nowrap">
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-            {m.matchMethod}
-          </code>
+        <td className={cn(BO_TD, 'whitespace-nowrap')}>
+          <BoCode>{m.matchMethod}</BoCode>
         </td>
-        <td className="px-3 py-2 text-center font-mono whitespace-nowrap text-foreground">
+        <td
+          className={cn(
+            BO_TD,
+            'text-right font-semibold whitespace-nowrap text-ds-ink tabular-nums',
+          )}
+        >
           {(m.matchConfidence * 100).toFixed(0)}%
         </td>
-        <td className="px-3 py-2 whitespace-nowrap">
-          <span className={statusBadge(m.matchStatus)}>{m.matchStatus.replace(/_/g, ' ')}</span>
+        <td className={cn(BO_TD, 'whitespace-nowrap')}>
+          <StatusBadge status={m.matchStatus} />
         </td>
-        <td className="px-3 py-2 text-xs whitespace-nowrap text-muted-foreground">
+        <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted tabular-nums')}>
           {formatDate(m.matchedAt)}
         </td>
       </tr>
 
       {isExpanded && (
-        <tr>
-          <td colSpan={10} className="border-t border-border bg-muted/10 px-4 py-3">
-            <div className="mb-2 font-mono text-xs font-semibold tracking-[0.02em] text-muted-foreground uppercase">
-              Bookmaker associati a: {m.canonicalHome ?? '?'} - {m.canonicalAway ?? '?'}
-            </div>
+        <tr className="border-t border-ds-line">
+          <td colSpan={11} className="bg-ds-surface-sunken/40 px-4 py-4">
+            <p className="ds-label m-0 mb-2 text-ds-ink-muted uppercase">
+              Bookmaker associati a: {eventName}
+            </p>
             {loadingDetail ? (
-              <p className="text-xs text-muted-foreground">Caricamento...</p>
+              <BoMuted>Caricamento…</BoMuted>
             ) : eventBookmakers.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nessun bookmaker trovato.</p>
+              <BoMuted>Nessun bookmaker trovato.</BoMuted>
             ) : (
-              <div className="overflow-x-auto rounded border border-border">
-                <table className="min-w-full text-xs">
+              <div className="overflow-x-auto rounded-ds-sm border border-ds-line bg-ds-surface-raised">
+                <table className="w-full min-w-full border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left font-mono font-medium tracking-[0.02em] text-muted-foreground uppercase">
-                      <th className="px-3 py-1.5">Bookmaker</th>
-                      <th className="px-3 py-1.5">Nome Home</th>
-                      <th className="px-3 py-1.5">Nome Away</th>
-                      <th className="px-3 py-1.5">Competizione</th>
-                      <th className="px-3 py-1.5">Metodo</th>
-                      <th className="px-3 py-1.5 text-center">Confidence</th>
-                      <th className="px-3 py-1.5">Status</th>
-                      <th className="px-3 py-1.5">Matched At</th>
+                    <tr className={BO_THEAD_ROW}>
+                      <th className="px-3 py-2 font-semibold">Bookmaker</th>
+                      <th className="px-3 py-2 font-semibold">Nome home</th>
+                      <th className="px-3 py-2 font-semibold">Nome away</th>
+                      <th className="px-3 py-2 font-semibold">Competizione</th>
+                      <th className="px-3 py-2 font-semibold">Metodo</th>
+                      <th className="px-3 py-2 text-right font-semibold">Confidence</th>
+                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2 font-semibold">Matched at</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {eventBookmakers.map((bk) => (
-                      <tr key={bk.id} className="hover:bg-muted/20">
-                        <td className="px-3 py-1.5 font-medium whitespace-nowrap text-foreground">
+                      <tr key={bk.id} className="border-t border-ds-line">
+                        <td className="px-3 py-2 font-semibold whitespace-nowrap text-ds-ink">
                           {bk.bookmakerName}
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap text-foreground">
+                        <td className="px-3 py-2 whitespace-nowrap text-ds-ink">
                           {bk.bookmakerHomeName ?? '-'}
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap text-foreground">
+                        <td className="px-3 py-2 whitespace-nowrap text-ds-ink">
                           {bk.bookmakerAwayName ?? '-'}
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                        <td className="px-3 py-2 whitespace-nowrap text-ds-ink-muted">
                           {bk.bookmakerCompetitionName ?? '-'}
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap">
-                          <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                            {bk.matchMethod}
-                          </code>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <BoCode>{bk.matchMethod}</BoCode>
                         </td>
-                        <td className="px-3 py-1.5 text-center font-mono whitespace-nowrap text-foreground">
+                        <td className="px-3 py-2 text-right font-semibold whitespace-nowrap text-ds-ink tabular-nums">
                           {(bk.matchConfidence * 100).toFixed(0)}%
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap">
-                          <span className={statusBadge(bk.matchStatus)}>
-                            {bk.matchStatus.replace(/_/g, ' ')}
-                          </span>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <StatusBadge status={bk.matchStatus} />
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                        <td className="px-3 py-2 whitespace-nowrap text-ds-ink-muted tabular-nums">
                           {formatDate(bk.matchedAt)}
                         </td>
                       </tr>

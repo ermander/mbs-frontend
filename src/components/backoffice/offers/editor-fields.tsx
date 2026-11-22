@@ -4,14 +4,21 @@ import { useId, useState } from 'react'
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { DS_PANEL } from '@/components/profit-tracker/tracker-ds'
+import { GIconButton } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { dsFocusRing } from '@/components/landing/ds-primitives'
 
-/** I campi dell'editor delle offerte (§14.262), sui componenti ui del backoffice. */
+/**
+ * I campi dell'editor delle offerte (§14.262). Dal §14.365 sul design OddWise: riquadri
+ * surface-raised, etichetta a 600, campi col contorno line-strong e il fuoco in brand come il
+ * TextField del design (GTextField); restano componenti propri per il datalist dei suggerimenti e
+ * per il campo numerico che tiene il testo scritto.
+ */
 
-const controlClass =
-  'w-full rounded-md border border-border bg-surface-1 px-3 py-2 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/20'
+/** Il contorno dei campi del design, per input, select e textarea dell'editor. */
+export const editorControlClass =
+  'w-full rounded-ds-sm border border-ds-line-strong bg-ds-surface-raised px-3 text-base text-ds-ink outline-hidden transition-[border-color,box-shadow] duration-150 placeholder:text-ds-ink-faint focus:border-ds-brand focus:shadow-ds-focus'
+const controlClass = editorControlClass
 
 /** Un riquadro del modulo con titolo e, se serve, una riga di spiegazione. */
 export function EditorSection({
@@ -26,11 +33,11 @@ export function EditorSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-5">
+    <section className={cn(DS_PANEL, 'p-5 sm:p-6')}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-medium text-foreground">{title}</h3>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+          <h2 className="ds-subheading m-0">{title}</h2>
+          {hint && <p className="ds-body-sm m-0 mt-1 text-ds-ink-muted">{hint}</p>}
         </div>
         {actions}
       </div>
@@ -53,10 +60,12 @@ function FieldShell({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn('space-y-1.5', className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
+      <label htmlFor={id} className="text-sm leading-5 font-semibold text-ds-ink">
+        {label}
+      </label>
       {children}
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="m-0 text-sm leading-5 text-ds-ink-muted">{hint}</p>}
     </div>
   )
 }
@@ -85,13 +94,14 @@ export function TextField({
   const listId = `${id}-list`
   return (
     <FieldShell id={id} label={label} hint={hint} className={className}>
-      <Input
+      <input
         id={id}
         type={type}
         value={value}
         placeholder={placeholder}
         list={list?.length ? listId : undefined}
         onChange={(e) => onChange(e.target.value)}
+        className={cn(controlClass, 'h-10')}
       />
       {list && list.length > 0 && (
         <datalist id={listId}>
@@ -128,7 +138,7 @@ export function TextAreaField({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={cn(controlClass, 'min-h-[72px] resize-y leading-relaxed')}
+        className={cn(controlClass, 'min-h-[72px] resize-y py-2 leading-6')}
       />
     </FieldShell>
   )
@@ -157,8 +167,9 @@ export function NumberField({
   const [draft, setDraft] = useState(value === null ? '' : String(value).replace('.', ','))
   return (
     <FieldShell id={id} label={label} hint={hint}>
-      <Input
+      <input
         id={id}
+        className={cn(controlClass, 'h-10 tabular-nums')}
         inputMode={integer ? 'numeric' : 'decimal'}
         value={draft}
         placeholder={placeholder}
@@ -196,7 +207,7 @@ export function SelectField<T extends string>({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className={cn(controlClass, 'h-9 py-0')}
+        className={cn(controlClass, 'h-10 cursor-pointer py-0')}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -219,15 +230,17 @@ export function CheckboxField({
 }) {
   const id = useId()
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border"
+        className={cn('m-0 h-5 w-5 flex-none cursor-pointer accent-ds-brand', dsFocusRing)}
       />
-      <Label htmlFor={id}>{label}</Label>
+      <label htmlFor={id} className="cursor-pointer text-sm leading-6 font-semibold text-ds-ink">
+        {label}
+      </label>
     </div>
   )
 }
@@ -248,37 +261,20 @@ export function ItemControls({
   onRemove: () => void
 }) {
   return (
-    <div className="flex shrink-0 gap-1">
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        aria-label={`Sposta su ${name}`}
-        disabled={index === 0}
-        onClick={() => onMove(-1)}
-      >
-        <ArrowUp />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        aria-label={`Sposta giù ${name}`}
+    <div className="flex shrink-0 gap-0.5">
+      <GIconButton label={`Sposta su ${name}`} disabled={index === 0} onClick={() => onMove(-1)}>
+        <ArrowUp className="h-4 w-4" aria-hidden />
+      </GIconButton>
+      <GIconButton
+        label={`Sposta giù ${name}`}
         disabled={index === count - 1}
         onClick={() => onMove(1)}
       >
-        <ArrowDown />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        aria-label={`Togli ${name}`}
-        onClick={onRemove}
-        className="text-destructive hover:text-destructive"
-      >
-        <Trash2 />
-      </Button>
+        <ArrowDown className="h-4 w-4" aria-hidden />
+      </GIconButton>
+      <GIconButton label={`Togli ${name}`} danger onClick={onRemove}>
+        <Trash2 className="h-4 w-4" aria-hidden />
+      </GIconButton>
     </div>
   )
 }

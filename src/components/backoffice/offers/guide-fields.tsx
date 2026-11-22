@@ -26,10 +26,11 @@ import type {
   GuideStep,
   OfferGuide,
 } from '@/types/offers'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { cn } from '@/lib/utils'
 import {
   EditorSection,
+  editorControlClass,
   ItemControls,
   NumberField,
   SelectField,
@@ -168,22 +169,22 @@ export function GuideFields({
             }}
           />
         ))}
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() =>
             set('steps', [...guide.steps, { title: '', blocks: [newBlock('paragraph')] }])
           }
+          className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
         >
-          <Plus /> Aggiungi passo
-        </Button>
+          <Plus className="h-4 w-4" aria-hidden /> Aggiungi passo
+        </button>
       </EditorSection>
 
       <EditorSection title={`Domande frequenti (${guide.faq.length})`}>
         {guide.faq.map((item, i) => (
-          <div key={i} className="space-y-3 rounded-md border border-border p-4">
+          <div key={i} className="space-y-3 rounded-ds-md border border-ds-line p-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-foreground">Domanda {i + 1}</span>
+              <span className="text-sm font-semibold text-ds-ink">Domanda {i + 1}</span>
               <ItemControls
                 name={`la domanda ${i + 1}`}
                 index={i}
@@ -204,13 +205,13 @@ export function GuideFields({
             />
           </div>
         ))}
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() => set('faq', [...guide.faq, { question: '', answer: '' }])}
+          className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
         >
-          <Plus /> Aggiungi domanda
-        </Button>
+          <Plus className="h-4 w-4" aria-hidden /> Aggiungi domanda
+        </button>
       </EditorSection>
 
       <EditorSection
@@ -244,14 +245,14 @@ export function GuideFields({
             />
           </div>
         ))}
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() => setTerms({ rows: [...guide.terms.rows, { label: '', value: '' }] })}
+          className={dsButtonClass('secondary', 'sm')}
         >
-          <Plus /> Aggiungi termine
-        </Button>
-        <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
+          <Plus className="h-4 w-4" aria-hidden /> Aggiungi termine
+        </button>
+        <div className="grid gap-4 border-t border-ds-line pt-4 sm:grid-cols-3">
           <TextField
             label="Verificati il"
             type="date"
@@ -294,7 +295,7 @@ function StepFields({
 }) {
   const setBlocks = (blocks: GuideBlock[]) => onChange({ ...step, blocks })
   return (
-    <div className="space-y-4 rounded-md border border-border bg-surface-1/40 p-4">
+    <div className="space-y-4 rounded-ds-md border border-ds-line bg-ds-surface-sunken/40 p-4">
       <div className="flex items-end gap-3">
         <TextField
           label={`Passo ${index + 1}: titolo`}
@@ -312,11 +313,14 @@ function StepFields({
         />
       </div>
 
-      <div className="space-y-3 border-l-2 border-border pl-4">
+      <div className="space-y-3 border-l-2 border-ds-line pl-4">
         {step.blocks.map((block, j) => (
-          <div key={j} className="space-y-3 rounded-md border border-border bg-card p-3">
+          <div
+            key={j}
+            className="space-y-3 rounded-ds-md border border-ds-line bg-ds-surface-raised p-3"
+          >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <span className="ds-label text-ds-ink-muted uppercase">
                 {BLOCK_LABELS[block.type]}
               </span>
               <ItemControls
@@ -335,15 +339,14 @@ function StepFields({
         ))}
         <div className="flex flex-wrap gap-2">
           {BLOCK_TYPES.map((type) => (
-            <Button
+            <button
               key={type}
               type="button"
-              size="sm"
-              variant="outline"
               onClick={() => setBlocks([...step.blocks, newBlock(type)])}
+              className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
             >
-              <Plus /> {BLOCK_LABELS[type]}
-            </Button>
+              <Plus className="h-4 w-4" aria-hidden /> {BLOCK_LABELS[type]}
+            </button>
           ))}
         </div>
       </div>
@@ -373,8 +376,9 @@ function BlockFields({
         <div className="space-y-2">
           {block.items.map((item, k) => (
             <div key={k} className="flex items-center gap-2">
-              <Input
+              <input
                 aria-label={`Voce ${k + 1}`}
+                className={cn(editorControlClass, 'h-10')}
                 value={item}
                 onChange={(e) =>
                   onChange({ ...block, items: replaceAt(block.items, k, e.target.value) })
@@ -389,14 +393,13 @@ function BlockFields({
               />
             </div>
           ))}
-          <Button
+          <button
             type="button"
-            size="sm"
-            variant="ghost"
             onClick={() => onChange({ ...block, items: [...block.items, ''] })}
+            className={cn(dsButtonClass('ghost', 'sm'), 'disabled:opacity-50')}
           >
-            <Plus /> Voce
-          </Button>
+            <Plus className="h-4 w-4" aria-hidden /> Voce
+          </button>
         </div>
       )
     case 'callout':
@@ -437,19 +440,18 @@ function BlockFields({
             />
           ))}
           {block.buttons.length < MAX_BUTTONS && (
-            <Button
+            <button
               type="button"
-              size="sm"
-              variant="ghost"
               onClick={() =>
                 onChange({
                   ...block,
                   buttons: [...block.buttons, { kind: 'external', label: '', href: '' }],
                 })
               }
+              className={dsButtonClass('ghost', 'sm')}
             >
-              <Plus /> Pulsante
-            </Button>
+              <Plus className="h-4 w-4" aria-hidden /> Pulsante
+            </button>
           )}
         </div>
       )
@@ -501,21 +503,18 @@ function ImageBlockFields({
           className="sr-only"
           onChange={(e) => void upload(e.target.files?.[0])}
         />
-        <Button
+        <button
           type="button"
-          size="sm"
-          variant="outline"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
+          className={cn(dsButtonClass('secondary', 'sm'), 'disabled:opacity-50')}
         >
-          <ImageUp />{' '}
+          <ImageUp className="h-4 w-4" aria-hidden />{' '}
           {uploading ? 'Caricamento…' : block.src ? 'Sostituisci immagine' : 'Carica immagine'}
-        </Button>
-        <span className="text-[11px] text-muted-foreground">
-          PNG, JPEG, WebP o GIF, fino a 5 MB.
-        </span>
+        </button>
+        <span className="ds-body-sm text-ds-ink-muted">PNG, JPEG, WebP o GIF, fino a 5 MB.</span>
         {error && (
-          <span role="alert" className="text-xs text-destructive">
+          <span role="alert" className="ds-body-sm text-ds-loss">
             {error}
           </span>
         )}
@@ -525,7 +524,7 @@ function ImageBlockFields({
         <img
           src={block.src}
           alt=""
-          className="max-h-48 w-auto max-w-full rounded-md border border-border sm:col-span-2"
+          className="max-h-48 w-auto max-w-full rounded-ds-sm border border-ds-line sm:col-span-2"
         />
       )}
       <TextField

@@ -12,9 +12,23 @@ import {
   setBackofficeOfferVisibility,
 } from '@/services/api/backoffice-offers-client'
 import type { OfferAdmin, OfferType, OfferVisibility } from '@/types/offers'
-import { Button } from '@/components/ui/button'
-import { Container } from '@/components/ui/container'
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoConfirmModal,
+} from '@/components/backoffice/backoffice-ds'
 import { VisibilityBadge } from '@/components/backoffice/offers/offer-editor'
+import { DsButton, dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { GIconButton, GSelect } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 
 const dateTime = new Intl.DateTimeFormat('it-IT', {
   day: '2-digit',
@@ -34,6 +48,8 @@ export default function BackofficeOffersPage() {
   const [error, setError] = useState<string | null>(null)
   const [type, setType] = useState<'all' | OfferType>('all')
   const [visibility, setVisibility] = useState<'all' | OfferVisibility>('all')
+  const [toDelete, setToDelete] = useState<OfferAdmin | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Lo stato cambia solo nei callback della promise; loading parte già a true
   // (react-hooks/set-state-in-effect).
@@ -54,15 +70,20 @@ export default function BackofficeOffersPage() {
     }
   }
 
-  const remove = async (offer: OfferAdmin) => {
-    if (!confirm(`Eliminare «${offer.title}» (${offer.bookmakerName})? Non si può annullare.`))
-      return
+  // Elimina chiede conferma nel Modal del design (prima il confirm() del browser).
+  const remove = async () => {
+    if (!toDelete) return
+    const offer = toDelete
     setError(null)
+    setDeleting(true)
     try {
       await deleteBackofficeOffer(offer.id)
       setOffers((list) => list.filter((o) => o.id !== offer.id))
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Errore nella cancellazione.')
+    } finally {
+      setDeleting(false)
+      setToDelete(null)
     }
   }
 
@@ -70,80 +91,78 @@ export default function BackofficeOffersPage() {
     (o) =>
       (type === 'all' || o.type === type) && (visibility === 'all' || o.visibility === visibility),
   )
-  const selectClass =
-    'h-9 rounded-md border border-border bg-surface-1 px-3 text-sm text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/20'
 
   return (
-    <Container>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Offerte</h2>
-          <p className="text-sm text-muted-foreground">
-            Le offerte e le loro guide. Le nuove nascono bozze; sul sito vanno solo le pubblicate.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/backoffice/offerte/nuova">Nuova offerta</Link>
-        </Button>
-      </div>
+    <>
+      <DsPageHeader
+        title="Offerte"
+        description="Le offerte e le loro guide. Le nuove nascono bozze; sul sito vanno solo le pubblicate."
+        actions={
+          <DsButton href="/backoffice/offerte/nuova" variant="primary">
+            <Plus className="h-5 w-5" aria-hidden />
+            Nuova offerta
+          </DsButton>
+        }
+      />
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <select
-          aria-label="Tipo"
+      <div className="flex flex-wrap items-center gap-3">
+        <GSelect
+          id="bo-offers-type"
+          ariaLabel="Tipo"
+          size="sm"
           value={type}
-          onChange={(e) => setType(e.target.value as 'all' | OfferType)}
-          className={selectClass}
-        >
-          <option value="all">Tutti i tipi</option>
-          {OFFER_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Visibilità"
+          onChange={(v) => setType(v as 'all' | OfferType)}
+          options={[
+            { value: 'all', label: 'Tutti i tipi' },
+            ...OFFER_TYPES.map((t) => ({ value: t.value, label: t.label })),
+          ]}
+          className="w-48"
+        />
+        <GSelect
+          id="bo-offers-visibility"
+          ariaLabel="Visibilità"
+          size="sm"
           value={visibility}
-          onChange={(e) => setVisibility(e.target.value as 'all' | OfferVisibility)}
-          className={selectClass}
-        >
-          <option value="all">Tutte le visibilità</option>
-          {(Object.keys(VISIBILITY_LABELS) as OfferVisibility[]).map((v) => (
-            <option key={v} value={v}>
-              {VISIBILITY_LABELS[v]}
-            </option>
-          ))}
-        </select>
-        <span className="self-center text-xs text-muted-foreground">
+          onChange={(v) => setVisibility(v as 'all' | OfferVisibility)}
+          options={[
+            { value: 'all', label: 'Tutte le visibilità' },
+            ...(Object.keys(VISIBILITY_LABELS) as OfferVisibility[]).map((v) => ({
+              value: v,
+              label: VISIBILITY_LABELS[v],
+            })),
+          ]}
+          className="w-52"
+        />
+        <span className="ds-body-sm text-ds-ink-muted tabular-nums">
           {shown.length} di {offers.length}
         </span>
       </div>
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/60">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Offerta</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Tipo</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Visibilità</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Stato</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Guida</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Aggiornata</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Azioni</th>
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
+          <thead>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Offerta</th>
+              <th className={BO_TH}>Tipo</th>
+              <th className={BO_TH}>Visibilità</th>
+              <th className={BO_TH}>Stato</th>
+              <th className={BO_TH}>Guida</th>
+              <th className={BO_TH}>Aggiornata</th>
+              <th className={cn(BO_TH, 'text-right')}>Azioni</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={7} className={BO_EMPTY_CELL}>
+                  Caricamento delle offerte…
                 </td>
               </tr>
             ) : shown.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={7} className={BO_EMPTY_CELL}>
                   {offers.length === 0
                     ? 'Nessuna offerta: creane una con «Nuova offerta».'
                     : 'Nessuna offerta con questi filtri.'}
@@ -151,62 +170,76 @@ export default function BackofficeOffersPage() {
               </tr>
             ) : (
               shown.map((offer) => (
-                <tr
-                  key={offer.id}
-                  className="border-t border-border transition-colors hover:bg-accent"
-                >
-                  <td className="px-4 py-2">
+                <tr key={offer.id} className={BO_ROW}>
+                  <td className={BO_TD}>
                     <Link
                       href={`/backoffice/offerte/${offer.id}`}
-                      className="font-medium text-foreground hover:underline"
+                      className={cn(
+                        'rounded-ds-xs font-semibold text-ds-ink underline-offset-4 hover:text-ds-brand hover:underline',
+                        dsFocusRing,
+                      )}
                     >
                       {offer.title}
                     </Link>
-                    <div className="text-xs text-muted-foreground">
-                      {offer.bookmakerName} · <span className="font-mono">{offer.slug}</span>
+                    <div className="ds-body-sm text-ds-ink-muted">
+                      {offer.bookmakerName} ·{' '}
+                      <span className="font-mono text-xs">{offer.slug}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-foreground">
+                  <td className={cn(BO_TD, 'text-ds-ink')}>
                     {typeLabel(offer.type)}
                     {offer.groupLabel && (
-                      <span className="text-muted-foreground"> · {offer.groupLabel}</span>
+                      <span className="text-ds-ink-muted"> · {offer.groupLabel}</span>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className={BO_TD}>
                     <VisibilityBadge visibility={offer.visibility} />
                   </td>
-                  <td className="px-4 py-2 text-foreground">{expiryLabel(offer)}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className={cn(BO_TD, 'text-ds-ink')}>{expiryLabel(offer)}</td>
+                  <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted')}>
                     {offer.guide ? `${offer.guide.steps.length} passi` : '—'}
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">
+                  <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted tabular-nums')}>
                     {dateTime.format(new Date(offer.updatedAt))}
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/backoffice/offerte/${offer.id}`}>Modifica</Link>
-                      </Button>
+                  <td className={cn(BO_TD, 'text-right')}>
+                    <div className="flex items-center justify-end gap-0.5">
                       {offer.visibility === 'published' ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
+                        <button
+                          type="button"
                           onClick={() => void changeVisibility(offer, 'hidden')}
+                          className={cn(dsButtonClass('ghost', 'sm'), 'px-2')}
                         >
+                          <EyeOff className="h-4 w-4" aria-hidden />
                           Nascondi
-                        </Button>
+                          <span className="sr-only"> «{offer.title}»</span>
+                        </button>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="success"
+                        <button
+                          type="button"
                           onClick={() => void changeVisibility(offer, 'published')}
+                          className={cn(dsButtonClass('ghost', 'sm'), 'px-2')}
                         >
+                          <Eye className="h-4 w-4" aria-hidden />
                           Pubblica
-                        </Button>
+                          <span className="sr-only"> «{offer.title}»</span>
+                        </button>
                       )}
-                      <Button size="sm" variant="destructive" onClick={() => void remove(offer)}>
-                        Elimina
-                      </Button>
+                      <Link
+                        href={`/backoffice/offerte/${offer.id}`}
+                        aria-label={`Modifica l'offerta «${offer.title}»`}
+                        title={`Modifica l'offerta «${offer.title}»`}
+                        className={cn(dsButtonClass('ghost', 'sm'), 'w-8 px-0')}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </Link>
+                      <GIconButton
+                        label={`Elimina l'offerta «${offer.title}»`}
+                        danger
+                        onClick={() => setToDelete(offer)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </GIconButton>
                     </div>
                   </td>
                 </tr>
@@ -215,6 +248,19 @@ export default function BackofficeOffersPage() {
           </tbody>
         </table>
       </div>
-    </Container>
+
+      <BoConfirmModal
+        open={toDelete !== null}
+        title="Eliminare l'offerta?"
+        description={
+          toDelete
+            ? `«${toDelete.title}» (${toDelete.bookmakerName}) sparisce con la sua guida. Non si può annullare.`
+            : ''
+        }
+        busy={deleting}
+        onConfirm={() => void remove()}
+        onCancel={() => setToDelete(null)}
+      />
+    </>
   )
 }

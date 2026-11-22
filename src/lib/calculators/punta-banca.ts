@@ -104,7 +104,7 @@ export function layStakeRimborso(
 }
 
 /**
- * Lay stake adjusted by imbalance (for display/agenda).
+ * Lay stake adjusted by imbalance (for display).
  * imbalancePercent: -30..30 (solo in modalità avanzata).
  */
 export function layStakeWithImbalance(

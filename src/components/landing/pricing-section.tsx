@@ -1,12 +1,17 @@
 import { Check } from 'lucide-react'
 
+import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import { LANDING_ROUTES, PRICING } from '@/lib/landing-content'
+import { SignedInSwitch } from '@/components/auth/signed-in-switch'
 import { DsBadge } from '@/components/landing/ds-data'
 import { DsButton, DsCard, DsContainer } from '@/components/landing/ds-primitives'
 
 /**
  * «Prezzi» (#prezzi): fascia su surface-raised; a sinistra i due paragrafi, a destra la card del
  * piano con il badge «Gratuito», i quattro punti con la spunta e la CTA primaria a tutta larghezza.
+ *
+ * La CTA segue la sessione come la barra (§14.362): «Inizia gratis» verso la registrazione per chi
+ * non è entrato (anche nell'HTML del server), «Vai alla dashboard» per chi lo è.
  */
 export function PricingSection() {
   const { plan } = PRICING
@@ -42,9 +47,23 @@ export function PricingSection() {
             ))}
           </ul>
           <div className="mt-6">
-            <DsButton href={LANDING_ROUTES.register} variant="primary" block iconEnd="arrow-right">
-              {plan.cta}
-            </DsButton>
+            <SignedInSwitch
+              signedIn={
+                <DsButton href={POST_AUTH_REDIRECT} variant="primary" block iconEnd="arrow-right">
+                  {plan.signedInCta}
+                </DsButton>
+              }
+              fallback={
+                <DsButton
+                  href={LANDING_ROUTES.register}
+                  variant="primary"
+                  block
+                  iconEnd="arrow-right"
+                >
+                  {plan.cta}
+                </DsButton>
+              }
+            />
           </div>
           <p className="ds-caption mt-3 text-ds-ink-muted">{plan.caption}</p>
         </DsCard>

@@ -6,7 +6,7 @@ import { Menu } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { PAGE_COLUMN } from '@/lib/page-column'
-import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
+import { LANDING_ROUTES } from '@/lib/landing-content'
 import { DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
 import { TopnavDesktopNav } from './topnav-desktop-nav'
 import { TopnavMobileSheet } from './topnav-mobile-sheet'
@@ -24,6 +24,9 @@ import { topnavDsScope } from './topnav-ds'
  * §14.360 (richiesta di Emanuele): le voci stanno a destra, accanto all'account, e la campanella è
  * nascosta finché non ci sono notifiche vere (`NOTIFICATIONS_IN_TOPNAV`). Se le voci non ci stanno,
  * `justify-end-safe` le fa ripartire dal marchio invece di farle finire sotto di esso.
+ *
+ * §14.362 (richiesta di Emanuele): il marchio porta alla landing, non più alla dashboard, che resta
+ * a un clic dalla tendina Tracker. Chi è entrato legge la landing con questa barra (SiteShell).
  */
 export function Topnav() {
   const [mobileOpen, setMobileOpen] = React.useState(false)
@@ -37,7 +40,7 @@ export function Topnav() {
     >
       <div className={cn(PAGE_COLUMN, 'flex h-full items-center gap-6')}>
         <Link
-          href={POST_AUTH_REDIRECT}
+          href={LANDING_ROUTES.home}
           aria-label="OddWise"
           className={cn('shrink-0 rounded-ds-sm', dsFocusRing)}
         >

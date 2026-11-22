@@ -295,8 +295,14 @@ export function OmDropdown({
 /* ---------- Bookmaker ---------- */
 
 const logoHeight = { sm: 'h-5', md: 'h-6', lg: 'h-8' } as const
+/** I file in public/loghi_book sono tutti 160×40: larghezza fissa a 4:1 per ogni altezza. */
+const logoBox = { sm: 'h-5 w-20', md: 'h-6 w-24', lg: 'h-8 w-32' } as const
 
-/** Il BookmakerLogo del design: il file del logo a raggio 4px; senza file, il nome in un riquadro. */
+/**
+ * Il BookmakerLogo del design: il file del logo a raggio 4px; senza file, il nome in un riquadro.
+ * Il riquadro ha larghezza fissa e object-contain: in un contenitore flex in colonna (che allarga i
+ * figli) o più stretto del logo, l'immagine non si deforma (ClickUp «Icone stretchate», §14.355).
+ */
 export function OmBookLogo({
   slug,
   name,
@@ -330,7 +336,7 @@ export function OmBookLogo({
       width={160}
       height={40}
       loading="lazy"
-      className={cn('block w-auto rounded-ds-xs', logoHeight[size])}
+      className={cn('block flex-none rounded-ds-xs object-contain', logoBox[size])}
     />
   )
 }

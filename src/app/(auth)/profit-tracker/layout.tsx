@@ -11,7 +11,6 @@ import { Container } from '@/components/ui/container'
  * larghezza, la colonna la fanno loro.
  */
 const DS_PAGES = new Set([
-  '/profit-tracker/dashboard',
   '/profit-tracker/report',
   '/profit-tracker/giocate',
   '/profit-tracker/giocate-in-corso',

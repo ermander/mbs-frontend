@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import { DsBadge, DsMoney } from '@/components/landing/ds-data'
 import { DsButton, DsCard, dsButtonClass } from '@/components/landing/ds-primitives'
 import { BookLogo } from '@/components/offers/offer-parts'
+import { OfferDoneToggle } from '@/components/offers/offer-done-toggle'
 import { OffersSignupDialog } from '@/components/offers/offers-signup'
 import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
 
@@ -135,7 +136,11 @@ export function OffersList({
             <ul className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3 min-[87.5rem]:grid-cols-4 min-[112.5rem]:grid-cols-5 min-[140rem]:grid-cols-6">
               {section.offers.map((offer) => (
                 <li key={offer.id} className="flex min-w-0">
-                  <OfferCard offer={offer} onLockedGuide={() => setSignupOpen(true)} />
+                  <OfferCard
+                    offer={offer}
+                    canMarkDone={!guest}
+                    onLockedGuide={() => setSignupOpen(true)}
+                  />
                 </li>
               ))}
             </ul>
@@ -267,8 +272,18 @@ function FilterSelect({
  * §14.351: una carta chiusa (ospiti) ha uno skeleton al posto del logo, il titolo coperto che
  * arriva dal backend e un «Apri la guida» che chiama `onLockedGuide` (l'invito a iscriversi).
  */
-function OfferCard({ offer, onLockedGuide }: { offer: Offer; onLockedGuide: () => void }) {
+function OfferCard({
+  offer,
+  canMarkDone,
+  onLockedGuide,
+}: {
+  offer: Offer
+  /** §14.367: chi è entrato può segnarla «Fatta» (non gli ospiti, non le scadute). */
+  canMarkDone: boolean
+  onLockedGuide: () => void
+}) {
   const expired = isExpired(offer)
+  const [done, setDone] = useState(Boolean(offer.done))
   const badge = offerBadge(offer)
   const guideLabel = expired ? OFFERS_COPY.readGuide : OFFERS_COPY.openGuide
 
@@ -326,6 +341,9 @@ function OfferCard({ offer, onLockedGuide }: { offer: Offer; onLockedGuide: () =
           <span className="ds-caption tracking-[0.02em] text-ds-ink-muted">
             Scaduta il {formatOfferDate(offer.expiredOn)}
           </span>
+        )}
+        {canMarkDone && !expired && !offer.locked && (
+          <OfferDoneToggle slug={offer.id} done={done} onChange={setDone} className="-ml-3" />
         )}
         {offer.locked ? (
           <button

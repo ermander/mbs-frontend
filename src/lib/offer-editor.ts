@@ -382,6 +382,7 @@ export function offerFromCard(card: OfferCardApi): Offer {
       !card.expired && card.daysLeft !== null && card.daysLeft <= EXPIRING_SOON_DAYS
         ? card.daysLeft
         : undefined,
+    done: card.done,
   }
 }
 

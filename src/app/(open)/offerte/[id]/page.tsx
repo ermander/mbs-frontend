@@ -56,6 +56,7 @@ export default async function OffertaPage({ params }: Params) {
       offer={offerFromCard(result.data)}
       guide={result.data.guide}
       updatedOn={romeToday(new Date(result.data.updatedAt))}
+      canMarkDone={!guest}
     />
   ) : guest && result.status === 404 ? (
     <DsContainer>

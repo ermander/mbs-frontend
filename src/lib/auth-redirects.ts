@@ -5,7 +5,7 @@
  * - verifica email OK
  * - GuestGuard (utente già loggato che visita /login o /registrazione)
  */
-export const POST_AUTH_REDIRECT = '/profit-tracker/dashboard'
+export const POST_AUTH_REDIRECT = '/dashboard'
 
 /** La pagina del login, dove DashboardAuthGuard manda chi non è entrato. */
 export const LOGIN_PATH = '/login'

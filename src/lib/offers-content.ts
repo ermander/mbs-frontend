@@ -49,6 +49,8 @@ export interface Offer {
    * titolo già coperto dal backend, e «Apri la guida» che invita a iscriversi.
    */
   locked?: boolean
+  /** §14.367: segnata «Fatta» da chi guarda (solo per chi è entrato). */
+  done?: boolean
 }
 
 /**

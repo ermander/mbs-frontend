@@ -32,6 +32,7 @@ import {
   type DsButtonVariant,
 } from '@/components/landing/ds-primitives'
 import { BookLogo, DsCallout, RichText } from '@/components/offers/offer-parts'
+import { OfferDoneToggle } from '@/components/offers/offer-done-toggle'
 
 /**
  * Dettaglio di un'offerta dal design «OddWise Offerta» (§14.260): a sinistra la colonna da 720px
@@ -39,20 +40,24 @@ import { BookLogo, DsCallout, RichText } from '@/components/offers/offer-parts'
  * passi da 280px che resta fisso e segna il passo che si sta leggendo. Senza guida restano la
  * testata, profitto e difficoltà e l'avviso «in preparazione». Dal §14.262 la guida ha la forma
  * dell'API (passi fatti di blocchi) e ogni parte vuota non si mostra: lo stesso componente fa da
- * anteprima nell'editor del backoffice. Gli stati personali del design («Segna come completata»,
- * il riquadro «Finito?») restano fuori finché la pagina è pubblica.
+ * anteprima nell'editor del backoffice. Dal §14.367 chi è entrato ha «Segna come fatta» accanto
+ * al logo (`canMarkDone`); il riquadro «Finito?» del design resta fuori.
  */
 export function OfferDetail({
   offer,
   guide,
   updatedOn,
+  canMarkDone = false,
 }: {
   offer: Offer
   guide: OfferGuide | null
   /** AAAA-MM-GG dell'ultimo aggiornamento, nella riga sotto il titolo. */
   updatedOn?: string
+  /** §14.367: il pulsante «Fatta» per chi è entrato (non nell'anteprima del backoffice). */
+  canMarkDone?: boolean
 }) {
   const expired = isExpired(offer)
+  const [done, setDone] = useState(Boolean(offer.done))
   const badge = offerBadge(offer)
   const typeLabel = OFFER_TYPES.find((t) => t.value === offer.type)?.label ?? offer.type
   const crumbs = [GUIDE_COPY.back, typeLabel, offer.group].filter(Boolean).join(' · ')
@@ -95,9 +100,17 @@ export function OfferDetail({
           </Link>
 
           <header className="mt-6 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <BookLogo slug={offer.bookSlug} name={offer.bookName} size="lg" />
               <DsBadge tone={badge.tone}>{badge.label}</DsBadge>
+              {canMarkDone && !expired && (
+                <OfferDoneToggle
+                  slug={offer.id}
+                  done={done}
+                  onChange={setDone}
+                  className="sm:ml-auto"
+                />
+              )}
             </div>
             <h1 className="ds-display text-pretty">{offer.title}</h1>
             <p className="ds-body-sm text-ds-ink-muted">

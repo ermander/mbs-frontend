@@ -24,7 +24,8 @@ export const SECTION_HOME: Record<SectionKey, string> = {
   oddsmatcher: '/odds-scanner',
   result_btts: '/risultato-goal',
   calculators: '/calcolatori',
-  tracker: '/profit-tracker/dashboard',
+  // §14.367: la Dashboard non è più del tracker (/dashboard, per tutti): la sua prima pagina è Giocate.
+  tracker: '/profit-tracker/giocate',
   guide: '/guide',
   forum: '/forum',
 }

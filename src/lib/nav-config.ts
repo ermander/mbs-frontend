@@ -7,7 +7,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Radar,
   Calculator,
-  BarChart3,
   PieChart,
   ListChecks,
   Archive,
@@ -118,6 +117,8 @@ export const authNavSections: AuthNavSection[] = [
     label: 'Sezioni',
     display: 'links',
     items: [
+      // MOCKUP: la Dashboard delle scorciatoie esce dal menu Tracker e diventa la prima voce.
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Guide', href: '/guide', icon: BookOpen },
       { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
       { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
@@ -136,7 +137,6 @@ export const authNavSections: AuthNavSection[] = [
     label: 'Tracker',
     display: 'menu',
     items: [
-      { label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
       { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
       { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
       { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },

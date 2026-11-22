@@ -9,15 +9,21 @@ import {
   CircleCheck,
   Gift,
   ListChecks,
+  Lock,
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
 import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { DsBadge } from '@/components/landing/ds-data'
-import { dsFocusRing } from '@/components/landing/ds-primitives'
+import { DsButton, dsFocusRing } from '@/components/landing/ds-primitives'
 import { useAccountInfo } from '@/components/profit-tracker/giocate-rapide/use-account-info'
-import { DS_PANEL, DsPageHeader, DsSection } from '@/components/profit-tracker/tracker-ds'
+import {
+  DS_PANEL,
+  DsEmptyState,
+  DsPageHeader,
+  DsSection,
+} from '@/components/profit-tracker/tracker-ds'
 import { OmBookLogo, OmSportIcon } from '@/components/strumenti/scanner-v2/om-ds'
 import { useNavSections } from '@/components/topnav/use-nav-sections'
 import { calculatorGroups } from '@/lib/calculators/catalog'
@@ -85,6 +91,7 @@ export function DashboardHub() {
   const hasOffers = navHrefs.has('/offerte')
   const hasCalculators = navHrefs.has('/calcolatori')
   const hasTracker = trackerItems.length > 0
+  const hasTools = onlineTools.length > 0 || hasCalculators
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,9 +105,21 @@ export function DashboardHub() {
 
       <div className="grid gap-x-6 gap-y-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
         <DsSection id="h-scorciatoie" title="Scorciatoie">
+          {!hasOffers && !hasTools && !hasTracker && (
+            <DsEmptyState
+              icon={<Lock className="h-8 w-8" strokeWidth={1.75} aria-hidden />}
+              title="Nessuna sezione abilitata"
+              description="Il tuo account non ha ancora sezioni abilitate. Se pensi che sia un errore, scrivici dalla pagina Contatti."
+              action={
+                <DsButton href="/contatti" variant="secondary" size="sm">
+                  Contatti
+                </DsButton>
+              }
+            />
+          )}
           <div className="grid gap-5 md:grid-cols-2">
             {hasOffers && <OffersCard />}
-            {(onlineTools.length > 0 || hasCalculators) && (
+            {hasTools && (
               <HubCard
                 icon={Wrench}
                 title="Strumenti"

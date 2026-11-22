@@ -244,7 +244,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
     label: 'DASHBOARD',
     items: [
-      { label: 'Dashboard', href: '/profit-tracker/dashboard' },
+      { label: 'Dashboard', href: '/dashboard' },
       { label: 'Report', href: '/profit-tracker/report' },
       { label: 'Giocate', href: '/profit-tracker/giocate' },
       { label: 'Archivio', href: '/profit-tracker/archivio' },

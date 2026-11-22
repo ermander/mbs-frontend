@@ -21,14 +21,17 @@ describe('visibleNavSections', () => {
       'Community',
       'Backoffice',
     ])
+    // §14.367: la Dashboard delle scorciatoie è la prima voce, fuori dal menu Tracker.
     expect(sections[0][1]).toEqual([
+      'Dashboard',
       'Guide',
       'Offerte',
       'Oddsmatcher',
       'Risultato + Goal',
       'Calcolatori',
     ])
-    expect(sections[1][1]).toHaveLength(7)
+    expect(sections[1][1]).toHaveLength(6)
+    expect(sections[1][1]).not.toContain('Dashboard')
     expect(sections[2][1]).toEqual(['Forum'])
     // 13 dal §14.262: «Offerte», l'editor delle guide.
     expect(sections[3][1]).toHaveLength(13)
@@ -45,13 +48,20 @@ describe('visibleNavSections', () => {
     for (const user of [{ role: 'USER_ROLE' as const, tools: [] }, null, undefined]) {
       const sections = outline(user)
       expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
-      expect(sections[0][1]).toEqual(['Guide', 'Offerte', 'Oddsmatcher', 'Calcolatori'])
+      expect(sections[0][1]).toEqual([
+        'Dashboard',
+        'Guide',
+        'Offerte',
+        'Oddsmatcher',
+        'Calcolatori',
+      ])
     }
   })
   // §14.366: ogni voce è una sezione che l'admin accende o spegne per utente.
   it('a user sees only the sections switched on for them', () => {
     const sections = outline({ role: 'USER_ROLE', sections: ['offers', 'calculators'] })
-    expect(sections).toEqual([['Sezioni', ['Offerte', 'Calcolatori']]])
+    // La Dashboard non è una sezione (§14.367): resta per tutti, come prima voce.
+    expect(sections).toEqual([['Sezioni', ['Dashboard', 'Offerte', 'Calcolatori']]])
   })
   it('the Tracker group follows the tracker section, Forum the forum one', () => {
     const sections = outline({
@@ -59,10 +69,10 @@ describe('visibleNavSections', () => {
       sections: ['oddsmatcher', 'result_btts', 'tracker', 'forum'],
     })
     expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
-    expect(sections[0][1]).toEqual(['Oddsmatcher', 'Risultato + Goal'])
+    expect(sections[0][1]).toEqual(['Dashboard', 'Oddsmatcher', 'Risultato + Goal'])
   })
-  it('no section at all: an empty bar; an admin with no section stored still sees everything', () => {
-    expect(outline({ role: 'USER_ROLE', sections: [] })).toEqual([])
+  it('no section at all: only the Dashboard; an admin with no section stored still sees everything', () => {
+    expect(outline({ role: 'USER_ROLE', sections: [] })).toEqual([['Sezioni', ['Dashboard']]])
     expect(outline({ role: 'ADMIN_ROLE', sections: [] }).map(([label]) => label)).toEqual([
       'Sezioni',
       'Tracker',
@@ -81,7 +91,7 @@ describe('visibleNavSections', () => {
   })
   it('does not mutate the config', () => {
     visibleNavSections({ role: 'USER_ROLE', tools: [] })
-    expect(authNavSections[0].items).toHaveLength(5)
+    expect(authNavSections[0].items).toHaveLength(6)
   })
 })
 
@@ -94,12 +104,24 @@ describe('authNavSections', () => {
     expect(hrefs.every((h) => h.startsWith('/'))).toBe(true)
     expect(new Set(hrefs).size).toBe(hrefs.length)
   })
-  it('the bar reads as the design: Guide, Offerte, Oddsmatcher, Calcolatori, Tracker, Forum', () => {
+  it('the bar reads as the design, with the Dashboard first (§14.367): Dashboard, Guide, Offerte, Oddsmatcher, Calcolatori, Tracker, Forum', () => {
     // §14.275: i gruppi «links» sono voci dirette, i «menu» (Tracker, Backoffice) tendine.
     const bar = visibleNavSections({ role: 'USER_ROLE', tools: [] }).flatMap((s) =>
       s.display === 'links' ? s.items.map((i) => i.label) : [s.label],
     )
-    expect(bar).toEqual(['Guide', 'Offerte', 'Oddsmatcher', 'Calcolatori', 'Tracker', 'Forum'])
+    expect(bar).toEqual([
+      'Dashboard',
+      'Guide',
+      'Offerte',
+      'Oddsmatcher',
+      'Calcolatori',
+      'Tracker',
+      'Forum',
+    ])
+  })
+  it('only the Dashboard shrinks to its icon on narrow bars (§14.367), and it leads to /dashboard', () => {
+    const items = authNavSections.flatMap((s) => s.items)
+    expect(items.filter((i) => i.compact).map((i) => i.href)).toEqual(['/dashboard'])
   })
 })
 

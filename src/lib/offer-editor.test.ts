@@ -196,6 +196,11 @@ describe('dalla carta dell’API alla pagina pubblica', () => {
     expect(offerBadge(offerFromCard({ ...card, daysLeft: 0 })).label).toBe('Scade oggi')
   })
 
+  it('porta «Fatta» di chi guarda (§14.367); senza il campo resta non fatta', () => {
+    expect(offerFromCard({ ...card, done: true }).done).toBe(true)
+    expect(offerFromCard(card).done).toBeUndefined()
+  })
+
   it('scaduta con la data, o forzata senza data', () => {
     const expired = offerFromCard({ ...card, expired: true, daysLeft: null })
     expect(isExpired(expired) && expired.expiredOn === '2026-10-20').toBe(true)

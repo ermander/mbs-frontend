@@ -1,13 +1,6 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { DashboardView } from '@/components/profit-tracker/dashboard/dashboard-view'
-import { GiocateDsShell } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
-
-/** La Dashboard del tracker dal design OddWise (§14.336), nel guscio chiaro delle Giocate. */
+/** §14.367: la Dashboard non è più una pagina del tracker; i vecchi link portano a /dashboard. */
 export default function ProfitTrackerDashboardPage() {
-  return (
-    <GiocateDsShell>
-      <DashboardView />
-    </GiocateDsShell>
-  )
+  redirect('/dashboard')
 }

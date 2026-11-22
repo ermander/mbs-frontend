@@ -1,10 +1,13 @@
+'use client'
+
+import { DashboardHub } from '@/components/dashboard/dashboard-hub'
+import { GiocateDsShell } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+
+/** §14.367: la Dashboard come pagina delle scorciatoie, sul design OddWise. */
 export default function DashboardPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background">
-      <div className="space-y-4 text-center">
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to the MBS Dashboard.</p>
-      </div>
-    </main>
+    <GiocateDsShell>
+      <DashboardHub />
+    </GiocateDsShell>
   )
 }

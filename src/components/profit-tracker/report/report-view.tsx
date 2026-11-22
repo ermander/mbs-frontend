@@ -24,6 +24,7 @@ import {
   DsStatTile,
   countLabel,
 } from '@/components/profit-tracker/tracker-ds'
+import { ReportSaldi } from '@/components/profit-tracker/report/report-saldi'
 import { PROFIT_CATEGORIES } from '@/lib/profit-tracker/categories'
 import { MONTH_FULL, dashMoney } from '@/lib/profit-tracker/dashboard'
 import {
@@ -353,8 +354,12 @@ export function ReportView() {
       <div className="flex flex-col gap-5">
         <DsPageHeader
           title="Report"
-          description="Il conto economico del tracker: profitto delle giocate, costi dell’attività, altre entrate e spese, per periodo, identità e categoria."
+          description="I saldi di oggi e il conto economico del tracker: profitto delle giocate, costi dell’attività, altre entrate e spese, per periodo, identità e categoria."
         />
+
+        <div className="mb-3">
+          <ReportSaldi />
+        </div>
 
         <div
           className={cn(DS_PANEL, 'grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-4')}

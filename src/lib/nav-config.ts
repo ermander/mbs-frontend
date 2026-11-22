@@ -7,7 +7,6 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Radar,
   Calculator,
-  BarChart3,
   PieChart,
   ListChecks,
   Archive,
@@ -73,6 +72,11 @@ export interface AuthNavItem {
    * della sezione e la segna come attiva anche sulle pagine sotto (il dettaglio di un'offerta).
    */
   children?: NavSubmenuLink[]
+  /**
+   * §14.367: nella barra sotto i 1280px resta solo l'icona (il nome per i lettori di schermo e
+   * come suggerimento al passaggio del mouse), perché a 1024px le voci di un admin non ci stanno.
+   */
+  compact?: boolean
 }
 
 /**
@@ -109,7 +113,7 @@ export const OFFERS_NAV_ITEMS: NavSubmenuLink[] = OFFER_TYPES.map((t) => ({
 
 /**
  * Le voci della Navbar del design (§14.275): Guide · Offerte · Oddsmatcher · Calcolatori ·
- * Tracker · Forum, con Risultato + Goal dopo l'Oddsmatcher per chi è abilitato e il Backoffice
+ * Tracker · Forum (dal §14.367 con la Dashboard davanti a tutte), con Risultato + Goal dopo l'Oddsmatcher per chi è abilitato e il Backoffice
  * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker; dal §14.358
  * anche Offerte apre una tendina, con le pagine di benvenuto, ricorrenti ed esclusive.
  */
@@ -118,6 +122,8 @@ export const authNavSections: AuthNavSection[] = [
     label: 'Sezioni',
     display: 'links',
     items: [
+      // §14.367: la Dashboard delle scorciatoie esce dal menu Tracker e diventa la prima voce.
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, compact: true },
       { label: 'Guide', href: '/guide', icon: BookOpen },
       { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
       { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
@@ -132,7 +138,6 @@ export const authNavSections: AuthNavSection[] = [
     display: 'menu',
     requiresSection: 'tracker',
     items: [
-      { label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
       { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
       { label: 'Giocate', href: '/profit-tracker/giocate', icon: ListChecks },
       { label: 'Archivio', href: '/profit-tracker/archivio', icon: Archive },
@@ -239,7 +244,7 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
   {
     label: 'DASHBOARD',
     items: [
-      { label: 'Dashboard', href: '/profit-tracker/dashboard' },
+      { label: 'Dashboard', href: '/dashboard' },
       { label: 'Report', href: '/profit-tracker/report' },
       { label: 'Giocate', href: '/profit-tracker/giocate' },
       { label: 'Archivio', href: '/profit-tracker/archivio' },

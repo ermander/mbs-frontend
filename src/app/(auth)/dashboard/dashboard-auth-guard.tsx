@@ -23,13 +23,20 @@ import { currentLocation } from '@/components/auth/post-auth-destination'
  * whoever is not logged in (no persisted flag, or a 401 that survives the refresh) sees
  * `publicFallback` instead of going to /login; a logged-in user gets `children` as on every
  * other page.
+ *
+ * With `pendingFallback` too (the bar of SiteShell, ClickUp «Controllo Navbar»): while the
+ * session is not known yet (store not read, /auth/me in flight or being retried after a
+ * network error) the guard shows `pendingFallback` instead of nothing or the retry message,
+ * so the page around it stays server-rendered and readable.
  */
 export function DashboardAuthGuard({
   children,
   publicFallback,
+  pendingFallback,
 }: {
   children: React.ReactNode
   publicFallback?: React.ReactNode
+  pendingFallback?: React.ReactNode
 }) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
@@ -103,6 +110,7 @@ export function DashboardAuthGuard({
   if (!user) {
     // Store not read yet: neither the public page nor the app, so a logged-in user sees no flash.
     if (allowGuest && isHydrated && !isLoggedIn) return <>{publicFallback}</>
+    if (pendingFallback !== undefined) return <>{pendingFallback}</>
     if (retry.attempt === 0) return null
     return (
       <div className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col justify-center gap-3 px-4">

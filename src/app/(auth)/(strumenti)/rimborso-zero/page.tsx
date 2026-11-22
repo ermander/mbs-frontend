@@ -7,7 +7,7 @@ import { RefundZeroTool } from '@/components/strumenti/refund-zero/refund-zero-t
 
 export default function RimborsoZeroPage() {
   return (
-    <Container className="max-w-[108rem]">
+    <Container>
       <ToolAuthGuard tool="result_btts">
         <ToolPageShell
           toolName="Rimborso 0-0"

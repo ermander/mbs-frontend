@@ -303,6 +303,10 @@
        che dimensionano le tabelle sull'altezza della finestra la sottraggono. 64px come la Navbar
        del design (§14.275). */
     --topnav-h: 4rem;
+    /* Larghezza massima della colonna delle pagine (PAGE_COLUMN in lib/page-column.ts, §14.357):
+       barra in alto, pagine e piè di pagina. Nessuna: l'app va a tutta larghezza, scelta di
+       Emanuele (2026-11-22). La landing la riporta a 1200px (SiteShell narrow). */
+    --page-max: none;
 
     --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);

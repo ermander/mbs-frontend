@@ -137,7 +137,7 @@ export function OffersList({
               <h2 className="ds-heading">{section.title}</h2>
               <span className="ds-body-sm text-ds-ink-muted">{section.countLabel}</span>
             </div>
-            <ul className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3 min-[87.5rem]:grid-cols-4 min-[112.5rem]:grid-cols-5 min-[140rem]:grid-cols-6">
               {section.offers.map((offer) => (
                 <li key={offer.id} className="flex min-w-0">
                   <OfferCard offer={offer} onLockedGuide={() => setSignupOpen(true)} />

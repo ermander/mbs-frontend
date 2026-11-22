@@ -8,6 +8,7 @@ import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
 import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import { eventSearchQuery, eventSearchUrl } from '@/lib/profit-tracker/ongoing-bets'
 import { cn } from '@/lib/utils'
+import { PAGE_COLUMN } from '@/lib/page-column'
 
 /**
  * Primitive del design «OddWise Giocate in corso» (§14.281) sui token ds-*: guscio chiaro della
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils'
  * quadrato delle azioni di riga, nome dell'evento che apre la ricerca Google.
  */
 
-/** Il guscio chiaro a tutta altezza sotto la barra in alto, con la colonna da 1200px del design. */
+/** Il guscio chiaro a tutta altezza sotto la barra in alto, con la colonna delle pagine (PAGE_COLUMN). */
 export function GiocateDsShell({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -25,7 +26,7 @@ export function GiocateDsShell({ children }: { children: React.ReactNode }) {
         'ds-scope ds-calc-bridge -mx-4 -my-6 flex min-h-[calc(100vh-var(--topnav-h))] flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light md:-mx-8',
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-5 px-4 pt-8 pb-16 sm:px-6">
+      <div className={cn(PAGE_COLUMN, 'flex flex-1 flex-col gap-5 pt-8 pb-16')}>
         {children}
         <p className="ds-caption mt-auto pt-6 text-ds-ink-muted">
           Gioco vietato ai minori di 18 anni. Gioca responsabilmente.

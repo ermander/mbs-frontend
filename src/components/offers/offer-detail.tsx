@@ -81,7 +81,7 @@ export function OfferDetail({
 
   return (
     <DsContainer className="pt-6 pb-24">
-      <div className="grid items-start gap-y-10 lg:grid-cols-[minmax(0,720px)_280px] lg:justify-between lg:gap-x-16">
+      <div className="grid items-start gap-y-10 lg:grid-cols-[minmax(0,720px)_280px] lg:gap-x-16 xl:gap-x-24">
         <article className="min-w-0">
           <Link
             href={offersListHref(offer.type)}

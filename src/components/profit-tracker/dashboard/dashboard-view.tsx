@@ -27,6 +27,13 @@ import {
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { BetLegRealizedLedgerSummaryResult } from '@/types/profit-tracker'
 
+/**
+ * I sei saldi su righe piene: 2 + 2 + 2 sul tablet, 3 + 3 sul portatile, tutti e sei in fila dai
+ * 1800px. Con la pagina a tutta larghezza (§14.357) la griglia a riempimento dava 5 + 1 tra 1600 e
+ * 1900px.
+ */
+const SALDI_GRID = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 min-[112.5rem]:grid-cols-6'
+
 /** La Dashboard del tracker dal design OddWise (§14.336): saldi, profitto dell'anno e grafico. */
 export function DashboardView() {
   const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
@@ -94,7 +101,7 @@ export function DashboardView() {
       )}
 
       <Section id="h-saldi" title="Saldi">
-        <div className={TILE_GRID}>
+        <div className={SALDI_GRID}>
           <DashStatTile
             label="Saldo totale"
             value={saldi.saldoTotale}

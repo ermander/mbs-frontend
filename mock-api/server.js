@@ -547,6 +547,8 @@ const SESSION_COOKIE = 'access_token=mock; Path=/; HttpOnly; SameSite=Lax';
 // /api/offers/:slug (una sola volta), come un access_token scaduto: la pagina deve rinnovare la
 // sessione e rileggere, non mostrare l'avviso.
 let offersUnauthorizedOnce = false;
+// §14.367: le offerte segnate «Fatta» dall'utente del mock (per slug; nel mock la spunta non scade).
+const OFFERS_DONE = new Set();
 const IMAGES = new Map();
 const OFFERS = [
     {
@@ -898,12 +900,29 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/api/offers' && req.method === 'GET') {
         if (offersDown) return send(503, { message: 'down' });
-        if (url.searchParams.has('page')) return send(200, offersPage(url.searchParams));
+        if (url.searchParams.has('page')) { const p = offersPage(url.searchParams); return send(200, { ...p, offers: p.offers.map((o) => ({ ...o, done: OFFERS_DONE.has(o.slug) })) }); }
         const rank = { benvenuto: 0, ricorrenti: 1, esclusive: 2 };
         const cards = OFFERS.filter((o) => o.visibility === 'published')
             .sort((a, b) => rank[a.type] - rank[b.type] || a.sortOrder - b.sortOrder)
             .map(publicCard);
         return send(200, { offers: cards });
+    }
+    // §14.367: GET /api/offers/todo come il backend (offer-done.ts): le attive non fatte, quante per tipo e le prime `limit`.
+    if (path === '/api/offers/todo' && req.method === 'GET') {
+        const todo = OFFERS.filter((o) => o.visibility === 'published').map(offerView).filter((o) => !o.expired && !OFFERS_DONE.has(o.slug));
+        const counts = { benvenuto: 0, ricorrenti: 0, esclusive: 0 };
+        for (const o of todo) counts[o.type] += 1;
+        const left = (o) => (o.daysLeft === null ? Infinity : o.daysLeft);
+        todo.sort((a, b) => left(a) - left(b) || Number(b.isNew) - Number(a.isNew) || (b.profit ?? -1) - (a.profit ?? -1) || b.createdAt.localeCompare(a.createdAt));
+        const limit = Math.min(20, Math.max(0, parseInt(url.searchParams.get('limit') || '3', 10) || 0));
+        return send(200, { counts, total: todo.length, offers: todo.slice(0, limit).map((o) => ({ ...publicCard(o), done: false })) });
+    }
+    const doneMatch = path.match(/^\/api\/offers\/([^/]+)\/done$/);
+    if (doneMatch && (req.method === 'PUT' || req.method === 'DELETE')) {
+        const slug = decodeURIComponent(doneMatch[1]);
+        if (!OFFERS.some((o) => o.slug === slug && o.visibility === 'published')) return send(404, { message: 'Offerta non trovata' });
+        if (req.method === 'PUT') OFFERS_DONE.add(slug); else OFFERS_DONE.delete(slug);
+        return send(200, { done: req.method === 'PUT' });
     }
     const publicOffer = path.match(/^\/api\/offers\/([^/]+)$/);
     if (publicOffer && req.method === 'GET') {
@@ -911,7 +930,7 @@ const server = http.createServer(async (req, res) => {
         const row = OFFERS.find((o) => o.slug === decodeURIComponent(publicOffer[1]) && o.visibility === 'published');
         if (!row) return send(404, { message: 'Offerta non trovata' });
         const { id, visibility, publishedAt, createdAt, expiryOverride, ...detail } = offerView(row);
-        return send(200, { offer: detail });
+        return send(200, { offer: { ...detail, done: OFFERS_DONE.has(detail.slug) } });
     }
     if (path === '/api/backoffice/offers' && req.method === 'GET') return send(200, { offers: OFFERS.map(offerView) });
     if (path === '/api/backoffice/offers' && req.method === 'POST') {

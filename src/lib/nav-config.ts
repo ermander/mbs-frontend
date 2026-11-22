@@ -36,14 +36,14 @@ import {
 } from 'lucide-react'
 
 import type { AuthUser, UserRole } from '@/services/api/auth-client'
-import { canUseTool, type ToolKey } from '@/lib/tools'
+import { canUseSection, type SectionKey } from '@/lib/tools'
 import { OFFER_TYPES, offersListHref, type OfferType } from '@/lib/offers-content'
 
 export interface NavLinkItem {
   label: string
   href: string
-  /** Se presente, il link è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
-  requiresTool?: ToolKey
+  /** Se presente, il link è visibile solo a chi ha quella sezione (admin o utente abilitato dal backoffice, §14.366) */
+  requiresSection?: SectionKey
 }
 
 export interface NavDropdownItem {
@@ -67,8 +67,6 @@ export interface AuthNavItem {
   icon: LucideIcon
   /** Se presente, la voce viene mostrata solo agli utenti con quel ruolo */
   requiresRole?: UserRole
-  /** Se presente, la voce è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
-  requiresTool?: ToolKey
   /**
    * §14.358: le pagine dentro la voce. Nella barra la voce diventa una tendina che si apre al
    * passaggio del mouse, nel cassetto mobile una riga che si espande; `href` resta la radice
@@ -89,6 +87,8 @@ export interface AuthNavSection {
   items: AuthNavItem[]
   /** Se presente, il gruppo intero è visibile solo agli utenti con quel ruolo */
   requiresRole?: UserRole
+  /** §14.366: se presente, il gruppo intero è visibile solo a chi ha quella sezione (il Tracker). */
+  requiresSection?: SectionKey
 }
 
 const OFFER_TYPE_ICONS: Record<OfferType, LucideIcon> = {
@@ -122,12 +122,7 @@ export const authNavSections: AuthNavSection[] = [
       { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
       { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
-      {
-        label: 'Risultato + Goal',
-        href: '/risultato-goal',
-        icon: Goal,
-        requiresTool: 'result_btts',
-      },
+      { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal },
       // §14.347: «Rimborso 0-0» (§14.288) is out of the menu; its page stays at /rimborso-zero.
       { label: 'Calcolatori', href: '/calcolatori', icon: Calculator },
     ],
@@ -135,6 +130,7 @@ export const authNavSections: AuthNavSection[] = [
   {
     label: 'Tracker',
     display: 'menu',
+    requiresSection: 'tracker',
     items: [
       { label: 'Dashboard', href: '/profit-tracker/dashboard', icon: BarChart3 },
       { label: 'Report', href: '/profit-tracker/report', icon: PieChart },
@@ -172,6 +168,20 @@ export const authNavSections: AuthNavSection[] = [
   },
 ]
 
+/**
+ * §14.366: la sezione del sito di ogni voce della barra, per indirizzo. Una voce la vede solo chi
+ * ha la sezione: admin o utente abilitato dal backoffice (Risultato + Goal dal §14.122, quando
+ * la voce aveva `requiresTool`). Il gruppo Tracker ha la sua `requiresSection`.
+ */
+export const NAV_ITEM_SECTIONS: Readonly<Record<string, SectionKey>> = {
+  '/guide': 'guide',
+  '/offerte': 'offers',
+  '/odds-scanner': 'oddsmatcher',
+  '/risultato-goal': 'result_btts',
+  '/calcolatori': 'calculators',
+  '/forum': 'forum',
+}
+
 /** La pagina del profilo vive nel menu dell'account (avatar a destra nella barra), con il logout. */
 export const accountNavItem: AuthNavItem = {
   label: 'Profilo',
@@ -180,17 +190,22 @@ export const accountNavItem: AuthNavItem = {
 }
 
 /**
- * I gruppi che l'utente può vedere: via i gruppi e le voci riservati a un altro ruolo o a uno
- * strumento non abilitato; un gruppo rimasto senza voci sparisce.
+ * I gruppi che l'utente può vedere: via i gruppi e le voci riservati a un altro ruolo o a una
+ * sezione non abilitata (§14.366); un gruppo rimasto senza voci sparisce.
  */
 export function visibleNavSections(
-  user: Pick<AuthUser, 'role' | 'tools'> | null | undefined,
+  user: Pick<AuthUser, 'role' | 'tools' | 'sections'> | null | undefined,
 ): AuthNavSection[] {
+  // Senza utente (la barra prima del bootstrap) le voci di prima del §14.366: tutte tranne
+  // Risultato + Goal, la regola di canUseSection per un utente senza `sections`.
+  const viewer = user ?? { role: 'USER_ROLE' as const }
   return authNavSections.flatMap((section) => {
     if (section.requiresRole && section.requiresRole !== user?.role) return []
+    if (section.requiresSection && !canUseSection(viewer, section.requiresSection)) return []
     const items = section.items.filter((item) => {
       if (item.requiresRole && item.requiresRole !== user?.role) return false
-      if (item.requiresTool && !canUseTool(user, item.requiresTool)) return false
+      const itemSection = NAV_ITEM_SECTIONS[item.href]
+      if (itemSection && !canUseSection(viewer, itemSection)) return false
       return true
     })
     return items.length > 0 ? [{ ...section, items }] : []
@@ -254,6 +269,6 @@ export const authenticatedNavDropdowns: NavDropdownItem[] = [
 export const authenticatedNavLinksBeforeDropdowns: NavLinkItem[] = [
   { label: 'HOME', href: '/' },
   { label: 'ODDS SCANNER', href: '/odds-scanner' },
-  { label: 'RISULTATO + GOAL', href: '/risultato-goal', requiresTool: 'result_btts' },
+  { label: 'RISULTATO + GOAL', href: '/risultato-goal', requiresSection: 'result_btts' },
 ]
 export const authenticatedNavLinksAfterDropdowns: NavLinkItem[] = []

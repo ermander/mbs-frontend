@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 
+import { SectionGuard } from '@/components/auth/section-guard'
 import { Container } from '@/components/ui/container'
 
 /**
@@ -26,8 +27,13 @@ const DS_PAGES = new Set([
 ])
 const DS_BET_DETAIL = /^\/profit-tracker\/giocate-(in-corso|archiviate)\/[^/]+$/
 
+/** §14.366: il Tracker è una sezione; senza, «Sezione non abilitata» su ogni sua pagina. */
 export default function ProfitTrackerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  if (DS_PAGES.has(pathname) || DS_BET_DETAIL.test(pathname)) return <>{children}</>
-  return <Container>{children}</Container>
+  const ds = DS_PAGES.has(pathname) || DS_BET_DETAIL.test(pathname)
+  return (
+    <SectionGuard section="tracker">
+      {ds ? children : <Container>{children}</Container>}
+    </SectionGuard>
+  )
 }

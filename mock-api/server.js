@@ -470,6 +470,14 @@ const TAGS = [
     { id: 't1', nome: 'Benvenuto Bet365', colore: '#0f4d3a', createdAt: ago(86400), updatedAt: ago(86400) },
     { id: 't2', nome: 'Da controllare', colore: '#8a5a00', createdAt: ago(86400), updatedAt: ago(86400) },
 ];
+// §14.361: promemoria del tracker (prima il mock non li aveva e la pagina mostrava solo l'errore).
+const REMINDERS = [
+    { id: 'r1', accountId: 'a1', descrizione: 'Prelevare la vincita del bonus di benvenuto', dataScadenza: inDays(1, 10, 0), periodoNotifica: '24h', notificaInviata: true, stato: 'attivo', createdAt: ago(86400), updatedAt: ago(86400) },
+    { id: 'r2', accountId: 'b365-1', descrizione: 'Giocare il rollover della freebet entro la scadenza', dataScadenza: inDays(3, 21, 0), periodoNotifica: '12h', notificaInviata: false, stato: 'attivo', createdAt: ago(86400), updatedAt: ago(86400) },
+    { id: 'r3', descrizione: 'Controllare le promo ricorrenti del weekend', dataScadenza: inDays(6, 9, 30), periodoNotifica: 'scadenza', notificaInviata: false, stato: 'attivo', createdAt: ago(86400), updatedAt: ago(86400) },
+    { id: 'r4', accountId: 'a4', descrizione: 'Inviare i documenti per la verifica del conto', dataScadenza: inDays(-2, 18, 0), periodoNotifica: '24h', notificaInviata: true, stato: 'completato', createdAt: ago(5 * 86400), updatedAt: ago(2 * 86400) },
+    { id: 'r5', accountId: 'a5', descrizione: 'Usare il bonus ricarica prima che scada', dataScadenza: inDays(-4, 23, 59), periodoNotifica: 'scadenza', notificaInviata: true, stato: 'scaduto', createdAt: ago(9 * 86400), updatedAt: ago(4 * 86400) },
+];
 function legSummaryOf(betId) {
     const legs = LEGS.filter((l) => l.betId === betId).sort((a, b) => (a.posizione ?? 0) - (b.posizione ?? 0));
     const first = legs[0];
@@ -1004,6 +1012,62 @@ const server = http.createServer(async (req, res) => {
         const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange).map((b) => (b.slug === 'sisal' ? { ...b, slug: 'snai', name: 'Snai' } : b));
         const totalResults = freeRows(new URLSearchParams()).total;
         return send(200, { ...META, calculatedAt: ago(35), totalResults, sports: [], bookmakers, marketTypes: [], nations: [], competitions: [] });
+    }
+    // §14.361: promemoria (filtro per stato, crea, modifica, completa, elimina), tag e book personali creati dalla pagina Impostazioni.
+    if (path === '/api/profit-tracker/reminders' && req.method === 'GET') {
+        const stato = url.searchParams.get('stato');
+        return send(200, REMINDERS.filter((r) => !stato || r.stato === stato));
+    }
+    if (path === '/api/profit-tracker/reminders' && req.method === 'POST') {
+        const body = await readBody(req);
+        const r = { id: `r${Date.now()}`, notificaInviata: false, stato: 'attivo', createdAt: iso(Date.now()), updatedAt: iso(Date.now()), ...body };
+        REMINDERS.push(r);
+        return send(201, r);
+    }
+    const remMatch = path.match(/^\/api\/profit-tracker\/reminders\/([^/]+)(\/complete)?$/);
+    if (remMatch) {
+        const i = REMINDERS.findIndex((r) => r.id === remMatch[1]);
+        if (i < 0) return send(404, { message: 'Promemoria non trovato' });
+        if (req.method === 'DELETE') {
+            REMINDERS.splice(i, 1);
+            return send(204);
+        }
+        if (remMatch[2] && req.method === 'PATCH') {
+            REMINDERS[i] = { ...REMINDERS[i], stato: 'completato', updatedAt: iso(Date.now()) };
+            return send(200, REMINDERS[i]);
+        }
+        if (req.method === 'PUT') {
+            const body = await readBody(req);
+            for (const [k, v] of Object.entries(body)) if (v !== undefined) REMINDERS[i][k] = v;
+            REMINDERS[i].updatedAt = iso(Date.now());
+            return send(200, REMINDERS[i]);
+        }
+    }
+    if (path === '/api/profit-tracker/tags' && req.method === 'POST') {
+        const body = await readBody(req);
+        if (TAGS.some((t) => t.nome.toLowerCase() === String(body.nome ?? '').toLowerCase())) return send(409, { message: 'Esiste già un tag con questo nome' });
+        const t = { id: `t${Date.now()}`, nome: body.nome, colore: body.colore, createdAt: iso(Date.now()), updatedAt: iso(Date.now()) };
+        TAGS.push(t);
+        return send(201, t);
+    }
+    const tagMatch = path.match(/^\/api\/profit-tracker\/tags\/([^/]+)$/);
+    if (tagMatch) {
+        const i = TAGS.findIndex((t) => t.id === tagMatch[1]);
+        if (i < 0) return send(404, { message: 'Tag non trovato' });
+        if (req.method === 'DELETE') {
+            TAGS.splice(i, 1);
+            return send(204);
+        }
+        const body = await readBody(req);
+        for (const k of ['nome', 'colore']) if (body[k] !== undefined) TAGS[i][k] = body[k];
+        return send(200, TAGS[i]);
+    }
+    if (path === '/api/profit-tracker/books' && req.method === 'POST') {
+        const body = await readBody(req);
+        if (BOOKS.some((b) => b.nome.toLowerCase() === String(body.nome ?? '').toLowerCase())) return send(409, { message: 'Esiste già un book con questo nome', code: 'BOOK_NAME_ALREADY_EXISTS' });
+        const b = { id: `pt-${Date.now()}`, nome: body.nome, descrizione: body.descrizione, isExchange: !!body.isExchange, externalId: null };
+        BOOKS.push(b);
+        return send(201, b);
     }
     if (path === '/api/profit-tracker/holders') return send(200, { items: HOLDERS, total: HOLDERS.length });
     if (path === '/api/profit-tracker/books') return send(200, { items: BOOKS, total: BOOKS.length });

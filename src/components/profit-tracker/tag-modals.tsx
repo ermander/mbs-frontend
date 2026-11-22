@@ -1,32 +1,112 @@
 'use client'
 
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GTextField,
+  dsDangerButtonClass,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { Tag } from '@/types/profit-tracker'
 
+/**
+ * Nuovo tag, Modifica tag ed Elimina tag della pagina Impostazioni sul design OddWise (§14.361),
+ * su DsModal. Stessi dieci colori e stessi salvataggi di prima; se il backend rifiuta («Esiste già
+ * un tag con questo nome») l'errore resta nella modale, che non si chiude.
+ */
+
 const TAG_COLORS = [
-  '#6366f1', // indigo
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#ef4444', // red
-  '#f97316', // orange
-  '#eab308', // yellow
-  '#22c55e', // green
-  '#14b8a6', // teal
-  '#06b6d4', // cyan
-  '#3b82f6', // blue
+  { value: '#6366f1', name: 'indaco' },
+  { value: '#8b5cf6', name: 'viola' },
+  { value: '#ec4899', name: 'rosa' },
+  { value: '#ef4444', name: 'rosso' },
+  { value: '#f97316', name: 'arancione' },
+  { value: '#eab308', name: 'giallo' },
+  { value: '#22c55e', name: 'verde' },
+  { value: '#14b8a6', name: 'verde acqua' },
+  { value: '#06b6d4', name: 'ciano' },
+  { value: '#3b82f6', name: 'blu' },
 ]
+
+/** Lo store non lancia: l'errore arriva in `tagsError`. Lo porta nella modale e lo toglie dallo store. */
+function takeTagsError(): string | undefined {
+  const failed = useProfitTrackerStore.getState().tagsError
+  if (failed) useProfitTrackerStore.setState({ tagsError: undefined })
+  return failed
+}
+
+/** I dieci colori come gruppo di scelte: pallino da 28px, la scelta con l'anello e la spunta. */
+function TagColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+      <legend className="mb-2 p-0 text-sm leading-5 font-semibold text-ds-ink">Colore</legend>
+      <div role="radiogroup" aria-label="Colore del tag" className="flex flex-wrap gap-2.5">
+        {TAG_COLORS.map((c) => {
+          const selected = value.toLowerCase() === c.value
+          return (
+            <button
+              key={c.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={`Colore ${c.name}`}
+              title={c.name}
+              onClick={() => onChange(c.value)}
+              className={cn(
+                'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-0 text-white transition-transform hover:scale-110',
+                dsFocusRing,
+                selected && 'ring-2 ring-ds-ink ring-offset-2 ring-offset-ds-surface-raised',
+              )}
+              style={{ backgroundColor: c.value }}
+            >
+              {selected && <Check className="h-4 w-4" strokeWidth={3} aria-hidden />}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+function ModalActions({
+  saving,
+  canSave,
+  label,
+  onClose,
+  onSave,
+}: {
+  saving: boolean
+  canSave: boolean
+  label: string
+  onClose: () => void
+  onSave: () => void
+}) {
+  return (
+    <div className="flex flex-wrap justify-end gap-3">
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={saving}
+        className={dsButtonClass('ghost', 'md')}
+      >
+        Annulla
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+      >
+        {saving ? 'Salvataggio…' : label}
+      </button>
+    </div>
+  )
+}
 
 interface TagCreateModalProps {
   open: boolean
@@ -34,68 +114,60 @@ interface TagCreateModalProps {
 }
 
 export function TagCreateModal({ open, onOpenChange }: TagCreateModalProps) {
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Nuovo tag">
+      {open && <TagCreateForm onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+/** Montato solo a modale aperta: nome vuoto e primo colore a ogni apertura. */
+function TagCreateForm({ onClose }: { onClose: () => void }) {
   const addTag = useProfitTrackerStore((s) => s.addTag)
-  const tagsError = useProfitTrackerStore((s) => s.tagsError)
 
   const [nome, setNome] = useState('')
-  const [colore, setColore] = useState(TAG_COLORS[0])
+  const [colore, setColore] = useState(TAG_COLORS[0].value)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const canSave = nome.trim() !== '' && !saving
 
   const handleSave = async () => {
-    if (!nome.trim()) return
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
     await addTag({ nome: nome.trim(), colore })
-    if (!tagsError) {
-      setNome('')
-      setColore(TAG_COLORS[0])
-      onOpenChange(false)
+    const failed = takeTagsError()
+    setSaving(false)
+    if (failed) {
+      setError(failed)
+      return
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Nuovo tag</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="tag-nome">Nome</Label>
-            <Input
-              id="tag-nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Es. Matched Betting, Value Bet..."
-            />
-            {tagsError && <p className="text-xs text-destructive">{tagsError}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Colore</Label>
-            <div className="flex flex-wrap gap-2">
-              {TAG_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: colore === c ? 'white' : 'transparent',
-                  }}
-                  onClick={() => setColore(c)}
-                  aria-label={`Colore ${c}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!nome.trim()}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GTextField
+          id="tag-nome"
+          label="Nome"
+          placeholder="Es. Matched Betting, Value Bet…"
+          value={nome}
+          onChange={setNome}
+          onEnter={() => void handleSave()}
+          error={error ?? undefined}
+        />
+        <TagColorPicker value={colore} onChange={setColore} />
+      </div>
+      <ModalActions
+        saving={saving}
+        canSave={canSave}
+        label="Salva il tag"
+        onClose={onClose}
+        onSave={() => void handleSave()}
+      />
+    </>
   )
 }
 
@@ -106,68 +178,59 @@ interface TagEditModalProps {
 }
 
 export function TagEditModal({ open, onOpenChange, tag }: TagEditModalProps) {
-  const updateTag = useProfitTrackerStore((s) => s.updateTag)
-  const tagsError = useProfitTrackerStore((s) => s.tagsError)
-
-  const [nome, setNome] = useState(tag?.nome ?? '')
-  const [colore, setColore] = useState(tag?.colore ?? TAG_COLORS[0])
-  const [isSaving, setIsSaving] = useState(false)
-
   if (!tag) return null
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Modifica tag">
+      {open && <TagEditForm tag={tag} onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+function TagEditForm({ tag, onClose }: { tag: Tag; onClose: () => void }) {
+  const updateTag = useProfitTrackerStore((s) => s.updateTag)
+
+  const [nome, setNome] = useState(tag.nome)
+  const [colore, setColore] = useState(tag.colore || TAG_COLORS[0].value)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const canSave = nome.trim() !== '' && !saving
 
   const handleSave = async () => {
-    setIsSaving(true)
-    await updateTag(tag.id, {
-      nome: nome.trim() || undefined,
-      colore,
-    })
-    setIsSaving(false)
-    if (!tagsError) {
-      onOpenChange(false)
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
+    await updateTag(tag.id, { nome: nome.trim() || undefined, colore })
+    const failed = takeTagsError()
+    setSaving(false)
+    if (failed) {
+      setError(failed)
+      return
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Modifica tag</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="tag-edit-nome">Nome</Label>
-            <Input id="tag-edit-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
-            {tagsError && <p className="text-xs text-destructive">{tagsError}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label>Colore</Label>
-            <div className="flex flex-wrap gap-2">
-              {TAG_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: colore === c ? 'white' : 'transparent',
-                  }}
-                  onClick={() => setColore(c)}
-                  aria-label={`Colore ${c}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving || !nome.trim()}>
-            {isSaving ? 'Salvataggio...' : 'Salva'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GTextField
+          id="tag-edit-nome"
+          label="Nome"
+          value={nome}
+          onChange={setNome}
+          onEnter={() => void handleSave()}
+          error={error ?? undefined}
+        />
+        <TagColorPicker value={colore} onChange={setColore} />
+      </div>
+      <ModalActions
+        saving={saving}
+        canSave={canSave}
+        label="Salva le modifiche"
+        onClose={onClose}
+        onSave={() => void handleSave()}
+      />
+    </>
   )
 }
 
@@ -177,40 +240,65 @@ interface TagDeleteModalProps {
   tag: Tag | null
 }
 
+/** La conferma prima di eliminare il tag: le giocate che lo usano restano. */
 export function TagDeleteModal({ open, onOpenChange, tag }: TagDeleteModalProps) {
-  const deleteTag = useProfitTrackerStore((s) => s.deleteTag)
-  const [isDeleting, setIsDeleting] = useState(false)
-
   if (!tag) return null
+  return (
+    <DsModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Eliminare il tag?"
+      description={
+        <>
+          Il tag <b className="font-semibold text-ds-ink">«{tag.nome}»</b> sparisce dall’elenco. Le
+          giocate che lo usano non vengono eliminate.
+        </>
+      }
+    >
+      {open && <TagDeleteActions tag={tag} onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+function TagDeleteActions({ tag, onClose }: { tag: Tag; onClose: () => void }) {
+  const deleteTag = useProfitTrackerStore((s) => s.deleteTag)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
-    setIsDeleting(true)
+    setDeleting(true)
+    setError(null)
     await deleteTag(tag.id)
-    setIsDeleting(false)
-    onOpenChange(false)
+    const failed = takeTagsError()
+    setDeleting(false)
+    if (failed) {
+      setError(failed)
+      return
+    }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Elimina tag</DialogTitle>
-        </DialogHeader>
-        <div className="p-4 pt-0 text-sm text-muted-foreground">
-          Sei sicuro di voler eliminare il tag{' '}
-          <span className="font-medium text-foreground">&quot;{tag.nome}&quot;</span>?
-          <br />
-          Le giocate che lo utilizzano non verranno eliminate.
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button variant="destructive" type="button" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Eliminazione...' : 'Elimina'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      {error && <FieldError id="tag-delete-error">{error}</FieldError>}
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={deleting}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDelete()}
+          disabled={deleting}
+          className={cn(dsDangerButtonClass('md'), 'disabled:opacity-50')}
+        >
+          {deleting ? 'Eliminazione…' : 'Elimina il tag'}
+        </button>
+      </div>
+    </>
   )
 }

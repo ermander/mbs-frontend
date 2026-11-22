@@ -1,158 +1,181 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GSelect,
+  GTextArea,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import {
+  REMINDER_PERIOD_OPTIONS,
+  reminderInputValue,
+  toDateTimeLocal,
+} from '@/lib/profit-tracker/reminders'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import type { ReminderPeriod, Reminder } from '@/types/profit-tracker'
+import type { Reminder, ReminderPeriod } from '@/types/profit-tracker'
 
 interface ReminderModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Il promemoria da modificare. */
   editingReminder?: Reminder | null
+  /** «Clona»: un promemoria nuovo che parte dai campi di questo. */
+  cloneFrom?: Reminder | null
 }
 
-export function ReminderModal({ open, onOpenChange, editingReminder }: ReminderModalProps) {
+/**
+ * Nuovo, Modifica e Clona promemoria sul design OddWise (§14.361), su DsModal. Stessi campi e
+ * salvataggi di prima, con tre correzioni: la data si legge e si scrive in ora locale (prima ogni
+ * modifica la spostava indietro di un'ora), «Nessun conto specifico» si può scegliere davvero
+ * (prima tornava al primo conto) e «Clona» riparte dai campi del promemoria (prima apriva un
+ * promemoria vuoto). Se il backend rifiuta l'errore resta nella modale, che non si chiude.
+ */
+export function ReminderModal({
+  open,
+  onOpenChange,
+  editingReminder,
+  cloneFrom,
+}: ReminderModalProps) {
+  const title = editingReminder
+    ? 'Modifica promemoria'
+    : cloneFrom
+      ? 'Clona promemoria'
+      : 'Nuovo promemoria'
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title={title}>
+      {open && (
+        <ReminderForm
+          editing={editingReminder ?? null}
+          source={editingReminder ?? cloneFrom ?? null}
+          onClose={() => onOpenChange(false)}
+        />
+      )}
+    </DsModal>
+  )
+}
+
+/** Montato solo a modale aperta: i campi ripartono dal promemoria scelto (o vuoti) a ogni apertura. */
+function ReminderForm({
+  editing,
+  source,
+  onClose,
+}: {
+  editing: Reminder | null
+  source: Reminder | null
+  onClose: () => void
+}) {
   const accounts = useProfitTrackerStore((s) => s.allAccounts)
   const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
   const createReminder = useProfitTrackerStore((s) => s.createReminder)
   const updateReminder = useProfitTrackerStore((s) => s.updateReminder)
-  const remindersError = useProfitTrackerStore((s) => s.remindersError)
 
-  const [accountId, setAccountId] = useState(editingReminder?.accountId ?? '')
-  const [descrizione, setDescrizione] = useState(editingReminder?.descrizione ?? '')
-  const [dataScadenza, setDataScadenza] = useState(() => {
-    if (editingReminder) {
-      return editingReminder.dataScadenza.slice(0, 16)
-    }
-    const now = new Date()
-    const iso = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      now.getHours(),
-      now.getMinutes(),
-    )
-      .toISOString()
-      .slice(0, 16)
-    return iso
-  })
-  const [periodoNotifica, setPeriodoNotifica] = useState<ReminderPeriod>(
-    editingReminder?.periodoNotifica ?? '24h',
+  const [accountId, setAccountId] = useState(source?.accountId ?? '')
+  const [descrizione, setDescrizione] = useState(source?.descrizione ?? '')
+  const [dataScadenza, setDataScadenza] = useState(() =>
+    source ? reminderInputValue(source.dataScadenza) : toDateTimeLocal(new Date()),
   )
+  const [periodoNotifica, setPeriodoNotifica] = useState<ReminderPeriod>(
+    source?.periodoNotifica ?? '24h',
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open) return
     void fetchAllAccounts()
-  }, [open, fetchAllAccounts])
+  }, [fetchAllAccounts])
 
-  const effectiveAccountId = useMemo(() => {
-    if (!accounts.length) return ''
-    if (accountId && accounts.some((a) => a.id === accountId)) return accountId
-    return editingReminder?.accountId ?? accounts[0]?.id ?? ''
-  }, [accounts, accountId, editingReminder])
+  const dateOk = dataScadenza !== '' && Number.isFinite(new Date(dataScadenza).getTime())
+  const canSave = descrizione.trim().length > 0 && dateOk && !saving
 
   const handleSave = async () => {
-    const iso = new Date(dataScadenza).toISOString()
-    if (editingReminder) {
-      await updateReminder(editingReminder.id, {
-        accountId: effectiveAccountId || undefined,
-        descrizione,
-        dataScadenza: iso,
-        periodoNotifica,
-      })
-    } else {
-      await createReminder({
-        accountId: effectiveAccountId || undefined,
-        descrizione,
-        dataScadenza: iso,
-        periodoNotifica,
-      })
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
+    const payload = {
+      descrizione,
+      dataScadenza: new Date(dataScadenza).toISOString(),
+      periodoNotifica,
     }
-    onOpenChange(false)
+    // In modifica «Nessun conto specifico» toglie il conto (null); prima la scelta non si poteva fare.
+    if (editing) await updateReminder(editing.id, { ...payload, accountId: accountId || null })
+    else await createReminder({ ...payload, accountId: accountId || undefined })
+    // Lo store non lancia: l'errore arriva in `remindersError`. Lo si porta nella modale e lo si
+    // toglie dallo store, che lo mostrerebbe anche sopra l'elenco.
+    const failed = useProfitTrackerStore.getState().remindersError
+    setSaving(false)
+    if (failed) {
+      useProfitTrackerStore.setState({ remindersError: undefined })
+      setError(failed)
+      return
+    }
+    onClose()
   }
 
-  const canSave =
-    descrizione.trim().length > 0 &&
-    dataScadenza &&
-    Number.isFinite(new Date(dataScadenza).getTime())
-
-  const title = editingReminder ? 'Modifica promemoria' : 'Nuovo promemoria'
+  // Il conto del promemoria resta fra le scelte anche se non è (più) nell'elenco dei conti.
+  const accountOptions = [
+    { value: '', label: 'Nessun conto specifico' },
+    ...accounts.map((a) => ({ value: a.id, label: a.nome })),
+    ...(accountId && accounts.length > 0 && !accounts.some((a) => a.id === accountId)
+      ? [{ value: accountId, label: 'Conto non trovato' }]
+      : []),
+  ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="rem-account">Conto (opzionale)</Label>
-            <select
-              id="rem-account"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={effectiveAccountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              <option value="">Nessun conto specifico</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rem-desc">Descrizione</Label>
-            <textarea
-              id="rem-desc"
-              className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rem-data">Data e ora di scadenza</Label>
-            <Input
-              id="rem-data"
-              type="datetime-local"
-              value={dataScadenza}
-              onChange={(e) => setDataScadenza(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rem-periodo">Quando vuoi ricevere la notifica?</Label>
-            <select
-              id="rem-periodo"
-              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-              value={periodoNotifica}
-              onChange={(e) => setPeriodoNotifica(e.target.value as ReminderPeriod)}
-            >
-              <option value="24h">24 ore prima della scadenza</option>
-              <option value="12h">12 ore prima della scadenza</option>
-              <option value="scadenza">Esattamente alla scadenza</option>
-            </select>
-          </div>
-          {remindersError && <p className="text-xs text-destructive">{remindersError}</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GSelect
+          id="rem-account"
+          label="Conto (facoltativo)"
+          options={accountOptions}
+          value={accountId}
+          onChange={setAccountId}
+        />
+        <GTextArea
+          id="rem-desc"
+          label="Descrizione"
+          placeholder="Es. Prelevare la vincita del bonus"
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        <GTextField
+          id="rem-data"
+          label="Data e ora di scadenza"
+          type="datetime-local"
+          value={dataScadenza}
+          onChange={setDataScadenza}
+        />
+        <GSelect
+          id="rem-periodo"
+          label="Quando vuoi ricevere la notifica?"
+          options={REMINDER_PERIOD_OPTIONS}
+          value={periodoNotifica}
+          onChange={(v) => setPeriodoNotifica(v as ReminderPeriod)}
+        />
+        {error && <FieldError id="rem-error">{error}</FieldError>}
+      </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!canSave}
+          className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+        >
+          {saving ? 'Salvataggio…' : editing ? 'Salva le modifiche' : 'Salva il promemoria'}
+        </button>
+      </div>
+    </>
   )
 }

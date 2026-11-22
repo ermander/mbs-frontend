@@ -603,7 +603,9 @@ export interface CreateReminderPayload {
   periodoNotifica: '24h' | '12h' | 'scadenza'
 }
 
-export type UpdateReminderPayload = Partial<CreateReminderPayload> & {
+/** `accountId: null` toglie il conto dal promemoria (il backend lo accetta, §14.361). */
+export type UpdateReminderPayload = Partial<Omit<CreateReminderPayload, 'accountId'>> & {
+  accountId?: string | null
   stato?: ReminderStatus
 }
 

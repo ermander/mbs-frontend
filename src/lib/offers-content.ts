@@ -9,7 +9,9 @@ import type { OfferDifficulty, OfferSectionApi, OfferType } from '@/types/offers
  * Dal §14.263 le offerte vengono dal database (GET /offers, lib/offers-api.ts, convertite con
  * offerFromCard); il catalogo d'esempio del design è in lib/offers-sample.ts, solo per i test.
  * Dal §14.345 l'elenco arriva una pagina alla volta (OFFERS_PAGE_SIZE carte): tipo, sito e pagina
- * stanno nell'indirizzo, e ordine dei gruppi, sezioni e conteggi li fa il backend.
+ * stanno nell'indirizzo, e ordine dei gruppi, sezioni e conteggi li fa il backend. Dal §14.358 i
+ * tre tipi sono tre pagine (/offerte/benvenuto, /offerte/ricorrenti, /offerte/esclusive) invece
+ * di un filtro nella stessa pagina.
  *
  * Deviazioni dal design: il filtro si chiama «Sito di scommesse» e non «Bookmaker», e la parola
  * sparisce anche dalla descrizione del benvenuto e dalle note (regola del brand, come sulla
@@ -49,30 +51,34 @@ export interface Offer {
   locked?: boolean
 }
 
-export const OFFER_TYPES: readonly { value: OfferType; label: string; description: string }[] = [
-  {
-    value: 'benvenuto',
-    label: 'Benvenuto',
-    description: 'Una volta sola, alla registrazione su un nuovo sito di scommesse.',
-  },
-  {
-    value: 'ricorrenti',
-    label: 'Ricorrenti',
-    description: 'Tornano ogni giorno, ogni settimana o ogni mese.',
-  },
-  {
-    value: 'esclusive',
-    label: 'Esclusive',
-    description: 'Offerte personali segnalate dagli utenti: controlla se le hai ricevute anche tu.',
-  },
+/**
+ * I tre tipi di offerta. Dal §14.358 ognuno ha la sua pagina (/offerte/<tipo>, `offersListHref`)
+ * col `title` in testa, e le tre voci stanno nella tendina «Offerte» della barra. La riga di
+ * descrizione di ogni tipo che veniva dal design è stata tolta: Emanuele l'ha giudicata inutile.
+ */
+export const OFFER_TYPES: readonly { value: OfferType; label: string; title: string }[] = [
+  { value: 'benvenuto', label: 'Benvenuto', title: 'Offerte di benvenuto' },
+  { value: 'ricorrenti', label: 'Ricorrenti', title: 'Offerte ricorrenti' },
+  { value: 'esclusive', label: 'Esclusive', title: 'Offerte esclusive' },
 ]
+
+/** Il tipo di offerta: la sua voce di OFFER_TYPES (etichetta e titolo della pagina). */
+export function offerTypeInfo(type: OfferType): (typeof OFFER_TYPES)[number] {
+  return OFFER_TYPES.find((t) => t.value === type) ?? OFFER_TYPES[0]
+}
+
+/** La radice delle offerte: /offerte da solo rimanda alla pagina del benvenuto (§14.358). */
+export const OFFERS_ROOT = '/offerte'
 
 export const ALL_BOOKS = 'all'
 
 /** Offerte per pagina dell'elenco (§14.345). */
 export const OFFERS_PAGE_SIZE = 10
 
-/** Il tipo dal parametro ?tipo= della pagina (link «indietro» del dettaglio); il benvenuto se manca o è sconosciuto. */
+/**
+ * Il tipo dal parametro ?tipo= dei vecchi indirizzi /offerte?tipo= (fino al §14.357 l'unica pagina
+ * dell'elenco, oggi un rimando alla pagina del tipo); il benvenuto se manca o è sconosciuto.
+ */
 export function parseOfferType(value: string | string[] | undefined): OfferType {
   const v = Array.isArray(value) ? value[0] : value
   return OFFER_TYPES.some((t) => t.value === v) ? (v as OfferType) : 'benvenuto'
@@ -97,19 +103,20 @@ export function parseOffersPage(value: string | string[] | undefined): number {
 }
 
 /**
- * La pagina dell'elenco aperta sul tipo (il link «indietro» del dettaglio) e, dal §14.345, sul
- * sito e sulla pagina: «Tutti i siti» e la pagina 1 restano fuori dall'indirizzo.
+ * La pagina dell'elenco di un tipo (il link «indietro» del dettaglio, le voci della barra), dal
+ * §14.345 aperta sul sito e sulla pagina: «Tutti i siti» e la pagina 1 restano fuori
+ * dall'indirizzo. Dal §14.358 il tipo è nel percorso (/offerte/benvenuto) e non più in ?tipo=.
  */
 export function offersListHref(type: OfferType, book: string = ALL_BOOKS, page = 1): string {
-  const query = new URLSearchParams({ tipo: type })
+  const query = new URLSearchParams()
   if (book !== ALL_BOOKS) query.set('sito', book)
   if (page > 1) query.set('pagina', String(page))
-  return `/offerte?${query}`
+  const search = query.toString()
+  return `${OFFERS_ROOT}/${type}${search ? `?${search}` : ''}`
 }
 
 export const OFFERS_COPY = {
   title: 'Offerte',
-  typeFilterLabel: 'Tipo di offerta',
   bookFilterLabel: 'Sito di scommesse',
   allBooks: 'Tutti i siti',
   profitLabel: 'Profitto stimato',
@@ -271,7 +278,7 @@ export function pageSections(
 
 /** Titolo dello stato vuoto: con il sito quando il filtro è attivo. */
 export function emptyTitle(type: OfferType, book: string): string {
-  const label = OFFER_TYPES.find((t) => t.value === type)?.label.toLowerCase() ?? type
+  const label = offerTypeInfo(type).label.toLowerCase()
   return book === ALL_BOOKS
     ? `Nessuna offerta di tipo ${label} da mostrare`
     : `Nessuna offerta di tipo ${label} per ${book}`

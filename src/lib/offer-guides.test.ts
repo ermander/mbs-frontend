@@ -81,7 +81,7 @@ describe('link fra elenco e dettaglio', () => {
     expect(parseOfferType(['esclusive', 'x'])).toBe('esclusive')
     expect(parseOfferType('altro')).toBe('benvenuto')
     expect(parseOfferType(undefined)).toBe('benvenuto')
-    expect(offersListHref('esclusive')).toBe('/offerte?tipo=esclusive')
+    expect(offersListHref('esclusive')).toBe('/offerte/esclusive')
     expect(offerById(SAMPLE_OFFERS, 'non-esiste')).toBeNull()
   })
 })

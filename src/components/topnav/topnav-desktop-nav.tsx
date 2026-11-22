@@ -3,26 +3,21 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { isActiveHref, type AuthNavItem, type AuthNavSection } from '@/lib/nav-config'
+import { isActiveHref, type AuthNavItem } from '@/lib/nav-config'
 import { dsNavLinkClass } from '@/components/landing/ds-primitives'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useNavSections } from './use-nav-sections'
-import { useHoverMenu } from './use-hover-menu'
-import { topnavMenuItem, topnavMenuPanel } from './topnav-ds'
+import { NavHoverMenu } from './nav-submenu'
 
 interface TopnavDesktopNavProps {
   className?: string
 }
 
-/** Le voci della barra: i gruppi `links` come link diretti, i gruppi `menu` come tendine. */
+/**
+ * Le voci della barra: i gruppi `links` come link diretti, i gruppi `menu` come tendine. Dal
+ * §14.358 anche una voce con `children` (Offerte) è una tendina, al suo posto fra i link.
+ */
 export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
   const sections = useNavSections()
   const pathname = usePathname()
@@ -34,12 +29,26 @@ export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
           section.display === 'links' ? (
             section.items.map((item) => (
               <li key={item.href}>
-                <TopnavLink item={item} active={isActiveHref(pathname, item.href)} />
+                {item.children ? (
+                  <NavHoverMenu
+                    label={item.label}
+                    items={item.children}
+                    active={isActiveHref(pathname, item.href)}
+                    pathname={pathname}
+                  />
+                ) : (
+                  <TopnavLink item={item} active={isActiveHref(pathname, item.href)} />
+                )}
               </li>
             ))
           ) : (
             <li key={section.label}>
-              <TopnavMenu section={section} pathname={pathname} />
+              <NavHoverMenu
+                label={section.label}
+                items={section.items}
+                active={section.items.some((item) => isActiveHref(pathname, item.href))}
+                pathname={pathname}
+              />
             </li>
           ),
         )}
@@ -57,62 +66,5 @@ function TopnavLink({ item, active }: { item: AuthNavItem; active: boolean }) {
     >
       {item.label}
     </Link>
-  )
-}
-
-function TopnavMenu({ section, pathname }: { section: AuthNavSection; pathname: string | null }) {
-  const active = section.items.some((item) => isActiveHref(pathname, item.href))
-  const { open, onOpenChange, hoverProps, triggerProps } = useHoverMenu()
-
-  return (
-    <div {...hoverProps}>
-      <DropdownMenu open={open} onOpenChange={onOpenChange} modal={false}>
-        <DropdownMenuTrigger
-          {...triggerProps}
-          className={cn(
-            dsNavLinkClass(active),
-            'group gap-1 whitespace-nowrap data-[state=open]:text-ds-ink',
-          )}
-        >
-          {section.label}
-          <ChevronDown
-            aria-hidden
-            className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180"
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          {...hoverProps}
-          align="start"
-          sideOffset={4}
-          className={cn(
-            topnavMenuPanel,
-            'max-h-[calc(100dvh-var(--topnav-h)-1rem)] min-w-56 overflow-y-auto',
-          )}
-        >
-          {section.items.map((item) => {
-            const itemActive = isActiveHref(pathname, item.href)
-            const Icon = item.icon
-            return (
-              <DropdownMenuItem
-                key={item.href}
-                asChild
-                className={cn(topnavMenuItem, itemActive && 'bg-ds-brand-soft font-semibold')}
-              >
-                <Link href={item.href} aria-current={itemActive ? 'page' : undefined}>
-                  <Icon
-                    aria-hidden
-                    className={cn(
-                      'h-4 w-4 shrink-0 text-ds-ink-muted',
-                      itemActive && 'text-ds-brand',
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </Link>
-              </DropdownMenuItem>
-            )
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
   )
 }

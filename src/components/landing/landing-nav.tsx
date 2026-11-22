@@ -14,6 +14,11 @@ import {
   dsFocusRing,
   dsNavLinkClass,
 } from '@/components/landing/ds-primitives'
+import { NavExpandable, NavHoverMenu } from '@/components/topnav/nav-submenu'
+
+/** Una riga del menu del telefono. */
+const MENU_ROW =
+  'flex items-center rounded-ds-sm px-3 py-2.5 font-medium text-ds-ink-muted transition-colors hover:bg-ds-surface-sunken hover:text-ds-ink'
 
 /**
  * La Navbar del design: 64px su surface-raised con hairline sotto, marchio, cinque voci e due
@@ -22,6 +27,9 @@ import {
  * Con `accountActions={false}` la barra resta senza le due azioni: è quella che SiteShell mostra
  * finché non sa se chi legge è entrato (nell'HTML del server e mentre /auth/me risponde), così a
  * chi è entrato non compare «Accedi» prima della barra dell'app (ClickUp «Controllo Navbar»).
+ *
+ * §14.358: «Offerte» ha sotto le tre pagine (benvenuto, ricorrenti, esclusive), come nella barra
+ * dell'app: una tendina al passaggio del mouse, una riga che si espande nel menu del telefono.
  */
 export function LandingNav({ accountActions = true }: { accountActions?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -45,13 +53,22 @@ export function LandingNav({ accountActions = true }: { accountActions?: boolean
               const active = isCurrentSection(link.href, pathname)
               return (
                 <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={dsNavLinkClass(active)}
-                  >
-                    {link.label}
-                  </Link>
+                  {link.children ? (
+                    <NavHoverMenu
+                      label={link.label}
+                      items={link.children}
+                      active={active}
+                      pathname={pathname}
+                    />
+                  ) : (
+                    <Link
+                      href={link.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={dsNavLinkClass(active)}
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               )
             })}
@@ -87,21 +104,30 @@ export function LandingNav({ accountActions = true }: { accountActions?: boolean
       {open && (
         <div id="landing-menu" className="border-t border-ds-line bg-ds-surface-raised lg:hidden">
           <DsContainer className="flex flex-col gap-0.5 py-3">
-            {LANDING_NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={close}
-                aria-current={isCurrentSection(link.href, pathname) ? 'page' : undefined}
-                className={cn(
-                  'rounded-ds-sm px-3 py-2.5 font-medium text-ds-ink-muted transition-colors hover:bg-ds-surface-sunken hover:text-ds-ink',
-                  isCurrentSection(link.href, pathname) && 'font-semibold text-ds-ink',
-                  dsFocusRing,
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {LANDING_NAV_LINKS.map((link) => {
+              const active = isCurrentSection(link.href, pathname)
+              return link.children ? (
+                <NavExpandable
+                  key={link.href}
+                  label={link.label}
+                  items={link.children}
+                  active={active}
+                  pathname={pathname}
+                  onNavigate={close}
+                  rowClassName={cn(MENU_ROW, dsFocusRing)}
+                />
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={close}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(MENU_ROW, active && 'font-semibold text-ds-ink', dsFocusRing)}
+                >
+                  {link.label}
+                </Link>
+              )
+            })}
             {accountActions && (
               <div className="mt-2 flex flex-col gap-2 border-t border-ds-line pt-3">
                 <DsButton href={LANDING_ROUTES.login} variant="ghost" block>

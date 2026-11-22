@@ -1,10 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Container } from '@/components/ui/container'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoConfirmModal,
+} from '@/components/backoffice/backoffice-ds'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  DsModal,
+  GCheckbox,
+  GIconButton,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsBadgeToggle, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import { getErrorMessage, getResponseStatus } from '@/lib/error-utils'
 import {
   getGlobalPaymentMethods,
@@ -33,6 +50,9 @@ export default function BackofficePaymentMethodsPage() {
   const [form, setForm] = useState<PaymentMethodFormData>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<PaymentMethod | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
   // com'è (loading parte già a true), i salvataggi passano da loadMethods, che riaccende il
@@ -77,8 +97,8 @@ export default function BackofficePaymentMethodsPage() {
     setFormError(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!form.nome.trim()) {
       setFormError('Il nome è obbligatorio.')
       return
@@ -111,162 +131,107 @@ export default function BackofficePaymentMethodsPage() {
 
   const toggleAttivo = async (method: PaymentMethod) => {
     setError(null)
+    setTogglingId(method.id)
     try {
       await updateGlobalPaymentMethod(method.id, { attivo: !method.attivo })
       await loadMethods()
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Errore nel salvataggio.')
+    } finally {
+      setTogglingId(null)
     }
   }
 
-  const handleDelete = async (method: PaymentMethod) => {
-    if (!confirm(`Eliminare il metodo di pagamento "${method.nome}"?`)) return
+  // Elimina chiede conferma nel Modal del design (prima il confirm() del browser).
+  const handleDelete = async () => {
+    if (!toDelete) return
     setError(null)
+    setDeleting(true)
     try {
-      await deleteGlobalPaymentMethod(method.id)
+      await deleteGlobalPaymentMethod(toDelete.id)
       await loadMethods()
     } catch (err: unknown) {
       // 409 «usato da N wallet: disattivalo invece di eliminarlo»: il messaggio del backend.
       setError(getErrorMessage(err) || 'Errore nella cancellazione del metodo di pagamento.')
+    } finally {
+      setDeleting(false)
+      setToDelete(null)
     }
   }
 
   return (
-    <Container>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Metodi di pagamento
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Il catalogo dei wallet: ogni collaboratore può aprirne uno per metodo. Un metodo usato
-            da qualche wallet si disattiva, non si elimina.
-          </p>
-        </div>
-        <Button onClick={openCreateForm}>Nuovo metodo</Button>
-      </div>
+    <>
+      <DsPageHeader
+        title="Metodi di pagamento"
+        description="Il catalogo dei wallet: ogni collaboratore può aprirne uno per metodo. Un metodo usato da qualche wallet si disattiva, non si elimina."
+        actions={
+          <button type="button" onClick={openCreateForm} className={dsButtonClass('primary', 'md')}>
+            <Plus className="h-5 w-5" aria-hidden />
+            Nuovo metodo
+          </button>
+        }
+      />
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
-      {showForm && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-6">
-          <h3 className="mb-4 text-lg font-medium text-foreground">
-            {editing ? 'Modifica metodo di pagamento' : 'Nuovo metodo di pagamento'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pm-nome">Nome *</Label>
-                <Input
-                  id="pm-nome"
-                  value={form.nome}
-                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                  placeholder="es. PayPal"
-                />
-                {editing && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Rinominare il metodo rinomina anche i wallet che lo usano.
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pm-descrizione">Descrizione</Label>
-                <Input
-                  id="pm-descrizione"
-                  value={form.descrizione}
-                  onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="pm-attivo"
-                  type="checkbox"
-                  checked={form.attivo}
-                  onChange={(e) => setForm((f) => ({ ...f, attivo: e.target.checked }))}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="pm-attivo">Attivo (si può aprire un wallet)</Label>
-              </div>
-            </div>
-
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-            <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Salvataggio...' : editing ? 'Salva modifiche' : 'Crea'}
-              </Button>
-              <Button type="button" variant="outline" onClick={closeForm}>
-                Annulla
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/60">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Nome</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Slug</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Descrizione</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Attivo</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Azioni</th>
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
+          <thead>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Nome</th>
+              <th className={BO_TH}>Slug</th>
+              <th className={BO_TH}>Descrizione</th>
+              <th className={BO_TH}>Stato</th>
+              <th className={cn(BO_TH, 'text-right')}>Azioni</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={5} className={BO_EMPTY_CELL}>
+                  Caricamento dei metodi di pagamento…
                 </td>
               </tr>
             ) : methods.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={5} className={BO_EMPTY_CELL}>
                   Nessun metodo di pagamento nel catalogo.
                 </td>
               </tr>
             ) : (
               methods.map((method) => (
-                <tr
-                  key={method.id}
-                  className="border-t border-border transition-colors hover:bg-accent"
-                >
-                  <td className="px-4 py-2 font-medium text-foreground">{method.nome}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                <tr key={method.id} className={BO_ROW}>
+                  <td className={cn(BO_TD, 'font-semibold text-ds-ink')}>{method.nome}</td>
+                  <td className={cn(BO_TD, 'font-mono text-xs text-ds-ink-muted')}>
                     {method.slug}
                   </td>
-                  <td className="px-4 py-2 text-foreground">
-                    {method.descrizione || <span className="text-xs text-muted-foreground">—</span>}
+                  <td className={cn(BO_TD, 'text-ds-ink')}>
+                    {method.descrizione || <span className="text-ds-ink-faint">—</span>}
                   </td>
-                  <td className="px-4 py-2">
-                    <button
-                      type="button"
+                  <td className={BO_TD}>
+                    <DsBadgeToggle
+                      tone={method.attivo ? 'profit' : 'neutral'}
+                      label={method.attivo ? 'Attivo' : 'Disattivato'}
+                      actionLabel={method.attivo ? 'Disattiva il metodo' : 'Riattiva il metodo'}
+                      disabled={togglingId === method.id}
                       onClick={() => void toggleAttivo(method)}
-                      className={
-                        'rounded-pill border px-2 py-0.5 text-[11px] font-medium ' +
-                        (method.attivo
-                          ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                          : 'border-border bg-muted text-muted-foreground')
-                      }
-                      title={method.attivo ? 'Clicca per disattivare' : 'Clicca per riattivare'}
-                    >
-                      {method.attivo ? 'Attivo' : 'Disattivato'}
-                    </button>
+                    />
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditForm(method)}>
-                        Modifica
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => void handleDelete(method)}
+                  <td className={cn(BO_TD, 'text-right')}>
+                    <div className="flex justify-end gap-0.5">
+                      <GIconButton
+                        label={`Modifica il metodo «${method.nome}»`}
+                        onClick={() => openEditForm(method)}
                       >
-                        Elimina
-                      </Button>
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </GIconButton>
+                      <GIconButton
+                        label={`Elimina il metodo «${method.nome}»`}
+                        danger
+                        onClick={() => setToDelete(method)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </GIconButton>
                     </div>
                   </td>
                 </tr>
@@ -275,6 +240,74 @@ export default function BackofficePaymentMethodsPage() {
           </tbody>
         </table>
       </div>
-    </Container>
+
+      <DsModal
+        open={showForm}
+        onOpenChange={(open) => !open && !saving && closeForm()}
+        title={editing ? 'Modifica metodo di pagamento' : 'Nuovo metodo di pagamento'}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeForm}
+              disabled={saving}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              form="bo-pm-form"
+              disabled={saving}
+              className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-60')}
+            >
+              {saving ? 'Salvataggio…' : editing ? 'Salva modifiche' : 'Crea'}
+            </button>
+          </>
+        }
+      >
+        <form id="bo-pm-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <GTextField
+            id="pm-nome"
+            label="Nome"
+            value={form.nome}
+            onChange={(nome) => setForm((f) => ({ ...f, nome }))}
+            placeholder="es. PayPal"
+            hint={
+              editing ? 'Rinominare il metodo rinomina anche i wallet che lo usano.' : undefined
+            }
+            inputProps={{ autoFocus: true }}
+          />
+          <GTextField
+            id="pm-descrizione"
+            label="Descrizione"
+            optional
+            value={form.descrizione}
+            onChange={(descrizione) => setForm((f) => ({ ...f, descrizione }))}
+          />
+          <GCheckbox
+            id="pm-attivo"
+            label="Attivo"
+            hint="Si può aprire un wallet con questo metodo."
+            checked={form.attivo}
+            onChange={(attivo) => setForm((f) => ({ ...f, attivo }))}
+          />
+          {formError && <DsAlert>{formError}</DsAlert>}
+        </form>
+      </DsModal>
+
+      <BoConfirmModal
+        open={toDelete !== null}
+        title="Eliminare il metodo di pagamento?"
+        description={
+          toDelete
+            ? `«${toDelete.nome}» esce dal catalogo. Se qualche wallet lo usa il backend rifiuta: va disattivato.`
+            : ''
+        }
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setToDelete(null)}
+      />
+    </>
   )
 }

@@ -11,6 +11,7 @@
  */
 const http = require('http');
 const { URL } = require('url');
+const { createBackofficeMock } = require('./backoffice');
 
 const PORT = parseInt(process.argv[2] ?? '4000', 10);
 const now = Date.now();
@@ -22,6 +23,8 @@ const inDays = (d, hour = 18, minute = 45) => {
     return t.toISOString();
 };
 
+// §14.365: sport mappings, matchings, review queue, Palinsesto, Competizioni and the scraper drill-down.
+const backofficeMock = createBackofficeMock(now);
 const user = { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', settings: {}, createdAt: '2026-03-01T10:00:00.000Z', tools: [], hasPassword: process.env.MOCK_USER_HAS_PASSWORD !== '0' };
 // §14.122: utenti del backoffice con gli strumenti abilitati (PATCH /backoffice/users/:id/tools).
 const USERS = [
@@ -1515,6 +1518,7 @@ const server = http.createServer(async (req, res) => {
     if (path === '/api/profit-tracker/tags') return send(200, TAGS);
     if (path === '/api/profit-tracker/global-books') return send(200, GLOBAL_BOOKS);
     if (path === '/__mock/saved') return send(200, saved);
+    if (await backofficeMock({ path, method: req.method, url, send, readBody: () => readBody(req), scrapers: SCRAPERS })) return;
     return send(404, { message: `mock: no route for ${req.method} ${path}` });
 });
 

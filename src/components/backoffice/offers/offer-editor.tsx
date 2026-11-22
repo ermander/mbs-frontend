@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
 
 import { bookmakerSlugsWithLogo } from '@/lib/bookmakers'
 import { getErrorMessage, getResponseStatus } from '@/lib/error-utils'
@@ -38,10 +36,11 @@ import type {
   OfferType,
   OfferVisibility,
 } from '@/types/offers'
-import { Button } from '@/components/ui/button'
-import { Container } from '@/components/ui/container'
-import { dsSans, dsSerif } from '@/components/landing/landing-fonts'
+import { BoBackLink } from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { OfferDetail } from '@/components/offers/offer-detail'
+import { DsSegmented } from '@/components/profit-tracker/tracker-ds'
 import {
   CheckboxField,
   EditorSection,
@@ -55,26 +54,18 @@ import { GuideFields } from '@/components/backoffice/offers/guide-fields'
  * L'editor di un'offerta nel backoffice (§14.262): la carta dell'elenco, la scadenza e la guida
  * a passi e blocchi, con l'anteprima resa dallo stesso componente della pagina pubblica. Senza
  * `offer` crea una bozza nuova e poi passa alla sua pagina. Pubblicare salva prima le modifiche,
- * così sul sito va sempre quello che si vede qui.
+ * così sul sito va sempre quello che si vede qui. Dal §14.365 sul design OddWise: barra in alto su
+ * surface, vista Modifica/Anteprima nel Segmented, pulsanti e badge del design.
  */
 
-const VISIBILITY_TONE: Record<OfferVisibility, string> = {
-  draft: 'border-border bg-muted text-muted-foreground',
-  published: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400',
-  hidden: 'border-amber-500/30 bg-amber-500/15 text-amber-400',
+const VISIBILITY_TONE: Record<OfferVisibility, DsBadgeTone> = {
+  draft: 'neutral',
+  published: 'profit',
+  hidden: 'warning',
 }
 
 export function VisibilityBadge({ visibility }: { visibility: OfferVisibility }) {
-  return (
-    <span
-      className={cn(
-        'rounded-pill border px-2 py-0.5 text-[11px] font-medium',
-        VISIBILITY_TONE[visibility],
-      )}
-    >
-      {VISIBILITY_LABELS[visibility]}
-    </span>
-  )
+  return <DsBadge tone={VISIBILITY_TONE[visibility]}>{VISIBILITY_LABELS[visibility]}</DsBadge>
 }
 
 const BOOKMAKER_SLUGS = bookmakerSlugsWithLogo()
@@ -195,91 +186,71 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
   const groupSuggestions = GROUP_SUGGESTIONS[input.type]
 
   return (
-    <Container className="max-w-5xl pb-24">
-      <Link
-        href="/backoffice/offerte"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" /> Tutte le offerte
-      </Link>
+    <div className="mx-auto flex w-full max-w-5xl flex-col pb-24">
+      <BoBackLink href="/backoffice/offerte">Tutte le offerte</BoBackLink>
 
-      <div className="sticky top-(--topnav-h) z-20 -mx-4 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="sticky top-(--topnav-h) z-20 -mx-4 mt-3 mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-ds-line bg-ds-surface/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-xl font-semibold tracking-tight text-foreground">
-              {input.title || 'Nuova offerta'}
-            </h2>
+            <h1 className="ds-heading m-0 truncate">{input.title || 'Nuova offerta'}</h1>
             <VisibilityBadge visibility={visibility} />
-            {saved && <span className="text-xs text-muted-foreground">{expiryLabel(saved)}</span>}
+            {saved && <span className="ds-caption text-ds-ink-muted">{expiryLabel(saved)}</span>}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="ds-caption m-0 text-ds-ink-muted">
             {dirty ? 'Modifiche non salvate' : saved ? 'Tutto salvato' : 'Non ancora salvata'}
-            {notice && <span className="ml-2 text-emerald-400">{notice}</span>}
+            {notice && <span className="ml-2 font-semibold text-ds-profit">{notice}</span>}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div
-            className="flex rounded-md border border-border p-0.5"
-            role="group"
-            aria-label="Vista"
-          >
-            {(['edit', 'preview'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={view === v}
-                onClick={() => {
-                  // «Oggi» si legge qui, al clic, e non durante il rendering.
-                  if (v === 'preview') setPreviewDay(romeToday())
-                  setView(v)
-                }}
-                className={cn(
-                  'rounded px-3 py-1 text-sm transition-colors',
-                  view === v
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {v === 'edit' ? 'Modifica' : 'Anteprima'}
-              </button>
-            ))}
-          </div>
-          <Button
+        <div className="flex flex-wrap items-center gap-2">
+          <DsSegmented
+            label="Vista"
+            value={view}
+            onChange={(v) => {
+              // «Oggi» si legge qui, al clic, e non durante il rendering.
+              if (v === 'preview') setPreviewDay(romeToday())
+              setView(v)
+            }}
+            items={[
+              { value: 'edit', label: 'Modifica' },
+              { value: 'preview', label: 'Anteprima' },
+            ]}
+          />
+          <button
             type="button"
-            variant="outline"
             disabled={busy || (!dirty && Boolean(saved))}
             onClick={() => void save()}
+            className={cn(dsButtonClass('secondary', 'md'), 'disabled:opacity-50')}
           >
             {busy ? 'Salvataggio…' : 'Salva'}
-          </Button>
+          </button>
           {visibility !== 'published' ? (
-            <Button
+            <button
               type="button"
-              variant="success"
               disabled={busy}
               onClick={() => void changeVisibility('published')}
+              className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-60')}
             >
               {dirty || !saved ? 'Salva e pubblica' : 'Pubblica'}
-            </Button>
+            </button>
           ) : (
-            <Button
+            <button
               type="button"
-              variant="secondary"
               disabled={busy}
               onClick={() => void changeVisibility('hidden')}
+              className={cn(dsButtonClass('secondary', 'md'), 'disabled:opacity-50')}
             >
               Nascondi
-            </Button>
+            </button>
           )}
           {visibility === 'hidden' && (
-            <Button
+            <button
               type="button"
-              variant="ghost"
               disabled={busy}
               onClick={() => void changeVisibility('draft')}
+              className={cn(dsButtonClass('ghost', 'md'), 'disabled:opacity-50')}
             >
               Riporta in bozza
-            </Button>
+            </button>
           )}
         </div>
       </div>
@@ -288,12 +259,10 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
         <div
           ref={errorsRef}
           role="alert"
-          className="mb-6 rounded-md border border-destructive/40 bg-destructive/10 p-4"
+          className="mb-6 rounded-ds-md border border-ds-loss/30 bg-ds-loss-soft px-4 py-3 text-ds-loss"
         >
-          <p className="mb-2 text-sm font-medium text-destructive">
-            Da sistemare prima di salvare:
-          </p>
-          <ul className="space-y-1 list-disc pl-5 text-sm text-destructive">
+          <p className="m-0 mb-1 text-sm font-semibold">Da sistemare prima di salvare:</p>
+          <ul className="m-0 space-y-1 list-disc pl-5 text-sm">
             {errors.map((error) => (
               <li key={error}>{error}</li>
             ))}
@@ -302,13 +271,7 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
       )}
 
       {view === 'preview' && previewDay ? (
-        <div
-          className={cn(
-            dsSerif.variable,
-            dsSans.variable,
-            'ds-scope overflow-hidden rounded-lg border border-border bg-ds-surface font-ds-sans text-base leading-6 text-ds-ink antialiased scheme-light',
-          )}
-        >
+        <div className="overflow-hidden rounded-ds-lg border border-ds-line bg-ds-surface shadow-ds-sm">
           <OfferDetail
             offer={previewOffer(input, previewDay)}
             guide={input.guide}
@@ -316,7 +279,7 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
           />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <EditorSection
             title="Carta dell'elenco"
             hint="Quello che si vede nell'elenco delle offerte e in testa alla pagina."
@@ -444,6 +407,6 @@ export function OfferEditor({ offer }: { offer?: OfferAdmin }) {
           )}
         </div>
       )}
-    </Container>
+    </div>
   )
 }

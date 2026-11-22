@@ -1,9 +1,22 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Container } from '@/components/ui/container'
+import { RefreshCw, Search } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoPagination,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { GSelect, GTextField } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsPageHeader } from '@/components/profit-tracker/tracker-ds'
 import { cn } from '@/lib/utils'
 import { getMatcherResults, getMatcherMeta } from '@/services/api/matcher-client'
 import {
@@ -28,25 +41,17 @@ const MATCH_TYPES: Array<{ value: string; label: string }> = [
   { value: 'back_lay', label: 'Back/Lay' },
 ]
 
-function ratingBadge(rating: number) {
-  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold tabular-nums'
-  if (rating >= 100) return `${base} bg-emerald-500/15 text-emerald-400`
-  if (rating >= 98) return `${base} bg-amber-500/15 text-amber-400`
-  return `${base} bg-red-500/15 text-red-400`
+/** Il rating: da 100 % in su in profit, fra 98 e 100 in warning, sotto in loss. */
+function ratingTone(rating: number): DsBadgeTone {
+  if (rating >= 100) return 'profit'
+  if (rating >= 98) return 'warning'
+  return 'loss'
 }
 
-function matchTypeBadge(type: string) {
-  const base = 'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
-  switch (type) {
-    case 'dutch_2way':
-      return `${base} bg-blue-500/15 text-blue-400`
-    case 'dutch_3way':
-      return `${base} bg-purple-500/15 text-purple-400`
-    case 'back_lay':
-      return `${base} bg-teal-500/15 text-teal-400`
-    default:
-      return `${base} bg-muted text-muted-foreground`
-  }
+const MATCH_TYPE_TONE: Record<string, DsBadgeTone> = {
+  dutch_2way: 'info',
+  dutch_3way: 'brand',
+  back_lay: 'neutral',
 }
 
 function matchTypeLabel(type: string) {
@@ -75,27 +80,22 @@ function isLayLeg(leg: MatcherLeg): boolean {
   return leg.outcomeLabel.startsWith('LAY ')
 }
 
+/** Una gamba: sito e BACK/LAY, sotto l'esito e la quota (la bancata in loss, come nell'oddsmatcher). */
 function LegCell({ leg }: { leg: MatcherLeg }) {
   const lay = isLayLeg(leg)
-  const oddsColor = lay ? 'text-pink-400' : 'text-blue-400'
-  const tagClass = lay
-    ? 'bg-pink-500/15 text-pink-400 border-pink-500/20'
-    : 'bg-blue-500/15 text-blue-400 border-blue-500/20'
-  const tagLabel = lay ? 'LAY' : 'BACK'
-
   return (
     <>
-      <div className="flex items-center gap-1.5">
-        <span className="font-medium">{leg.bookmakerName}</span>
-        <span
-          className={`inline-flex items-center rounded border px-1.5 py-0 text-[10px] font-semibold ${tagClass}`}
-        >
-          {tagLabel}
-        </span>
+      <div className="flex min-w-[140px] flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <span className="font-semibold text-ds-ink">{leg.bookmakerName}</span>
+        <DsBadge tone={lay ? 'loss' : 'info'} className="h-[18px] px-1.5 text-[10px] font-semibold">
+          {lay ? 'LAY' : 'BACK'}
+        </DsBadge>
       </div>
-      <div className="text-xs">
+      <div className="text-xs whitespace-nowrap text-ds-ink-muted">
         {leg.outcomeLabel.replace(/^(BACK|LAY)\s+/, '')}{' '}
-        <span className={`font-semibold ${oddsColor}`}>{leg.odds.toFixed(2)}</span>
+        <span className={cn('font-semibold tabular-nums', lay ? 'text-ds-loss' : 'text-ds-ink')}>
+          {leg.odds.toFixed(2)}
+        </span>
       </div>
     </>
   )
@@ -131,6 +131,8 @@ function marketLabel(
   return label
 }
 
+// I risultati del matcher per l'amministratore, senza polling: si ricarica con «Aggiorna». Dal
+// §14.365 sul design OddWise: filtri GSelect e GTextField, tabella e badge del design.
 export default function MatcherPage() {
   const [results, setResults] = useState<MatcherResult[]>([])
   const [meta, setMeta] = useState<MatcherMeta | null>(null)
@@ -148,6 +150,9 @@ export default function MatcherPage() {
   const [competitionIds, setCompetitionIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  // Il menu delle competizioni si apre qui dentro e non nel body, così prende la palette chiara
+  // del design (nel body restava scuro).
+  const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null)
 
   const setFilter =
     <T,>(setter: React.Dispatch<React.SetStateAction<T>>) =>
@@ -198,7 +203,9 @@ export default function MatcherPage() {
       if (sport) filters.sport = sport
       if (matchType) filters.match_type = matchType as MatchType
       if (marketTypeFilter) filters.market_type = marketTypeFilter
-      if (minRating) filters.min_rating = parseFloat(minRating)
+      // Il campo è di testo: si accetta anche la virgola, e un valore che non è un numero non filtra.
+      const rating = parseFloat(minRating.replace(',', '.'))
+      if (Number.isFinite(rating)) filters.min_rating = rating
       if (bookmaker) filters.bookmaker = bookmaker
       if (competitionIds.length > 0) filters.competitions = competitionIds.join(',')
       if (debouncedSearch) filters.search = debouncedSearch
@@ -241,42 +248,44 @@ export default function MatcherPage() {
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  return (
-    <Container>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Matcher</h1>
-          <p className="text-sm text-muted-foreground">
-            {total.toLocaleString()} risultati
-            {calculatedAt && ` — aggiornato ${formatDate(calculatedAt)}`}
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-          <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-          Aggiorna
-        </Button>
-      </div>
+  const legCell = (leg: MatcherLeg | undefined) =>
+    leg ? <LegCell leg={leg} /> : <span className="text-ds-ink-faint">—</span>
 
-      {/* Filters */}
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+  return (
+    <>
+      <DsPageHeader
+        title="Matcher"
+        description={`${total.toLocaleString('it-IT')} risultati${calculatedAt ? ` · aggiornato ${formatDate(calculatedAt)}` : ''}`}
+        actions={
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className={cn(dsButtonClass('secondary', 'md'), 'disabled:opacity-60')}
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+            Aggiorna
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <GSelect
+          id="bo-matcher-sport"
+          ariaLabel="Sport"
+          size="sm"
           value={sport}
-          onChange={(e) => {
-            const value = e.target.value
+          onChange={(value) => {
             setFilter(setSport)(value)
             setCompetitionIds((prev) =>
               pruneCompetitionIds(prev, meta?.competitions, { sport: value }),
             )
           }}
-        >
-          <option value="">Tutti gli sport</option>
-          {meta?.sports.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: '', label: 'Tutti gli sport' },
+            ...(meta?.sports ?? []).map((s) => ({ value: s, label: s })),
+          ]}
+        />
 
         <MatcherCompetitionFilter
           className="col-span-2"
@@ -284,139 +293,123 @@ export default function MatcherPage() {
           scope={{ sport }}
           selectedIds={competitionIds}
           onToggle={toggleCompetition}
+          portalContainer={portalEl}
         />
 
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+        <GSelect
+          id="bo-matcher-type"
+          ariaLabel="Tipo"
+          size="sm"
           value={matchType}
-          onChange={(e) => setFilter(setMatchType)(e.target.value)}
-        >
-          {MATCH_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          onChange={setFilter(setMatchType)}
+          options={MATCH_TYPES}
+        />
 
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+        <GSelect
+          id="bo-matcher-market"
+          ariaLabel="Mercato"
+          size="sm"
           value={marketTypeFilter}
-          onChange={(e) => setFilter(setMarketTypeFilter)(e.target.value)}
-        >
-          <option value="">Tutti i mercati</option>
-          {meta?.marketTypes.map((m) => (
-            <option key={m} value={m}>
-              {marketLabel(m, null)}
-            </option>
-          ))}
-        </select>
+          onChange={setFilter(setMarketTypeFilter)}
+          options={[
+            { value: '', label: 'Tutti i mercati' },
+            ...(meta?.marketTypes ?? []).map((m) => ({ value: m, label: marketLabel(m, null) })),
+          ]}
+        />
 
-        <input
-          type="number"
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+        <GTextField
+          id="bo-matcher-rating"
+          ariaLabel="Rating minimo"
+          size="sm"
           placeholder="Rating min"
           value={minRating}
-          onChange={(e) => setFilter(setMinRating)(e.target.value)}
-          step="0.5"
+          onChange={setFilter(setMinRating)}
+          suffix="%"
+          inputProps={{ inputMode: 'decimal' }}
         />
 
-        <select
-          className="rounded-md border bg-background px-3 py-2 text-sm"
+        <GSelect
+          id="bo-matcher-bookmaker"
+          ariaLabel="Bookmaker"
+          size="sm"
           value={bookmaker}
-          onChange={(e) => setFilter(setBookmaker)(e.target.value)}
-        >
-          <option value="">Tutti i bookmaker</option>
-          {meta?.bookmakers.map((b) => (
-            <option key={b.slug} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+          onChange={setFilter(setBookmaker)}
+          options={[
+            { value: '', label: 'Tutti i bookmaker' },
+            ...(meta?.bookmakers ?? []).map((b) => ({ value: b.slug, label: b.name })),
+          ]}
+        />
 
-        <input
-          type="text"
-          className="rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="Cerca evento..."
+        <GTextField
+          id="bo-matcher-search"
+          ariaLabel="Cerca evento"
+          type="search"
+          size="sm"
+          placeholder="Cerca evento…"
+          prefix={<Search className="h-4 w-4" aria-hidden />}
           value={search}
-          onChange={(e) => setFilter(setSearch)(e.target.value)}
+          onChange={setFilter(setSearch)}
+          className="col-span-2 md:col-span-1"
         />
       </div>
 
-      {/* Results table */}
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
           <thead>
-            <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground uppercase">
-              <th className="px-3 py-2">Rating</th>
-              <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Evento</th>
-              <th className="px-3 py-2">Kickoff</th>
-              <th className="px-3 py-2">Mercato</th>
-              <th className="px-3 py-2">Leg 1</th>
-              <th className="px-3 py-2">Leg 2</th>
-              <th className="px-3 py-2">Leg 3</th>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Rating</th>
+              <th className={BO_TH}>Tipo</th>
+              <th className={BO_TH}>Evento</th>
+              <th className={BO_TH}>Kickoff</th>
+              <th className={BO_TH}>Mercato</th>
+              <th className={BO_TH}>Leg 1</th>
+              <th className={BO_TH}>Leg 2</th>
+              <th className={BO_TH}>Leg 3</th>
             </tr>
           </thead>
           <tbody>
             {loading && results.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={8} className={BO_EMPTY_CELL}>
+                  Caricamento dei risultati…
                 </td>
               </tr>
             ) : results.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                  Nessun risultato
+                <td colSpan={8} className={BO_EMPTY_CELL}>
+                  Nessun risultato.
                 </td>
               </tr>
             ) : (
               results.map((r, i) => (
-                <tr key={i} className="border-b hover:bg-muted/30">
-                  <td className="px-3 py-2">
-                    <span className={ratingBadge(r.rating)}>{r.rating.toFixed(2)}%</span>
+                <tr key={i} className={cn(BO_ROW, 'align-top')}>
+                  <td className={BO_TD}>
+                    <DsBadge tone={ratingTone(r.rating)} className="font-semibold tabular-nums">
+                      {r.rating.toFixed(2)}%
+                    </DsBadge>
                   </td>
-                  <td className="px-3 py-2">
-                    <span className={matchTypeBadge(r.matchType)}>
+                  <td className={BO_TD}>
+                    <DsBadge tone={MATCH_TYPE_TONE[r.matchType] ?? 'neutral'}>
                       {matchTypeLabel(r.matchType)}
-                    </span>
+                    </DsBadge>
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="font-medium">
+                  <td className={cn(BO_TD, 'min-w-[200px]')}>
+                    <div className="font-semibold text-ds-ink">
                       {r.homeName} vs {r.awayName}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {r.sportName} — {r.competitionName}
+                    <div className="ds-caption text-ds-ink-muted">
+                      {r.sportName} · {r.competitionName}
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap">{formatDate(r.startTime)}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink-muted tabular-nums')}>
+                    {formatDate(r.startTime)}
+                  </td>
+                  <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink')}>
                     {marketLabel(r.marketTypeKey, r.line, r)}
                   </td>
-                  {/* Leg 1 */}
-                  <td className="px-3 py-2">
-                    {r.legs[0] ? (
-                      <LegCell leg={r.legs[0]} />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  {/* Leg 2 */}
-                  <td className="px-3 py-2">
-                    {r.legs[1] ? (
-                      <LegCell leg={r.legs[1]} />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  {/* Leg 3 */}
-                  <td className="px-3 py-2">
-                    {r.legs[2] ? (
-                      <LegCell leg={r.legs[2]} />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
+                  <td className={BO_TD}>{legCell(r.legs[0])}</td>
+                  <td className={BO_TD}>{legCell(r.legs[1])}</td>
+                  <td className={BO_TD}>{legCell(r.legs[2])}</td>
                 </tr>
               ))
             )}
@@ -424,30 +417,17 @@ export default function MatcherPage() {
         </table>
       </div>
 
-      {/* Pagination */}
+      <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-50" />
+
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            Pagina {page + 1} di {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              className="rounded-md border px-3 py-1 hover:bg-muted disabled:opacity-50"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-            >
-              Precedente
-            </button>
-            <button
-              className="rounded-md border px-3 py-1 hover:bg-muted disabled:opacity-50"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-            >
-              Successiva
-            </button>
-          </div>
-        </div>
+        <BoPagination
+          label={`Pagina ${page + 1} di ${totalPages}`}
+          prevDisabled={page === 0}
+          nextDisabled={page >= totalPages - 1}
+          onPrev={() => setPage((p) => Math.max(0, p - 1))}
+          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+        />
       )}
-    </Container>
+    </>
   )
 }

@@ -1,13 +1,13 @@
 'use client'
 
 import { use, useEffect, useState } from 'react'
-import Link from 'next/link'
 
 import { getErrorMessage, getResponseStatus } from '@/lib/error-utils'
 import { getBackofficeOffer } from '@/services/api/backoffice-offers-client'
 import type { OfferAdmin } from '@/types/offers'
-import { Container } from '@/components/ui/container'
+import { BoBackLink, BoMuted } from '@/components/backoffice/backoffice-ds'
 import { OfferEditor } from '@/components/backoffice/offers/offer-editor'
+import { DsAlert } from '@/components/profit-tracker/tracker-ds'
 
 type LoadState =
   | { status: 'loading' }
@@ -43,20 +43,13 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
 
   if (load.status === 'ready') return <OfferEditor key={load.offer.id} offer={load.offer} />
   return (
-    <Container className="max-w-5xl">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+      <BoBackLink href="/backoffice/offerte">Tutte le offerte</BoBackLink>
       {load.status === 'loading' ? (
-        <p className="text-sm text-muted-foreground">Caricamento...</p>
+        <BoMuted>Caricamento dell’offerta…</BoMuted>
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-destructive">{load.message}</p>
-          <Link
-            href="/backoffice/offerte"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← Tutte le offerte
-          </Link>
-        </div>
+        <DsAlert>{load.message}</DsAlert>
       )}
-    </Container>
+    </div>
   )
 }

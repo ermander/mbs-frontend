@@ -58,12 +58,15 @@ export function MatcherCompetitionFilter({
   selectedIds,
   onToggle,
   className,
+  portalContainer,
 }: {
   competitions: MatcherCompetition[] | undefined
   scope: CompetitionScope
   selectedIds: string[]
   onToggle: (id: string) => void
   className?: string
+  /** Where the dropdown opens (default the body): a node inside the page's light palette. */
+  portalContainer?: HTMLElement | null
 }) {
   const options = useMemo(() => competitionOptions(competitions, scope), [competitions, scope])
   const resultsById = useMemo(
@@ -75,6 +78,7 @@ export function MatcherCompetitionFilter({
   return (
     <SearchableMultiSelect
       className={className}
+      portalContainer={portalContainer}
       options={options}
       selectedIds={selectedIds}
       onToggle={onToggle}

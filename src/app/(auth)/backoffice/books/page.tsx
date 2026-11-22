@@ -1,10 +1,29 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Container } from '@/components/ui/container'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+
+import {
+  BO_EMPTY_CELL,
+  BO_ROW,
+  BO_TABLE,
+  BO_TABLE_WRAP,
+  BO_TD,
+  BO_TH,
+  BO_THEAD_ROW,
+  BoConfirmModal,
+  boLink,
+} from '@/components/backoffice/backoffice-ds'
+import { DsBadge } from '@/components/landing/ds-data'
+import { dsButtonClass } from '@/components/landing/ds-primitives'
+import {
+  DsModal,
+  GCheckbox,
+  GIconButton,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsAlert, DsPageHeader } from '@/components/profit-tracker/tracker-ds'
+import { cn } from '@/lib/utils'
 import {
   getGlobalBooks,
   createGlobalBook,
@@ -38,6 +57,8 @@ export default function BackofficeBooksPage() {
   const [form, setForm] = useState<BookFormData>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<Book | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Lo stato cambia solo nei callback della promise: l'effetto di montaggio chiama il fetch così
   // com'è (loading parte già a true), i salvataggi passano da loadBooks, che riaccende il
@@ -88,8 +109,8 @@ export default function BackofficeBooksPage() {
     setFormError(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!form.nome.trim()) {
       setFormError('Il nome è obbligatorio.')
       return
@@ -124,157 +145,97 @@ export default function BackofficeBooksPage() {
     }
   }
 
-  const handleDelete = async (book: Book) => {
-    if (!confirm(`Eliminare il bookmaker "${book.nome}"?`)) return
+  // Elimina chiede conferma nel Modal del design (prima il confirm() del browser).
+  const handleDelete = async () => {
+    if (!toDelete) return
+    setDeleting(true)
     try {
-      await deleteGlobalBook(book.id)
+      await deleteGlobalBook(toDelete.id)
+      setToDelete(null)
       await loadBooks()
     } catch {
+      setToDelete(null)
       setError('Errore nella cancellazione del bookmaker.')
+    } finally {
+      setDeleting(false)
     }
   }
 
   return (
-    <Container>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Bookmaker globali
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Gestisci la lista di bookmaker disponibili per tutti gli utenti.
-          </p>
-        </div>
-        <Button onClick={openCreateForm}>Nuovo bookmaker</Button>
-      </div>
+    <>
+      <DsPageHeader
+        title="Bookmaker globali"
+        description="La lista dei bookmaker disponibili per tutti gli utenti."
+        actions={
+          <button type="button" onClick={openCreateForm} className={dsButtonClass('primary', 'md')}>
+            <Plus className="h-5 w-5" aria-hidden />
+            Nuovo bookmaker
+          </button>
+        }
+      />
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {error && <DsAlert>{error}</DsAlert>}
 
-      {showForm && (
-        <div className="mb-6 rounded-lg border border-border bg-card p-6">
-          <h3 className="mb-4 text-lg font-medium text-foreground">
-            {editingBook ? 'Modifica bookmaker' : 'Nuovo bookmaker'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input
-                  id="nome"
-                  value={form.nome}
-                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                  placeholder="es. Betfair"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="externalId">External ID</Label>
-                <Input
-                  id="externalId"
-                  value={form.externalId}
-                  onChange={(e) => setForm((f) => ({ ...f, externalId: e.target.value }))}
-                  placeholder="es. betfair"
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="genericUrl">URL</Label>
-                <Input
-                  id="genericUrl"
-                  value={form.genericUrl}
-                  onChange={(e) => setForm((f) => ({ ...f, genericUrl: e.target.value }))}
-                  placeholder="https://www.betfair.com"
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="descrizione">Descrizione</Label>
-                <Input
-                  id="descrizione"
-                  value={form.descrizione}
-                  onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="isExchange"
-                  type="checkbox"
-                  checked={form.isExchange}
-                  onChange={(e) => setForm((f) => ({ ...f, isExchange: e.target.checked }))}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="isExchange">Exchange</Label>
-              </div>
-            </div>
-
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-
-            <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Salvataggio...' : editingBook ? 'Salva modifiche' : 'Crea'}
-              </Button>
-              <Button type="button" variant="outline" onClick={closeForm}>
-                Annulla
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
-        <table className="min-w-full text-sm">
-          <thead className="bg-muted/60">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Nome</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">Exchange</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">URL</th>
-              <th className="px-4 py-2 text-left font-medium text-muted-foreground">External ID</th>
-              <th className="px-4 py-2 text-right font-medium text-muted-foreground">Azioni</th>
+      <div className={BO_TABLE_WRAP}>
+        <table className={BO_TABLE}>
+          <thead>
+            <tr className={BO_THEAD_ROW}>
+              <th className={BO_TH}>Nome</th>
+              <th className={BO_TH}>Tipo</th>
+              <th className={BO_TH}>URL</th>
+              <th className={BO_TH}>External ID</th>
+              <th className={cn(BO_TH, 'text-right')}>Azioni</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                  Caricamento...
+                <td colSpan={5} className={BO_EMPTY_CELL}>
+                  Caricamento dei bookmaker…
                 </td>
               </tr>
             ) : books.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={5} className={BO_EMPTY_CELL}>
                   Nessun bookmaker globale configurato.
                 </td>
               </tr>
             ) : (
               books.map((book) => (
-                <tr
-                  key={book.id}
-                  className="border-t border-border transition-colors hover:bg-accent"
-                >
-                  <td className="px-4 py-2 font-medium text-foreground">{book.nome}</td>
-                  <td className="px-4 py-2 text-foreground">{book.isExchange ? 'Sì' : 'No'}</td>
-                  <td className="px-4 py-2">
+                <tr key={book.id} className={BO_ROW}>
+                  <td className={cn(BO_TD, 'font-semibold text-ds-ink')}>{book.nome}</td>
+                  <td className={BO_TD}>
+                    <DsBadge tone={book.isExchange ? 'info' : 'neutral'}>
+                      {book.isExchange ? 'Exchange' : 'Bookmaker'}
+                    </DsBadge>
+                  </td>
+                  <td className={cn(BO_TD, 'max-w-[320px] truncate')}>
                     {book.genericUrl ? (
-                      <a
-                        href={book.genericUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary underline underline-offset-4"
-                      >
+                      <a href={book.genericUrl} target="_blank" rel="noreferrer" className={boLink}>
                         {book.genericUrl}
                       </a>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-ds-ink-faint">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-foreground">
-                    {book.externalId ?? <span className="text-xs text-muted-foreground">—</span>}
+                  <td className={cn(BO_TD, 'font-mono text-xs text-ds-ink')}>
+                    {book.externalId ?? <span className="text-ds-ink-faint">—</span>}
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditForm(book)}>
-                        Modifica
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDelete(book)}>
-                        Elimina
-                      </Button>
+                  <td className={cn(BO_TD, 'text-right')}>
+                    <div className="flex justify-end gap-0.5">
+                      <GIconButton
+                        label={`Modifica il bookmaker «${book.nome}»`}
+                        onClick={() => openEditForm(book)}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </GIconButton>
+                      <GIconButton
+                        label={`Elimina il bookmaker «${book.nome}»`}
+                        danger
+                        onClick={() => setToDelete(book)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </GIconButton>
                     </div>
                   </td>
                 </tr>
@@ -283,6 +244,88 @@ export default function BackofficeBooksPage() {
           </tbody>
         </table>
       </div>
-    </Container>
+
+      <DsModal
+        open={showForm}
+        onOpenChange={(open) => !open && !saving && closeForm()}
+        title={editingBook ? 'Modifica bookmaker' : 'Nuovo bookmaker'}
+        size="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeForm}
+              disabled={saving}
+              className={dsButtonClass('secondary', 'md')}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              form="bo-book-form"
+              disabled={saving}
+              className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-60')}
+            >
+              {saving ? 'Salvataggio…' : editingBook ? 'Salva modifiche' : 'Crea'}
+            </button>
+          </>
+        }
+      >
+        <form id="bo-book-form" onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
+          <GTextField
+            id="bo-book-nome"
+            label="Nome"
+            value={form.nome}
+            onChange={(nome) => setForm((f) => ({ ...f, nome }))}
+            placeholder="es. Betfair"
+            inputProps={{ autoFocus: true }}
+          />
+          <GTextField
+            id="bo-book-external"
+            label="External ID"
+            optional
+            value={form.externalId}
+            onChange={(externalId) => setForm((f) => ({ ...f, externalId }))}
+            placeholder="es. betfair"
+          />
+          <GTextField
+            id="bo-book-url"
+            label="URL"
+            optional
+            value={form.genericUrl}
+            onChange={(genericUrl) => setForm((f) => ({ ...f, genericUrl }))}
+            placeholder="https://www.betfair.com"
+            className="sm:col-span-2"
+          />
+          <GTextField
+            id="bo-book-descrizione"
+            label="Descrizione"
+            optional
+            value={form.descrizione}
+            onChange={(descrizione) => setForm((f) => ({ ...f, descrizione }))}
+            className="sm:col-span-2"
+          />
+          <div className="sm:col-span-2">
+            <GCheckbox
+              id="bo-book-exchange"
+              label="È un exchange"
+              hint="Spunta se su questo sito si banca, come su Betfair Exchange."
+              checked={form.isExchange}
+              onChange={(isExchange) => setForm((f) => ({ ...f, isExchange }))}
+            />
+          </div>
+          {formError && <DsAlert className="sm:col-span-2">{formError}</DsAlert>}
+        </form>
+      </DsModal>
+
+      <BoConfirmModal
+        open={toDelete !== null}
+        title="Eliminare il bookmaker?"
+        description={toDelete ? `«${toDelete.nome}» sparisce dalla lista di tutti gli utenti.` : ''}
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setToDelete(null)}
+      />
+    </>
   )
 }

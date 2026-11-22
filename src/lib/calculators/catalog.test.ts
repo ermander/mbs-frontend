@@ -124,6 +124,6 @@ describe('catalog', () => {
   })
 
   it('leaves the save action out only where there is no bet to save', () => {
-    expect([...CALCULATORS_WITHOUT_SAVE]).toEqual(['condizionato', 'fun-bonus'])
+    expect([...CALCULATORS_WITHOUT_SAVE]).toEqual(['fun-bonus'])
   })
 })

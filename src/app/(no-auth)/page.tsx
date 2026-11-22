@@ -1,4 +1,3 @@
-import { RedirectIfLoggedIn } from '@/components/auth/redirect-if-logged-in'
 import { SiteShell } from '@/components/landing/site-shell'
 import { HeroSection } from '@/components/landing/hero-section'
 import { HowItWorksSection } from '@/components/landing/how-it-works-section'
@@ -13,20 +12,21 @@ import { TrustSection } from '@/components/landing/trust-section'
  * 6yv6CKdzp9n9Ei2SAWNmwH, §14.248), rese con i token ds-* di globals.css (tema chiaro, serif per i
  * titoli, brand verde, accento lime solo sulla frase chiave del titolo). Variante scura con
  * data-theme="dark" sull'<html>.
+ *
+ * §14.363 (richiesta di Emanuele): chi è entrato resta sulla landing e la legge con la barra
+ * dell'app, senza Accedi e Inizia gratis (SiteShell); prima RedirectIfLoggedIn lo mandava alla
+ * dashboard. La pagina resta resa dal server per tutti, come per i motori di ricerca.
  */
 export default function Page() {
   return (
-    <>
-      <RedirectIfLoggedIn />
-      <SiteShell narrow>
-        <HeroSection />
-        <HowItWorksSection />
-        <OddsmatcherSection />
-        <CalculatorSection />
-        <PricingSection />
-        <FaqSection />
-        <TrustSection />
-      </SiteShell>
-    </>
+    <SiteShell narrow>
+      <HeroSection />
+      <HowItWorksSection />
+      <OddsmatcherSection />
+      <CalculatorSection />
+      <PricingSection />
+      <FaqSection />
+      <TrustSection />
+    </SiteShell>
   )
 }

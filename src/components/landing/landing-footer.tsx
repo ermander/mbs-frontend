@@ -1,6 +1,5 @@
 import Link from 'next/link'
 
-import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import {
   APP_FOOTER_COLUMNS,
   BRAND,
@@ -28,8 +27,9 @@ const APP_FOOTER_SCOPE = cn(
  * telefono) con la pagina corrente segnata, avvertenza in caption sotto un'hairline.
  *
  * Con `inApp` è quello sotto le pagine di chi è entrato, nei layout di (auth) e di (open)
- * (§14.348): stesso aspetto, il marchio porta alla dashboard come quello della Topnav e i link
- * stanno in due colonne senza «Prezzi», che sta sulla landing (APP_FOOTER_COLUMNS).
+ * (§14.348): stesso aspetto, i link stanno in due colonne senza «Prezzi» (APP_FOOTER_COLUMNS). Il
+ * marchio porta alla landing per tutti, come quello della Topnav (§14.363; prima, nell'app, alla
+ * dashboard).
  */
 export function LandingFooter({ inApp = false }: { inApp?: boolean }) {
   const columns = inApp ? APP_FOOTER_COLUMNS : LANDING_FOOTER_COLUMNS
@@ -43,7 +43,7 @@ export function LandingFooter({ inApp = false }: { inApp?: boolean }) {
       <DsContainer className="flex flex-col gap-5 py-8">
         <div className="flex flex-wrap items-center justify-between gap-6">
           <Link
-            href={inApp ? POST_AUTH_REDIRECT : LANDING_ROUTES.home}
+            href={LANDING_ROUTES.home}
             aria-label={BRAND.name}
             className={cn('rounded-ds-sm', dsFocusRing)}
           >

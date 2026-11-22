@@ -12,6 +12,8 @@ import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import { resolveProfitTrackerBook, shortBookmakerName } from '@/lib/bookmakers'
 import type { Account } from '@/types/profit-tracker'
 import { cn } from '@/lib/utils'
+import { canUseSection } from '@/lib/tools'
+import { useAuthStore } from '@/stores/auth-store'
 import { formatNum } from './calculator-shared'
 
 export type AssignTone = 'primary' | 'destructive' | 'sky'
@@ -93,6 +95,8 @@ export function AssignAccountsModal({
   const holders = useProfitTrackerStore((s) => s.allHolders)
   const fetchAllBooks = useProfitTrackerStore((s) => s.fetchAllBooks)
   const fetchHolders = useProfitTrackerStore((s) => s.fetchAllHolders)
+  // §14.366: senza la sezione Tracker non si leggono i conti (il backend risponde 403) e la modale lo dice.
+  const tracker = useAuthStore((s) => canUseSection(s.user, 'tracker'))
 
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -105,7 +109,7 @@ export function AssignAccountsModal({
   const initialKey = JSON.stringify(initialSelection ?? {})
 
   useEffect(() => {
-    if (!open) return
+    if (!open || !tracker) return
     let cancelled = false
     const load = async () => {
       setLoading(true)
@@ -148,7 +152,7 @@ export function AssignAccountsModal({
     }
     // legsKey stands for `legs`: a new array with the same legs must not reload.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, legsKey, initialKey, books, holders.length, fetchAllBooks, fetchHolders])
+  }, [open, tracker, legsKey, initialKey, books, holders.length, fetchAllBooks, fetchHolders])
 
   const holderName = (acc: Account) => holders.find((h) => h.id === acc.holderId)?.nome ?? acc.nome
   const optionLabel = (acc: Account, legKey: string) => {
@@ -172,7 +176,27 @@ export function AssignAccountsModal({
       <DialogContent className="max-w-md gap-0 rounded-ow-card p-0" showClose={true}>
         {/* Portal container per dropdown SearchableSelect dentro la modale */}
         <div ref={setPortalEl} className="pointer-events-none fixed inset-0 z-9998" aria-hidden />
-        {savedBetId ? (
+        {!tracker ? (
+          <>
+            <div className="px-6 pt-6 pb-4">
+              <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">
+                Tracker non abilitato
+              </DialogTitle>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Il Tracker non è abilitato per il tuo account, quindi la giocata non si può salvare.
+              </p>
+            </div>
+            <div className="flex justify-end border-t border-border bg-muted/20 px-6 py-4">
+              <Button
+                variant="outline"
+                className="rounded-ow-btn"
+                onClick={() => onOpenChange(false)}
+              >
+                Chiudi
+              </Button>
+            </div>
+          </>
+        ) : savedBetId ? (
           <>
             <div className="px-6 pt-6 pb-4">
               <DialogTitle className="text-lg font-medium tracking-[-0.012em] text-foreground">

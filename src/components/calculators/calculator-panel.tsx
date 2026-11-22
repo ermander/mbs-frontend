@@ -9,6 +9,8 @@ import { DsButton, dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
 import { CalculatorIcon } from '@/components/calculators/calculator-icon'
 import { CALCULATORS_WITHOUT_SAVE, type CalculatorTool } from '@/lib/calculators/catalog'
+import { canUseSection } from '@/lib/tools'
+import { useAuthStore } from '@/stores/auth-store'
 import { formatRating } from '@/lib/landing-format'
 import { LANDING_ROUTES } from '@/lib/landing-content'
 import { cn } from '@/lib/utils'
@@ -117,6 +119,7 @@ export function CalculatorPanel({
 
   const reserved = Boolean(tool.requiresTool)
   const canSave = !CALCULATORS_WITHOUT_SAVE.has(tool.slug) && !locked
+  const tracker = useAuthStore((s) => canUseSection(s.user, 'tracker'))
 
   return (
     <div
@@ -189,7 +192,7 @@ export function CalculatorPanel({
           <button type="button" onClick={onClose} className={dsButtonClass('ghost', 'md')}>
             Annulla
           </button>
-          {canSave && !guest && <div ref={setSaveSlot} className="contents" />}
+          {canSave && !guest && tracker && <div ref={setSaveSlot} className="contents" />}
           {canSave && guest && (
             <DsButton href={LANDING_ROUTES.register} variant="primary">
               <UserPlus className="h-5 w-5" aria-hidden />
@@ -268,7 +271,9 @@ export function CalculatorSaveAction({
 }) {
   const slot = React.useContext(SaveSlotContext)
   const guest = React.useContext(GuestContext)
-  if (guest) return null
+  // §14.366: senza la sezione Tracker non c'è dove salvare (il backend risponde 403).
+  const tracker = useAuthStore((s) => canUseSection(s.user, 'tracker'))
+  if (guest || !tracker) return null
   const button = (
     <button
       type="button"

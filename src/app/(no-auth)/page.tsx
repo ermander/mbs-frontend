@@ -18,7 +18,7 @@ export default function Page() {
   return (
     <>
       <RedirectIfLoggedIn />
-      <SiteShell>
+      <SiteShell narrow>
         <HeroSection />
         <HowItWorksSection />
         <OddsmatcherSection />

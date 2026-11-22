@@ -28,6 +28,7 @@ import {
   type CalculatorTool,
 } from '@/lib/calculators/catalog'
 import { cn } from '@/lib/utils'
+import { PAGE_COLUMN } from '@/lib/page-column'
 
 /**
  * §14.340: Risultato + Goal in un pezzo di codice a parte, che il browser scarica solo quando lo
@@ -121,7 +122,7 @@ function CalcolatoriDashboard() {
       {/* Sotto il pannello aperto l'indice esce dal tab e dai lettori di schermo. */}
       <div
         inert={open ? true : undefined}
-        className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-10 px-4 pt-10 pb-16 sm:px-6"
+        className={cn(PAGE_COLUMN, 'flex flex-1 flex-col gap-10 pt-10 pb-16')}
       >
         <h1 className="sr-only">Calcolatori</h1>
 

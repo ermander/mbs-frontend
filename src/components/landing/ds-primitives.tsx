@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { PAGE_COLUMN } from '@/lib/page-column'
 
 /**
  * Primitive del design system OddWise (Claude Design, §14.248) per le pagine pubbliche: colonna,
@@ -24,7 +25,7 @@ export function dsNavLinkClass(active: boolean) {
   )
 }
 
-/** Colonna della pagina: 1200px con 24px di margine interno (20px sul telefono). */
+/** Colonna della pagina: quella dell'app (PAGE_COLUMN, §14.357), con 20px di margine sul telefono. */
 export function DsContainer({
   className,
   children,
@@ -32,9 +33,7 @@ export function DsContainer({
   className?: string
   children: React.ReactNode
 }) {
-  return (
-    <div className={cn('mx-auto w-full max-w-[1200px] px-5 sm:px-6', className)}>{children}</div>
-  )
+  return <div className={cn(PAGE_COLUMN, 'px-5', className)}>{children}</div>
 }
 
 export type DsButtonVariant = 'primary' | 'secondary' | 'ghost'

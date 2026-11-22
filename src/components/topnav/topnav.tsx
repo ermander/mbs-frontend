@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Menu } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { PAGE_COLUMN } from '@/lib/page-column'
 import { POST_AUTH_REDIRECT } from '@/lib/auth-redirects'
 import { DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
 import { TopnavDesktopNav } from './topnav-desktop-nav'
@@ -16,7 +17,7 @@ import { topnavDsScope } from './topnav-ds'
 /**
  * Barra di navigazione dell'area autenticata, dalla Navbar del design OddWise (§14.275): 64px su
  * surface-raised con hairline sotto, marchio, voci allineate a sinistra, campanella e account a
- * destra, nella colonna da 1200px delle pagine. Sotto `lg` le voci passano in un cassetto aperto
+ * destra, nella colonna delle pagine (PAGE_COLUMN). Sotto `lg` le voci passano in un cassetto aperto
  * dal pulsante a destra. È alta `--topnav-h` (globals.css): le pagine che dimensionano le tabelle
  * sull'altezza della finestra la sottraggono.
  */
@@ -30,7 +31,7 @@ export function Topnav() {
         'sticky top-0 z-30 h-(--topnav-h) border-b border-ds-line bg-ds-surface-raised',
       )}
     >
-      <div className="mx-auto flex h-full w-full max-w-[1200px] items-center gap-6 px-4 sm:px-6">
+      <div className={cn(PAGE_COLUMN, 'flex h-full items-center gap-6')}>
         <Link
           href={POST_AUTH_REDIRECT}
           aria-label="OddWise"

@@ -1,345 +1,323 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ProfitTrackerPageShell } from '@/components/profit-tracker/profit-tracker-page-shell'
-import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
-import { ReminderModal } from '@/components/profit-tracker/reminder-modal'
 import Link from 'next/link'
-import type { ReminderStatus } from '@/types/profit-tracker'
+import { Bell, Check, Copy, Pencil, Plus, Trash2 } from 'lucide-react'
 
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
+import { DsBadge } from '@/components/landing/ds-data'
+import {
+  DsModal,
+  GIconButton,
+  GiocateDsShell,
+  dsDangerButtonClass,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import {
+  DS_CARD,
+  DS_ROW,
+  DS_TABLE_WRAP,
+  DS_THEAD_ROW,
+  DsAlert,
+  DsEmptyState,
+  DsPageHeader,
+  DsSegmented,
+  countLabel,
+} from '@/components/profit-tracker/tracker-ds'
+import { ReminderModal } from '@/components/profit-tracker/reminder-modal'
+import { eventDateLabel } from '@/lib/profit-tracker/archived-bets'
+import {
+  REMINDER_FILTERS,
+  REMINDER_PERIOD_LABEL,
+  REMINDER_STATUS,
+  emptyRemindersTitle,
+  reminderAccountLabel,
+  type ReminderFilter,
+} from '@/lib/profit-tracker/reminders'
+import { cn } from '@/lib/utils'
+import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
+import type { Reminder } from '@/types/profit-tracker'
+
+const inlineLink = cn(
+  'rounded-sm font-semibold underline underline-offset-2 transition-colors hover:text-ds-ink',
+  dsFocusRing,
+)
+
+/**
+ * La voce «Promemoria» del Tracker sul design OddWise (§14.361): filtro per stato, tabella (schede
+ * sul telefono) con scadenza, conto, descrizione, stato e notifica, e le azioni Completa, Clona,
+ * Modifica ed Elimina. Elimina ora chiede conferma; il conto si legge per nome, non per id.
+ */
 export default function PromemoriaPage() {
   const reminders = useProfitTrackerStore((s) => s.reminders)
-  const isLoadingReminders = useProfitTrackerStore((s) => s.isLoadingReminders)
+  const isLoading = useProfitTrackerStore((s) => s.isLoadingReminders)
   const remindersError = useProfitTrackerStore((s) => s.remindersError)
   const fetchReminders = useProfitTrackerStore((s) => s.fetchReminders)
   const completeReminder = useProfitTrackerStore((s) => s.completeReminder)
   const deleteReminder = useProfitTrackerStore((s) => s.deleteReminder)
+  const allAccounts = useProfitTrackerStore((s) => s.allAccounts)
+  const fetchAllAccounts = useProfitTrackerStore((s) => s.fetchAllAccounts)
 
-  const [filterStatus, setFilterStatus] = useState<ReminderStatus | 'tutti'>('attivo')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingReminderId, setEditingReminderId] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<ReminderFilter>('attivo')
+  const [modal, setModal] = useState<{ mode: 'new' | 'edit' | 'clone'; id?: string } | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [accountsLoaded, setAccountsLoaded] = useState(false)
 
   useEffect(() => {
-    void fetchReminders({
-      stato: filterStatus === 'tutti' ? undefined : filterStatus,
-    })
+    void fetchReminders({ stato: filterStatus === 'tutti' ? undefined : filterStatus })
   }, [fetchReminders, filterStatus])
 
-  const editingReminder = useMemo(
-    () => reminders.find((r) => r.id === editingReminderId),
-    [reminders, editingReminderId],
+  // I nomi dei conti della colonna Conto (la modale usa lo stesso elenco).
+  useEffect(() => {
+    void fetchAllAccounts().finally(() => setAccountsLoaded(true))
+  }, [fetchAllAccounts])
+
+  const byId = useMemo(() => new Map(reminders.map((r) => [r.id, r])), [reminders])
+  const modalReminder = modal?.id ? (byId.get(modal.id) ?? null) : null
+  const toDelete = deleteId ? (byId.get(deleteId) ?? null) : null
+  const accounts = accountsLoaded ? allAccounts : null
+
+  const isEmpty = !isLoading && !remindersError && reminders.length === 0
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
+    await deleteReminder(deleteId)
+    setDeleting(false)
+    setDeleteId(null)
+  }
+
+  const newButton = (
+    <button
+      type="button"
+      onClick={() => setModal({ mode: 'new' })}
+      className={dsButtonClass('primary', 'md')}
+    >
+      <Plus className="h-5 w-5" aria-hidden />
+      Nuovo promemoria
+    </button>
   )
 
-  const handleNew = () => {
-    setEditingReminderId(null)
-    setModalOpen(true)
-  }
+  /* ---------- Pezzi delle righe ---------- */
 
-  const handleEdit = (id: string) => {
-    setEditingReminderId(id)
-    setModalOpen(true)
-  }
+  const statusBadge = (r: Reminder) => (
+    <DsBadge tone={REMINDER_STATUS[r.stato].tone}>{REMINDER_STATUS[r.stato].label}</DsBadge>
+  )
 
-  const handleClone = (id: string) => {
-    const original = reminders.find((r) => r.id === id)
-    if (!original) return
-    setEditingReminderId(null)
-    setModalOpen(true)
-  }
-
-  const filteredReminders = reminders
-
-  const renderStatusBadge = (stato: ReminderStatus) => {
-    if (stato === 'attivo') {
-      return (
-        <Badge className="border border-emerald-500/20 bg-emerald-500/15 text-xs text-emerald-400">
-          Attivo
-        </Badge>
-      )
-    }
-    if (stato === 'completato') {
-      return (
-        <Badge
-          variant="outline"
-          className="border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-400"
-        >
-          Completato
-        </Badge>
-      )
-    }
-    return (
-      <Badge variant="outline" className="border-border bg-destructive/10 text-xs text-destructive">
-        Scaduto
-      </Badge>
+  const accountCell = (r: Reminder) => {
+    const label = reminderAccountLabel(r, accounts)
+    return label ? (
+      <span className="text-ds-ink">{label}</span>
+    ) : (
+      <span className="text-ds-ink-faint">—</span>
     )
   }
 
+  const notifyCell = (r: Reminder) => (
+    <span className="flex flex-col">
+      <span className="text-ds-ink">{REMINDER_PERIOD_LABEL[r.periodoNotifica]}</span>
+      {r.notificaInviata && <span className="ds-caption text-ds-ink-muted">Notifica inviata</span>}
+    </span>
+  )
+
+  const actions = (r: Reminder) => (
+    <div className="flex flex-wrap items-center justify-end gap-0.5">
+      {r.stato === 'attivo' && (
+        <button
+          type="button"
+          onClick={() => void completeReminder(r.id)}
+          className={cn(dsButtonClass('ghost', 'sm'), 'px-2')}
+        >
+          <Check className="h-4 w-4" aria-hidden />
+          Completa
+          <span className="sr-only"> il promemoria «{r.descrizione}»</span>
+        </button>
+      )}
+      <GIconButton
+        label={`Clona il promemoria «${r.descrizione}»`}
+        onClick={() => setModal({ mode: 'clone', id: r.id })}
+      >
+        <Copy className="h-4 w-4" aria-hidden />
+      </GIconButton>
+      <GIconButton
+        label={`Modifica il promemoria «${r.descrizione}»`}
+        onClick={() => setModal({ mode: 'edit', id: r.id })}
+      >
+        <Pencil className="h-4 w-4" aria-hidden />
+      </GIconButton>
+      <GIconButton
+        label={`Elimina il promemoria «${r.descrizione}»`}
+        danger
+        onClick={() => setDeleteId(r.id)}
+      >
+        <Trash2 className="h-4 w-4" aria-hidden />
+      </GIconButton>
+    </div>
+  )
+
   return (
-    <ProfitTrackerPageShell
-      sectionTitle="Promemoria"
-      sectionDescription="Gestisci i promemoria collegati ai conti e alle notifiche Telegram."
-      actions={
-        <Button size="sm" type="button" onClick={handleNew} className="w-full sm:w-auto">
-          Nuovo promemoria
-        </Button>
-      }
-    >
-      <p className="text-xs text-muted-foreground">
+    <GiocateDsShell>
+      <DsPageHeader
+        title="Promemoria"
+        description="Le scadenze da ricordare sui tuoi conti, con la notifica su Telegram."
+        actions={newButton}
+      />
+
+      <DsAlert tone="info">
         I promemoria arrivano su Telegram: il collegamento si gestisce dal{' '}
-        <Link href="/account/profilo" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/account/profilo" className={inlineLink}>
           Profilo
         </Link>
         .
-      </p>
+      </DsAlert>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Stato:</span>
-        <Button
-          type="button"
-          variant={filterStatus === 'attivo' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilterStatus('attivo')}
-        >
-          Attivi
-        </Button>
-        <Button
-          type="button"
-          variant={filterStatus === 'completato' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilterStatus('completato')}
-        >
-          Completati
-        </Button>
-        <Button
-          type="button"
-          variant={filterStatus === 'scaduto' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilterStatus('scaduto')}
-        >
-          Scaduti
-        </Button>
-        <Button
-          type="button"
-          variant={filterStatus === 'tutti' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilterStatus('tutti')}
-        >
-          Tutti
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <DsSegmented
+          label="Stato dei promemoria"
+          items={REMINDER_FILTERS}
+          value={filterStatus}
+          onChange={setFilterStatus}
+        />
+        <span className="ds-body-sm text-ds-ink-muted">
+          {!isLoading || reminders.length > 0
+            ? countLabel(reminders.length, 'promemoria', 'promemoria')
+            : ''}
+        </span>
       </div>
 
-      <div className="space-y-4 block sm:hidden">
-        {isLoadingReminders && (
-          <div className="rounded-xl border border-border bg-card/70 px-3 py-4 text-center text-xs text-muted-foreground shadow-xs">
-            Caricamento promemoria in corso...
-          </div>
-        )}
-        {!isLoadingReminders && filteredReminders.length === 0 && (
-          <div className="rounded-xl border border-border bg-card/70 px-3 py-6 text-center text-xs text-muted-foreground shadow-xs">
-            Nessun promemoria {filterStatus !== 'tutti' ? `con stato ${filterStatus}` : ''}.
-          </div>
-        )}
-        {!isLoadingReminders &&
-          filteredReminders.map((rem) => {
-            const data = new Date(rem.dataScadenza)
-            const dataLabel = data.toLocaleString(undefined, {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            })
-            let notificaLabel = 'Alla scadenza'
-            if (rem.periodoNotifica === '24h') notificaLabel = '24h prima'
-            if (rem.periodoNotifica === '12h') notificaLabel = '12h prima'
+      {remindersError && <DsAlert>{remindersError}</DsAlert>}
 
-            return (
-              <div
-                key={rem.id}
-                className="rounded-xl border border-border bg-card/70 p-4 shadow-xs"
-              >
-                <div className="grid gap-2 text-xs">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Scadenza</span>
-                    <span className="text-right">{dataLabel}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Conto</span>
-                    <span className="text-right">
-                      {rem.accountId ? (
-                        rem.accountId
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Descrizione</span>
-                    <span className="text-right">{rem.descrizione}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Stato</span>
-                    <span className="text-right">{renderStatusBadge(rem.stato)}</span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Notifica</span>
-                    <span className="text-right text-muted-foreground">
-                      {notificaLabel}
-                      {rem.notificaInviata && <span className="ml-1 text-[10px]">· Inviata</span>}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-3">
-                  {rem.stato === 'attivo' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      onClick={() => void completeReminder(rem.id)}
-                    >
-                      Completa
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={() => handleClone(rem.id)}
-                  >
-                    Clona
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    onClick={() => handleEdit(rem.id)}
-                  >
-                    Modifica
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    type="button"
-                    onClick={() => void deleteReminder(rem.id)}
-                  >
-                    Elimina
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-      </div>
+      {isLoading && reminders.length === 0 && (
+        <p className="ds-body-sm m-0 text-ds-ink-muted">Caricamento dei promemoria…</p>
+      )}
+      {isEmpty && (
+        <DsEmptyState
+          icon={<Bell className="h-8 w-8" strokeWidth={1.75} aria-hidden />}
+          title={emptyRemindersTitle(filterStatus)}
+          description={
+            filterStatus === 'attivo' || filterStatus === 'tutti'
+              ? 'Crea un promemoria per ricordarti una scadenza: la notifica ti arriva su Telegram.'
+              : 'Scegli un altro stato qui sopra per vedere gli altri promemoria.'
+          }
+          action={filterStatus === 'attivo' || filterStatus === 'tutti' ? newButton : undefined}
+        />
+      )}
 
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card/70 shadow-xs sm:block">
-        <table className="min-w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border/60 bg-muted/40 font-mono text-xs font-medium tracking-[0.02em] text-muted-foreground uppercase">
-              <th className="px-3 py-2 text-left">Scadenza</th>
-              <th className="px-3 py-2 text-left">Conto</th>
-              <th className="px-3 py-2 text-left">Descrizione</th>
-              <th className="px-3 py-2 text-left">Stato</th>
-              <th className="px-3 py-2 text-left">Notifica</th>
-              <th className="px-3 py-2 text-right">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoadingReminders && (
-              <tr>
-                <td colSpan={6} className="px-3 py-4 text-center text-xs text-muted-foreground">
-                  Caricamento promemoria in corso...
-                </td>
-              </tr>
-            )}
-            {!isLoadingReminders && filteredReminders.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  Nessun promemoria {filterStatus !== 'tutti' ? `con stato ${filterStatus}` : ''}.
-                </td>
-              </tr>
-            )}
-            {!isLoadingReminders &&
-              filteredReminders.map((rem) => {
-                const data = new Date(rem.dataScadenza)
-                const dataLabel = data.toLocaleString(undefined, {
-                  dateStyle: 'short',
-                  timeStyle: 'short',
-                })
-                let notificaLabel = 'Alla scadenza'
-                if (rem.periodoNotifica === '24h') notificaLabel = '24h prima'
-                if (rem.periodoNotifica === '12h') notificaLabel = '12h prima'
-
-                return (
-                  <tr
-                    key={rem.id}
-                    className="border-b border-border/40 transition-colors last:border-b-0 hover:bg-accent"
-                  >
-                    <td className="px-3 py-2 align-top text-xs">{dataLabel}</td>
-                    <td className="px-3 py-2 align-top text-xs">
-                      {rem.accountId ? (
-                        rem.accountId
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+      {reminders.length > 0 && (
+        <div className={cn('flex flex-col gap-3', isLoading && 'opacity-60')}>
+          <div className={DS_TABLE_WRAP}>
+            <table className="w-full border-collapse">
+              <caption className="sr-only">Promemoria</caption>
+              <thead>
+                <tr className={DS_THEAD_ROW}>
+                  <th scope="col" className="w-[140px] py-3 pr-2.5 pl-4">
+                    Scadenza
+                  </th>
+                  <th scope="col" className="w-[200px] px-2.5 py-3">
+                    Conto
+                  </th>
+                  <th scope="col" className="min-w-[220px] px-2.5 py-3">
+                    Descrizione
+                  </th>
+                  <th scope="col" className="w-[120px] px-2.5 py-3">
+                    Stato
+                  </th>
+                  <th scope="col" className="w-[150px] px-2.5 py-3">
+                    Notifica
+                  </th>
+                  <th scope="col" className="w-[230px] py-3 pr-4 pl-2">
+                    <span className="sr-only">Azioni</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {reminders.map((r) => (
+                  <tr key={r.id} className={DS_ROW}>
+                    <td className="py-3 pr-2.5 pl-4 font-semibold whitespace-nowrap text-ds-ink tabular-nums">
+                      {eventDateLabel(r.dataScadenza)}
                     </td>
-                    <td className="px-3 py-2 align-top text-xs">{rem.descrizione}</td>
-                    <td className="px-3 py-2 align-top text-xs">{renderStatusBadge(rem.stato)}</td>
-                    <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                      {notificaLabel}
-                      {rem.notificaInviata && <span className="ml-1 text-[10px]">· Inviata</span>}
-                    </td>
-                    <td className="px-3 py-2 text-right align-top text-xs">
-                      <div className="inline-flex gap-1">
-                        {rem.stato === 'attivo' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            onClick={() => void completeReminder(rem.id)}
-                          >
-                            Completa
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => handleClone(rem.id)}
-                        >
-                          Clona
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => handleEdit(rem.id)}
-                        >
-                          Modifica
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          type="button"
-                          onClick={() => void deleteReminder(rem.id)}
-                        >
-                          Elimina
-                        </Button>
-                      </div>
-                    </td>
+                    <td className="px-2.5 py-3">{accountCell(r)}</td>
+                    <td className="px-2.5 py-3 text-ds-ink">{r.descrizione}</td>
+                    <td className="px-2.5 py-3">{statusBadge(r)}</td>
+                    <td className="px-2.5 py-3">{notifyCell(r)}</td>
+                    <td className="py-2 pr-4 pl-2">{actions(r)}</td>
                   </tr>
-                )
-              })}
-          </tbody>
-        </table>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {remindersError && <p className="text-xs text-destructive">{remindersError}</p>}
+          <ul className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
+            {reminders.map((r) => (
+              <li key={r.id} className={DS_CARD}>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold text-ds-ink tabular-nums">
+                    {eventDateLabel(r.dataScadenza)}
+                  </span>
+                  {statusBadge(r)}
+                </div>
+                <p className="m-0 text-ds-ink">{r.descrizione}</p>
+                <dl className="ds-body-sm m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+                  <dt className="text-ds-ink-muted">Conto</dt>
+                  <dd className="m-0 text-right">{accountCell(r)}</dd>
+                  <dt className="text-ds-ink-muted">Notifica</dt>
+                  <dd className="m-0 text-right text-ds-ink">
+                    {REMINDER_PERIOD_LABEL[r.periodoNotifica]}
+                    {r.notificaInviata && <span className="text-ds-ink-muted"> · inviata</span>}
+                  </dd>
+                </dl>
+                <div className="flex justify-end border-t border-ds-line pt-3">{actions(r)}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ReminderModal
-        key={modalOpen ? (editingReminder?.id ?? 'new') : 'closed'}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        editingReminder={editingReminder ?? undefined}
+        key={modal ? `${modal.mode}-${modal.id ?? 'nuovo'}` : 'chiusa'}
+        open={modal != null}
+        onOpenChange={(open) => {
+          if (!open) setModal(null)
+        }}
+        editingReminder={modal?.mode === 'edit' ? modalReminder : null}
+        cloneFrom={modal?.mode === 'clone' ? modalReminder : null}
       />
-    </ProfitTrackerPageShell>
+
+      <DsModal
+        open={toDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteId(null)
+        }}
+        title="Eliminare il promemoria?"
+        description={
+          toDelete ? (
+            <>
+              <b className="font-semibold text-ds-ink">«{toDelete.descrizione}»</b> non ti verrà più
+              ricordato.
+            </>
+          ) : undefined
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setDeleteId(null)}
+              disabled={deleting}
+              className={dsButtonClass('ghost', 'md')}
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+              className={cn(dsDangerButtonClass('md'), 'disabled:opacity-50')}
+            >
+              {deleting ? 'Eliminazione…' : 'Elimina il promemoria'}
+            </button>
+          </>
+        }
+      />
+    </GiocateDsShell>
   )
 }

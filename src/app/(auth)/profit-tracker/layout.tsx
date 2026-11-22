@@ -6,7 +6,8 @@ import { Container } from '@/components/ui/container'
 
 /**
  * Pagine del tracker già sul design OddWise (§14.281, dettaglio §14.283, archiviate §14.298,
- * dashboard §14.336, il resto del tracker §14.350): a tutta larghezza, la colonna la fanno loro.
+ * dashboard §14.336, il resto del tracker §14.350, Impostazioni e Promemoria §14.361): a tutta
+ * larghezza, la colonna la fanno loro.
  */
 const DS_PAGES = new Set([
   '/profit-tracker/dashboard',
@@ -20,6 +21,8 @@ const DS_PAGES = new Set([
   '/profit-tracker/conti',
   '/profit-tracker/wallets',
   '/profit-tracker/collaboratori',
+  '/profit-tracker/book-personali',
+  '/profit-tracker/promemoria',
 ])
 const DS_BET_DETAIL = /^\/profit-tracker\/giocate-(in-corso|archiviate)\/[^/]+$/
 

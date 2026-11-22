@@ -255,7 +255,10 @@ interface ProfitTrackerState {
     dataScadenza: string
     periodoNotifica: '24h' | '12h' | 'scadenza'
   }) => Promise<void>
-  updateReminder: (id: string, patch: Partial<Reminder>) => Promise<void>
+  updateReminder: (
+    id: string,
+    patch: Partial<Omit<Reminder, 'accountId'>> & { accountId?: string | null },
+  ) => Promise<void>
   deleteReminder: (id: string) => Promise<void>
   completeReminder: (id: string) => Promise<void>
 

@@ -454,8 +454,8 @@ function DeleteAccountDialog({ user, onClose }: { user: AuthUser; onClose: () =>
       await authClient.deleteMe(payload)
       toast.success('Account eliminato.')
       clearUser()
-      // Navigazione completa, non router.replace: svuota anche gli store in memoria (Profit
-      // Tracker, agenda) con i dati dell'utente appena cancellato e non lascia al guard
+      // Navigazione completa, non router.replace: svuota anche lo store in memoria del Profit
+      // Tracker con i dati dell'utente appena cancellato e non lascia al guard
       // dell'area riservata il tempo di reindirizzare a /login (stessa scelta del guard su /me).
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- ricarica voluta
       window.location.href = '/'

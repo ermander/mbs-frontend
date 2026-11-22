@@ -11,7 +11,7 @@ import { SiteShell } from '@/components/landing/site-shell'
 // JWT_ACCESS_EXPIRES_IN=15m e JWT_REFRESH_EXPIRES_IN=7d, rinnovati
 // insieme a ogni /auth/refresh) e, solo durante l'accesso con Google,
 // google_oauth (10 minuti, path /api/auth/google, rimosso al callback).
-// Nel browser: i tre store Zustand con persist (mbs-auth, mbs-agenda,
+// Nel browser: i due store Zustand con persist (mbs-auth,
 // mbs-result-btts-stake) in localStorage. Nessun analytics, nessun
 // cookie di terze parti (flagcdn.com e il proxy Cloudflare non ne
 // impostano). Da aggiornare se cambiano le durate o si aggiunge uno store.
@@ -59,11 +59,6 @@ const LOCAL_STORAGE: readonly StorageRow[] = [
     key: 'mbs-auth',
     purpose:
       'Un solo indicatore «hai effettuato l’accesso», per mostrarti subito la pagina giusta all’apertura dell’app, prima della verifica con il server.',
-  },
-  {
-    key: 'mbs-agenda',
-    purpose:
-      'Le voci dell’agenda dei calcolatori Punta-Banca e Punta-Punta che salvi tu (importi, quote e risultati dei calcoli). Esistono solo nel tuo browser.',
   },
   {
     key: 'mbs-result-btts-stake',
@@ -269,7 +264,7 @@ const SECTIONS: readonly LegalSection[] = [
 export default function CookiePage() {
   return (
     <SiteShell>
-      <LegalPage title="Informativa sui cookie" updated="18 ottobre 2026" sections={SECTIONS} />
+      <LegalPage title="Informativa sui cookie" updated="22 novembre 2026" sections={SECTIONS} />
     </SiteShell>
   )
 }

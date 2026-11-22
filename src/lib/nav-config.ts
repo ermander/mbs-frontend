@@ -30,10 +30,14 @@ import {
   CalendarDays,
   ListFilter,
   Users,
+  PartyPopper,
+  Repeat,
+  Sparkles,
 } from 'lucide-react'
 
 import type { AuthUser, UserRole } from '@/services/api/auth-client'
 import { canUseTool, type ToolKey } from '@/lib/tools'
+import { OFFER_TYPES, offersListHref, type OfferType } from '@/lib/offers-content'
 
 export interface NavLinkItem {
   label: string
@@ -49,6 +53,13 @@ export interface NavDropdownItem {
   requiresRole?: UserRole
 }
 
+/** Una pagina dentro una voce della barra (§14.358): le tre pagine delle offerte. */
+export interface NavSubmenuLink {
+  label: string
+  href: string
+  icon: LucideIcon
+}
+
 /** Una pagina dell'area autenticata, con la sua icona. */
 export interface AuthNavItem {
   label: string
@@ -58,6 +69,12 @@ export interface AuthNavItem {
   requiresRole?: UserRole
   /** Se presente, la voce è visibile solo a chi può usare quello strumento (admin o utente abilitato dal backoffice) */
   requiresTool?: ToolKey
+  /**
+   * §14.358: le pagine dentro la voce. Nella barra la voce diventa una tendina che si apre al
+   * passaggio del mouse, nel cassetto mobile una riga che si espande; `href` resta la radice
+   * della sezione e la segna come attiva anche sulle pagine sotto (il dettaglio di un'offerta).
+   */
+  children?: NavSubmenuLink[]
 }
 
 /**
@@ -74,10 +91,27 @@ export interface AuthNavSection {
   requiresRole?: UserRole
 }
 
+const OFFER_TYPE_ICONS: Record<OfferType, LucideIcon> = {
+  benvenuto: PartyPopper,
+  ricorrenti: Repeat,
+  esclusive: Sparkles,
+}
+
+/**
+ * §14.358 (ClickUp «Dividere sezioni offerte»): le tre pagine delle offerte, una per tipo, sotto
+ * la voce «Offerte» della barra dell'app e di quella della landing (LANDING_NAV_LINKS).
+ */
+export const OFFERS_NAV_ITEMS: NavSubmenuLink[] = OFFER_TYPES.map((t) => ({
+  label: t.label,
+  href: offersListHref(t.value),
+  icon: OFFER_TYPE_ICONS[t.value],
+}))
+
 /**
  * Le voci della Navbar del design (§14.275): Guide · Offerte · Oddsmatcher · Calcolatori ·
  * Tracker · Forum, con Risultato + Goal dopo l'Oddsmatcher per chi è abilitato e il Backoffice
- * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker.
+ * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker; dal §14.358
+ * anche Offerte apre una tendina, con le pagine di benvenuto, ricorrenti ed esclusive.
  */
 export const authNavSections: AuthNavSection[] = [
   {
@@ -85,7 +119,7 @@ export const authNavSections: AuthNavSection[] = [
     display: 'links',
     items: [
       { label: 'Guide', href: '/guide', icon: BookOpen },
-      { label: 'Offerte', href: '/offerte', icon: Gift },
+      { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
       { label: 'Oddsmatcher', href: '/odds-scanner', icon: Radar },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
       {

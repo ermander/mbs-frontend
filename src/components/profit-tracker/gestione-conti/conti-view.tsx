@@ -220,7 +220,7 @@ export function ContiView() {
   const bookCell = (a: Account) => {
     const book = bookOf(a.bookId)
     return (
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 flex-col items-start gap-1">
         {book ? (
           <OmBookLogo slug={bookLogoSlug(book)} name={book.nome} size="sm" />
         ) : (

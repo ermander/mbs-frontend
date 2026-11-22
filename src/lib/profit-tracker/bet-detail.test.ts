@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import { multiplaLayStakes } from '@/lib/calculators/multipla'
+import { authNavSections } from '@/lib/nav-config'
 import {
+  betDetailBack,
   betSummary,
   isMultiplaLegs,
   legFormErrors,
@@ -234,5 +236,24 @@ describe('ricalcolo delle coperture della multipla', () => {
     expect(multiplaRecalcPatches(multipla(), 'p', { accountId: 'a2' })).toEqual([])
     const single = [leg({ id: 'p' }), leg({ id: 'b', metodo: 'banca', quotaRiferimento: 2 })]
     expect(multiplaRecalcPatches(single, 'b', { quota: 2.2 })).toEqual([])
+  })
+})
+
+describe('betDetailBack (§14.354)', () => {
+  const tracker = authNavSections.find((sec) => sec.label === 'Tracker')
+  const navItem = (href: string) => tracker?.items.find((i) => i.href === href)
+
+  it('dalla giocata archiviata torna alla voce Archivio del Tracker', () => {
+    const back = betDetailBack(true)
+    expect(back).toEqual({
+      href: '/profit-tracker/archivio',
+      label: 'Torna alle giocate archiviate',
+    })
+    expect(navItem(back.href)?.label).toBe('Archivio')
+  })
+  it('dalla giocata in corso torna alla voce Giocate del Tracker', () => {
+    const back = betDetailBack(false)
+    expect(back).toEqual({ href: '/profit-tracker/giocate', label: 'Torna alle giocate in corso' })
+    expect(navItem(back.href)?.label).toBe('Giocate')
   })
 })

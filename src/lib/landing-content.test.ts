@@ -91,6 +91,17 @@ describe('landing copy (OddWise, design di Claude Design)', () => {
     expect(content.LANDING_FOOTER_LINKS.map((l) => l.label)).toContain('Prezzi')
   })
 
+  // §14.358: anche per chi non è entrato «Offerte» apre le tre pagine dei tipi.
+  it('puts the three offer pages under «Offerte», only there', () => {
+    const withChildren = content.LANDING_NAV_LINKS.filter((l) => l.children)
+    expect(withChildren.map((l) => l.href)).toEqual(['/offerte'])
+    expect(withChildren[0].children?.map((c) => c.href)).toEqual([
+      '/offerte/benvenuto',
+      '/offerte/ricorrenti',
+      '/offerte/esclusive',
+    ])
+  })
+
   it('segna nella barra la sezione delle offerte, anche sul dettaglio', () => {
     const active = (pathname: string) =>
       content.LANDING_NAV_LINKS.filter((l) => content.isCurrentSection(l.href, pathname)).map(
@@ -98,6 +109,7 @@ describe('landing copy (OddWise, design di Claude Design)', () => {
       )
     expect(active('/offerte')).toEqual(['Offerte'])
     expect(active('/offerte/snai-30')).toEqual(['Offerte'])
+    expect(active('/offerte/ricorrenti')).toEqual(['Offerte'])
     expect(active('/offerte-vecchie')).toEqual([])
     expect(active('/')).toEqual([])
   })

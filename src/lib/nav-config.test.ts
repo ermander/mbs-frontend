@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { accountNavItem, authNavSections, isActiveHref, visibleNavSections } from './nav-config'
+import {
+  OFFERS_NAV_ITEMS,
+  accountNavItem,
+  authNavSections,
+  isActiveHref,
+  visibleNavSections,
+} from './nav-config'
 
 const outline = (user: Parameters<typeof visibleNavSections>[0]) =>
   visibleNavSections(user).map((s) => [s.label, s.items.map((i) => i.label)])
@@ -61,6 +67,31 @@ describe('authNavSections', () => {
       s.display === 'links' ? s.items.map((i) => i.label) : [s.label],
     )
     expect(bar).toEqual(['Guide', 'Offerte', 'Oddsmatcher', 'Calcolatori', 'Tracker', 'Forum'])
+  })
+})
+
+// §14.358 (ClickUp «Dividere sezioni offerte»): Offerte apre le tre pagine dei tipi.
+describe('Offerte', () => {
+  it('has the three offer pages under it, for every user', () => {
+    for (const user of [{ role: 'USER_ROLE' as const, tools: [] }, null]) {
+      const offers = visibleNavSections(user)[0].items.find((i) => i.label === 'Offerte')
+      expect(offers?.href).toBe('/offerte')
+      expect(offers?.children?.map((c) => [c.label, c.href])).toEqual([
+        ['Benvenuto', '/offerte/benvenuto'],
+        ['Ricorrenti', '/offerte/ricorrenti'],
+        ['Esclusive', '/offerte/esclusive'],
+      ])
+    }
+    expect(OFFERS_NAV_ITEMS.every((i) => i.icon)).toBe(true)
+  })
+  it('the section stays active on the type pages and on an offer, each page only on itself', () => {
+    for (const path of ['/offerte/benvenuto', '/offerte/esclusive', '/offerte/snai-30']) {
+      expect(isActiveHref(path, '/offerte')).toBe(true)
+    }
+    expect(OFFERS_NAV_ITEMS.filter((i) => isActiveHref('/offerte/ricorrenti', i.href))).toEqual([
+      OFFERS_NAV_ITEMS[1],
+    ])
+    expect(OFFERS_NAV_ITEMS.some((i) => isActiveHref('/offerte/snai-30', i.href))).toBe(false)
   })
 })
 

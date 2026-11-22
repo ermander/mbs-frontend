@@ -1,3 +1,5 @@
+import { OFFERS_NAV_ITEMS, type NavSubmenuLink } from '@/lib/nav-config'
+
 /**
  * Copy della landing OddWise, ripreso ALLA LETTERA dal design fatto con Claude Design (artifact
  * 6yv6CKdzp9n9Ei2SAWNmwH, schermata «Landing», testi di renderVals(); ADAPTER_STATUS §14.248).
@@ -12,6 +14,12 @@
 export interface LandingLink {
   href: string
   label: string
+  /**
+   * §14.358: le pagine sotto la voce (le offerte di benvenuto, ricorrenti ed esclusive): nella
+   * barra la voce apre una tendina al passaggio del mouse, nel menu del telefono si espande. Il
+   * piè di pagina le ignora e porta alla radice della sezione.
+   */
+  children?: readonly NavSubmenuLink[]
 }
 
 /**
@@ -40,7 +48,7 @@ export const LANDING_ROUTES = {
 
 export const LANDING_NAV_LINKS: readonly LandingLink[] = [
   { href: LANDING_ROUTES.guide, label: 'Guide' },
-  { href: LANDING_ROUTES.offerte, label: 'Offerte' },
+  { href: LANDING_ROUTES.offerte, label: 'Offerte', children: OFFERS_NAV_ITEMS },
   { href: LANDING_ROUTES.oddsmatcher, label: 'Oddsmatcher' },
   { href: LANDING_ROUTES.calcolatori, label: 'Calcolatori' },
   { href: LANDING_ROUTES.forum, label: 'Forum' },

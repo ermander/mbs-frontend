@@ -8,7 +8,6 @@ import {
   ALL_BOOKS,
   OFFERS_COPY,
   OFFERS_PAGE_SIZE,
-  OFFER_TYPES,
   bookOptions,
   emptyTitle,
   formatOfferDate,
@@ -29,25 +28,25 @@ import { OffersSignupDialog } from '@/components/offers/offers-signup'
 import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
 
 interface OffersView {
-  type: OfferType
   book: string
   page: number
 }
 
 /**
- * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): il tipo, il filtro per sito, una
- * sezione per gruppo con le carte su tre colonne (due da md, una sul telefono) e le scadute in
- * fondo. Dal §14.345 una pagina di OFFERS_PAGE_SIZE carte alla volta, letta dal server di Next:
- * tipo, sito e pagina stanno nell'indirizzo (?tipo=&sito=&pagina=), quindi il link «indietro» del
- * dettaglio e il tasto indietro del browser riaprono la stessa vista. Cambiare tipo azzera il
- * sito, come nel design, e cambiare tipo o sito riporta alla pagina 1. Filtri e numero di pagina
+ * L'elenco delle offerte dal design «OddWise Offerte» (§14.259): il filtro per sito, una sezione
+ * per gruppo con le carte su tre colonne (due da md, una sul telefono) e le scadute in fondo. Dal
+ * §14.345 una pagina di OFFERS_PAGE_SIZE carte alla volta, letta dal server di Next: tipo, sito e
+ * pagina stanno nell'indirizzo, quindi il link «indietro» del dettaglio e il tasto indietro del
+ * browser riaprono la stessa vista. Cambiare sito riporta alla pagina 1. Filtro e numero di pagina
  * cambiano subito (useOptimistic); le carte restano quelle di prima, attenuate, finché non arriva
  * la pagina nuova.
  *
- * §14.351: le tre schede grandi del tipo diventano una select come quella del sito, sulla stessa
- * riga (per tutti). Con `guest` l'elenco è quello per chi non è entrato: il filtro per sito è
- * spento (direbbe di che sito è ogni carta chiusa), le carte chiuse non hanno logo e il loro
- * «Apri la guida» apre l'invito a iscriversi invece della guida.
+ * §14.358: il tipo non si sceglie più qui. Benvenuto, ricorrenti ed esclusive sono tre pagine
+ * (/offerte/<tipo>, dalla tendina «Offerte» della barra) e `type` è quello della pagina; la select
+ * del tipo che dal §14.351 stava accanto a quella del sito non c'è più. Con `guest` l'elenco è
+ * quello per chi non è entrato: il filtro per sito è spento (direbbe di che sito è ogni carta
+ * chiusa), le carte chiuse non hanno logo e il loro «Apri la guida» apre l'invito a iscriversi
+ * invece della guida.
  */
 export function OffersList({
   type,
@@ -56,36 +55,34 @@ export function OffersList({
   total,
   offers,
   sections,
-  activeByType,
   books,
   guest = false,
 }: OffersView & {
+  /** Il tipo della pagina (§14.358): non cambia dentro l'elenco. */
+  type: OfferType
   total: number
   offers: readonly Offer[]
   sections: readonly OfferSectionApi[]
-  activeByType: Record<OfferType, number>
   books: readonly string[]
   /** §14.351: l'elenco per chi non è entrato (carte chiuse, niente filtro per sito). */
   guest?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const [view, setView] = useOptimistic<OffersView>({ type, book, page })
+  const [view, setView] = useOptimistic<OffersView>({ book, page })
   const [signupOpen, setSignupOpen] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
   const scrollOnArrival = useRef(false)
 
-  // Tipo e sito sostituiscono la voce della cronologia (come prima del §14.345); la pagina ne
-  // aggiunge una, così «indietro» torna alla pagina di prima.
+  // Il sito sostituisce la voce della cronologia (come prima del §14.345); la pagina ne aggiunge
+  // una, così «indietro» torna alla pagina di prima.
   const navigate = (next: OffersView, history: 'push' | 'replace') => {
     startTransition(() => {
       setView(next)
-      router[history](offersListHref(next.type, next.book, next.page), { scroll: false })
+      router[history](offersListHref(type, next.book, next.page), { scroll: false })
     })
   }
-  const selectType = (value: OfferType) =>
-    navigate({ type: value, book: ALL_BOOKS, page: 1 }, 'replace')
-  const setBook = (value: string) => navigate({ type: view.type, book: value, page: 1 }, 'replace')
+  const setBook = (value: string) => navigate({ book: value, page: 1 }, 'replace')
   const goToPage = (value: number) => {
     scrollOnArrival.current = true
     navigate({ ...view, page: value }, 'push')
@@ -106,13 +103,6 @@ export function OffersList({
         ref={topRef}
         className="flex scroll-mt-[calc(var(--topnav-h)+1.5rem)] flex-col gap-3 sm:flex-row sm:items-end"
       >
-        <FilterSelect
-          label={OFFERS_COPY.typeFilterLabel}
-          options={typeOptions(activeByType)}
-          value={view.type}
-          onChange={(value) => selectType(value as OfferType)}
-          className="w-full sm:w-[220px]"
-        />
         <FilterSelect
           label={OFFERS_COPY.bookFilterLabel}
           options={guest ? bookOptions([]) : bookOptions(books, view.book)}
@@ -188,24 +178,16 @@ export function OffersList({
         <OffersSignupDialog
           open={signupOpen}
           onOpenChange={setSignupOpen}
-          from={offersListHref(view.type, ALL_BOOKS, view.page)}
+          from={offersListHref(type, ALL_BOOKS, view.page)}
         />
       )}
     </>
   )
 }
 
-/** Le voci del filtro per tipo: «Benvenuto · 12 attive», i numeri di tutti i siti. */
-function typeOptions(counts: Record<OfferType, number>): { value: string; label: string }[] {
-  return OFFER_TYPES.map((t) => ({
-    value: t.value,
-    label: `${t.label} · ${counts[t.value] ?? 0} attive`,
-  }))
-}
-
 /**
  * Il Select del design in taglia sm: etichetta sopra, controllo da 32px con la freccia a destra.
- * Dal §14.351 serve sia al tipo sia al sito; spento (ospiti, sul sito) mostra `hint` al passaggio.
+ * Dal §14.358 serve solo al sito; spento (ospiti) mostra `hint` al passaggio.
  */
 function FilterSelect({
   label,

@@ -18,6 +18,11 @@ import {
 import { DsWordmark, dsFocusRing } from '@/components/landing/ds-primitives'
 import { useNavSections } from './use-nav-sections'
 import { topnavDsScope } from './topnav-ds'
+import { NavExpandable } from './nav-submenu'
+
+/** Una riga del cassetto: icona e voce, fondo brand-soft su quella attiva. */
+const SHEET_ROW =
+  'flex items-center gap-3 rounded-ds-sm px-3 py-2.5 font-medium text-ds-ink-muted transition-colors hover:bg-ds-surface-sunken hover:text-ds-ink'
 
 interface TopnavMobileSheetProps {
   open: boolean
@@ -26,7 +31,8 @@ interface TopnavMobileSheetProps {
 
 /**
  * Sotto `lg`: cassetto da destra sui token ds-*. Le voci dei gruppi `links` in colonna, quelle
- * delle tendine (Tracker, Backoffice) sotto l'etichetta del gruppo.
+ * delle tendine (Tracker, Backoffice) sotto l'etichetta del gruppo. Dal §14.358 una voce con
+ * `children` (Offerte) è una riga che si espande sulle sue pagine.
  */
 export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps) {
   const sections = useNavSections()
@@ -80,6 +86,21 @@ export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps
                 {section.items.map((item) => {
                   const active = isActiveHref(pathname, item.href)
                   const Icon = item.icon
+                  if (item.children) {
+                    return (
+                      <NavExpandable
+                        key={item.href}
+                        label={item.label}
+                        icon={Icon}
+                        items={item.children}
+                        active={active}
+                        pathname={pathname}
+                        onNavigate={close}
+                        rowClassName={cn(SHEET_ROW, dsFocusRing)}
+                        itemsClassName="pl-7"
+                      />
+                    )
+                  }
                   return (
                     <Link
                       key={item.href}
@@ -87,7 +108,7 @@ export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps
                       onClick={close}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'flex items-center gap-3 rounded-ds-sm px-3 py-2.5 font-medium text-ds-ink-muted transition-colors hover:bg-ds-surface-sunken hover:text-ds-ink',
+                        SHEET_ROW,
                         active && 'bg-ds-brand-soft font-semibold text-ds-ink',
                         dsFocusRing,
                       )}

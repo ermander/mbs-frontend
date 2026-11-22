@@ -11,6 +11,7 @@ import {
   isExpired,
   offerBadge,
   offerHref,
+  offerTypeInfo,
   offersListHref,
   pageSections,
   parseOfferBook,
@@ -158,22 +159,37 @@ describe("indirizzo dell'elenco (§14.345)", () => {
     }
   })
 
+  // §14.358: il tipo è nel percorso (/offerte/<tipo>), una pagina per tipo.
   it('scrive tipo, sito e pagina, lasciando fuori «Tutti i siti» e la pagina 1', () => {
-    expect(offersListHref('benvenuto')).toBe('/offerte?tipo=benvenuto')
-    expect(offersListHref('benvenuto', ALL_BOOKS, 1)).toBe('/offerte?tipo=benvenuto')
-    expect(offersListHref('ricorrenti', ALL_BOOKS, 3)).toBe('/offerte?tipo=ricorrenti&pagina=3')
-    expect(offersListHref('benvenuto', 'Snai', 2)).toBe(
-      '/offerte?tipo=benvenuto&sito=Snai&pagina=2',
-    )
+    expect(offersListHref('benvenuto')).toBe('/offerte/benvenuto')
+    expect(offersListHref('benvenuto', ALL_BOOKS, 1)).toBe('/offerte/benvenuto')
+    expect(offersListHref('ricorrenti', ALL_BOOKS, 3)).toBe('/offerte/ricorrenti?pagina=3')
+    expect(offersListHref('benvenuto', 'Snai', 2)).toBe('/offerte/benvenuto?sito=Snai&pagina=2')
     expect(offersListHref('benvenuto', 'Better Lottomatica')).toBe(
-      '/offerte?tipo=benvenuto&sito=Better+Lottomatica',
+      '/offerte/benvenuto?sito=Better+Lottomatica',
     )
-    const query = new URLSearchParams(offersListHref('esclusive', 'A&B', 4).split('?')[1])
-    expect([query.get('tipo'), query.get('sito'), query.get('pagina')]).toEqual([
-      'esclusive',
+    const [path, search] = offersListHref('esclusive', 'A&B', 4).split('?')
+    const query = new URLSearchParams(search)
+    expect([path, query.get('tipo'), query.get('sito'), query.get('pagina')]).toEqual([
+      '/offerte/esclusive',
+      null,
       'A&B',
       '4',
     ])
+  })
+
+  it('ogni tipo ha la sua pagina, con titolo e descrizione', () => {
+    expect(OFFER_TYPES.map((t) => offersListHref(t.value))).toEqual([
+      '/offerte/benvenuto',
+      '/offerte/ricorrenti',
+      '/offerte/esclusive',
+    ])
+    expect(OFFER_TYPES.map((t) => offerTypeInfo(t.value).title)).toEqual([
+      'Offerte di benvenuto',
+      'Offerte ricorrenti',
+      'Offerte esclusive',
+    ])
+    for (const t of OFFER_TYPES) expect(t.description).not.toMatch(/bookmaker/i)
   })
 })
 

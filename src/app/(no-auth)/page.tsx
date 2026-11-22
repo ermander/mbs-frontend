@@ -13,7 +13,7 @@ import { TrustSection } from '@/components/landing/trust-section'
  * titoli, brand verde, accento lime solo sulla frase chiave del titolo). Variante scura con
  * data-theme="dark" sull'<html>.
  *
- * §14.362 (richiesta di Emanuele): chi è entrato resta sulla landing e la legge con la barra
+ * §14.363 (richiesta di Emanuele): chi è entrato resta sulla landing e la legge con la barra
  * dell'app, senza Accedi e Inizia gratis (SiteShell); prima RedirectIfLoggedIn lo mandava alla
  * dashboard. La pagina resta resa dal server per tutti, come per i motori di ricerca.
  */

@@ -28,7 +28,7 @@ const APP_FOOTER_SCOPE = cn(
  *
  * Con `inApp` è quello sotto le pagine di chi è entrato, nei layout di (auth) e di (open)
  * (§14.348): stesso aspetto, i link stanno in due colonne senza «Prezzi» (APP_FOOTER_COLUMNS). Il
- * marchio porta alla landing per tutti, come quello della Topnav (§14.362; prima, nell'app, alla
+ * marchio porta alla landing per tutti, come quello della Topnav (§14.363; prima, nell'app, alla
  * dashboard).
  */
 export function LandingFooter({ inApp = false }: { inApp?: boolean }) {

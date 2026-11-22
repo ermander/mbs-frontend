@@ -25,7 +25,7 @@ import { topnavDsScope } from './topnav-ds'
  * nascosta finché non ci sono notifiche vere (`NOTIFICATIONS_IN_TOPNAV`). Se le voci non ci stanno,
  * `justify-end-safe` le fa ripartire dal marchio invece di farle finire sotto di esso.
  *
- * §14.362 (richiesta di Emanuele): il marchio porta alla landing, non più alla dashboard, che resta
+ * §14.363 (richiesta di Emanuele): il marchio porta alla landing, non più alla dashboard, che resta
  * a un clic dalla tendina Tracker. Chi è entrato legge la landing con questa barra (SiteShell).
  */
 export function Topnav() {

@@ -10,7 +10,7 @@ import { DsButton, DsCard, DsContainer } from '@/components/landing/ds-primitive
  * «Prezzi» (#prezzi): fascia su surface-raised; a sinistra i due paragrafi, a destra la card del
  * piano con il badge «Gratuito», i quattro punti con la spunta e la CTA primaria a tutta larghezza.
  *
- * La CTA segue la sessione come la barra (§14.362): «Inizia gratis» verso la registrazione per chi
+ * La CTA segue la sessione come la barra (§14.363): «Inizia gratis» verso la registrazione per chi
  * non è entrato (anche nell'HTML del server), «Vai alla dashboard» per chi lo è.
  */
 export function PricingSection() {

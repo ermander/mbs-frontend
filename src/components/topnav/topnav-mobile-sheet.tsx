@@ -33,7 +33,7 @@ interface TopnavMobileSheetProps {
  * Sotto `lg`: cassetto da destra sui token ds-*. Le voci dei gruppi `links` in colonna, quelle
  * delle tendine (Tracker, Backoffice) sotto l'etichetta del gruppo. Dal §14.358 una voce con
  * `children` (Offerte) è una riga che si espande sulle sue pagine. Il marchio in testa porta alla
- * landing come quello della barra (§14.362).
+ * landing come quello della barra (§14.363).
  */
 export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps) {
   const sections = useNavSections()

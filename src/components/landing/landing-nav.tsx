@@ -18,8 +18,12 @@ import {
 /**
  * La Navbar del design: 64px su surface-raised con hairline sotto, marchio, cinque voci e due
  * azioni (Accedi in ghost, Inizia gratis in primary). Sotto lg un pulsante apre il menu a colonna.
+ *
+ * Con `accountActions={false}` la barra resta senza le due azioni: è quella che SiteShell mostra
+ * finché non sa se chi legge è entrato (nell'HTML del server e mentre /auth/me risponde), così a
+ * chi è entrato non compare «Accedi» prima della barra dell'app (ClickUp «Controllo Navbar»).
  */
-export function LandingNav() {
+export function LandingNav({ accountActions = true }: { accountActions?: boolean }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const close = () => setOpen(false)
@@ -54,14 +58,16 @@ export function LandingNav() {
           </ul>
         </nav>
 
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
-          <DsButton href={LANDING_ROUTES.login} variant="ghost">
-            {BRAND.login}
-          </DsButton>
-          <DsButton href={LANDING_ROUTES.register} variant="primary">
-            {BRAND.signup}
-          </DsButton>
-        </div>
+        {accountActions && (
+          <div className="ml-auto hidden items-center gap-2 lg:flex">
+            <DsButton href={LANDING_ROUTES.login} variant="ghost">
+              {BRAND.login}
+            </DsButton>
+            <DsButton href={LANDING_ROUTES.register} variant="primary">
+              {BRAND.signup}
+            </DsButton>
+          </div>
+        )}
 
         <button
           type="button"
@@ -96,14 +102,16 @@ export function LandingNav() {
                 {link.label}
               </Link>
             ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-ds-line pt-3">
-              <DsButton href={LANDING_ROUTES.login} variant="ghost" block>
-                {BRAND.login}
-              </DsButton>
-              <DsButton href={LANDING_ROUTES.register} variant="primary" block>
-                {BRAND.signup}
-              </DsButton>
-            </div>
+            {accountActions && (
+              <div className="mt-2 flex flex-col gap-2 border-t border-ds-line pt-3">
+                <DsButton href={LANDING_ROUTES.login} variant="ghost" block>
+                  {BRAND.login}
+                </DsButton>
+                <DsButton href={LANDING_ROUTES.register} variant="primary" block>
+                  {BRAND.signup}
+                </DsButton>
+              </div>
+            )}
           </DsContainer>
         </div>
       )}

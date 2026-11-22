@@ -76,9 +76,9 @@ export const LANDING_FOOTER_LINKS: readonly LandingLink[] = LANDING_FOOTER_COLUM
 
 /**
  * Le colonne del piè di pagina dentro l'app, sotto le pagine di chi è entrato (§14.348): le
- * sezioni dell'app e, accanto, Contatti con le pagine legali. Manca «Prezzi», che sta sulla
- * landing, da cui chi è entrato viene rimandato alla dashboard (RedirectIfLoggedIn): l'ancora non
- * si aprirebbe mai. Due colonne invece di tre, così sul telefono stanno affiancate.
+ * sezioni dell'app e, accanto, Contatti con le pagine legali. Manca «Prezzi», che parla a chi un
+ * account non ce l'ha ancora (dal §14.363 chi è entrato può leggere la landing, ma non viene
+ * mandato ai prezzi). Due colonne invece di tre, così sul telefono stanno affiancate.
  */
 export const APP_FOOTER_COLUMNS: readonly (readonly LandingLink[])[] = [
   LANDING_NAV_LINKS,
@@ -291,6 +291,8 @@ export const PRICING = {
       'Forum con moderatori',
     ],
     cta: 'Inizia gratis',
+    /** Al posto di «Inizia gratis» per chi è già entrato e legge la landing (§14.363). */
+    signedInCta: 'Vai alla dashboard',
     caption: 'Nessuna carta richiesta.',
   },
 } as const

@@ -2,18 +2,33 @@
 
 import { useState } from 'react'
 
+import { dsButtonClass } from '@/components/landing/ds-primitives'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  DsModal,
+  FieldError,
+  GCheckbox,
+  GReadOnly,
+  GTextArea,
+  GTextField,
+} from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { cn } from '@/lib/utils'
 import { useProfitTrackerStore } from '@/stores/profit-tracker-store'
 import type { Book } from '@/types/profit-tracker'
+
+/**
+ * Nuovo book e Modifica book della pagina Impostazioni sul design OddWise (§14.361), su DsModal
+ * come le modali di Gestione conti (§14.350). Campi e salvataggi come prima; se il backend
+ * rifiuta («Esiste già un book con questo nome») l'errore resta nella modale, che non si chiude.
+ */
+
+const EXCHANGE_HINT = 'Spunta se su questo sito si banca, come su Betfair Exchange.'
+
+/** Lo store non lancia: l'errore arriva in `booksError`. Lo porta nella modale e lo toglie dallo store. */
+function takeBooksError(): string | undefined {
+  const failed = useProfitTrackerStore.getState().booksError
+  if (failed) useProfitTrackerStore.setState({ booksError: undefined })
+  return failed
+}
 
 interface BookCreateModalProps {
   open: boolean
@@ -21,77 +36,85 @@ interface BookCreateModalProps {
 }
 
 export function BookCreateModal({ open, onOpenChange }: BookCreateModalProps) {
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Nuovo book personale">
+      {open && <BookCreateForm onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+/** Montato solo a modale aperta: i campi ripartono vuoti a ogni apertura. */
+function BookCreateForm({ onClose }: { onClose: () => void }) {
   const addBook = useProfitTrackerStore((s) => s.addBook)
-  const booksError = useProfitTrackerStore((s) => s.booksError)
 
   const [nome, setNome] = useState('')
   const [descrizione, setDescrizione] = useState('')
   const [isExchange, setIsExchange] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const canSave = nome.trim() !== '' && !saving
 
   const handleSave = async () => {
-    if (!nome.trim()) return
-    await addBook({
-      nome: nome.trim(),
-      descrizione: descrizione || undefined,
-      isExchange,
-    })
-    if (!booksError) {
-      setNome('')
-      setDescrizione('')
-      setIsExchange(false)
-      onOpenChange(false)
+    if (!canSave) return
+    setSaving(true)
+    setError(null)
+    await addBook({ nome: nome.trim(), descrizione: descrizione || undefined, isExchange })
+    const failed = takeBooksError()
+    setSaving(false)
+    if (failed) {
+      setError(failed)
+      return
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Nuovo book personale</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="book-nome">Nome</Label>
-            <Input
-              id="book-nome"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Es. SportMarket, Pinnacle..."
-            />
-            {booksError && <p className="text-xs text-destructive">{booksError}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="book-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="book-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              id="book-exchange"
-              type="checkbox"
-              className="h-4 w-4 rounded border border-input"
-              checked={isExchange}
-              onChange={(e) => setIsExchange(e.target.checked)}
-            />
-            <Label htmlFor="book-exchange" className="text-sm">
-              È un exchange
-            </Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={!nome.trim()}>
-            Salva
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GTextField
+          id="book-nome"
+          label="Nome"
+          placeholder="Es. SportMarket, Pinnacle…"
+          value={nome}
+          onChange={setNome}
+          onEnter={() => void handleSave()}
+          error={error ?? undefined}
+        />
+        <GTextArea
+          id="book-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        <GCheckbox
+          id="book-exchange"
+          label="È un exchange"
+          hint={EXCHANGE_HINT}
+          checked={isExchange}
+          onChange={setIsExchange}
+        />
+      </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!canSave}
+          className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+        >
+          {saving ? 'Salvataggio…' : 'Salva il book'}
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -101,71 +124,75 @@ interface BookEditModalProps {
   book: Book | null
 }
 
+/** Modifica book: descrizione ed exchange; il nome resta quello di prima. */
 export function BookEditModal({ open, onOpenChange, book }: BookEditModalProps) {
-  const updateBook = useProfitTrackerStore((s) => s.updateBook)
-  const booksError = useProfitTrackerStore((s) => s.booksError)
-
-  const [descrizione, setDescrizione] = useState(book?.descrizione ?? '')
-  const [isExchange, setIsExchange] = useState<boolean>(book?.isExchange ?? false)
-  const [isSaving, setIsSaving] = useState(false)
-
   if (!book) return null
+  return (
+    <DsModal open={open} onOpenChange={onOpenChange} title="Modifica book">
+      {open && <BookEditForm book={book} onClose={() => onOpenChange(false)} />}
+    </DsModal>
+  )
+}
+
+function BookEditForm({ book, onClose }: { book: Book; onClose: () => void }) {
+  const updateBook = useProfitTrackerStore((s) => s.updateBook)
+
+  const [descrizione, setDescrizione] = useState(book.descrizione ?? '')
+  const [isExchange, setIsExchange] = useState<boolean>(book.isExchange ?? false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSave = async () => {
-    setIsSaving(true)
-    await updateBook(book.id, {
-      descrizione: descrizione.trim() || null,
-      isExchange,
-    })
-    setIsSaving(false)
-    if (!booksError) {
-      onOpenChange(false)
+    setSaving(true)
+    setError(null)
+    await updateBook(book.id, { descrizione: descrizione.trim() || null, isExchange })
+    const failed = takeBooksError()
+    setSaving(false)
+    if (failed) {
+      setError(failed)
+      return
     }
+    onClose()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Modifica book</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 p-4 pt-0 text-sm">
-          <div className="space-y-1.5">
-            <Label htmlFor="book-edit-nome">Nome</Label>
-            <Input id="book-edit-nome" value={book.nome} disabled readOnly />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="book-edit-desc">Descrizione (opzionale)</Label>
-            <textarea
-              id="book-edit-desc"
-              className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
-              value={descrizione}
-              onChange={(e) => setDescrizione(e.target.value)}
-            />
-          </div>
-          {booksError && <p className="text-xs text-destructive">{booksError}</p>}
-          <div className="flex items-center gap-2">
-            <input
-              id="book-edit-exchange"
-              type="checkbox"
-              className="h-4 w-4 rounded border border-input"
-              checked={isExchange}
-              onChange={(e) => setIsExchange(e.target.checked)}
-            />
-            <Label htmlFor="book-edit-exchange" className="text-sm">
-              È un exchange
-            </Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-            Annulla
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Salvataggio...' : 'Salva'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="flex flex-col gap-4">
+        <GReadOnly label="Nome">{book.nome}</GReadOnly>
+        <GTextArea
+          id="book-edit-desc"
+          label="Descrizione"
+          optional
+          value={descrizione}
+          onChange={setDescrizione}
+        />
+        <GCheckbox
+          id="book-edit-exchange"
+          label="È un exchange"
+          hint={EXCHANGE_HINT}
+          checked={isExchange}
+          onChange={setIsExchange}
+        />
+        {error && <FieldError id="book-edit-error">{error}</FieldError>}
+      </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className={dsButtonClass('ghost', 'md')}
+        >
+          Annulla
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className={cn(dsButtonClass('primary', 'md'), 'disabled:opacity-50')}
+        >
+          {saving ? 'Salvataggio…' : 'Salva le modifiche'}
+        </button>
+      </div>
+    </>
   )
 }

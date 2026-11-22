@@ -1,10 +1,13 @@
-import { Container } from '@/components/ui/container'
+import { BookOpen } from 'lucide-react'
+
+import { DsComingSoonPage } from '@/components/landing/ds-coming-soon-page'
 
 export default function GuidePage() {
   return (
-    <Container className="space-y-4 max-w-3xl text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground">Guide</h1>
-      <p className="text-muted-foreground">In costruzione.</p>
-    </Container>
+    <DsComingSoonPage
+      title="Guide"
+      icon={BookOpen}
+      description="Questa sezione è in preparazione: la trovi qui appena è pronta."
+    />
   )
 }

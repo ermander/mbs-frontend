@@ -319,6 +319,51 @@ export function GReadOnly({
   )
 }
 
+/**
+ * La casella da spuntare del design (§14.361: «È un exchange» del book personale): quadrato in
+ * brand, testo in ink e, se c'è, una riga di spiegazione in ink-muted sotto.
+ */
+export function GCheckbox({
+  id,
+  label,
+  hint,
+  checked,
+  onChange,
+  disabled,
+}: {
+  id: string
+  label: string
+  hint?: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+}) {
+  const hintId = `${id}-hint`
+  return (
+    <div className="flex items-start gap-3">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        aria-describedby={hint ? hintId : undefined}
+        onChange={(e) => onChange(e.target.checked)}
+        className={cn('m-0 mt-0.5 h-5 w-5 flex-none cursor-pointer accent-ds-brand', dsFocusRing)}
+      />
+      <div className="flex min-w-0 flex-col">
+        <label htmlFor={id} className="cursor-pointer text-sm leading-6 font-semibold text-ds-ink">
+          {label}
+        </label>
+        {hint && (
+          <p id={hintId} className="m-0 text-sm leading-5 text-ds-ink-muted">
+            {hint}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /** Tinta del select quando il valore porta uno stato (es. lo stato evento della gamba). */
 export type GSelectTone = 'neutral' | 'warning' | 'profit' | 'loss' | 'info'
 

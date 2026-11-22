@@ -43,7 +43,8 @@ interface OffersView {
  *
  * §14.358: il tipo non si sceglie più qui. Benvenuto, ricorrenti ed esclusive sono tre pagine
  * (/offerte/<tipo>, dalla tendina «Offerte» della barra) e `type` è quello della pagina; la select
- * del tipo che dal §14.351 stava accanto a quella del sito non c'è più. Con `guest` l'elenco è
+ * del tipo che dal §14.351 stava accanto a quella del sito non c'è più, e quella del sito sta a
+ * destra sulla riga del titolo della pagina (`header`). Con `guest` l'elenco è
  * quello per chi non è entrato: il filtro per sito è spento (direbbe di che sito è ogni carta
  * chiusa), le carte chiuse non hanno logo e il loro «Apri la guida» apre l'invito a iscriversi
  * invece della guida.
@@ -57,6 +58,7 @@ export function OffersList({
   sections,
   books,
   guest = false,
+  header,
 }: OffersView & {
   /** Il tipo della pagina (§14.358): non cambia dentro l'elenco. */
   type: OfferType
@@ -66,6 +68,8 @@ export function OffersList({
   books: readonly string[]
   /** §14.351: l'elenco per chi non è entrato (carte chiuse, niente filtro per sito). */
   guest?: boolean
+  /** §14.358: il titolo della pagina, a sinistra sulla riga del filtro per sito. */
+  header?: React.ReactNode
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -101,8 +105,9 @@ export function OffersList({
     <>
       <div
         ref={topRef}
-        className="flex scroll-mt-[calc(var(--topnav-h)+1.5rem)] flex-col gap-3 sm:flex-row sm:items-end"
+        className="flex scroll-mt-[calc(var(--topnav-h)+1.5rem)] flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
       >
+        {header}
         <FilterSelect
           label={OFFERS_COPY.bookFilterLabel}
           options={guest ? bookOptions([]) : bookOptions(books, view.book)}
@@ -110,7 +115,7 @@ export function OffersList({
           onChange={setBook}
           disabled={guest}
           hint={guest ? OFFERS_COPY.guestBookFilterHint : undefined}
-          className="w-full sm:w-[220px]"
+          className="w-full sm:ml-auto sm:w-[220px] sm:shrink-0"
         />
       </div>
 

@@ -52,36 +52,17 @@ export interface Offer {
 }
 
 /**
- * I tre tipi di offerta. Dal §14.358 ognuno ha la sua pagina (/offerte/<tipo>, `offersListHref`),
- * con `title` e `description` in testa, e le tre voci stanno nella tendina «Offerte» della barra.
+ * I tre tipi di offerta. Dal §14.358 ognuno ha la sua pagina (/offerte/<tipo>, `offersListHref`)
+ * col `title` in testa, e le tre voci stanno nella tendina «Offerte» della barra. La riga di
+ * descrizione di ogni tipo che veniva dal design è stata tolta: Emanuele l'ha giudicata inutile.
  */
-export const OFFER_TYPES: readonly {
-  value: OfferType
-  label: string
-  title: string
-  description: string
-}[] = [
-  {
-    value: 'benvenuto',
-    label: 'Benvenuto',
-    title: 'Offerte di benvenuto',
-    description: 'Una volta sola, alla registrazione su un nuovo sito di scommesse.',
-  },
-  {
-    value: 'ricorrenti',
-    label: 'Ricorrenti',
-    title: 'Offerte ricorrenti',
-    description: 'Tornano ogni giorno, ogni settimana o ogni mese.',
-  },
-  {
-    value: 'esclusive',
-    label: 'Esclusive',
-    title: 'Offerte esclusive',
-    description: 'Offerte personali segnalate dagli utenti: controlla se le hai ricevute anche tu.',
-  },
+export const OFFER_TYPES: readonly { value: OfferType; label: string; title: string }[] = [
+  { value: 'benvenuto', label: 'Benvenuto', title: 'Offerte di benvenuto' },
+  { value: 'ricorrenti', label: 'Ricorrenti', title: 'Offerte ricorrenti' },
+  { value: 'esclusive', label: 'Esclusive', title: 'Offerte esclusive' },
 ]
 
-/** Il tipo di offerta: le voci di OFFER_TYPES (titolo e descrizione della sua pagina). */
+/** Il tipo di offerta: la sua voce di OFFER_TYPES (etichetta e titolo della pagina). */
 export function offerTypeInfo(type: OfferType): (typeof OFFER_TYPES)[number] {
   return OFFER_TYPES.find((t) => t.value === type) ?? OFFER_TYPES[0]
 }

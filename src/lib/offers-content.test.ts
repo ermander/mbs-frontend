@@ -49,7 +49,7 @@ describe('catalogo', () => {
   it('non usa mai la parola «bookmaker» nei testi', () => {
     const texts = [
       ...Object.values(OFFERS_COPY).flat(),
-      ...OFFER_TYPES.flatMap((t) => [t.label, t.description]),
+      ...OFFER_TYPES.flatMap((t) => [t.label, t.title]),
     ]
     for (const text of texts) expect(text.toLowerCase()).not.toContain('bookmaker')
   })
@@ -178,7 +178,7 @@ describe("indirizzo dell'elenco (§14.345)", () => {
     ])
   })
 
-  it('ogni tipo ha la sua pagina, con titolo e descrizione', () => {
+  it('ogni tipo ha la sua pagina, col suo titolo', () => {
     expect(OFFER_TYPES.map((t) => offersListHref(t.value))).toEqual([
       '/offerte/benvenuto',
       '/offerte/ricorrenti',
@@ -189,7 +189,6 @@ describe("indirizzo dell'elenco (§14.345)", () => {
       'Offerte ricorrenti',
       'Offerte esclusive',
     ])
-    for (const t of OFFER_TYPES) expect(t.description).not.toMatch(/bookmaker/i)
   })
 })
 

@@ -33,7 +33,7 @@ export function offersPageMetadata(type: OfferType): Metadata {
  * La pagina dell'elenco di un tipo di offerta (§14.358): /offerte/benvenuto, /offerte/ricorrenti
  * e /offerte/esclusive la montano col loro tipo. Fino al §14.357 era l'unica pagina /offerte, col
  * tipo scelto da una select (?tipo=); oggi il tipo lo dà il percorso, la pagina ha il suo titolo
- * con la descrizione del tipo, e /offerte rimanda qui.
+ * con a destra il filtro per sito, e /offerte rimanda qui.
  *
  * Elenco delle offerte (§14.259): le pubblicate dal database (§14.263), lette dal server. Dal
  * §14.345 una pagina alla volta (10 carte): sito e pagina vengono dall'indirizzo (?sito=&pagina=)
@@ -64,10 +64,16 @@ export async function OffersTypePage({
   const guest = !result.ok && result.status === 401 ? await fetchFreeOffersPage(type, page) : null
   if (guest?.ok && guest.data.page !== page) redirect(offersListHref(type, book, guest.data.page))
 
+  const info = offerTypeInfo(type)
+  // Il titolo della pagina sta a sinistra sulla riga del filtro per sito, che è dentro OffersList
+  // (§14.358): quando l'elenco non c'è (errore, rinnovo della sessione) la pagina lo mostra da sola.
+  const header = <h1 className="ds-title m-0 min-w-0">{info.title}</h1>
+
   let content: React.ReactNode
   if (result.ok) {
     content = (
       <OffersList
+        header={header}
         type={type}
         book={book}
         page={result.data.page}
@@ -77,38 +83,40 @@ export async function OffersTypePage({
         books={result.data.books}
       />
     )
-  } else if (guest) {
+  } else if (guest?.ok) {
     content = (
       <OffersGuestGate>
-        {guest.ok ? (
-          <OffersList
-            guest
-            type={type}
-            book={ALL_BOOKS}
-            page={guest.data.page}
-            total={guest.data.total}
-            offers={guest.data.offers.map(offerFromFreeCard)}
-            sections={guest.data.sections}
-            books={[]}
-          />
-        ) : (
-          <OffersLoadError status={guest.status} />
-        )}
+        <OffersList
+          guest
+          header={header}
+          type={type}
+          book={ALL_BOOKS}
+          page={guest.data.page}
+          total={guest.data.total}
+          offers={guest.data.offers.map(offerFromFreeCard)}
+          sections={guest.data.sections}
+          books={[]}
+        />
       </OffersGuestGate>
     )
   } else {
-    content = <OffersLoadError status={result.status} />
+    content = (
+      <>
+        {header}
+        {guest ? (
+          <OffersGuestGate>
+            <OffersLoadError status={guest.status} />
+          </OffersGuestGate>
+        ) : (
+          <OffersLoadError status={result.status} />
+        )}
+      </>
+    )
   }
-
-  const info = offerTypeInfo(type)
 
   return (
     <DsPageShell>
       <DsContainer className="flex flex-col gap-8 pt-6 pb-16">
-        <header className="flex min-w-0 flex-col gap-1">
-          <h1 className="ds-title m-0">{info.title}</h1>
-          <p className="ds-body m-0 text-pretty text-ds-ink-muted">{info.description}</p>
-        </header>
         {content}
         <p className="ds-caption pt-6 tracking-[0.02em] text-ds-ink-muted">
           {OFFERS_COPY.responsibleGaming}

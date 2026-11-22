@@ -68,12 +68,8 @@ export function DsSection({
   )
 }
 
-/**
- * La griglia dei riquadri: tanti per riga quanti ne stanno da 300px (mai più larghi della colonna
- * sul telefono). Con la colonna da 1600px (§14.357) i sei saldi della dashboard stanno 4 + 2 fino
- * ai monitor larghi invece di 5 + 1.
- */
-export const DS_TILE_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-4'
+/** La griglia dei riquadri: tanti per riga quanti ne stanno da 260px. */
+export const DS_TILE_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4'
 
 /**
  * StatTile del design OddWise con l'icona nel cerchio brand-soft in alto a destra: etichetta,

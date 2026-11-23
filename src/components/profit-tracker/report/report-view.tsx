@@ -28,6 +28,8 @@ import { ReportSaldi } from '@/components/profit-tracker/report/report-saldi'
 import { PROFIT_CATEGORIES } from '@/lib/profit-tracker/categories'
 import { MONTH_FULL, dashMoney } from '@/lib/profit-tracker/dashboard'
 import {
+  BREAKDOWN_PAGE_SIZE,
+  breakdownPage,
   breakdownShare,
   buildBreakdown,
   buildStatement,
@@ -49,7 +51,7 @@ import type {
  * Il Report del tracker sul design OddWise (§14.350): filtri, riquadri del periodo, conto
  * economico (§14.111), barre dei mesi con il mese da approfondire, suddivisioni e dettaglio delle
  * voci. Stesse letture e stessi conti della pagina di prima; il grafico è quello a barre della
- * Dashboard al posto di Recharts.
+ * Dashboard al posto di Recharts. Dal §14.386 le suddivisioni vanno a pagine.
  */
 
 const DETAIL_PAGE_SIZE = 15
@@ -608,16 +610,19 @@ export function ReportView() {
             title="Per categoria"
             rows={byCategoria}
             emptyLabel="Nessuna voce nel periodo."
+            unit={['categoria', 'categorie']}
           />
           <BreakdownCard
             title="Per identità (netto)"
             rows={byHolder}
             emptyLabel="Nessuna voce nel periodo."
+            unit={['identità', 'identità']}
           />
           <BreakdownCard
             title="Per conto (solo giocate)"
             rows={byAccount}
             emptyLabel="Nessun profitto registrato nel periodo."
+            unit={['conto', 'conti']}
           />
         </div>
       </DsSection>
@@ -797,17 +802,29 @@ function StatementLine({
   )
 }
 
-/** Una suddivisione: voce, importo, barra in proporzione alla voce più grande, conteggio e quota. */
+/**
+ * Una suddivisione: voce, importo, barra in proporzione alla voce più grande, conteggio e quota.
+ * Dal §14.386 a pagine di BREAKDOWN_PAGE_SIZE voci: barre e quote restano sul totale di tutte le
+ * voci, e l'ultima pagina tiene l'altezza delle altre perché le frecce non si spostino.
+ */
 function BreakdownCard({
   title,
   rows,
   emptyLabel,
+  unit,
 }: {
   title: string
   rows: BreakdownRow[]
   emptyLabel: string
+  /** Come si contano le voci nel piede: singolare e plurale. */
+  unit: [string, string]
 }) {
+  // La pagina vale per le voci con cui è stata scelta: con un altro mese o altri filtri si
+  // riparte dalla prima, senza un effetto che la azzeri.
+  const [pageState, setPageState] = useState<{ rows: BreakdownRow[]; page: number } | null>(null)
+  const { page, items, filler } = breakdownPage(rows, pageState?.rows === rows ? pageState.page : 0)
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.totale)), 1)
+  const withNote = rows.some((r) => r.note)
   return (
     <div className={cn(DS_PANEL, 'flex min-w-0 flex-col gap-3 p-5')}>
       <h3 className="ds-heading m-0 text-lg leading-6">{title}</h3>
@@ -815,41 +832,95 @@ function BreakdownCard({
         <p className="ds-body-sm m-0 text-ds-ink-muted">{emptyLabel}</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {rows.map((row) => {
-            const share = breakdownShare(row, rows)
-            return (
-              <li key={row.key} className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="ds-body-sm truncate text-ds-ink" title={row.label}>
-                    {row.label}
-                  </span>
-                  <DsAmount value={row.totale} size="sm" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ds-surface-sunken">
-                    <div
-                      className={cn(
-                        'h-full rounded-full',
-                        row.totale >= 0 ? 'bg-ds-brand' : 'bg-ds-loss',
-                      )}
-                      style={{ width: `${(Math.abs(row.totale) / maxAbs) * 100}%` }}
-                    />
-                  </div>
-                  <span className="ds-caption w-28 shrink-0 text-right text-ds-ink-muted tabular-nums">
-                    {countLabel(row.count, UNIT_ONE[row.unit], row.unit)}
-                    {share != null ? ` · ${share.toFixed(0)} %` : ''}
-                  </span>
-                </div>
-                {row.note && (
-                  <p className="ds-caption m-0 truncate text-ds-ink-muted" title={row.note}>
-                    {row.note}
-                  </p>
-                )}
-              </li>
-            )
-          })}
+          {items.map((row) => (
+            <BreakdownItem
+              key={row.key}
+              row={row}
+              share={breakdownShare(row, rows)}
+              maxAbs={maxAbs}
+            />
+          ))}
+          {Array.from({ length: filler }, (_, i) => (
+            <BreakdownItem
+              key={`vuota-${i}`}
+              row={{
+                key: `vuota-${i}`,
+                label: '\u00a0',
+                totale: 0,
+                count: 0,
+                unit: 'voci',
+                note: withNote ? '\u00a0' : undefined,
+              }}
+              share={null}
+              maxAbs={maxAbs}
+              placeholder
+            />
+          ))}
         </ul>
       )}
+      {rows.length > BREAKDOWN_PAGE_SIZE && (
+        <div className="mt-auto">
+          <OmPagination
+            compact
+            label={`Pagine della suddivisione ${title}`}
+            page={page}
+            pageSize={BREAKDOWN_PAGE_SIZE}
+            total={rows.length}
+            unit={rows.length === 1 ? unit[0] : unit[1]}
+            onChange={(p) => setPageState({ rows, page: p })}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+/** Una voce della suddivisione; `placeholder` è la riga vuota che tiene l'altezza della pagina. */
+function BreakdownItem({
+  row,
+  share,
+  maxAbs,
+  placeholder,
+}: {
+  row: BreakdownRow
+  share: number | null
+  maxAbs: number
+  placeholder?: boolean
+}) {
+  return (
+    <li
+      aria-hidden={placeholder || undefined}
+      className={cn('flex flex-col gap-1', placeholder && 'invisible')}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span
+          className="ds-body-sm truncate text-ds-ink"
+          title={placeholder ? undefined : row.label}
+        >
+          {row.label}
+        </span>
+        <DsAmount value={row.totale} size="sm" />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ds-surface-sunken">
+          <div
+            className={cn('h-full rounded-full', row.totale >= 0 ? 'bg-ds-brand' : 'bg-ds-loss')}
+            style={{ width: `${(Math.abs(row.totale) / maxAbs) * 100}%` }}
+          />
+        </div>
+        <span className="ds-caption w-28 shrink-0 text-right text-ds-ink-muted tabular-nums">
+          {countLabel(row.count, UNIT_ONE[row.unit], row.unit)}
+          {share != null ? ` · ${share.toFixed(0)} %` : ''}
+        </span>
+      </div>
+      {row.note && (
+        <p
+          className="ds-caption m-0 truncate text-ds-ink-muted"
+          title={placeholder ? undefined : row.note}
+        >
+          {row.note}
+        </p>
+      )}
+    </li>
   )
 }

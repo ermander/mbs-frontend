@@ -46,6 +46,31 @@ type LinkCheck =
 type FormError = { kind: 'dead' } | { kind: 'message'; text: string } | null
 
 /**
+ * §14.383: lo stesso form serve due pagine con lo stesso link (un token di reimposta password):
+ * /reimposta-password («Password dimenticata», vale 60 minuti) e /invito (l'account creato dal
+ * Backoffice per un tester, vale 7 giorni). Cambiano solo le parole.
+ */
+export type PasswordFormVariant = 'reset' | 'invite'
+
+const COPY = {
+  reset: {
+    title: 'Scegli una password nuova',
+    noEmail: 'Scegli la password con cui accederai da adesso.',
+    passwordLabel: 'Nuova password',
+    submit: 'Salva la nuova password',
+    deadInline: 'Questo link è scaduto o è già stato usato. Richiedi un nuovo link dalla',
+  },
+  invite: {
+    title: 'Scegli la tua password',
+    noEmail: 'Scegli la password con cui entrerai.',
+    passwordLabel: 'Password',
+    submit: 'Salva la password ed entra',
+    deadInline:
+      'Questo invito è scaduto o è già stato usato. Chiedi un nuovo invito a chi te l’ha mandato, oppure richiedi un link dalla',
+  },
+} as const
+
+/**
  * Reimposta password dal design di Claude Design (§14.257). All'apertura POST
  * /auth/reset-password/check: link scaduto o già usato → vista «Link non valido» con «Richiedi un
  * nuovo link»; link buono → «Scegli una password nuova» con l'email dell'account, la password
@@ -54,7 +79,14 @@ type FormError = { kind: 'dead' } | { kind: 'message'; text: string } | null
  * backend ha già fatto entrare l'utente (cookie e utente nella risposta) e scollegato gli altri
  * dispositivi (token_version): vista «Password cambiata» con il pulsante verso il tracker.
  */
-export function DsResetPasswordForm({ token }: { token: string }) {
+export function DsResetPasswordForm({
+  token,
+  variant = 'reset',
+}: {
+  token: string
+  variant?: PasswordFormVariant
+}) {
+  const copy = COPY[variant]
   const setUser = useAuthStore((s) => s.setUser)
   const [link, setLink] = React.useState<LinkCheck>(() =>
     token ? { status: 'checking' } : { status: 'dead' },
@@ -107,24 +139,31 @@ export function DsResetPasswordForm({ token }: { token: string }) {
     [token, setUser],
   )
 
-  if (done) return <PasswordChanged />
-  if (link.status === 'dead') return <DeadLink />
+  if (done) return variant === 'invite' ? <InviteAccepted /> : <PasswordChanged />
+  if (link.status === 'dead') return variant === 'invite' ? <DeadInvite /> : <DeadLink />
 
   const clearError = () => setFormError(null)
 
   return (
     <>
-      <h1 className="ds-title">Scegli una password nuova</h1>
+      <h1 className="ds-title">{copy.title}</h1>
       <p className="mt-2 text-ds-ink-muted" aria-live="polite">
         {link.status === 'checking' ? (
           'Controllo il link…'
         ) : link.email ? (
-          <>
-            Per l&apos;account{' '}
-            <b className="font-semibold wrap-anywhere text-ds-ink">{link.email}</b>.
-          </>
+          variant === 'invite' ? (
+            <>
+              Il tuo invito a OddWise: scegli la password per entrare con{' '}
+              <b className="font-semibold wrap-anywhere text-ds-ink">{link.email}</b>.
+            </>
+          ) : (
+            <>
+              Per l&apos;account{' '}
+              <b className="font-semibold wrap-anywhere text-ds-ink">{link.email}</b>.
+            </>
+          )
         ) : (
-          'Scegli la password con cui accederai da adesso.'
+          copy.noEmail
         )}
       </p>
 
@@ -147,7 +186,7 @@ export function DsResetPasswordForm({ token }: { token: string }) {
           )}
 
           <DsField>
-            <DsLabel htmlFor="reset-password">Nuova password</DsLabel>
+            <DsLabel htmlFor="reset-password">{copy.passwordLabel}</DsLabel>
             <DsInput
               id="reset-password"
               type={showPassword ? 'text' : 'password'}
@@ -202,7 +241,7 @@ export function DsResetPasswordForm({ token }: { token: string }) {
             >
               {formError.kind === 'dead' ? (
                 <>
-                  Questo link è scaduto o è già stato usato. Richiedi un nuovo link dalla{' '}
+                  {copy.deadInline}{' '}
                   <Link href={RECOVERY_PATH} className={inlineLink}>
                     pagina di recupero
                   </Link>
@@ -220,7 +259,7 @@ export function DsResetPasswordForm({ token }: { token: string }) {
             disabled={isSubmitting}
             aria-busy={isSubmitting || undefined}
           >
-            {isSubmitting ? 'Salvataggio…' : 'Salva la nuova password'}
+            {isSubmitting ? 'Salvataggio…' : copy.submit}
           </DsFormButton>
         </form>
       )}
@@ -273,6 +312,47 @@ function PasswordChanged() {
       <div className="mt-6">
         <DsButton href={POST_AUTH_REDIRECT} variant="primary" size="lg" iconEnd="arrow-right">
           Vai al tracker
+        </DsButton>
+      </div>
+    </div>
+  )
+}
+
+/** §14.383: l'invito scaduto, già usato o senza token. Chi ha già scelto la password entra dal login. */
+function DeadInvite() {
+  return (
+    <div>
+      <Link2Off className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
+      <FocusedTitle>Invito non valido</FocusedTitle>
+      <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
+        Questo invito è scaduto o è già stato usato: il link vale 7 giorni e funziona una volta
+        sola. Se hai già scelto la password, accedi. Altrimenti chiedi un nuovo invito a chi te
+        l&apos;ha mandato, oppure richiedi un link per scegliere la password.
+      </p>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <DsButton href="/login" variant="primary" size="lg" iconEnd="arrow-right">
+          Accedi
+        </DsButton>
+        <DsButton href={RECOVERY_PATH} variant="secondary" size="lg">
+          Richiedi un link
+        </DsButton>
+      </div>
+    </div>
+  )
+}
+
+/** §14.383: dopo il 200 dell'invito il tester è già dentro con la sua password. */
+function InviteAccepted() {
+  return (
+    <div>
+      <Check className="h-8 w-8 text-ds-ink" strokeWidth={2} aria-hidden />
+      <FocusedTitle>Password salvata</FocusedTitle>
+      <p className="ds-body-lg mt-3 text-pretty text-ds-ink-muted">
+        Sei dentro. Le prossime volte entri con la tua email e questa password.
+      </p>
+      <div className="mt-6">
+        <DsButton href={POST_AUTH_REDIRECT} variant="primary" size="lg" iconEnd="arrow-right">
+          Inizia
         </DsButton>
       </div>
     </div>

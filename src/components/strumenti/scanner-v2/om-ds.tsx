@@ -632,6 +632,8 @@ export function OmPagination({
   total,
   onChange,
   unit = 'combinazioni',
+  label = 'Pagine dei risultati',
+  compact = false,
   children,
 }: {
   /** Da zero. */
@@ -640,14 +642,67 @@ export function OmPagination({
   total: number
   onChange: (page: number) => void
   unit?: string
+  /** Il nome della navigazione per i lettori di schermo, se nella pagina ce n'è più d'una. */
+  label?: string
+  /**
+   * Per il piede di un riquadro stretto (le suddivisioni del Report, §14.386): niente bordo
+   * proprio, una riga sola, frecce senza testo con il nome per i lettori di schermo.
+   */
+  compact?: boolean
   children?: React.ReactNode
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const start = total === 0 ? 0 : page * pageSize + 1
   const end = Math.min((page + 1) * pageSize, total)
+  if (compact) {
+    const arrow = cn(
+      dsButtonClass('secondary', 'sm'),
+      'w-8 px-0 disabled:cursor-not-allowed disabled:opacity-50',
+    )
+    return (
+      <nav
+        aria-label={label}
+        className="ds-caption flex items-center justify-between gap-3 border-t border-ds-line pt-3 text-ds-ink-muted tabular-nums"
+      >
+        <span className="min-w-0 truncate">
+          {start === end
+            ? countFormat.format(end)
+            : `${countFormat.format(start)}–${countFormat.format(end)}`}{' '}
+          di {countFormat.format(total)} {unit}
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Pagina precedente"
+            onClick={() => onChange(Math.max(0, page - 1))}
+            disabled={page <= 0}
+            className={arrow}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </button>
+          <span className="whitespace-nowrap" aria-live="polite">
+            <span className="sr-only">Pagina </span>
+            {page + 1}
+            <span aria-hidden> / </span>
+            <span className="sr-only"> di </span>
+            {pages}
+          </span>
+          <button
+            type="button"
+            aria-label="Pagina successiva"
+            onClick={() => onChange(Math.min(pages - 1, page + 1))}
+            disabled={page >= pages - 1}
+            className={arrow}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
+        </span>
+      </nav>
+    )
+  }
   return (
     <nav
-      aria-label="Pagine dei risultati"
+      aria-label={label}
       className="ds-body-sm flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-ds-ink-muted tabular-nums"
     >
       <span>

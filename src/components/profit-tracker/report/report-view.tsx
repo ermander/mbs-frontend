@@ -1,9 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, Calculator, ListChecks, Scale, Trophy, X } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  BarChart3,
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  ListChecks,
+  Scale,
+  Trophy,
+  X,
+} from 'lucide-react'
 
-import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import { DsBadge, type DsBadgeTone } from '@/components/landing/ds-data'
 import { OmDropdown, OmPagination, type OmOption } from '@/components/strumenti/scanner-v2/om-ds'
 import { MonthBars } from '@/components/profit-tracker/dashboard/profit-month-chart'
@@ -24,19 +34,26 @@ import {
   DsStatTile,
   countLabel,
 } from '@/components/profit-tracker/tracker-ds'
+import { ReportMonthTable } from '@/components/profit-tracker/report/report-mesi'
 import { ReportSaldi } from '@/components/profit-tracker/report/report-saldi'
 import { PROFIT_CATEGORIES } from '@/lib/profit-tracker/categories'
 import { MONTH_FULL, dashMoney } from '@/lib/profit-tracker/dashboard'
 import {
   BREAKDOWN_PAGE_SIZE,
+  adjacentMonth,
   breakdownPage,
   breakdownShare,
   buildBreakdown,
+  buildMonthTable,
   buildStatement,
+  monthHasData,
   monthIndexOf,
+  monthlyAverage,
+  monthsOfYear,
   rowCategoryLabel,
   type BreakdownRow,
   type CategoryAmount,
+  type MonthAmounts,
 } from '@/lib/profit-tracker/report'
 import { cn } from '@/lib/utils'
 import { getProfitReport, getProfitReportDetail } from '@/services/api/profit-tracker-client'
@@ -51,7 +68,12 @@ import type {
  * Il Report del tracker sul design OddWise (§14.350): filtri, riquadri del periodo, conto
  * economico (§14.111), barre dei mesi con il mese da approfondire, suddivisioni e dettaglio delle
  * voci. Stesse letture e stessi conti della pagina di prima; il grafico è quello a barre della
- * Dashboard al posto di Recharts. Dal §14.386 le suddivisioni vanno a pagine.
+ * Dashboard al posto di Recharts. Dal §14.389 le suddivisioni vanno a pagine.
+ *
+ * Analisi mese per mese: il mese si apre dal filtro «Mese», dalle barre o dalla tabella «Mese per
+ * mese», e si scorre con le frecce; i riquadri passano al mese con il confronto col mese prima e
+ * con la media. Un clic su una voce delle suddivisioni (identità, conto, categoria) la mette come
+ * filtro, per seguire una sola identità mese per mese.
  */
 
 const DETAIL_PAGE_SIZE = 15
@@ -71,25 +93,8 @@ const KIND_TONE: Record<ProfitReportDetailKind, DsBadgeTone> = {
 
 type ChartMode = 'netto' | 'giocate'
 
-interface MonthDatum {
-  netto: number
-  profittoGiocate: number
-  altreEntrate: number
-  costiAttivita: number
-  spesePersonali: number
-  giocate: number
-  movimenti: number
-}
-
-const EMPTY_MONTH: MonthDatum = {
-  netto: 0,
-  profittoGiocate: 0,
-  altreEntrate: 0,
-  costiAttivita: 0,
-  spesePersonali: 0,
-  giocate: 0,
-  movimenti: 0,
-}
+/** Gli anni del filtro: l'anno in corso e i quattro prima. */
+const YEARS_BACK = 4
 
 const money = (n: number) => dashMoney(n)
 const UNIT_ONE: Record<BreakdownRow['unit'], string> = {
@@ -210,23 +215,10 @@ export function ReportView() {
     }
   }, [detailFilters, detailPage])
 
-  const months: MonthDatum[] = useMemo(() => {
-    const out = Array.from({ length: 12 }, () => ({ ...EMPTY_MONTH }))
-    for (const b of report?.buckets ?? []) {
-      const { year: y, month } = monthIndexOf(b.periodStart)
-      if (y !== year) continue
-      out[month] = {
-        netto: b.netto,
-        profittoGiocate: b.profittoGiocate,
-        altreEntrate: b.altreEntrate,
-        costiAttivita: b.costiAttivita,
-        spesePersonali: b.spesePersonali,
-        giocate: b.giocate,
-        movimenti: b.movimenti,
-      }
-    }
-    return out
-  }, [report, year])
+  const months: MonthAmounts[] = useMemo(
+    () => monthsOfYear(report?.buckets ?? [], year),
+    [report, year],
+  )
 
   // Nell'anno in corso i mesi che devono ancora iniziare restano vuoti, come nella Dashboard.
   const currentMonth = year === currentYear ? now.getMonth() : -1
@@ -256,17 +248,72 @@ export function ReportView() {
 
   // §14.111: media e miglior mese sul netto del periodo.
   const kpi = useMemo(() => {
-    const withData = months
+    const { media, mesi } = monthlyAverage(months)
+    const best = months
       .map((m, i) => ({ ...m, i }))
-      .filter((m) => m.giocate > 0 || m.movimenti > 0)
-    const netto = report?.netto ?? 0
-    const media = withData.length > 0 ? netto / withData.length : 0
-    const best = withData.reduce<(MonthDatum & { i: number }) | null>(
-      (acc, m) => (acc == null || m.netto > acc.netto ? m : acc),
-      null,
-    )
-    return { media, best, monthsWithData: withData.length }
-  }, [report, months])
+      .filter(monthHasData)
+      .reduce<(MonthAmounts & { i: number }) | null>(
+        (acc, m) => (acc == null || m.netto > acc.netto ? m : acc),
+        null,
+      )
+    return { media, best, monthsWithData: mesi }
+  }, [months])
+
+  // La tabella «Mese per mese»: fino al mese in corso nell'anno corrente, tutto l'anno prima.
+  const monthTable = useMemo(
+    () => buildMonthTable(months, currentMonth >= 0 ? currentMonth : 11),
+    [months, currentMonth],
+  )
+
+  // Il confronto di gennaio va con il dicembre dell'anno prima, che il report dell'anno non ha: lo
+  // legge a parte, con gli stessi filtri, solo quando gennaio è aperto.
+  const prevDecemberFilters = useMemo(
+    () =>
+      selectedMonth === 0
+        ? {
+            ...baseFilters,
+            fromDate: new Date(Date.UTC(year - 1, 11, 1)).toISOString(),
+            toDate: new Date(Date.UTC(year - 1, 11, 31, 23, 59, 59)).toISOString(),
+          }
+        : null,
+    [baseFilters, selectedMonth, year],
+  )
+  const [prevDecember, setPrevDecember] = useState<{
+    filters: NonNullable<typeof prevDecemberFilters>
+    netto: number | null
+  } | null>(null)
+  useEffect(() => {
+    if (!prevDecemberFilters) return
+    let cancelled = false
+    getProfitReport(prevDecemberFilters)
+      .then((r) => {
+        if (!cancelled) setPrevDecember({ filters: prevDecemberFilters, netto: r.netto })
+      })
+      .catch(() => {
+        if (!cancelled) setPrevDecember({ filters: prevDecemberFilters, netto: null })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [prevDecemberFilters])
+
+  // Il mese aperto: le sue voci, il mese prima (null se non letto) e lo scarto dalla media.
+  const monthView = useMemo(() => {
+    if (selectedMonth == null) return null
+    const m = months[selectedMonth]
+    const prevMonth = (selectedMonth + 11) % 12
+    let prevNetto: number | null
+    let prevLoading = false
+    if (selectedMonth > 0) {
+      prevNetto = months[prevMonth].netto
+    } else if (prevDecember?.filters === prevDecemberFilters) {
+      prevNetto = prevDecember?.netto ?? null
+    } else {
+      prevNetto = null
+      prevLoading = true
+    }
+    return { ...m, prevMonth, prevNetto, prevLoading }
+  }, [selectedMonth, months, prevDecember, prevDecemberFilters])
 
   const holderName = (id: string | null) =>
     id ? (allHolders.find((h) => h.id === id)?.nome ?? 'Sconosciuto') : '—'
@@ -313,10 +360,32 @@ export function ReportView() {
     [visibleRows, accountInfo],
   )
 
-  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => ({
-    value: String(y),
-    label: String(y),
-  }))
+  const yearOptions = Array.from({ length: YEARS_BACK + 1 }, (_, i) => currentYear - i).map(
+    (y) => ({
+      value: String(y),
+      label: String(y),
+    }),
+  )
+  // Nell'anno in corso i mesi che devono ancora iniziare non si possono aprire.
+  const monthOptions = [
+    { value: '', label: "Tutto l'anno" },
+    ...MONTH_FULL.map((name, i) => ({
+      value: String(i),
+      label: name,
+      disabled: currentMonth >= 0 && i > currentMonth,
+    })),
+  ]
+  const monthLimits = { minYear: currentYear - YEARS_BACK, now }
+  const goToMonth = (target: { year: number; month: number } | null) => {
+    if (!target) return
+    setYear(target.year)
+    setSelectedMonth(target.month)
+  }
+  const prevTarget =
+    selectedMonth == null ? null : adjacentMonth(year, selectedMonth, -1, monthLimits)
+  const nextTarget =
+    selectedMonth == null ? null : adjacentMonth(year, selectedMonth, 1, monthLimits)
+  const toggleMonth = (m: number) => setSelectedMonth((prev) => (prev === m ? null : m))
   const holderOptions: OmOption[] = useMemo(
     () =>
       allHolders
@@ -363,9 +432,7 @@ export function ReportView() {
           <ReportSaldi />
         </div>
 
-        <div
-          className={cn(DS_PANEL, 'grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-4')}
-        >
+        <div className={cn(DS_PANEL, 'grid grid-cols-2 gap-4 px-6 py-5 lg:grid-cols-5')}>
           <GSelect
             id="report-anno"
             label="Anno"
@@ -377,8 +444,17 @@ export function ReportView() {
               setSelectedMonth(null)
             }}
           />
+          <GSelect
+            id="report-mese"
+            label="Mese"
+            size="sm"
+            options={monthOptions}
+            value={selectedMonth == null ? '' : String(selectedMonth)}
+            onChange={(v) => setSelectedMonth(v === '' ? null : Number(v))}
+          />
           <OmDropdown
             id="report-identita"
+            className="col-span-2 lg:col-span-1"
             label="Identità"
             allLabel="Tutte le identità"
             single
@@ -390,6 +466,7 @@ export function ReportView() {
           />
           <OmDropdown
             id="report-conto"
+            className="col-span-2 lg:col-span-1"
             label="Conto scommesse"
             allLabel="Tutti i conti"
             single
@@ -402,6 +479,7 @@ export function ReportView() {
           />
           <OmDropdown
             id="report-categoria"
+            className="col-span-2 lg:col-span-1"
             label="Categoria"
             allLabel="Tutte le categorie"
             single
@@ -452,50 +530,130 @@ export function ReportView() {
         )}
       </div>
 
-      <DsSection id="h-report-anno" title={`Anno ${year}`}>
-        <div className={DS_TILE_GRID}>
-          <DsStatTile
-            label={`Netto ${year}`}
-            value={report?.netto ?? 0}
-            note="Giocate, meno costi, più entrate, meno spese"
-            icon={Scale}
-            signed
-            isLoading={isLoadingReport}
-          />
-          <DsStatTile
-            label={`Profitto giocate ${year}`}
-            value={report?.profittoGiocate ?? 0}
-            note={
-              isLoadingReport
-                ? ' '
-                : `${report?.giocate ?? 0} ${report?.giocate === 1 ? 'giocata' : 'giocate'}`
-            }
-            icon={ListChecks}
-            signed
-            isLoading={isLoadingReport}
-          />
-          <DsStatTile
-            label="Netto medio mensile"
-            value={kpi.media}
-            note={
-              kpi.monthsWithData > 0
-                ? `Su ${kpi.monthsWithData} ${kpi.monthsWithData === 1 ? 'mese' : 'mesi'} con voci`
-                : 'Nessun mese con voci'
-            }
-            icon={Calculator}
-            signed
-            isLoading={isLoadingReport}
-          />
-          <DsStatTile
-            label="Miglior mese (netto)"
-            value={kpi.best?.netto ?? 0}
-            text={kpi.best ? MONTH_FULL[kpi.best.i] : '—'}
-            note={kpi.best ? money(kpi.best.netto) : 'Nessun mese con voci'}
-            icon={Trophy}
-            isLoading={isLoadingReport}
-          />
+      <section aria-labelledby="h-report-periodo" className="flex flex-col gap-3">
+        <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 id="h-report-periodo" className="ds-label m-0 text-ds-ink-muted uppercase">
+            {periodo}
+          </h2>
+          {selectedMonth != null && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={!prevTarget}
+                onClick={() => goToMonth(prevTarget)}
+                className={cn(dsButtonClass('secondary', 'sm'), 'gap-1')}
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+                {prevTarget ? MONTH_FULL[prevTarget.month] : 'Mese prima'}
+              </button>
+              <button
+                type="button"
+                disabled={!nextTarget}
+                onClick={() => goToMonth(nextTarget)}
+                className={cn(dsButtonClass('secondary', 'sm'), 'gap-1')}
+              >
+                {nextTarget ? MONTH_FULL[nextTarget.month] : 'Mese dopo'}
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedMonth(null)}
+                className={dsButtonClass('ghost', 'sm')}
+              >
+                Tutto l&apos;anno
+              </button>
+            </div>
+          )}
         </div>
-      </DsSection>
+        {monthView && selectedMonth != null ? (
+          <div className={DS_TILE_GRID}>
+            <DsStatTile
+              label={`Netto di ${MONTH_FULL[selectedMonth].toLowerCase()}`}
+              value={monthView.netto}
+              note="Giocate, meno costi, più entrate, meno spese"
+              icon={Scale}
+              signed
+              isLoading={isLoadingReport}
+            />
+            <DsStatTile
+              label={`Profitto giocate di ${MONTH_FULL[selectedMonth].toLowerCase()}`}
+              value={monthView.profittoGiocate}
+              note={isLoadingReport ? ' ' : countLabel(monthView.giocate, 'giocata', 'giocate')}
+              icon={ListChecks}
+              signed
+              isLoading={isLoadingReport}
+            />
+            <DsStatTile
+              label={`Rispetto a ${MONTH_FULL[monthView.prevMonth].toLowerCase()}${selectedMonth === 0 ? ` ${year - 1}` : ''}`}
+              value={monthView.prevNetto == null ? 0 : monthView.netto - monthView.prevNetto}
+              text={monthView.prevNetto == null ? '—' : undefined}
+              note={
+                monthView.prevNetto == null
+                  ? 'Netto del mese prima non disponibile'
+                  : `Netto del mese prima: ${money(monthView.prevNetto)}`
+              }
+              icon={ArrowLeftRight}
+              signed
+              isLoading={isLoadingReport || monthView.prevLoading}
+            />
+            <DsStatTile
+              label={`Rispetto alla media del ${year}`}
+              value={monthView.netto - kpi.media}
+              note={
+                kpi.monthsWithData > 0
+                  ? `Media mensile: ${money(kpi.media)}`
+                  : 'Nessun mese con voci'
+              }
+              icon={Calculator}
+              signed
+              isLoading={isLoadingReport}
+            />
+          </div>
+        ) : (
+          <div className={DS_TILE_GRID}>
+            <DsStatTile
+              label={`Netto ${year}`}
+              value={report?.netto ?? 0}
+              note="Giocate, meno costi, più entrate, meno spese"
+              icon={Scale}
+              signed
+              isLoading={isLoadingReport}
+            />
+            <DsStatTile
+              label={`Profitto giocate ${year}`}
+              value={report?.profittoGiocate ?? 0}
+              note={
+                isLoadingReport
+                  ? ' '
+                  : `${report?.giocate ?? 0} ${report?.giocate === 1 ? 'giocata' : 'giocate'}`
+              }
+              icon={ListChecks}
+              signed
+              isLoading={isLoadingReport}
+            />
+            <DsStatTile
+              label="Netto medio mensile"
+              value={kpi.media}
+              note={
+                kpi.monthsWithData > 0
+                  ? `Su ${kpi.monthsWithData} ${kpi.monthsWithData === 1 ? 'mese' : 'mesi'} con voci`
+                  : 'Nessun mese con voci'
+              }
+              icon={Calculator}
+              signed
+              isLoading={isLoadingReport}
+            />
+            <DsStatTile
+              label="Miglior mese (netto)"
+              value={kpi.best?.netto ?? 0}
+              text={kpi.best ? MONTH_FULL[kpi.best.i] : '—'}
+              note={kpi.best ? money(kpi.best.netto) : 'Nessun mese con voci'}
+              icon={Trophy}
+              isLoading={isLoadingReport}
+            />
+          </div>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className={cn(DS_PANEL, 'flex min-w-0 flex-col gap-6 px-4 pt-5 pb-6 sm:px-6')}>
@@ -507,7 +665,8 @@ export function ReportView() {
                   : 'Profitto delle giocate mese per mese'}
               </h2>
               <p className="ds-body-sm m-0 text-ds-ink-muted">
-                Scegli un mese per vedere solo quello nel conto economico e nel dettaglio.
+                Clicca un mese per aprirlo: riquadri, conto economico, suddivisioni e dettaglio
+                mostrano solo quello.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -520,15 +679,6 @@ export function ReportView() {
                 value={chartMode}
                 onChange={setChartMode}
               />
-              {selectedMonth != null && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedMonth(null)}
-                  className={dsButtonClass('ghost', 'sm')}
-                >
-                  Tutto l&apos;anno
-                </button>
-              )}
             </div>
           </div>
           {isLoadingReport ? (
@@ -544,7 +694,7 @@ export function ReportView() {
               barTitle={barTitle}
               label={`Grafico a barre del ${chartMode === 'netto' ? 'netto' : 'profitto delle giocate'} del ${year}`}
               selectedMonth={selectedMonth}
-              onSelect={(m) => setSelectedMonth((prev) => (prev === m ? null : m))}
+              onSelect={toggleMonth}
             />
           )}
         </div>
@@ -604,25 +754,46 @@ export function ReportView() {
         </section>
       </div>
 
+      <DsSection id="h-mese-per-mese" title={`Mese per mese · ${year}`}>
+        <ReportMonthTable
+          year={year}
+          rows={monthTable}
+          selectedMonth={selectedMonth}
+          onSelect={toggleMonth}
+          betsOnly={betsOnly}
+          isLoading={isLoadingReport}
+        />
+      </DsSection>
+
       <DsSection id="h-suddivisioni" title={`Suddivisioni · ${periodo}`}>
+        <p className="ds-body-sm m-0 -mt-1 text-ds-ink-muted">
+          Clicca un&apos;identità, un conto o una categoria per filtrare tutto il report su quella
+          voce, anche mese per mese.
+        </p>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <BreakdownCard
             title="Per categoria"
             rows={byCategoria}
             emptyLabel="Nessuna voce nel periodo."
             unit={['categoria', 'categorie']}
+            selectedKey={categoria}
+            onSelect={(key) => setCategoria((prev) => (prev === key ? '' : key))}
           />
           <BreakdownCard
             title="Per identità (netto)"
             rows={byHolder}
             emptyLabel="Nessuna voce nel periodo."
             unit={['identità', 'identità']}
+            selectedKey={holderId}
+            onSelect={(key) => setHolderId((prev) => (prev === key ? '' : key))}
           />
           <BreakdownCard
             title="Per conto (solo giocate)"
             rows={byAccount}
             emptyLabel="Nessun profitto registrato nel periodo."
             unit={['conto', 'conti']}
+            selectedKey={accountId}
+            onSelect={(key) => setAccountId((prev) => (prev === key ? '' : key))}
           />
         </div>
       </DsSection>
@@ -804,20 +975,25 @@ function StatementLine({
 
 /**
  * Una suddivisione: voce, importo, barra in proporzione alla voce più grande, conteggio e quota.
- * Dal §14.386 a pagine di BREAKDOWN_PAGE_SIZE voci: barre e quote restano sul totale di tutte le
+ * Dal §14.389 a pagine di BREAKDOWN_PAGE_SIZE voci: barre e quote restano sul totale di tutte le
  * voci, e l'ultima pagina tiene l'altezza delle altre perché le frecce non si spostino.
+ * Con `onSelect` il nome della voce è un pulsante che la mette come filtro (o lo toglie).
  */
 function BreakdownCard({
   title,
   rows,
   emptyLabel,
   unit,
+  selectedKey,
+  onSelect,
 }: {
   title: string
   rows: BreakdownRow[]
   emptyLabel: string
   /** Come si contano le voci nel piede: singolare e plurale. */
   unit: [string, string]
+  selectedKey?: string
+  onSelect?: (key: string) => void
 }) {
   // La pagina vale per le voci con cui è stata scelta: con un altro mese o altri filtri si
   // riparte dalla prima, senza un effetto che la azzeri.
@@ -838,6 +1014,8 @@ function BreakdownCard({
               row={row}
               share={breakdownShare(row, rows)}
               maxAbs={maxAbs}
+              selected={selectedKey === row.key}
+              onSelect={onSelect}
             />
           ))}
           {Array.from({ length: filler }, (_, i) => (
@@ -875,17 +1053,24 @@ function BreakdownCard({
   )
 }
 
-/** Una voce della suddivisione; `placeholder` è la riga vuota che tiene l'altezza della pagina. */
+/**
+ * Una voce della suddivisione; `placeholder` è la riga vuota che tiene l'altezza della pagina. Con
+ * `onSelect` (mai sulle righe vuote) il nome è un pulsante che mette la voce come filtro.
+ */
 function BreakdownItem({
   row,
   share,
   maxAbs,
   placeholder,
+  selected,
+  onSelect,
 }: {
   row: BreakdownRow
   share: number | null
   maxAbs: number
   placeholder?: boolean
+  selected?: boolean
+  onSelect?: (key: string) => void
 }) {
   return (
     <li
@@ -893,12 +1078,28 @@ function BreakdownItem({
       className={cn('flex flex-col gap-1', placeholder && 'invisible')}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span
-          className="ds-body-sm truncate text-ds-ink"
-          title={placeholder ? undefined : row.label}
-        >
-          {row.label}
-        </span>
+        {onSelect && !placeholder ? (
+          <button
+            type="button"
+            aria-pressed={selected}
+            title={selected ? `Togli il filtro ${row.label}` : `Filtra il report per ${row.label}`}
+            onClick={() => onSelect(row.key)}
+            className={cn(
+              'ds-body-sm min-w-0 cursor-pointer truncate rounded-ds-xs text-left underline-offset-2 hover:text-ds-brand hover:underline',
+              selected ? 'font-semibold text-ds-brand' : 'text-ds-ink',
+              dsFocusRing,
+            )}
+          >
+            {row.label}
+          </button>
+        ) : (
+          <span
+            className="ds-body-sm truncate text-ds-ink"
+            title={placeholder ? undefined : row.label}
+          >
+            {row.label}
+          </span>
+        )}
         <DsAmount value={row.totale} size="sm" />
       </div>
       <div className="flex items-center gap-2">

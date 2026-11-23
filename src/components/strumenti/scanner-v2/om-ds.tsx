@@ -645,7 +645,7 @@ export function OmPagination({
   /** Il nome della navigazione per i lettori di schermo, se nella pagina ce n'è più d'una. */
   label?: string
   /**
-   * Per il piede di un riquadro stretto (le suddivisioni del Report, §14.386): niente bordo
+   * Per il piede di un riquadro stretto (le suddivisioni del Report, §14.389): niente bordo
    * proprio, una riga sola, frecce senza testo con il nome per i lettori di schermo.
    */
   compact?: boolean

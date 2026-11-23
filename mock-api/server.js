@@ -493,6 +493,24 @@ const WALLET_MOVEMENTS = [
     { id: 'wm8', walletId: null, tipo: 'trasferimento', fromWalletId: 'w1', toWalletId: 'w2', valore: 5, dataRegistrazione: monthDay(12), descrizione: null, categoryId: null, holderId: null, createdAt: monthDay(12), updatedAt: monthDay(12) },
 ];
 const categoryOf = (m) => (m.categoryId ? MOVEMENT_CATEGORIES.find((c) => c.id === m.categoryId) ?? null : null);
+// Report mese per mese: lo storico dei mesi prima di quello in corso (fino al dicembre dell'anno
+// prima, per il confronto di gennaio), solo nel Report e nel suo dettaglio: barre, tabella «Mese
+// per mese» e confronti hanno così più mesi. Giocate archiviate su un conto o movimenti di wallet
+// con la categoria del catalogo e l'identità di riferimento.
+const monthsAgoDay = (k, d) => { const t = new Date(now); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - k); t.setUTCDate(d); t.setUTCHours(10, 0, 0, 0); return t.toISOString(); };
+const REPORT_HISTORY = [
+    [1, 3, 'a1', 'matched_betting', 182.4, 'Benvenuto Sisal'], [1, 11, 'a3', 'surebet', 64.1, 'Surebet Over 2,5'], [1, 19, 'b365-3', 'matched_betting', 96, 'Rimborso Bet365'], [1, 20, 'h3', 'compenso-identita', -80, 'Compenso Lucia'], [1, 27, null, 'spesa-personale', -420, 'Affitto'],
+    [2, 5, 'a2', 'matched_betting', 140, 'Freebet Sisal'], [2, 14, 'a4', 'valuebet', -35.5, 'Valuebet Bwin'], [2, 22, 'h2', 'compenso-identita', -100, 'Compenso Marco'], [2, 25, null, 'stipendio', 1800, 'Stipendio'],
+    [3, 2, 'a3', 'surebet', 48.2, 'Surebet tennis'], [3, 9, 'a1', 'matched_betting', 230, 'Cashback Sisal'], [3, 16, 'b365-3', 'valuebet', -120, 'Valuebet Bet365'], [3, 28, null, 'commissioni', -12.5, 'Commissione prelievo'],
+    [4, 6, 'a5', 'matched_betting', 310, 'Benvenuto Betsson'], [4, 13, 'a2', 'surebet', 22.8, 'Surebet basket'], [4, 21, 'h2', 'compenso-identita', -120, 'Compenso Marco'], [4, 26, null, 'spesa-personale', -380, 'Vacanza'],
+    [5, 4, 'a4', 'matched_betting', 85, 'Freebet Bwin'], [5, 18, 'a1', 'valuebet', 64, 'Valuebet Sisal'], [5, 24, null, 'altra-entrata', 150, 'Rimborso spese'],
+    [6, 7, 'a3', 'surebet', -18.4, 'Surebet annullata'], [6, 15, 'b365-3', 'matched_betting', 205, 'Benvenuto Bet365'], [6, 23, 'h3', 'compenso-identita', -90, 'Compenso Lucia'],
+    [7, 3, 'a1', 'matched_betting', 120, 'Ricarica bonus Sisal'], [7, 17, 'a5', 'valuebet', 74.6, 'Valuebet Betsson'], [7, 25, null, 'stipendio', 1800, 'Stipendio'],
+    [8, 8, 'a2', 'matched_betting', 260, 'Benvenuto Sisal'], [8, 19, 'a4', 'surebet', 31, 'Surebet calcio'], [8, 22, null, 'spesa-personale', -250, 'Spesa personale'],
+    [9, 5, 'a1', 'matched_betting', 175, 'Freebet Sisal'], [9, 20, 'a3', 'valuebet', -60, 'Valuebet Betfair'], [9, 26, null, 'commissioni', -8, 'Commissione prelievo'],
+    [10, 9, 'a5', 'matched_betting', 140, 'Rimborso Betsson'], [10, 21, 'b365-3', 'surebet', 18.9, 'Surebet Bet365'],
+    [11, 6, 'a1', 'matched_betting', 210, 'Benvenuto Sisal'], [11, 15, 'a2', 'valuebet', 42, 'Valuebet Sisal'], [11, 22, 'h2', 'compenso-identita', -70, 'Compenso Marco'],
+].map(([k, d, who, categoria, importo, nome], i) => ({ id: `rh${i + 1}`, data: monthsAgoDay(k, d), who, categoria, importo, nome }));
 const withCategory = (m) => { const c = categoryOf(m); return { ...m, categoriaSlug: c ? c.slug : null, categoriaNome: c ? c.nome : null, natura: c ? c.natura : null }; };
 const categoryInUse = (id) => WALLET_MOVEMENTS.filter((m) => m.categoryId === id).length;
 // §14.109: movimenti conto con lo stato del prelievo (w1 ha 60 in attesa da a1).
@@ -578,20 +596,35 @@ function filterRows(q) {
     if (get('market_type')) rows = rows.filter((r) => r.marketTypeKey === get('market_type'));
     if (get('nation')) rows = rows.filter((r) => r.nationName === get('nation'));
     if (get('competitions')) { const ids = new Set(get('competitions').split(',')); rows = rows.filter((r) => ids.has(r.competitionId)); }
-    if (get('bookmaker') && get('cover_bookmakers')) {
-        // §14.102: one leg on a chosen book, every other leg on a cover bookmaker.
-        const b = new Set(get('bookmaker').split(',')); const c = new Set(get('cover_bookmakers').split(','));
-        rows = rows.filter((r) => r.legs.some((leg, i) => b.has(leg.bookmakerSlug) && r.legs.every((o, j) => j === i || c.has(o.bookmakerSlug))));
-    } else if (get('bookmaker')) { const b = new Set(get('bookmaker').split(',')); rows = rows.filter((r) => r.legs.some((l) => b.has(l.bookmakerSlug))); }
-    else if (get('cover_bookmakers')) { const c = new Set(get('cover_bookmakers').split(',')); rows = rows.filter((r) => r.legs.every((l) => c.has(l.bookmakerSlug))); }
     if (get('allowed_bookmakers')) { const s = new Set(get('allowed_bookmakers').split(',')); rows = rows.filter((r) => r.legs.every((l) => s.has(l.bookmakerSlug))); }
     if (get('min_rating')) rows = rows.filter((r) => r.rating >= parseFloat(get('min_rating')));
     if (get('max_rating')) rows = rows.filter((r) => r.rating <= parseFloat(get('max_rating')));
-    const minO = get('min_odds') ? parseFloat(get('min_odds')) : null;
-    const maxO = get('max_odds') ? parseFloat(get('max_odds')) : null;
-    if (minO != null || maxO != null) {
-        const inRange = (o) => (minO == null || o >= minO) && (maxO == null || o <= maxO);
-        rows = rows.filter((r) => (r.matchType === 'back_lay' ? inRange(r.legs[0].odds) : r.legs.some((l) => inRange(l.odds))));
+    // §14.386 (matcher/stake-leg.ts of the backend): `bookmaker`, `cover_bookmakers` and the price
+    // bounds pick the leg the stake goes on («Puntata»): on a main book, every other leg on a cover,
+    // its price in the range. A dutch row comes back with that leg first; a back/lay keeps the BACK
+    // first (an exchange chosen as main book still matches its LAY).
+    const stake = {
+        b: get('bookmaker') ? new Set(get('bookmaker').split(',')) : null,
+        c: get('cover_bookmakers') ? new Set(get('cover_bookmakers').split(',')) : null,
+        min: get('min_odds') ? parseFloat(get('min_odds')) : null,
+        max: get('max_odds') ? parseFloat(get('max_odds')) : null,
+    };
+    const inRange = (o) => (stake.min == null || o >= stake.min) && (stake.max == null || o <= stake.max);
+    const canTake = (r, i) => (!stake.b || stake.b.has(r.legs[i].bookmakerSlug)) && inRange(r.legs[i].odds)
+        && (!stake.c || r.legs.every((o, j) => j === i || stake.c.has(o.bookmakerSlug)));
+    const stakeIndex = (r) => {
+        if (r.matchType === 'back_lay') {
+            if (canTake(r, 0)) return 0;
+            const layOk = stake.b && stake.b.has(r.legs[1].bookmakerSlug) && (!stake.c || stake.c.has(r.legs[0].bookmakerSlug)) && inRange(r.legs[0].odds);
+            return layOk ? 0 : -1;
+        }
+        return r.legs.findIndex((_, i) => canTake(r, i));
+    };
+    if (stake.b || stake.c || stake.min != null || stake.max != null) {
+        rows = rows.filter((r) => stakeIndex(r) >= 0).map((r) => {
+            const i = stakeIndex(r);
+            return i > 0 ? { ...r, legs: [r.legs[i], ...r.legs.filter((_, k) => k !== i)] } : r;
+        });
     }
     if (get('search')) { const s = get('search').toLowerCase(); rows = rows.filter((r) => `${r.homeName} ${r.awayName} ${r.competitionName}`.toLowerCase().includes(s)); }
     if (get('start_time_from')) rows = rows.filter((r) => r.startTime >= get('start_time_from'));
@@ -1569,6 +1602,19 @@ const server = http.createServer(async (req, res) => {
                 if ((holderId && h !== holderId) || (categoria && c.slug !== categoria)) continue;
                 rows.push({ importo: m.tipo === 'ricarica' ? m.valore : -m.valore, data: m.dataRegistrazione, accountId: null, bookId: null, holderId: h, sezione: c.natura, categoria: c.slug, categoriaNome: c.nome, refId: `wm:${m.id}`, kind: m.tipo, id: m.id, nome: m.descrizione ?? null, walletId: m.walletId });
             }
+        }
+        for (const r of REPORT_HISTORY) {
+            if (!inWindow(r.data) || (categoria && r.categoria !== categoria)) continue;
+            const acc = ACCOUNTS.find((x) => x.id === r.who);
+            if (acc) {
+                if ((holderId && acc.holderId !== holderId) || (accountId && acc.id !== accountId) || (bookId && acc.bookId !== bookId)) continue;
+                rows.push({ importo: r.importo, data: r.data, accountId: acc.id, bookId: acc.bookId, holderId: acc.holderId, sezione: 'giocate', categoria: r.categoria, categoriaNome: null, refId: `rh:${r.id}`, kind: 'bet', id: r.id, nome: r.nome, walletId: null });
+                continue;
+            }
+            const c = MOVEMENT_CATEGORIES.find((x) => x.slug === r.categoria);
+            const h = r.who ?? 'h1';
+            if (!c || accountId || bookId || (holderId && h !== holderId)) continue;
+            rows.push({ importo: r.importo, data: r.data, accountId: null, bookId: null, holderId: h, sezione: c.natura, categoria: c.slug, categoriaNome: c.nome, refId: `rh:${r.id}`, kind: r.importo > 0 ? 'ricarica' : 'spesa', id: r.id, nome: r.nome, walletId: 'w1' });
         }
         return rows;
     };

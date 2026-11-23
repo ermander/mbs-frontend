@@ -5,12 +5,106 @@
  */
 
 import { getCategoryLabel } from '@/lib/profit-tracker/categories'
-import type { ProfitReportRow, ProfitReportSezione } from '@/types/profit-tracker'
+import type {
+  ProfitReportBucket,
+  ProfitReportRow,
+  ProfitReportSezione,
+} from '@/types/profit-tracker'
 
 /** Anno e mese (UTC) di un periodStart ISO del backend. */
 export function monthIndexOf(periodStart: string): { year: number; month: number } {
   const d = new Date(periodStart)
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() }
+}
+
+/** Le voci del conto economico di un mese, dai bucket mensili del report. */
+export interface MonthAmounts {
+  netto: number
+  profittoGiocate: number
+  altreEntrate: number
+  costiAttivita: number
+  spesePersonali: number
+  giocate: number
+  movimenti: number
+}
+
+export const EMPTY_MONTH: MonthAmounts = {
+  netto: 0,
+  profittoGiocate: 0,
+  altreEntrate: 0,
+  costiAttivita: 0,
+  spesePersonali: 0,
+  giocate: 0,
+  movimenti: 0,
+}
+
+/** I dodici mesi di `year` dai bucket del report (i mesi senza bucket restano a zero). */
+export function monthsOfYear(buckets: ProfitReportBucket[], year: number): MonthAmounts[] {
+  const out = Array.from({ length: 12 }, () => ({ ...EMPTY_MONTH }))
+  for (const b of buckets) {
+    const { year: y, month } = monthIndexOf(b.periodStart)
+    if (y !== year) continue
+    out[month] = {
+      netto: b.netto,
+      profittoGiocate: b.profittoGiocate,
+      altreEntrate: b.altreEntrate,
+      costiAttivita: b.costiAttivita,
+      spesePersonali: b.spesePersonali,
+      giocate: b.giocate,
+      movimenti: b.movimenti,
+    }
+  }
+  return out
+}
+
+/** Un mese con almeno una giocata o un movimento. */
+export const monthHasData = (m: MonthAmounts) => m.giocate > 0 || m.movimenti > 0
+
+export interface MonthTableRow extends MonthAmounts {
+  month: number
+  /** Il netto da gennaio fino a questo mese compreso. */
+  cumulato: number
+  hasData: boolean
+}
+
+/**
+ * La tabella «Mese per mese»: i mesi da gennaio a `lastMonth` compreso (l'ultimo già iniziato
+ * nell'anno in corso, dicembre negli anni passati), con il netto cumulato.
+ */
+export function buildMonthTable(months: MonthAmounts[], lastMonth: number): MonthTableRow[] {
+  let run = 0
+  return months.slice(0, Math.max(0, lastMonth + 1)).map((m, month) => {
+    run += m.netto
+    return { ...m, month, cumulato: run, hasData: monthHasData(m) }
+  })
+}
+
+/** §14.111: il netto medio dei mesi con voci (0 senza mesi con voci). */
+export function monthlyAverage(months: MonthAmounts[]): { media: number; mesi: number } {
+  const withData = months.filter(monthHasData)
+  if (withData.length === 0) return { media: 0, mesi: 0 }
+  return {
+    media: withData.reduce((sum, m) => sum + m.netto, 0) / withData.length,
+    mesi: withData.length,
+  }
+}
+
+/**
+ * Il mese prima e il mese dopo di (year, month), con le frecce del Report: null fuori dagli anni
+ * del filtro (da `minYear`) o dopo il mese in corso.
+ */
+export function adjacentMonth(
+  year: number,
+  month: number,
+  step: -1 | 1,
+  limits: { minYear: number; now: Date },
+): { year: number; month: number } | null {
+  const index = year * 12 + month + step
+  const next = { year: Math.floor(index / 12), month: index % 12 }
+  if (next.year < limits.minYear) return null
+  const nowIndex = limits.now.getFullYear() * 12 + limits.now.getMonth()
+  if (index > nowIndex) return null
+  return next
 }
 
 /** Etichetta di una riga: dal catalogo per i movimenti, statica per le giocate. */
@@ -133,4 +227,23 @@ export function breakdownShare(row: BreakdownRow, rows: BreakdownRow[]): number 
   const totalPositive = rows.filter((r) => r.totale > 0).reduce((sum, r) => sum + r.totale, 0)
   if (totalPositive === 0 || row.totale < 0) return null
   return (row.totale / totalPositive) * 100
+}
+
+/** Quante voci per pagina mostra ogni suddivisione (§14.389). */
+export const BREAKDOWN_PAGE_SIZE = 6
+
+/**
+ * Una pagina di una suddivisione: la pagina chiesta (da 0) riportata dentro i limiti, le sue voci,
+ * il numero di pagine e quante righe vuote servono all'ultima per restare alta come le altre.
+ */
+export function breakdownPage<T>(
+  rows: T[],
+  page: number,
+  pageSize: number = BREAKDOWN_PAGE_SIZE,
+): { page: number; pages: number; items: T[]; filler: number } {
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const current = Math.min(Math.max(0, Math.floor(page)), pages - 1)
+  const items = rows.slice(current * pageSize, (current + 1) * pageSize)
+  const filler = pages > 1 ? pageSize - items.length : 0
+  return { page: current, pages, items, filler }
 }

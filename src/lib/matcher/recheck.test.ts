@@ -183,6 +183,7 @@ describe('what the read of a bookmaker says', () => {
 
   it('every reason for not reading has its own words', () => {
     expect(readOutcomeText(book({ outcome: 'busy' })).label).toBe('Occupato')
+    expect(readOutcomeText(book({ outcome: 'busy' })).detail).toMatch(/non è stato riletto/)
     expect(readOutcomeText(book({ outcome: 'off', detail: 'paused' })).detail).toMatch(/in pausa/)
     expect(readOutcomeText(book({ outcome: 'off', detail: 'disabled' })).detail).toMatch(
       /spenta dal backoffice/,

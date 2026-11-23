@@ -21,8 +21,13 @@ import { LandingNav } from '@/components/landing/landing-nav'
  * non è nota la barra è quella della landing senza Accedi e Inizia gratis, e una sessione
  * scaduta resta sulla pagina con la barra della landing (publicFallback), senza finire sul login.
  *
- * Con `narrow` (solo la landing) barra, sezioni e piè di pagina stanno nella colonna da 1200px del
- * mockup invece che in quella da 1600px dell'app (§14.357).
+ * Con `narrow` (solo la landing) sezioni e piè di pagina stanno nella colonna da 1200px del mockup
+ * invece che in quella a tutta larghezza dell'app (§14.357). La barra no (§14.384, ClickUp
+ * 1amgf8934re): è la stessa di tutte le altre pagine, a tutta larghezza con le voci a destra. Prima
+ * stava anche lei nei 1200px e la barra dell'app di un admin non ci entrava: sopra i 1280px le voci
+ * finivano sotto il nome (Backoffice sopra il nome utente) e non erano allineate con il resto
+ * dell'app; per chi non è entrato il marchio e le voci si spostavano passando dalla landing alle
+ * pagine legali.
  */
 export function SiteShell({
   narrow = false,
@@ -31,13 +36,17 @@ export function SiteShell({
   narrow?: boolean
   children: React.ReactNode
 }) {
+  // Solo su contenuto e piè di pagina: la barra resta nella colonna dell'app (vedi sopra). Non su
+  // un involucro intorno alla barra, che toglierebbe alla Topnav il suo `sticky`. L'involucro di
+  // contenuto e piè di pagina è `contents`: non fa box, e i due restano elementi della colonna flex
+  // del guscio (il contenuto si allarga, il piè di pagina sta in fondo), ma ereditano `--page-max`.
+  const column = narrow && PAGE_COLUMN_NARROW
   return (
     <div
       className={cn(
         dsSerif.variable,
         dsSans.variable,
         'ds-scope flex min-h-screen flex-col bg-ds-surface font-ds-sans text-base leading-6 tracking-normal text-ds-ink antialiased scheme-light',
-        narrow && PAGE_COLUMN_NARROW,
       )}
     >
       <DashboardAuthGuard
@@ -46,8 +55,10 @@ export function SiteShell({
       >
         <Topnav />
       </DashboardAuthGuard>
-      <main className="flex-1">{children}</main>
-      <SignedInSwitch signedIn={<LandingFooter inApp />} fallback={<LandingFooter />} />
+      <div className={cn('contents', column)}>
+        <main className="flex-1">{children}</main>
+        <SignedInSwitch signedIn={<LandingFooter inApp />} fallback={<LandingFooter />} />
+      </div>
     </div>
   )
 }

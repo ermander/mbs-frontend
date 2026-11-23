@@ -21,11 +21,29 @@ export interface BackofficeUser {
 
 interface ListUsersResponse {
   users: BackofficeUser[]
+  /** §14.374: gli utenti della ricerca, su tutte le pagine; assente sui backend più vecchi. */
+  total?: number
 }
 
-export async function getBackofficeUsers(): Promise<BackofficeUser[]> {
-  const { data } = await apiClient.get<ListUsersResponse>('/backoffice/users')
-  return data.users
+export interface BackofficeUsersPage {
+  users: BackofficeUser[]
+  total: number
+}
+
+/**
+ * GET /backoffice/users (§14.374): una pagina di utenti, i più recenti per primi, con la ricerca
+ * `q` su nome, username ed email (ogni parola deve trovarsi). Un backend di prima del §14.374
+ * ignora i parametri e manda tutti gli utenti senza `total`: allora il totale sono quelli arrivati.
+ */
+export async function getBackofficeUsers(params: {
+  limit: number
+  offset: number
+  q?: string
+}): Promise<BackofficeUsersPage> {
+  const { data } = await apiClient.get<ListUsersResponse>('/backoffice/users', {
+    params: { limit: params.limit, offset: params.offset, q: params.q || undefined },
+  })
+  return { users: data.users, total: data.total ?? data.users.length }
 }
 
 /** PATCH /backoffice/users/:id/sections (§14.366): una sezione accesa o spenta per un utente; risponde con la riga aggiornata. */

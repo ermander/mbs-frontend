@@ -41,7 +41,21 @@ const USERS = [
     { id: '11111111-1111-4111-8111-111111111111', email: 'marco@example.com', name: 'Marco Rossi', username: 'marco', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-05-10T09:00:00.000Z', enabled_tools: ['result_btts', ...BASE_SECTIONS], is_active: true },
     { id: '22222222-2222-4222-8222-222222222222', email: 'giulia@example.com', name: 'Giulia Bianchi', username: 'giulia', role: 'USER_ROLE', is_email_verified: false, created_at: '2026-06-02T15:30:00.000Z', enabled_tools: [...BASE_SECTIONS], is_active: true },
     { id: '33333333-3333-4333-8333-333333333333', email: 'ottavio@example.com', name: 'Ottavio Gialli', username: 'ottavio', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-07-14T11:00:00.000Z', enabled_tools: ['offers', 'calculators'], is_active: false },
+    // §14.374: abbastanza utenti per vedere le pagine (25 a pagina) della tabella Utenti.
+    ...Array.from({ length: 40 }, (_, i) => {
+        const nn = String(i + 1).padStart(2, '0');
+        return { id: `44444444-4444-4444-8444-4444444444${nn}`, email: `prova${nn}@example.com`, name: `Utente di prova ${nn}`, username: `prova${nn}`, role: 'USER_ROLE', is_email_verified: i % 3 !== 0, created_at: iso(Date.UTC(2026, 7, 1) + i * 86_400_000), enabled_tools: i % 4 === 0 ? ['offers'] : [...BASE_SECTIONS], is_active: i % 9 !== 0 };
+    }),
 ];
+/** §14.374: GET /backoffice/users come il backend: i più recenti per primi, `q` (ogni parola in nome, username o email), `limit`/`offset`; senza `limit` tutti. */
+const usersPage = (params) => {
+    const words = (params.get('q') || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const rows = USERS.filter((u) => words.every((w) => [u.name, u.username, u.email].some((f) => f.toLowerCase().includes(w))))
+        .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
+    const limit = params.has('limit') ? Math.min(100, Math.max(1, parseInt(params.get('limit'), 10) || 25)) : null;
+    const offset = Math.max(0, parseInt(params.get('offset') || '0', 10) || 0);
+    return { users: limit === null ? rows.slice(offset) : rows.slice(offset, offset + limit), total: rows.length, limit, offset };
+};
 // §14.124: pagina scraper del backoffice (toggle, sport, nota manuale), in memoria.
 // §14.145: pagina «Salute». Report di salute con i campi che la pagina legge e storia delle
 // metriche con le serie per bookmaker (quote scritte/attive, età p50/p90) e quelle globali.
@@ -994,7 +1008,7 @@ const server = http.createServer(async (req, res) => {
             return send(204);
         }
     }
-    if (path === '/api/backoffice/users' && req.method === 'GET') return send(200, { users: USERS });
+    if (path === '/api/backoffice/users' && req.method === 'GET') return send(200, usersPage(url.searchParams));
     // §14.366: una sezione accesa o spenta, ATTIVO / NON ATTIVO (non sul proprio account).
     const sectionsMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/sections$/);
     if (sectionsMatch && req.method === 'PATCH') {

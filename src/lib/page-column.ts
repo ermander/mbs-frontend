@@ -6,6 +6,8 @@
  * della barra di un admin non ci starebbero). Le griglie aggiungono colonne sugli schermi larghi
  * (offerte fino a 6, saldi della dashboard 6 in fila) e i testi da leggere (guida dell'offerta,
  * pagine legali) restano a 720px con l'indice accanto, centrati come un blocco solo (§14.373).
+ * Lo stesso per ogni colonna stretta: profilo, contatti e 404 stanno al centro (§14.382), mai
+ * attaccate a sinistra con la pagina vuota a destra.
  *
  * Prima era la colonna da 1200px del mockup della landing (disegnato su uno schermo da 1440px),
  * copiata in tutte le pagine col restyle: su un portatile da 1512px lasciava 180px vuoti per lato,

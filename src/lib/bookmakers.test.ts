@@ -61,9 +61,15 @@ describe('logos and names', () => {
     expect(bookmakerLogoSrc('totosi')).toBe('/loghi_book/34.png')
   })
 
+  it('has the BetItaly logo (§14.378)', () => {
+    expect(bookmakerLogoSrc('betitaly')).toBe('/loghi_book/betitaly.png')
+    expect(profitTrackerBookLogoSlug({ nome: 'Betitaly.it', externalId: null })).toBe('betitaly')
+    expect(profitTrackerBookLogoSlug({ nome: 'BetItaly', externalId: null })).toBe('betitaly')
+  })
+
   it('lists one logo per brand for the landing carousel, sorted and without duplicates', () => {
     const all = allBookmakerLogoSrcs()
-    expect(all).toHaveLength(49)
+    expect(all).toHaveLength(50)
     expect(new Set(all).size).toBe(all.length)
     expect(all[0]).toBe('/loghi_book/14.png') // 888sport
     expect(all).toContain('/loghi_book/mylotteriesplay.png')

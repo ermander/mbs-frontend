@@ -16,6 +16,7 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   betfairsportsbook: '5',
   betfair: '36',
   betflag: '6',
+  betitaly: 'betitaly',
   betpassion: '46',
   betpoint: '23',
   betsson: '19',

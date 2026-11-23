@@ -4,11 +4,16 @@ import { SiteShell } from '@/components/landing/site-shell'
 
 const CONTACT_EMAIL = 'info@example.com'
 
+/**
+ * Contatti: recapiti a sinistra (380px) e modulo a destra (480px). Dal §14.382 le due colonne
+ * stanno al centro della pagina come un blocco solo (`lg:justify-center`), come il dettaglio
+ * dell'offerta (§14.373): con la pagina a tutta larghezza (§14.357) restavano a sinistra.
+ */
 export default function ContattiPage() {
   return (
     <SiteShell>
       <DsContainer className="py-16 lg:py-24">
-        <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
+        <div className="flex flex-col gap-10 lg:flex-row lg:justify-center lg:gap-16">
           <div className="flex flex-col gap-6 lg:w-[380px] lg:shrink-0">
             <div className="flex flex-col gap-3">
               <DsEyebrow>Contatti</DsEyebrow>

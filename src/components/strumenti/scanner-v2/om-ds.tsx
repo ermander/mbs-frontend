@@ -1,9 +1,9 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight, Search, Trophy } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Search, Trophy, X } from 'lucide-react'
 
-import { dsButtonClass } from '@/components/landing/ds-primitives'
+import { dsButtonClass, dsFocusRing } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
 import { bookmakerLogoSrc, shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
 import { formatOdds, formatRating } from '@/lib/landing-format'
@@ -44,7 +44,9 @@ export interface OmOption {
  * con Esc (il fuoco torna sul pulsante) e con «Fatto». Con `floating` il pannello è `fixed` sul
  * pulsante e si apre verso l'alto se sotto non c'è posto: nei DsModal non resta tagliato dallo
  * scorrimento del modal. Con `floating` e `alignBelow` si apre sempre sotto, allineato al
- * pulsante e largo quanto lui, e l'elenco si accorcia allo spazio che resta sotto.
+ * pulsante e largo quanto lui, e l'elenco si accorcia allo spazio che resta sotto. Con `chips`
+ * le voci scelte stanno nel campo come chips con la ×, che tolgono quella voce senza aprire il
+ * menu; il campo va a capo e cresce in altezza quando non ci stanno su una riga (§14.387).
  */
 export function OmDropdown({
   id,
@@ -61,6 +63,7 @@ export function OmDropdown({
   disabled,
   floating,
   alignBelow,
+  chips,
   className,
 }: {
   id: string
@@ -79,6 +82,8 @@ export function OmDropdown({
   floating?: boolean
   /** Con `floating`: sempre sotto il pulsante e largo quanto lui, mai in su. */
   alignBelow?: boolean
+  /** Le voci scelte come chips con la × dentro il campo (solo a scelta multipla). */
+  chips?: boolean
   className?: string
 }) {
   const [open, setOpen] = React.useState(false)
@@ -170,39 +175,119 @@ export function OmDropdown({
         selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value],
       )
   }
+  const removeChip = (value: string) => {
+    onChange(selected.filter((v) => v !== value))
+    // La × sparisce con la sua chip: il fuoco torna sul campo invece di perdersi nella pagina.
+    buttonRef.current?.focus()
+  }
+  const onTrigger = () => (open ? close(false) : openPanel())
+  const withChips = chips && !single
 
   return (
     <div ref={rootRef} className={cn('relative flex min-w-0 flex-col gap-1.5', className)}>
       <span id={`${id}-label`} className="text-sm leading-5 font-semibold text-ds-ink">
         {label}
       </span>
-      <button
-        ref={buttonRef}
-        id={id}
-        type="button"
-        disabled={disabled}
-        aria-expanded={open}
-        aria-haspopup="true"
-        aria-labelledby={`${id}-label ${id}`}
-        onClick={() => (open ? close(false) : openPanel())}
-        className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-ds-sm border bg-ds-surface-raised text-left text-ds-ink transition-[border-color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-50',
-          size === 'sm' ? 'ds-body-sm h-8 pr-2 pl-2.5' : 'ds-body h-10 pr-2.5 pl-3',
-          open
-            ? 'border-ds-brand shadow-ds-focus'
-            : 'border-ds-line-strong focus-visible:border-ds-brand focus-visible:shadow-ds-focus focus-visible:outline-hidden',
-        )}
-      >
-        <span className="truncate">{display}</span>
-        <span className="inline-flex flex-none items-center gap-1.5">
-          {selected.length > 1 && (
-            <span className="ds-caption rounded-full bg-ds-brand-soft px-1.5 py-px text-ds-brand">
-              {selected.length}
-            </span>
+      {withChips ? (
+        // Il campo è un riquadro con dentro le chips: il pulsante che apre il menu lo copre tutto
+        // da sotto (le chips lasciano passare il clic, tranne la ×), così non ci sono pulsanti
+        // dentro un pulsante.
+        <div
+          className={cn(
+            'relative flex w-full flex-wrap items-center gap-1 rounded-ds-sm border bg-ds-surface-raised pr-8 text-ds-ink transition-[border-color,box-shadow] duration-150',
+            size === 'sm' ? 'min-h-8 py-[3px] pl-[3px]' : 'min-h-10 py-[5px] pl-[5px]',
+            disabled && 'opacity-50',
+            open
+              ? 'border-ds-brand shadow-ds-focus'
+              : 'border-ds-line-strong has-[>button:focus-visible]:border-ds-brand has-[>button:focus-visible]:shadow-ds-focus',
           )}
-          <ChevronDown className="h-4 w-4 text-ds-ink-muted" aria-hidden />
-        </span>
-      </button>
+        >
+          <button
+            ref={buttonRef}
+            id={id}
+            type="button"
+            disabled={disabled}
+            aria-expanded={open}
+            aria-haspopup="true"
+            aria-labelledby={`${id}-label ${id}-value`}
+            onClick={onTrigger}
+            className="absolute inset-0 cursor-pointer rounded-ds-sm outline-hidden disabled:cursor-not-allowed"
+          />
+          {names.length === 0 ? (
+            <span
+              id={`${id}-value`}
+              className={cn(
+                'pointer-events-none relative truncate px-[7px]',
+                size === 'sm' ? 'ds-body-sm' : 'ds-body',
+              )}
+            >
+              {allLabel}
+            </span>
+          ) : (
+            <>
+              <span id={`${id}-value`} className="sr-only">
+                {names.join(', ')}
+              </span>
+              {selected.map((value, i) => (
+                <span
+                  key={value}
+                  className={cn(
+                    'ds-body-sm pointer-events-none relative inline-flex max-w-full items-center rounded-ds-sm bg-ds-brand-soft pl-2 font-semibold text-ds-brand',
+                    size === 'sm' ? 'h-6' : 'h-7',
+                  )}
+                >
+                  <span className="truncate">{names[i]}</span>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    aria-label={`Rimuovi ${names[i]}`}
+                    title={`Rimuovi ${names[i]}`}
+                    onClick={() => removeChip(value)}
+                    className={cn(
+                      'pointer-events-auto inline-flex h-full w-6 flex-none cursor-pointer items-center justify-center rounded-ds-sm transition-colors duration-150 hover:bg-ds-brand/15 disabled:cursor-not-allowed',
+                      dsFocusRing,
+                    )}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </span>
+              ))}
+            </>
+          )}
+          <ChevronDown
+            className="pointer-events-none absolute top-1/2 right-2.5 h-4 w-4 -translate-y-1/2 text-ds-ink-muted"
+            aria-hidden
+          />
+        </div>
+      ) : (
+        <button
+          ref={buttonRef}
+          id={id}
+          type="button"
+          disabled={disabled}
+          aria-expanded={open}
+          aria-haspopup="true"
+          aria-labelledby={`${id}-label ${id}`}
+          onClick={onTrigger}
+          className={cn(
+            'flex w-full items-center justify-between gap-2 rounded-ds-sm border bg-ds-surface-raised text-left text-ds-ink transition-[border-color,box-shadow] duration-150 disabled:cursor-not-allowed disabled:opacity-50',
+            size === 'sm' ? 'ds-body-sm h-8 pr-2 pl-2.5' : 'ds-body h-10 pr-2.5 pl-3',
+            open
+              ? 'border-ds-brand shadow-ds-focus'
+              : 'border-ds-line-strong focus-visible:border-ds-brand focus-visible:shadow-ds-focus focus-visible:outline-hidden',
+          )}
+        >
+          <span className="truncate">{display}</span>
+          <span className="inline-flex flex-none items-center gap-1.5">
+            {selected.length > 1 && (
+              <span className="ds-caption rounded-full bg-ds-brand-soft px-1.5 py-px text-ds-brand">
+                {selected.length}
+              </span>
+            )}
+            <ChevronDown className="h-4 w-4 text-ds-ink-muted" aria-hidden />
+          </span>
+        </button>
+      )}
       {open && (
         <div
           className={cn(

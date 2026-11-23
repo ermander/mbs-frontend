@@ -99,16 +99,33 @@ describe('pageSections', () => {
   })
 
   // §14.351: le offerte del worker non hanno gruppo, e non sono segnalate dagli utenti.
-  it('nel benvenuto e nelle ricorrenti le attive senza gruppo sono offerte del sito', () => {
+  // §14.370: e non hanno intestazione («Offerte dal sito di scommesse» non diceva niente).
+  it('nel benvenuto e nelle ricorrenti le attive senza gruppo non hanno intestazione', () => {
     for (const type of ['benvenuto', 'ricorrenti'] as const) {
       const sections = pageSections(
-        [offer({ id: 'w1', type, group: null }), offer({ id: 's1', type, group: 'Singola' })],
-        [section('Singola', 1), section(null, 23)],
+        [
+          offer({ id: 'w1', type, group: null }),
+          offer({ id: 'e1', type, group: null, expired: true }),
+        ],
+        [section(null, 23), section(null, 2, true)],
+        type,
+      )
+      expect(sections.map((s) => [s.title, s.offers.map((o) => o.id)])).toEqual([
+        [null, ['w1']],
+        ['Scadute', ['e1']],
+      ])
+    }
+  })
+
+  it('con dei gruppi nel tipo, anche su altre pagine, le attive senza gruppo sono «Altre offerte»', () => {
+    for (const type of ['benvenuto', 'ricorrenti'] as const) {
+      const sections = pageSections(
+        [offer({ id: 'w1', type, group: null })],
+        [section('Singola', 10), section(null, 23)],
         type,
       )
       expect(sections.map((s) => [s.title, s.countLabel])).toEqual([
-        ['Singola', '1 offerta'],
-        ['Offerte dal sito di scommesse', '23 offerte'],
+        ['Altre offerte', '23 offerte'],
       ])
     }
   })
@@ -127,22 +144,19 @@ describe('pageSections', () => {
 })
 
 describe('bookOptions', () => {
-  it('mette «Tutti i siti» prima dei siti del backend', () => {
+  // §14.370: «Tutti i siti» è il menu senza scelta, non una voce.
+  it('elenca i siti del backend nel loro ordine, senza «Tutti i siti»', () => {
     expect(bookOptions(['888sport', 'Betpassion']).map((o) => o.label)).toEqual([
-      'Tutti i siti',
       '888sport',
       'Betpassion',
     ])
-    expect(bookOptions([])[0]).toEqual({ value: ALL_BOOKS, label: 'Tutti i siti' })
+    expect(bookOptions([])).toEqual([])
+    expect(bookOptions([], ALL_BOOKS)).toEqual([])
   })
 
   it('tiene fra le voci il sito scelto anche se non ha più offerte', () => {
-    expect(bookOptions(['Snai'], 'Admiral').map((o) => o.value)).toEqual([
-      ALL_BOOKS,
-      'Snai',
-      'Admiral',
-    ])
-    expect(bookOptions(['Snai'], 'Snai')).toHaveLength(2)
+    expect(bookOptions(['Snai'], 'Admiral').map((o) => o.value)).toEqual(['Snai', 'Admiral'])
+    expect(bookOptions(['Snai'], 'Snai')).toHaveLength(1)
   })
 })
 

@@ -26,7 +26,7 @@ import { DsButton, DsCard, dsButtonClass } from '@/components/landing/ds-primiti
 import { BookLogo } from '@/components/offers/offer-parts'
 import { OfferDoneToggle } from '@/components/offers/offer-done-toggle'
 import { OffersSignupDialog } from '@/components/offers/offers-signup'
-import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
+import { OmDropdown, OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
 
 interface OffersView {
   book: string
@@ -109,13 +109,11 @@ export function OffersList({
         className="flex scroll-mt-[calc(var(--topnav-h)+1.5rem)] flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
       >
         {header}
-        <FilterSelect
-          label={OFFERS_COPY.bookFilterLabel}
-          options={guest ? bookOptions([]) : bookOptions(books, view.book)}
+        <BookFilter
+          books={guest ? [] : books}
           value={guest ? ALL_BOOKS : view.book}
           onChange={setBook}
           disabled={guest}
-          hint={guest ? OFFERS_COPY.guestBookFilterHint : undefined}
           className="w-full sm:ml-auto sm:w-[220px] sm:shrink-0"
         />
       </div>
@@ -129,10 +127,12 @@ export function OffersList({
       >
         {shown.map((section) => (
           <section key={section.key} className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-ds-line pb-3">
-              <h2 className="ds-heading">{section.title}</h2>
-              <span className="ds-body-sm text-ds-ink-muted">{section.countLabel}</span>
-            </div>
+            {section.title !== null && (
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-ds-line pb-3">
+                <h2 className="ds-heading">{section.title}</h2>
+                <span className="ds-body-sm text-ds-ink-muted">{section.countLabel}</span>
+              </div>
+            )}
             <ul className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3 min-[87.5rem]:grid-cols-4 min-[112.5rem]:grid-cols-5 min-[140rem]:grid-cols-6">
               {section.offers.map((offer) => (
                 <li key={offer.id} className="flex min-w-0">
@@ -196,73 +196,74 @@ export function OffersList({
 }
 
 /**
- * Il Select del design in taglia sm: etichetta sopra, controllo da 32px con la freccia a destra.
- * Dal §14.358 serve solo al sito; spento (ospiti) mostra `hint` al passaggio.
+ * Il filtro per sito (§14.370): il menu con la ricerca del resto dell'app (OmDropdown in taglia sm,
+ * una scelta sola), che si apre sotto largo quanto il pulsante. Senza scelta è «Tutti i siti» e
+ * «Azzera» ci riporta. Spento (ospiti) resta la select chiusa col lucchetto e l'invito a iscriversi
+ * al passaggio: non c'è niente da cercare.
  */
-function FilterSelect({
-  label,
-  options,
+function BookFilter({
+  books,
   value,
   onChange,
   disabled = false,
-  hint,
   className,
 }: {
-  label: string
-  options: { value: string; label: string }[]
+  books: readonly string[]
   value: string
   onChange: (value: string) => void
   disabled?: boolean
-  hint?: string
   className?: string
 }) {
   const id = useId()
   const hintId = useId()
+  if (!disabled) {
+    return (
+      <OmDropdown
+        id="offerte-filtro-sito"
+        label={OFFERS_COPY.bookFilterLabel}
+        allLabel={OFFERS_COPY.allBooks}
+        single
+        size="sm"
+        floating
+        alignBelow
+        emptyText={OFFERS_COPY.bookSearchEmpty}
+        options={bookOptions(books, value)}
+        selected={value === ALL_BOOKS ? [] : [value]}
+        onChange={(next) => onChange(next[0] ?? ALL_BOOKS)}
+        className={cn('gap-1', className)}
+      />
+    )
+  }
   return (
-    <div className={cn('flex min-w-0 flex-col gap-1', className)} title={hint}>
+    <div
+      className={cn('flex min-w-0 flex-col gap-1', className)}
+      title={OFFERS_COPY.guestBookFilterHint}
+    >
       <label
         htmlFor={id}
-        className={cn(
-          'flex items-center gap-1.5 text-sm leading-5 font-semibold',
-          disabled ? 'text-ds-ink-muted' : 'text-ds-ink',
-        )}
+        className="flex items-center gap-1.5 text-sm leading-5 font-semibold text-ds-ink-muted"
       >
-        {label}
-        {disabled && <Lock aria-hidden className="h-3.5 w-3.5" />}
+        {OFFERS_COPY.bookFilterLabel}
+        <Lock aria-hidden className="h-3.5 w-3.5" />
       </label>
-      <div
-        className={cn(
-          'relative flex h-8 rounded-ds-sm border border-ds-line-strong text-ds-ink transition-[border-color,box-shadow] focus-within:border-ds-brand focus-within:shadow-ds-focus',
-          disabled ? 'bg-ds-surface-sunken text-ds-ink-muted' : 'bg-ds-surface-raised',
-        )}
-      >
+      <div className="relative flex h-8 rounded-ds-sm border border-ds-line-strong bg-ds-surface-sunken text-ds-ink-muted">
         <select
           id={id}
-          value={value}
-          disabled={disabled}
-          aria-describedby={hint ? hintId : undefined}
-          onChange={(event) => onChange(event.target.value)}
-          className={cn(
-            'h-full min-w-0 flex-1 appearance-none border-0 bg-transparent pr-8 pl-3 text-base outline-hidden',
-            disabled ? 'cursor-not-allowed' : 'cursor-pointer',
-          )}
+          value={ALL_BOOKS}
+          disabled
+          aria-describedby={hintId}
+          className="h-full min-w-0 flex-1 cursor-not-allowed appearance-none border-0 bg-transparent pr-8 pl-3 text-base outline-hidden"
         >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          <option value={ALL_BOOKS}>{OFFERS_COPY.allBooks}</option>
         </select>
         <ChevronDown
           aria-hidden
           className="pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 text-ds-ink-muted"
         />
       </div>
-      {hint && (
-        <span id={hintId} className="sr-only">
-          {hint}
-        </span>
-      )}
+      <span id={hintId} className="sr-only">
+        {OFFERS_COPY.guestBookFilterHint}
+      </span>
     </div>
   )
 }

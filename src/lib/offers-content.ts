@@ -127,12 +127,18 @@ export const OFFERS_COPY = {
   openGuide: 'Apri la guida',
   readGuide: 'Leggi la guida',
   exclusivesTitle: 'Segnalate dagli utenti',
-  /** §14.351: le offerte di benvenuto o ricorrenti senza gruppo (quelle del worker). */
-  siteOffersTitle: 'Offerte dal sito di scommesse',
+  /**
+   * §14.370: le attive senza gruppo del benvenuto e delle ricorrenti (quelle del worker) non hanno
+   * titolo; «Altre offerte» solo quando la pagina ha anche dei gruppi, per non confonderle con
+   * l'ultimo. Prima (§14.351) erano «Offerte dal sito di scommesse», che non diceva niente.
+   */
+  ungroupedTitle: 'Altre offerte',
   exclusivesNote:
     "offerte personali che il sito di scommesse propone solo ad alcuni utenti; controlla se l'hai ricevuta anche tu",
   expiredTitle: 'Scadute',
   expiredNote: 'le guide restano leggibili',
+  /** §14.370: il filtro per sito è un menu con la ricerca (OmDropdown), come nel resto dell'app. */
+  bookSearchEmpty: 'Nessun sito di scommesse con questo nome.',
   emptyDescription:
     'Prova con un altro sito di scommesse o guarda tutte le offerte di questo tipo.',
   emptyAction: 'Mostra tutte',
@@ -184,19 +190,17 @@ export function formatOfferDate(isoDate: string): string {
 }
 
 /**
- * Le voci del filtro per il tipo scelto: «Tutti i siti» e i siti che hanno offerte del tipo (dal
- * backend, già in ordine alfabetico). Il sito scelto resta fra le voci anche se non ne ha più
- * (un indirizzo vecchio), così il menu mostra quello che la pagina sta filtrando.
+ * Le voci del filtro per il tipo scelto: i siti che hanno offerte del tipo (dal backend, già in
+ * ordine alfabetico). Il sito scelto resta fra le voci anche se non ne ha più (un indirizzo
+ * vecchio), così il menu mostra quello che la pagina sta filtrando. «Tutti i siti» non è una voce
+ * dal §14.370: è il menu senza scelta, e «Azzera» ci riporta.
  */
 export function bookOptions(
   books: readonly string[],
   selected: string = ALL_BOOKS,
 ): { value: string; label: string }[] {
   const names = selected === ALL_BOOKS || books.includes(selected) ? books : [...books, selected]
-  return [
-    { value: ALL_BOOKS, label: OFFERS_COPY.allBooks },
-    ...names.map((name) => ({ value: name, label: name })),
-  ]
+  return names.map((name) => ({ value: name, label: name }))
 }
 
 export interface OfferBadge {
@@ -226,7 +230,8 @@ export function offerBadge(offer: Offer): OfferBadge {
 
 export interface OfferSection {
   key: string
-  title: string
+  /** null: la sezione non ha intestazione (né titolo né numero), le carte vanno subito sotto. */
+  title: string | null
   countLabel: string
   expired: boolean
   offers: Offer[]
@@ -237,9 +242,10 @@ export interface OfferSection {
  * loro ordine (un gruppo per sezione, poi tutte le scadute insieme); il numero accanto al titolo è
  * quello della sezione intera, anche quando continua nella pagina dopo. Sezioni vuote mai.
  *
- * §14.351: le attive senza gruppo sono «Segnalate dagli utenti» solo fra le esclusive; nel
- * benvenuto e nelle ricorrenti (le offerte del worker non hanno gruppo) sono le offerte del sito
- * di scommesse, senza la nota delle offerte personali.
+ * §14.351: le attive senza gruppo sono «Segnalate dagli utenti» solo fra le esclusive, con la nota
+ * delle offerte personali. §14.370: nel benvenuto e nelle ricorrenti (le offerte del worker non
+ * hanno gruppo) non hanno intestazione, perché sono tutte offerte dei siti di scommesse; se il tipo
+ * ha anche dei gruppi (su qualunque pagina) diventano «Altre offerte», col loro numero.
  */
 export function pageSections(
   offers: readonly Offer[],
@@ -263,11 +269,13 @@ export function pageSections(
       ]
     }
     const exclusives = section.group === null && type === 'esclusive'
+    const ungroupedTitle = sections.some((s) => !s.expired && s.group !== null)
+      ? OFFERS_COPY.ungroupedTitle
+      : null
     return [
       {
         key: section.group ?? 'tutte',
-        title:
-          section.group ?? (exclusives ? OFFERS_COPY.exclusivesTitle : OFFERS_COPY.siteOffersTitle),
+        title: section.group ?? (exclusives ? OFFERS_COPY.exclusivesTitle : ungroupedTitle),
         countLabel: exclusives
           ? `${offersCountLabel(section.count)} · ${OFFERS_COPY.exclusivesNote}`
           : offersCountLabel(section.count),

@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  EMPTY_MONTH,
+  adjacentMonth,
   breakdownShare,
   buildBreakdown,
+  buildMonthTable,
   buildStatement,
   monthIndexOf,
+  monthlyAverage,
+  monthsOfYear,
 } from '@/lib/profit-tracker/report'
-import type { ProfitReportRow } from '@/types/profit-tracker'
+import type { ProfitReportBucket, ProfitReportRow } from '@/types/profit-tracker'
 
 const row = (over: Partial<ProfitReportRow>): ProfitReportRow => ({
   periodStart: '2026-03-01T00:00:00.000Z',
@@ -85,5 +90,60 @@ describe('report', () => {
     ])
     expect(breakdownShare(rows[0], rows)).toBe(80)
     expect(breakdownShare(rows[2], rows)).toBeNull()
+  })
+
+  it("mette i bucket dell'anno nei dodici mesi e ignora gli altri anni", () => {
+    const bucket = (periodStart: string, netto: number): ProfitReportBucket => ({
+      ...EMPTY_MONTH,
+      periodStart,
+      netto,
+      nettoAttivita: netto,
+      profittoGiocate: netto,
+      totale: netto,
+      giocate: 1,
+    })
+    const months = monthsOfYear(
+      [
+        bucket('2026-01-01T00:00:00.000Z', 50),
+        bucket('2026-03-01T00:00:00.000Z', -20),
+        bucket('2025-12-01T00:00:00.000Z', 999),
+      ],
+      2026,
+    )
+    expect(months).toHaveLength(12)
+    expect(months.map((m) => m.netto).slice(0, 4)).toEqual([50, 0, -20, 0])
+    expect(months[1]).toEqual(EMPTY_MONTH)
+  })
+
+  it('costruisce la tabella mese per mese fino al mese indicato, con il cumulato', () => {
+    const months = Array.from({ length: 12 }, () => ({ ...EMPTY_MONTH }))
+    months[0] = { ...EMPTY_MONTH, netto: 100, giocate: 2 }
+    months[2] = { ...EMPTY_MONTH, netto: -30, movimenti: 1 }
+    months[5] = { ...EMPTY_MONTH, netto: 999, giocate: 1 }
+    const table = buildMonthTable(months, 3)
+    expect(table.map((r) => [r.month, r.netto, r.cumulato, r.hasData])).toEqual([
+      [0, 100, 100, true],
+      [1, 0, 100, false],
+      [2, -30, 70, true],
+      [3, 0, 70, false],
+    ])
+    expect(buildMonthTable(months, -1)).toEqual([])
+  })
+
+  it('fa la media del netto sui soli mesi con voci', () => {
+    const months = Array.from({ length: 12 }, () => ({ ...EMPTY_MONTH }))
+    expect(monthlyAverage(months)).toEqual({ media: 0, mesi: 0 })
+    months[0] = { ...EMPTY_MONTH, netto: 100, giocate: 1 }
+    months[1] = { ...EMPTY_MONTH, netto: -40, movimenti: 2 }
+    expect(monthlyAverage(months)).toEqual({ media: 30, mesi: 2 })
+  })
+
+  it('passa al mese prima o dopo attraverso gli anni, senza andare oltre i limiti', () => {
+    const limits = { minYear: 2022, now: new Date(2026, 10, 23) }
+    expect(adjacentMonth(2026, 0, -1, limits)).toEqual({ year: 2025, month: 11 })
+    expect(adjacentMonth(2025, 11, 1, limits)).toEqual({ year: 2026, month: 0 })
+    expect(adjacentMonth(2026, 9, 1, limits)).toEqual({ year: 2026, month: 10 })
+    expect(adjacentMonth(2026, 10, 1, limits)).toBeNull()
+    expect(adjacentMonth(2022, 0, -1, limits)).toBeNull()
   })
 })

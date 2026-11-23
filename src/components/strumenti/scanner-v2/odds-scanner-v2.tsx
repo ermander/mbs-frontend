@@ -15,6 +15,8 @@ import { bookmakersParam, coverBookmakersParam } from '@/lib/matcher/bookmaker-p
 import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildMultiplaBet } from '@/lib/calculators/bet-payloads'
 import { matcherRowKey } from '@/lib/matcher/format'
+import { recheckTargetOfRow } from '@/lib/matcher/recheck'
+import { hasRole } from '@/lib/tools'
 import {
   inMultiplaWindow,
   matcherRowToMultiplaEvent,
@@ -27,6 +29,10 @@ import type { MatcherFilters, MatcherMeta, MatcherResult } from '@/types/matcher
 import { multiplaEventKey, type MultiplaEvent } from '@/types/multipla-event'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
 import { MatcherCalculatorPanel } from './matcher-calculator-panel'
+import {
+  OddsRecheckDialog,
+  useOddsRecheck,
+} from '@/components/strumenti/recheck/odds-recheck-dialog'
 import {
   EMPTY_FILTERS,
   SHARED_AMOUNT_KEYS,
@@ -347,6 +353,19 @@ export function OddsScannerV2() {
       .finally(() => setRefreshing(false))
   }, [query, applyResults, loadMeta, fetchResults])
 
+  // «Ricalcola» (§14.390): the on-demand read of a row's event, for the admin only (the backend
+  // answers nobody else). A read reloads the rows, as «Aggiorna» does.
+  const canRecheck = useAuthStore((s) => hasRole(s.user, 'ADMIN_ROLE'))
+  const recheck = useOddsRecheck(refresh)
+  const startRecheck = recheck.open
+  const openRecheck = useCallback(
+    (row: MatcherResult) => {
+      const target = recheckTargetOfRow(row)
+      if (target) startRecheck(target)
+    },
+    [startRecheck],
+  )
+
   // The page is light (ds-*): the accounts dialog of the multipla takes the same palette through
   // the bridge of the calculators while it is open (the calculator panel holds its own).
   useEffect(() => (multiplaSaveOpen ? holdCalcBridge() : undefined), [multiplaSaveOpen])
@@ -587,6 +606,7 @@ export function OddsScannerV2() {
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
           onOpenCalculator={openCalculator}
+          onRecheck={!free && canRecheck ? openRecheck : undefined}
           onResetFilters={resetFilters}
           multipla={free ? undefined : multiplaSelection}
         />
@@ -601,6 +621,7 @@ export function OddsScannerV2() {
           canSave={!free}
         />
       )}
+      {!free && canRecheck && <OddsRecheckDialog recheck={recheck} />}
       {!free && (
         <AssignAccountsModal
           open={multiplaSaveOpen}

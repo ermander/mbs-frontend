@@ -219,15 +219,24 @@ export function amount(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? '—' : formatMoney(value, { sign: false })
 }
 
+/** Un'informazione in più nel riepilogo di «Profitti» (la quota netta di una gamba exchange). */
+export interface CalcProfitsDetail {
+  key: string
+  label: string
+  value: string
+}
+
 /**
  * Sezione «Profitti»: etichetta a sinistra, esborso e guadagno minimo a destra, sotto la tabella o
- * il riquadro che spiega cosa manca.
+ * il riquadro che spiega cosa manca. Le informazioni di `details` stanno nella stessa riga, prima
+ * dell'esborso, così esborso e guadagno restano sul bordo destro come negli altri calcolatori.
  */
 export function CalcProfits({
   outlayLabel = 'Esborso totale',
   outlay,
   gainLabel = 'Guadagno minimo',
   minGain,
+  details,
   children,
 }: {
   outlayLabel?: string
@@ -235,8 +244,18 @@ export function CalcProfits({
   /** «Guadagno minimo», o il risultato che il calcolatore sa dare (la multipla). */
   gainLabel?: string
   minGain: number | null
+  details?: CalcProfitsDetail[]
   children: React.ReactNode
 }) {
+  const summary: CalcProfitsDetail[] = [
+    ...(details ?? []),
+    { key: 'outlay', label: outlayLabel, value: amount(outlay) },
+    {
+      key: 'gain',
+      label: gainLabel,
+      value: minGain == null || !Number.isFinite(minGain) ? '—' : formatMoney(minGain),
+    },
+  ]
   return (
     <section aria-labelledby="calc-profits-title">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-ds-line pb-2">
@@ -244,10 +263,15 @@ export function CalcProfits({
           Profitti
         </h2>
         <span className="ds-body-sm text-ds-ink-muted">
-          {outlayLabel} <b className="ds-num text-ds-ink">{amount(outlay)}</b> · {gainLabel}{' '}
-          <b className="ds-num text-ds-ink">
-            {minGain == null || !Number.isFinite(minGain) ? '—' : formatMoney(minGain)}
-          </b>
+          {summary.map((d, i) => (
+            <React.Fragment key={d.key}>
+              {i > 0 && ' · '}
+              {/* Etichetta e numero vanno a capo insieme (sul telefono la riga si spezza). */}
+              <span className="whitespace-nowrap">
+                {d.label} <b className="ds-num text-ds-ink">{d.value}</b>
+              </span>
+            </React.Fragment>
+          ))}
         </span>
       </div>
       <div className="mt-3">{children}</div>

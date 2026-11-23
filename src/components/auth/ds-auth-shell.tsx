@@ -187,10 +187,15 @@ export function DsCenteredAuthShell({
 }
 
 /** «Ti è tornata in mente? Accedi» nella barra del recupero password (§14.257), come nel design. */
-export function DsBackToLogin() {
+export function DsBackToLogin({
+  prompt = 'Ti è tornata in mente?',
+}: {
+  /** La domanda prima di «Accedi»; /invito (§14.383) chiede «Hai già scelto la password?». */
+  prompt?: string
+} = {}) {
   return (
     <>
-      Ti è tornata in mente?{' '}
+      {prompt}{' '}
       <Link
         href={LANDING_ROUTES.login}
         className={cn(

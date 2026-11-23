@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { Search, Send, SlidersHorizontal, UserPlus } from 'lucide-react'
 import {
   BO_EMPTY_CELL,
   BO_ROW,
@@ -24,14 +24,21 @@ import { cn } from '@/lib/utils'
 import { SECTIONS, type SectionKey } from '@/lib/tools'
 import {
   USERS_PAGE_SIZE,
+  backendErrorMessage,
+  expiryLabel,
+  invitePending,
+  italianDay,
   lastUsersPage,
   sectionsSummary,
   usersEmptyMessage,
 } from '@/lib/backoffice-users'
+import { ExpiryPicker, InviteLinkBox, NewUserModal } from '@/components/backoffice/user-invite'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   getBackofficeUsers,
+  resendBackofficeUserInvite,
   setBackofficeUserActive,
+  setBackofficeUserExpiry,
   setBackofficeUserSection,
   type BackofficeUser,
 } from '@/services/api/backoffice-users-client'
@@ -62,12 +69,62 @@ function hasSection(user: BackofficeUser, section: SectionKey): boolean {
 }
 
 /**
+ * §14.383: la scadenza nella finestra «Abilitazioni»: com'è adesso, le scorciatoie e il giorno, e
+ * «Salva scadenza». Spostarla in avanti fa rientrare subito un account scaduto.
+ */
+function ExpiryEditor({
+  user,
+  busy,
+  onSave,
+}: {
+  user: BackofficeUser
+  busy: boolean
+  onSave: (expiresOn: string | null) => void
+}) {
+  const current = user.expires_on ?? null
+  const [draft, setDraft] = useState<string | null>(current)
+  return (
+    <section className="flex flex-col gap-3 rounded-ds-md border border-ds-line p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="ds-body font-semibold text-ds-ink">Scadenza</span>
+        <span
+          className={cn(
+            'ds-body-sm',
+            user.is_expired ? 'font-semibold text-ds-loss' : 'text-ds-ink-muted',
+          )}
+        >
+          {current === null
+            ? 'Adesso: nessuna'
+            : user.is_expired
+              ? `Scaduto il ${italianDay(current)}: non può entrare`
+              : `Adesso: fino al ${italianDay(current)}`}
+        </span>
+      </div>
+      <ExpiryPicker id={`expiry-${user.id}`} value={draft} onChange={setDraft} disabled={busy} />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          disabled={busy || draft === current}
+          onClick={() => onSave(draft)}
+          className={dsButtonClass('secondary', 'sm')}
+        >
+          Salva scadenza
+        </button>
+      </div>
+    </section>
+  )
+}
+
+/**
  * Gestione utenti del Backoffice (§14.122, design §14.365, §14.366): per ogni utente lo stato
  * ATTIVO / NON ATTIVO (NON ATTIVO = fuori dal sito subito e niente accesso finché non lo si
  * riattiva; il proprio account non si disattiva) e le sezioni del sito che può aprire, in una
  * finestra «Abilitazioni» con uno switch «abilitato / non abilitato» per sezione. Gli admin
  * aprono tutte le sezioni. Dal §14.374 una pagina di USERS_PAGE_SIZE utenti alla volta, letta dal
  * backend, con la ricerca su nome, username ed email; cambiare ricerca riporta alla pagina 1.
+ * Dal §14.383 «Nuovo utente» crea l'account di un tester (email, durata, sezioni) e gli manda il
+ * link per scegliere la password; la colonna «Scadenza» e la finestra «Abilitazioni» dicono e
+ * spostano l'ultimo giorno, e rimandano l'invito a chi non ha ancora scelto la password.
  */
 export default function BackofficeUsersPage() {
   const me = useAuthStore((s) => s.user)
@@ -77,6 +134,11 @@ export default function BackofficeUsersPage() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deactivating, setDeactivating] = useState<BackofficeUser | null>(null)
+  const [creating, setCreating] = useState(false)
+  /** §14.383: il link di un invito rimandato quando la mail non è partita, da copiare. */
+  const [inviteLink, setInviteLink] = useState<{ id: string; url: string } | null>(null)
+  /** Cresce per rileggere la pagina (dopo «Nuovo utente») anche a query uguale. */
+  const [reload, setReload] = useState(0)
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -96,8 +158,13 @@ export default function BackofficeUsersPage() {
   }, [search, debouncedSearch])
 
   const query = useMemo(
-    () => ({ limit: USERS_PAGE_SIZE, offset: page * USERS_PAGE_SIZE, q: debouncedSearch.trim() }),
-    [page, debouncedSearch],
+    () => ({
+      limit: USERS_PAGE_SIZE,
+      offset: page * USERS_PAGE_SIZE,
+      q: debouncedSearch.trim(),
+      reload,
+    }),
+    [page, debouncedSearch, reload],
   )
 
   // Le righe in mano sono «per» una query: finché non è quella corrente si sta caricando, e le
@@ -112,7 +179,7 @@ export default function BackofficeUsersPage() {
 
   useEffect(() => {
     let cancelled = false
-    getBackofficeUsers(query)
+    getBackofficeUsers({ limit: query.limit, offset: query.offset, q: query.q })
       .then((data) => {
         if (cancelled) return
         // Una pagina oltre la fine (utenti cancellati nel frattempo): si va all'ultima.
@@ -156,8 +223,7 @@ export default function BackofficeUsersPage() {
         setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
         toast.success(done(updated))
       } catch (err) {
-        const message = (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message
+        const message = backendErrorMessage(err)
         toast.error(message ? `Modifica non salvata: ${message}` : 'Modifica non salvata: riprova.')
       } finally {
         setBusy((prev) => {
@@ -190,13 +256,61 @@ export default function BackofficeUsersPage() {
     [run],
   )
 
+  const setExpiry = useCallback(
+    (user: BackofficeUser, expiresOn: string | null) =>
+      run(
+        `${user.id}:expiry`,
+        () => setBackofficeUserExpiry(user.id, expiresOn),
+        (u) =>
+          u.expires_on
+            ? `${u.username}: accesso fino al ${italianDay(u.expires_on)}`
+            : `${u.username}: senza scadenza`,
+      ),
+    [run],
+  )
+
+  /** §14.383: un link nuovo e una mail nuova; se la mail non parte, il link resta da copiare. */
+  const resendInvite = useCallback(
+    (user: BackofficeUser) => {
+      setInviteLink(null)
+      return run(
+        `${user.id}:invite`,
+        async () => {
+          const result = await resendBackofficeUserInvite(user.id)
+          if (!result.emailSent) setInviteLink({ id: user.id, url: result.inviteUrl })
+          return result.user
+        },
+        (u) => `Invito rimandato a ${u.email}`,
+      )
+    },
+    [run],
+  )
+
+  /** Dopo «Nuovo utente»: la prima pagina senza ricerca, dove l'account appena creato sta in cima. */
+  const showNewest = () => {
+    setSearch('')
+    setDebouncedSearch('')
+    setPage(0)
+    setReload((n) => n + 1)
+  }
+
   const editing = users.find((u) => u.id === editingId) ?? null
 
   return (
     <>
       <DsPageHeader
         title="Utenti"
-        description="Tutti gli utenti iscritti alla piattaforma. Un utente NON ATTIVO esce subito dal sito e non può rientrare; da «Abilitazioni» scegli le sezioni che può aprire. Gli amministratori le aprono tutte."
+        description="Tutti gli utenti iscritti alla piattaforma. Un utente NON ATTIVO esce subito dal sito e non può rientrare; da «Abilitazioni» scegli le sezioni che può aprire e fino a quando. Gli amministratori le aprono tutte."
+        actions={
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className={dsButtonClass('primary', 'md')}
+          >
+            <UserPlus className="h-4 w-4" aria-hidden />
+            Nuovo utente
+          </button>
+        }
       />
 
       <div ref={topRef} className="scroll-mt-[calc(var(--topnav-h)+1.5rem)]">
@@ -229,6 +343,7 @@ export default function BackofficeUsersPage() {
               <th className={BO_TH}>Ruolo</th>
               <th className={BO_TH}>Email verificata</th>
               <th className={BO_TH}>Data iscrizione</th>
+              <th className={BO_TH}>Scadenza</th>
               <th className={BO_TH}>Stato</th>
               <th className={BO_TH}>Sezioni</th>
             </tr>
@@ -236,19 +351,20 @@ export default function BackofficeUsersPage() {
           <tbody>
             {firstLoad ? (
               <tr>
-                <td colSpan={8} className={BO_EMPTY_CELL}>
+                <td colSpan={9} className={BO_EMPTY_CELL}>
                   Caricamento degli utenti…
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={8} className={BO_EMPTY_CELL}>
+                <td colSpan={9} className={BO_EMPTY_CELL}>
                   {error ? 'Nessun utente da mostrare.' : usersEmptyMessage(debouncedSearch)}
                 </td>
               </tr>
             ) : (
               users.map((user) => {
                 const active = isActive(user)
+                const expired = active && user.is_expired === true
                 const isAdmin = user.role === 'ADMIN_ROLE'
                 const isMe = me?.id === user.id
                 return (
@@ -281,6 +397,19 @@ export default function BackofficeUsersPage() {
                     <td className={cn(BO_TD, 'whitespace-nowrap text-ds-ink tabular-nums')}>
                       {formatDate(user.created_at)}
                     </td>
+                    <td className={cn(BO_TD, 'whitespace-nowrap tabular-nums')}>
+                      <span
+                        className={cn(
+                          'block',
+                          user.is_expired ? 'font-semibold text-ds-loss' : 'text-ds-ink',
+                        )}
+                      >
+                        {expiryLabel(user)}
+                      </span>
+                      {invitePending(user) && (
+                        <span className="ds-body-sm block text-ds-ink-muted">Invito in attesa</span>
+                      )}
+                    </td>
                     <td className={BO_TD}>
                       <span className="flex items-center gap-2 whitespace-nowrap">
                         <BoSwitch
@@ -296,10 +425,19 @@ export default function BackofficeUsersPage() {
                         <span
                           className={cn(
                             'ds-body-sm font-semibold',
-                            active ? 'text-ds-profit' : 'text-ds-loss',
+                            expired
+                              ? 'text-ds-warning'
+                              : active
+                                ? 'text-ds-profit'
+                                : 'text-ds-loss',
                           )}
+                          title={
+                            expired
+                              ? 'Attivo ma scaduto: non entra finché non sposti la scadenza da «Abilitazioni»'
+                              : undefined
+                          }
                         >
-                          {active ? 'ATTIVO' : 'NON ATTIVO'}
+                          {expired ? 'SCADUTO' : active ? 'ATTIVO' : 'NON ATTIVO'}
                         </span>
                       </span>
                     </td>
@@ -348,19 +486,58 @@ export default function BackofficeUsersPage() {
 
       <DsModal
         open={editing !== null}
-        onOpenChange={(next) => !next && setEditingId(null)}
+        onOpenChange={(next) => {
+          if (next) return
+          setEditingId(null)
+          setInviteLink(null)
+        }}
         title={editing ? `Abilitazioni di ${editing.username}` : 'Abilitazioni'}
-        description="Le sezioni del sito che l'utente può aprire. Ogni modifica vale subito: una sezione non abilitata sparisce dal suo menu e la pagina gli dice che non è abilitata."
+        description="Fino a quando l'utente può entrare e le sezioni del sito che può aprire. Ogni modifica vale subito: una sezione non abilitata sparisce dal suo menu e la pagina gli dice che non è abilitata."
         footer={
           <button
             type="button"
-            onClick={() => setEditingId(null)}
+            onClick={() => {
+              setEditingId(null)
+              setInviteLink(null)
+            }}
             className={dsButtonClass('primary', 'md')}
           >
             Fatto
           </button>
         }
       >
+        {editing && (
+          <ExpiryEditor
+            key={`${editing.id}:${editing.expires_on ?? ''}`}
+            user={editing}
+            busy={busy.has(`${editing.id}:expiry`)}
+            onSave={(expiresOn) => void setExpiry(editing, expiresOn)}
+          />
+        )}
+        {editing && invitePending(editing) && (
+          <section className="flex flex-col gap-3 rounded-ds-md border border-ds-line p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-col">
+                <span className="ds-body font-semibold text-ds-ink">Invito</span>
+                <span className="ds-body-sm text-ds-ink-muted">
+                  Non ha ancora scelto la password
+                  {editing.invited_at ? `; ultimo invito il ${formatDate(editing.invited_at)}` : ''}
+                  .
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={busy.has(`${editing.id}:invite`)}
+                onClick={() => void resendInvite(editing)}
+                className={dsButtonClass('secondary', 'sm')}
+              >
+                <Send className="h-4 w-4" aria-hidden />
+                Reinvia invito
+              </button>
+            </div>
+            {inviteLink?.id === editing.id && <InviteLinkBox url={inviteLink.url} />}
+          </section>
+        )}
         {editing && (
           <ul className="m-0 flex list-none flex-col divide-y divide-ds-line rounded-ds-md border border-ds-line p-0">
             {SECTIONS.map((s) => {
@@ -390,6 +567,8 @@ export default function BackofficeUsersPage() {
           </ul>
         )}
       </DsModal>
+
+      <NewUserModal open={creating} onOpenChange={setCreating} onCreated={showNewest} />
 
       <BoConfirmModal
         open={deactivating !== null}

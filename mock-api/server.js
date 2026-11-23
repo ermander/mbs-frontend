@@ -35,6 +35,12 @@ const BASE_SECTIONS = ALL_SECTIONS.filter((s) => s !== 'result_btts');
 const user = { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', settings: {}, createdAt: '2026-03-01T10:00:00.000Z', tools: [], sections: [...ALL_SECTIONS], hasPassword: process.env.MOCK_USER_HAS_PASSWORD !== '0' };
 /** §14.366: the 403 of a member read when the mock user is a plain user without that section. */
 const sectionOff = (section) => user.role !== 'ADMIN_ROLE' && Array.isArray(user.sections) && !user.sections.includes(section);
+// §14.383: i giorni sul calendario di Roma, come il backend: l'ultimo giorno di un account e se è passato.
+const mockRomeDay = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(d);
+const mockAddDays = (date, n) => { const [y, m, d] = date.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+function mockDayPlus(n) { return mockAddDays(mockRomeDay(), n); }
+/** La riga come la manda il backend dal §14.383: expires_on, is_expired, has_password, invited_at. */
+const boUserRow = (u) => ({ invited_at: null, has_password: true, expires_on: null, ...u, expires_at: u.expires_on ? `${mockAddDays(u.expires_on, 1)}T00:00:00+01:00` : null, is_expired: Boolean(u.expires_on) && u.expires_on < mockRomeDay() });
 // §14.122: utenti del backoffice con le sezioni abilitate (PATCH /backoffice/users/:id/sections, §14.366) e lo stato (PATCH /active).
 const USERS = [
     { id: 'u1', email: 'admin@example.com', name: 'Admin', username: 'admin', role: 'ADMIN_ROLE', is_email_verified: true, created_at: '2026-03-01T10:00:00.000Z', enabled_tools: [...BASE_SECTIONS], is_active: true },
@@ -42,6 +48,9 @@ const USERS = [
     { id: '22222222-2222-4222-8222-222222222222', email: 'giulia@example.com', name: 'Giulia Bianchi', username: 'giulia', role: 'USER_ROLE', is_email_verified: false, created_at: '2026-06-02T15:30:00.000Z', enabled_tools: [...BASE_SECTIONS], is_active: true },
     { id: '33333333-3333-4333-8333-333333333333', email: 'ottavio@example.com', name: 'Ottavio Gialli', username: 'ottavio', role: 'USER_ROLE', is_email_verified: true, created_at: '2026-07-14T11:00:00.000Z', enabled_tools: ['offers', 'calculators'], is_active: false },
     // §14.374: abbastanza utenti per vedere le pagine (25 a pagina) della tabella Utenti.
+    // §14.383: due tester creati dal Backoffice: Lia non ha ancora scelto la password, Ugo è scaduto.
+    { id: '55555555-5555-4555-8555-555555555501', email: 'lia.tester@example.com', name: 'Lia Tester', username: 'lia.tester@example.com', role: 'USER_ROLE', is_email_verified: true, created_at: ago(3 * 86400), enabled_tools: [...BASE_SECTIONS], is_active: true, invited_at: ago(3 * 86400), has_password: false, expires_on: mockDayPlus(27) },
+    { id: '55555555-5555-4555-8555-555555555502', email: 'ugo.tester@example.com', name: 'Ugo Tester', username: 'ugo.tester@example.com', role: 'USER_ROLE', is_email_verified: true, created_at: ago(40 * 86400), enabled_tools: ['offers', 'oddsmatcher'], is_active: true, invited_at: ago(40 * 86400), has_password: true, expires_on: mockDayPlus(-2) },
     ...Array.from({ length: 40 }, (_, i) => {
         const nn = String(i + 1).padStart(2, '0');
         return { id: `44444444-4444-4444-8444-4444444444${nn}`, email: `prova${nn}@example.com`, name: `Utente di prova ${nn}`, username: `prova${nn}`, role: 'USER_ROLE', is_email_verified: i % 3 !== 0, created_at: iso(Date.UTC(2026, 7, 1) + i * 86_400_000), enabled_tools: i % 4 === 0 ? ['offers'] : [...BASE_SECTIONS], is_active: i % 9 !== 0 };
@@ -54,7 +63,7 @@ const usersPage = (params) => {
         .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
     const limit = params.has('limit') ? Math.min(100, Math.max(1, parseInt(params.get('limit'), 10) || 25)) : null;
     const offset = Math.max(0, parseInt(params.get('offset') || '0', 10) || 0);
-    return { users: limit === null ? rows.slice(offset) : rows.slice(offset, offset + limit), total: rows.length, limit, offset };
+    return { users: (limit === null ? rows.slice(offset) : rows.slice(offset, offset + limit)).map(boUserRow), total: rows.length, limit, offset };
 };
 // §14.124: pagina scraper del backoffice (toggle, sport, nota manuale), in memoria.
 // §14.145: pagina «Salute». Report di salute con i campi che la pagina legge e storia delle
@@ -1067,7 +1076,7 @@ const server = http.createServer(async (req, res) => {
         console.log('  user section:', u.username, JSON.stringify(body));
         u.enabled_tools = u.enabled_tools.filter((t) => t !== body.section);
         if (body.enabled) u.enabled_tools.push(body.section);
-        return send(200, { user: u });
+        return send(200, { user: boUserRow(u) });
     }
     const activeMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/active$/);
     if (activeMatch && req.method === 'PATCH') {
@@ -1077,7 +1086,41 @@ const server = http.createServer(async (req, res) => {
         if (!body.active && u.id === user.id) return send(400, { message: 'Non puoi disattivare il tuo account' });
         console.log('  user active:', u.username, JSON.stringify(body));
         u.is_active = !!body.active;
-        return send(200, { user: u });
+        return send(200, { user: boUserRow(u) });
+    }
+    // §14.383: «Nuovo utente» (verificato, senza password, link di invito). Email con «errore» →
+    // la mail non parte (emailSent false, il BO mostra il link da copiare); 'esiste@example.com' o
+    // un'email già presente → 409.
+    if (path === '/api/backoffice/users' && req.method === 'POST') {
+        const body = await readBody(req);
+        const email = String(body.email || '').trim().toLowerCase();
+        console.log('  new user:', JSON.stringify(body));
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(400, { errors: ['Email non valida'] });
+        if (body.expiresOn !== null && (typeof body.expiresOn !== 'string' || body.expiresOn < mockRomeDay())) return send(400, { message: 'La scadenza non può essere nel passato' });
+        if (email === 'esiste@example.com' || USERS.some((x) => x.email.toLowerCase() === email)) return send(409, { message: 'Esiste già un account con questa email' });
+        const u = { id: `66666666-6666-4666-8666-${String(Date.now()).slice(-12)}`, email, name: String(body.name || '').trim(), username: email, role: 'USER_ROLE', is_email_verified: true, created_at: iso(Date.now()), enabled_tools: ALL_SECTIONS.filter((x) => (body.sections || BASE_SECTIONS).includes(x)), is_active: true, invited_at: iso(Date.now()), has_password: false, expires_on: body.expiresOn };
+        USERS.push(u);
+        return send(201, { user: boUserRow(u), emailSent: !email.includes('errore'), inviteUrl: `http://localhost:3000/invito?token=mock-${u.id.slice(-6)}` });
+    }
+    const expiryMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/expiry$/);
+    if (expiryMatch && req.method === 'PATCH') {
+        const body = await readBody(req);
+        const u = USERS.find((x) => x.id === expiryMatch[1]);
+        if (!u) return send(404, { message: 'Utente non trovato' });
+        console.log('  user expiry:', u.username, JSON.stringify(body));
+        if (body.expiresOn !== null && u.id === user.id) return send(400, { message: 'Non puoi mettere una scadenza al tuo account' });
+        if (body.expiresOn !== null && (typeof body.expiresOn !== 'string' || body.expiresOn < mockRomeDay())) return send(400, { message: 'La scadenza non può essere nel passato' });
+        u.expires_on = body.expiresOn;
+        return send(200, { user: boUserRow(u) });
+    }
+    const inviteMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/invite$/);
+    if (inviteMatch && req.method === 'POST') {
+        const u = USERS.find((x) => x.id === inviteMatch[1]);
+        if (!u) return send(404, { message: 'Utente non trovato' });
+        console.log('  user invite again:', u.username);
+        if (!u.invited_at || u.has_password !== false) return send(409, { message: "L'invito si rimanda solo a un account creato dal Backoffice che non ha ancora scelto la password" });
+        u.invited_at = iso(Date.now());
+        return send(200, { user: boUserRow(u), emailSent: !u.email.includes('errore'), inviteUrl: `http://localhost:3000/invito?token=mock-${u.id.slice(-6)}-${Date.now() % 1000}` });
     }
     const toolsMatch = path.match(/^\/api\/backoffice\/users\/([^/]+)\/tools$/);
     if (toolsMatch && req.method === 'PATCH') {

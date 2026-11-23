@@ -25,6 +25,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   // §14.366: l'account è NON ATTIVO, disattivato dal backoffice.
   google_account_disabled:
     'Il tuo account è disattivato: scrivici dalla pagina Contatti se pensi che sia un errore.',
+  // §14.383: l'account (di un tester) è arrivato alla scadenza decisa dal backoffice.
+  google_account_expired:
+    'Il periodo di accesso del tuo account è terminato: scrivici dalla pagina Contatti se vuoi continuare.',
 }
 
 /**

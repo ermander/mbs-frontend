@@ -7,7 +7,8 @@ import type { MatcherMeta, MatcherResult } from '@/types/matcher'
 /**
  * The «Guadagno» column of the scanner v2: what a row yields with the stake,
  * bonus and rimborso typed in the shared bar, no imbalance, the stake on the
- * BACK leg of a back/lay row and on the first leg of a dutch. The calculator
+ * BACK leg of a back/lay row and on the first leg of a dutch (the main book's
+ * leg when one is chosen: the backend puts it first, §14.386). The calculator
  * modal refines it; this is the number that makes the table readable.
  */
 

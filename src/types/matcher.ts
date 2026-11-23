@@ -103,16 +103,20 @@ export interface MatcherFilters {
   market_type?: string
   min_rating?: number
   max_rating?: number
-  /** Comma-separated slugs: rows with at least one leg on one of them. */
+  /**
+   * Comma-separated slugs: rows whose stake leg («Puntata») sits on one of them (§14.386). The
+   * backend sends each dutch row back with that leg first, so the table and the calculators show
+   * the main book under «Puntata»; a back/lay row keeps the BACK first.
+   */
   bookmaker?: string
   /**
-   * Comma-separated slugs (§14.102): with `bookmaker`, the legs other than the
-   * chosen book must sit on one of them; alone, every leg must.
+   * Comma-separated slugs (§14.102, §14.386): every leg other than the stake leg must sit on one
+   * of them, with or without `bookmaker`.
    */
   cover_bookmakers?: string
   /** Comma-separated slugs: rows whose EVERY leg sits on one of them (§14.95). */
   allowed_bookmakers?: string
-  /** Bounds on the price of the leg the stake goes on (§14.95). */
+  /** Bounds on the price of the leg the stake goes on (§14.95): the main book's leg when `bookmaker` is set (§14.386). */
   min_odds?: number
   max_odds?: number
   nation?: string

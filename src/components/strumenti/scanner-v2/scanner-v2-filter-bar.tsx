@@ -32,9 +32,9 @@ export interface ScannerV2Filters {
   nation: string
   competitionIds: string[]
   marketType: string
-  /** The books the stake goes on (slugs): at least one leg of the row on one of them; none = any. */
+  /** The books the stake goes on (slugs): the «Puntata» leg on one of them (§14.386); none = any. */
   books: string[]
-  /** The books the OTHER legs may sit on (§14.102); none = any book. */
+  /** The books the OTHER legs («Bancata · copertura») may sit on (§14.102, §14.386); none = any book. */
   coverBooks: string[]
   /** The exchanges the other legs may sit on; none = any exchange. */
   exchanges: string[]

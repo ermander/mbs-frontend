@@ -1,4 +1,4 @@
-import { bookmakerLogoSrc, shortBookmakerName } from '@/lib/bookmakers'
+import { profitTrackerBookLogoSlug } from '@/lib/bookmakers'
 import type {
   BetLeg,
   ModalitaSaldo,
@@ -126,15 +126,17 @@ export function createdLabel(iso: string): string {
   return `creata il ${p2(d.getDate())}/${p2(d.getMonth() + 1)} alle ${hm(d)}`
 }
 
-/** Il file del logo di un book del tracker: il collegamento al motore (externalId), poi il nome. */
-export function bookLogoSlug(book: { nome: string; externalId?: string | null }): string {
-  const ext = (book.externalId ?? '').trim().toLowerCase()
-  if (ext && bookmakerLogoSrc(ext)) return ext
-  const byName = shortBookmakerName(book.nome)
-    .toLowerCase()
-    .replace(/\.it$/, '')
-    .replace(/[^a-z0-9]/g, '')
-  return bookmakerLogoSrc(byName) ? byName : ''
+/**
+ * Il file del logo di un book del tracker: il numero del vecchio scanner dei book globali, poi il nome
+ * se è un marchio con il logo, infine il collegamento al motore (externalId); un «Betfair» non
+ * exchange è lo Sportsbook (§14.371).
+ */
+export function bookLogoSlug(book: {
+  nome: string
+  externalId?: string | null
+  isExchange?: boolean
+}): string {
+  return profitTrackerBookLogoSlug(book)
 }
 
 export interface OngoingFilters {

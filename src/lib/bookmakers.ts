@@ -5,7 +5,8 @@ import type { SportType } from '@/types/profit-tracker'
  * Identity of the bookmakers of the internal engine (od_bookmakers slugs) on the
  * frontend: logos, short names, sport labels and the link to the Profit Tracker
  * books. The logo files in `public/loghi_book` are still named after the numeric
- * ids of the RobinOdds scanner removed in §14.100, hence the map below.
+ * ids of the RobinOdds scanner removed in §14.100, hence the map below; the files
+ * added later are named after the slug.
  */
 
 const LOGO_FILE_BY_SLUG: Record<string, string> = {
@@ -18,17 +19,25 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   betpassion: '46',
   betpoint: '23',
   betsson: '19',
+  betwin360: 'betwin360',
   // Bgame, Fastbet, NetBet, Sunbet, Winamax: brands the RobinOdds list never had, files named after the slug.
   bgame: 'bgame',
   bwin: '10',
+  // Casinò di Sanremo, Casinò di Venezia, Gioca7, StarYes: Profit Tracker books only, their slug
+  // is the external id of the global book (§14.132, §14.135-§14.137).
+  casinosanremo: 'casinosanremo',
+  casinovenezia: 'casinovenezia',
   codere: '47',
   daznbet: '17',
   domusbet: '12',
   eplay24: '22',
   eurobet: '13',
   fastbet: 'fastbet',
+  gioca7: 'gioca7',
+  giocodigitale: 'giocodigitale',
   goldbet: '16',
   leovegas: '18',
+  lottomatica: 'lottomatica',
   marathonbet: '1',
   // MyLotteriesPlay: a brand the RobinOdds list never had, its file is named after the slug.
   mylotteriesplay: 'mylotteriesplay',
@@ -41,10 +50,13 @@ const LOGO_FILE_BY_SLUG: Record<string, string> = {
   sisal: '24',
   snai: '26',
   sportbet: '37',
+  sportium: 'sportium',
   stake: '41',
   stanleybet: '30',
   sunbet: 'sunbet',
   starcasino: '31',
+  starvegas: 'starvegas',
+  staryes: 'staryes',
   totosi: '34',
   vincitu: '44',
   williamhill: '33',
@@ -65,14 +77,64 @@ export function bookmakerLogoSrc(slug: string): string | null {
 }
 
 /**
- * The logos of every bookmaker of the engine, one per brand, in slug order: the carousel
- * of the landing ("40 siti di scommesse"). Alt text and names stay out of the landing
+ * The logos of every bookmaker that has one, one per brand, in slug order (the engine's
+ * and the Profit Tracker-only ones). Alt text and names stay out of the landing
  * (landing-content.test.ts), so only the paths are exposed.
  */
 export function allBookmakerLogoSrcs(): string[] {
   return Object.keys(LOGO_FILE_BY_SLUG)
     .sort()
     .map((slug) => `/loghi_book/${LOGO_FILE_BY_SLUG[slug]}.png`)
+}
+
+/**
+ * The global books of the Profit Tracker still carry the old scanner's numeric id as external id
+ * («36» Betfair Exchange, «5» Betfair, «31» StarCasinò): the same number names the logo file.
+ * Ids with no file of that name («48» Gioco Digitale, «50» StarVegas) are not here.
+ */
+const SLUG_BY_LEGACY_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(LOGO_FILE_BY_SLUG)
+    .filter(([, file]) => /^\d+$/.test(file))
+    .map(([slug, file]) => [file, slug]),
+)
+
+/** Book names that do not squash to their slug (accents already folded). */
+const LOGO_SLUG_BY_NAME: Record<string, string> = {
+  betfairexchange: 'betfair',
+  betfairsportbook: 'betfairsportsbook',
+  bw360: 'betwin360',
+  casinodisanremo: 'casinosanremo',
+  casinodivenezia: 'casinovenezia',
+}
+
+/** «Casinò di Sanremo» → «casinodisanremo», «Totosi.it» → «totosi»: lower case, no accents, no «.it». */
+function squashBookName(name: string): string {
+  return shortBookmakerName(name)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\.it$/, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * The slug whose logo a Profit Tracker book shows, '' when there is none. First the old scanner's
+ * number of the global books, then the name when it is a brand with a logo, last the engine link
+ * (external id = slug): a «Lottomatica» linked to `goldbet` for the odds is still Lottomatica. A
+ * «Betfair» that is not an exchange is the sportsbook: the bare name would give it the Exchange logo.
+ */
+export function profitTrackerBookLogoSlug(book: {
+  nome: string
+  externalId?: string | null
+  isExchange?: boolean
+}): string {
+  const ext = (book.externalId ?? '').trim().toLowerCase()
+  if (ext && SLUG_BY_LEGACY_ID[ext]) return SLUG_BY_LEGACY_ID[ext]
+  const name = squashBookName(book.nome)
+  if (name === 'betfair' && book.isExchange === false) return 'betfairsportsbook'
+  const byName = LOGO_SLUG_BY_NAME[name] ?? name
+  if (LOGO_FILE_BY_SLUG[byName]) return byName
+  return ext && LOGO_FILE_BY_SLUG[ext] ? ext : ''
 }
 
 /** "Sisal (PokerStars · Snai)" → "Sisal": the aliases in the display name are noise in a table cell. */

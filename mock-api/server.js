@@ -654,6 +654,112 @@ function freeRows(q) {
     return { ...page, results: page.results.map((r) => ({ ...r, legs: r.legs.map(asSnai) })) };
 }
 
+// §14.390: «Ricalcola», the on-demand read of one event (POST /api/odds-collection/recheck). One
+// scenario per bookmaker, so the dialog shows each of its states: bwin's price of the row had moved
+// (once: it is then stored), goldbet lists the two teams the other way round on a market with a
+// home and an away and nobody knows it, xsport no longer lists the event, betsson was read moments
+// ago; the others confirm. A twin brand is answered under its own name. MOCK_RECHECK_LIMIT (60)
+// requests an hour, then 429; MOCK_RECHECK_DELAY_MS (900) before the answer.
+const RECHECK_OUTCOMES = {
+    '1x2': [['home', '1', 2.1], ['draw', 'X', 3.5], ['away', '2', 3.8]],
+    over_under: [['over', 'Over', 1.95], ['under', 'Under', 1.9]],
+    btts: [['yes', 'GG', 1.9], ['no', 'NG', 1.95]],
+    double_chance: [['1x', '1X', 1.4], ['12', '12', 1.3], ['x2', 'X2', 1.8]],
+    draw_no_bet: [['home', '1', 1.65], ['away', '2', 2.3]],
+    handicap_asian: [['home', '1', 1.9], ['away', '2', 1.95]],
+};
+const RECHECK_LIMIT = parseInt(process.env.MOCK_RECHECK_LIMIT ?? '60', 10) || 60;
+const recheckUsed = [];
+const recheckMoved = new Set();
+function recheckQuotaState() {
+    while (recheckUsed.length && Date.now() - recheckUsed[0] >= 3600e3) recheckUsed.shift();
+    return { limit: RECHECK_LIMIT, remaining: Math.max(0, RECHECK_LIMIT - recheckUsed.length), resetAt: recheckUsed.length ? iso(recheckUsed[0] + 3600e3) : null, windowSeconds: 3600 };
+}
+function recheckAnswer(body) {
+    const sameMarket = (r) => r.eventId === body.eventId && r.canonicalMarketId === body.canonicalMarketId;
+    const sample = ROWS.find(sameMarket);
+    if (!sample) return null;
+    const asked = Array.isArray(body.bookmakers) && body.bookmakers.length ? body.bookmakers : (body.row?.legs ?? []).map((l) => l.bookmaker);
+    const slugs = [...new Set(asked)];
+    const defined = RECHECK_OUTCOMES[sample.marketTypeKey] ?? [['home', '1', 1.9], ['away', '2', 1.9]];
+    const sided = defined.some(([key]) => key === 'home') && defined.some(([key]) => key === 'away');
+    const rowLegs = body.row?.legs ?? [];
+    // The stored price of a bookmaker on an outcome: the leg of a row when there is one, a made-up one otherwise.
+    const stored = (feed, key, fallback, lay) => {
+        for (const r of ROWS.filter(sameMarket)) {
+            const i = r.legs.findIndex((l) => l.bookmakerSlug === feed && l.outcomeKey === key);
+            if (i >= 0 && (r.matchType === 'back_lay' && i > 0) === lay) return r.legs[i].odds;
+        }
+        return Math.round(fallback * (1 + ((feed.length * 7) % 5 - 2) / 100) * 100) / 100;
+    };
+    const price = (odds, layOdds, status, seen) => ({ odds, layOdds, status, lastSeenAt: ago(seen) });
+    let rowGone = false;
+    const bookmakers = slugs.map((slug) => {
+        const feed = feedOf(slug);
+        const book = BOOKMAKERS[feed];
+        if (!book) return { slug, name: slug, isExchange: false, outcome: 'unknown', listed: null, listing: null, mapping: null, namesOrder: 'unclear', kickoffDeltaMinutes: null, referenceBooks: 0, outcomes: [], findings: [] };
+        const name = TWIN_BY_SLUG.get(slug)?.name ?? book.name;
+        const mine = rowLegs.filter((l) => l.bookmaker === slug).map((l) => l.outcomeKey);
+        const base = { slug, name, isExchange: book.isExchange, referenceBooks: 5, kickoffDeltaMinutes: 0, namesOrder: 'as_catalog',
+            mapping: { homeName: sample.homeName, awayName: sample.awayName, inverted: false, matchMethod: 'exact_name', matchStatus: 'confirmed' },
+            listing: { homeName: sample.homeName, awayName: sample.awayName, startTime: sample.startTime, competitionName: sample.competitionName } };
+        const rows = (make) => defined.map(([key, label, fallback]) => {
+            const lay = book.isExchange ? Math.round((stored(feed, key, fallback + 0.03, true)) * 100) / 100 : null;
+            const before = price(stored(feed, key, fallback, false), lay, 'active', 240);
+            return { key, label, before, referenceMedian: fallback, ...make(key, label, before) };
+        });
+        const live = (label, p) => ({ label, marketName: sample.marketTypeKey === '1x2' ? '1X2' : sample.marketTypeKey === 'over_under' ? `Under/Over ${sample.line}` : 'Mercato', odds: p.odds, layOdds: p.layOdds, status: 'active' });
+        const confirmed = (key, label, before) => ({ after: { ...before, lastSeenAt: ago(0) }, change: 'confirmed', live: live(label, before) });
+        if (feed === 'betsson') {
+            return { ...base, outcome: 'recent', readAgeSeconds: 12, listed: null, listing: null, kickoffDeltaMinutes: null, outcomes: rows(() => ({ after: null, change: null, live: null })), findings: [] };
+        }
+        if (feed === 'xsport') {
+            rowGone = true;
+            return { ...base, outcome: 'read', durationMs: 1840, listed: false, listing: null, kickoffDeltaMinutes: null,
+                outcomes: rows((key, label, before) => ({ after: { ...before, status: 'suspended' }, change: 'withdrawn', live: null })), findings: ['not_listed', 'price_withdrawn'] };
+        }
+        if (feed === 'goldbet' && sided) {
+            // The bookmaker lists «away – home» and the mapping does not say so: its «1» sits on our home.
+            const flip = { home: 'away', away: 'home' };
+            const fallbackOf = Object.fromEntries(defined.map(([key, , fallback]) => [key, fallback]));
+            return { ...base, outcome: 'read', durationMs: 2310, listed: true, namesOrder: 'reversed',
+                listing: { ...base.listing, homeName: sample.awayName, awayName: sample.homeName },
+                outcomes: rows((key, label, before) => ({ ...confirmed(key, label, before), referenceMedian: flip[key] ? fallbackOf[flip[key]] : fallbackOf[key] })),
+                findings: ['orientation_mismatch', 'sides_look_swapped', 'price_confirmed'] };
+        }
+        if (feed === 'bwin' && mine.length && !recheckMoved.has(`${body.eventId}|${body.canonicalMarketId}`)) {
+            recheckMoved.add(`${body.eventId}|${body.canonicalMarketId}`);
+            const outcomes = rows((key, label, before) => {
+                if (!mine.includes(key)) return confirmed(key, label, before);
+                const after = price(Math.max(1.01, Math.round((before.odds - 0.07) * 100) / 100), null, 'active', 0);
+                // The new price is stored: the rows of the list carry it from now on.
+                for (const r of ROWS.filter(sameMarket)) {
+                    const moved = r.legs.find((l) => l.bookmakerSlug === feed && l.outcomeKey === key);
+                    if (!moved) continue;
+                    moved.odds = after.odds;
+                    moved.lastSeenAt = iso(Date.now());
+                    r.rating = Math.round((r.matchType === 'back_lay' ? backLayRating(r.legs[0].odds, r.legs[1].odds) : dutchRating(r.legs.map((l) => l.odds))) * 100) / 100;
+                }
+                return { after, change: 'moved', live: live(label, after) };
+            });
+            return { ...base, outcome: 'read', durationMs: 1520, listed: true, outcomes, findings: ['price_moved'] };
+        }
+        return { ...base, outcome: 'read', durationMs: 900 + feed.length * 130, listed: true, outcomes: rows(confirmed), findings: ['price_confirmed'] };
+    });
+    let row;
+    if (body.row) {
+        const wanted = rowLegs.map((l) => `${feedOf(l.bookmaker)}|${l.outcomeKey}`).sort().join('+');
+        const found = rowGone ? undefined : ROWS.find((r) => sameMarket(r) && r.matchType === body.row.matchType && r.legs.map((l) => `${l.bookmakerSlug}|${l.outcomeKey}`).sort().join('+') === wanted);
+        row = { found: Boolean(found), rating: found ? found.rating : null };
+    }
+    return {
+        eventId: body.eventId, canonicalMarketId: body.canonicalMarketId,
+        event: { homeName: sample.homeName, awayName: sample.awayName, startTime: sample.startTime, competitionName: sample.competitionName, sportName: sample.sportName },
+        market: { marketTypeKey: sample.marketTypeKey, line: sample.line, handicap: sample.handicap, periodScope: sample.periodScope, teamScope: sample.teamScope },
+        startedAt: iso(Date.now()), durationMs: 2400, bookmakers, ...(row ? { row } : {}), matcherApplied: true,
+    };
+}
+
 // §14.262: le offerte del backoffice. Una pubblicata con una guida piccola e una bozza senza.
 const romeToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const dayNum = (d) => Date.parse(`${d}T00:00:00Z`) / 86400000;
@@ -1210,6 +1316,22 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === '/api/odds-collection/matcher/results') return send(200, filterRows(url.searchParams));
     if (path === '/api/odds-collection/matcher/free/results') return send(200, freeRows(url.searchParams));
+    // §14.390: «Ricalcola», admin only, counted per user.
+    if (path === '/api/odds-collection/recheck/quota') {
+        if (user.role !== 'ADMIN_ROLE') return send(403, { message: 'Riservato agli amministratori' });
+        return send(200, { quota: recheckQuotaState() });
+    }
+    if (path === '/api/odds-collection/recheck' && req.method === 'POST') {
+        if (user.role !== 'ADMIN_ROLE') return send(403, { message: 'Riservato agli amministratori' });
+        const body = await readBody(req);
+        if (typeof body.eventId !== 'string' || typeof body.canonicalMarketId !== 'string') return send(400, { message: 'eventId: uuid richiesto' });
+        if (recheckQuotaState().remaining === 0) return send(429, { message: 'Hai esaurito i ricalcoli disponibili per ora: riprova più tardi', quota: recheckQuotaState() });
+        const answer = recheckAnswer(body);
+        if (!answer) return send(404, { message: 'Evento o mercato non trovato' });
+        recheckUsed.push(Date.now());
+        const delay = parseInt(process.env.MOCK_RECHECK_DELAY_MS ?? '900', 10) || 0;
+        return setTimeout(() => send(200, { ...answer, quota: recheckQuotaState() }), delay);
+    }
     if (path === '/api/odds-collection/matcher/free/meta') {
         const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange).map((b) => (b.slug === 'sisal' ? { ...b, slug: 'snai', name: 'Snai' } : b));
         const totalResults = freeRows(new URLSearchParams()).total;

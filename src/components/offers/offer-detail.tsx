@@ -41,7 +41,9 @@ import { OfferDoneToggle } from '@/components/offers/offer-done-toggle'
  * testata, profitto e difficoltà e l'avviso «in preparazione». Dal §14.262 la guida ha la forma
  * dell'API (passi fatti di blocchi) e ogni parte vuota non si mostra: lo stesso componente fa da
  * anteprima nell'editor del backoffice. Dal §14.367 chi è entrato ha «Segna come fatta» accanto
- * al logo (`canMarkDone`); il riquadro «Finito?» del design resta fuori.
+ * al logo (`canMarkDone`); il riquadro «Finito?» del design resta fuori. Dal §14.373 colonna e
+ * indice stanno al centro della pagina come un blocco solo (`lg:justify-center`): con la pagina a
+ * tutta larghezza (§14.357) restavano attaccati a sinistra, con mezzo schermo vuoto a destra.
  */
 export function OfferDetail({
   offer,
@@ -86,7 +88,7 @@ export function OfferDetail({
 
   return (
     <DsContainer className="pt-6 pb-24">
-      <div className="grid items-start gap-y-10 lg:grid-cols-[minmax(0,720px)_280px] lg:gap-x-16 xl:gap-x-24">
+      <div className="grid items-start gap-y-10 lg:grid-cols-[minmax(0,720px)_280px] lg:justify-center lg:gap-x-16 xl:gap-x-24">
         <article className="min-w-0">
           <Link
             href={offersListHref(offer.type)}

@@ -15,7 +15,8 @@ export interface LegalSection {
  * sinistra la colonna di lettura da 720px con eyebrow, titolo in display, data e sezioni numerate
  * in body-lg (paragrafi ed elenchi a 68ch, le tabelle a tutta colonna); a destra, da lg, l'indice
  * da 280px su filetto verticale che resta fisso. Sul telefono l'indice sta fra l'intestazione e il
- * testo.
+ * testo. Dal §14.373 colonna e indice stanno al centro della pagina come un blocco solo, come nel
+ * dettaglio dell'offerta: con la pagina a tutta larghezza (§14.357) restavano a sinistra.
  */
 export function LegalPage({
   eyebrow = 'Legale',
@@ -30,7 +31,7 @@ export function LegalPage({
 }) {
   return (
     <DsContainer className="pt-16 pb-24">
-      <div className="grid gap-y-10 [grid-template-areas:'head'_'toc'_'body'] lg:grid-cols-[minmax(0,720px)_280px] lg:gap-x-16 lg:gap-y-0 lg:[grid-template-areas:'head_toc'_'body_toc'] xl:gap-x-24">
+      <div className="grid gap-y-10 [grid-template-areas:'head'_'toc'_'body'] lg:grid-cols-[minmax(0,720px)_280px] lg:justify-center lg:gap-x-16 lg:gap-y-0 lg:[grid-template-areas:'head_toc'_'body_toc'] xl:gap-x-24">
         <header className="min-w-0 [grid-area:head]">
           <DsEyebrow>{eyebrow}</DsEyebrow>
           <h1 className="ds-display mt-3 text-pretty">{title}</h1>

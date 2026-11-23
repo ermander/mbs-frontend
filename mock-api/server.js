@@ -30,7 +30,7 @@ const inDays = (d, hour = 18, minute = 45) => {
 
 // §14.365: sport mappings, matchings, review queue, Palinsesto, Competizioni and the scraper drill-down.
 const backofficeMock = createBackofficeMock(now);
-// §14.390: «Best Odds», the catalog, the lists of events and the prices of one event.
+// §14.391: «Best Odds», the catalog, the lists of events and the prices of one event.
 const bestOddsMock = createBestOddsMock(now);
 // §14.366: every section of the site; a new account gets all of them but result_btts.
 const ALL_SECTIONS = ['offers', 'oddsmatcher', 'result_btts', 'calculators', 'tracker', 'guide', 'forum'];
@@ -1212,7 +1212,7 @@ const server = http.createServer(async (req, res) => {
         return send(200, body);
     }
     if (path === '/api/odds-collection/matcher/results') return send(200, filterRows(url.searchParams));
-    // §14.390: Best Odds (mock-api/best-odds.js). An event that is not in the palinsesto answers the 404 of the backend.
+    // §14.391: Best Odds (mock-api/best-odds.js). An event that is not in the palinsesto answers the 404 of the backend.
     if (path === '/api/odds-collection/best-odds/catalog') return send(200, bestOddsMock.catalog());
     if (path === '/api/odds-collection/best-odds/events') return send(200, bestOddsMock.listEvents(url.searchParams));
     if (path.startsWith('/api/odds-collection/best-odds/events/')) {

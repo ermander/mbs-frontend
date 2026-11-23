@@ -1,5 +1,5 @@
 /**
- * «Best Odds» for the mock (§14.390): the catalog sport → nation → competition, the events of a
+ * «Best Odds» for the mock (§14.391): the catalog sport → nation → competition, the events of a
  * competition, of a sport or of a search, and one event with its markets and every site's prices,
  * with the shapes of the backend (types/best-odds.ts). Everything is made up and derived from the
  * event's number, so a reload shows the same prices: enough sports, nations and markets to see

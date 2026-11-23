@@ -100,7 +100,7 @@ describe('authNavSections', () => {
     expect(hrefs.every((h) => h.startsWith('/'))).toBe(true)
     expect(new Set(hrefs).size).toBe(hrefs.length)
   })
-  it('the bar reads as the design, with the Dashboard first (§14.367) and Radar where the Oddsmatcher was (§14.390): Dashboard, Guide, Offerte, Radar, Calcolatori, Tracker, Forum', () => {
+  it('the bar reads as the design, with the Dashboard first (§14.367) and Radar where the Oddsmatcher was (§14.391): Dashboard, Guide, Offerte, Radar, Calcolatori, Tracker, Forum', () => {
     // §14.275: i gruppi «links» sono voci dirette, i «menu» (Tracker, Backoffice) tendine.
     const bar = visibleNavSections({ role: 'USER_ROLE', tools: [] }).flatMap((s) =>
       s.display === 'links' ? s.items.map((i) => i.label) : [s.label],
@@ -146,7 +146,7 @@ describe('Offerte', () => {
   })
 })
 
-// §14.390 (ClickUp «Best Odds»): Radar apre l'Oddsmatcher e Best Odds.
+// §14.391 (ClickUp «Best Odds»): Radar apre l'Oddsmatcher e Best Odds.
 describe('Radar', () => {
   const radar = () => visibleNavSections({ role: 'USER_ROLE', tools: [] })[0].items[3]
   it('holds the Oddsmatcher and Best Odds, in this order, where the Oddsmatcher was', () => {

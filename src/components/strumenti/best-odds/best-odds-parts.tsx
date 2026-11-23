@@ -7,7 +7,7 @@ import { dsFocusRing } from '@/components/landing/ds-primitives'
 import { resolveCompetitionFlag } from '@/lib/country-flags'
 import { cn } from '@/lib/utils'
 
-/** Small pieces shared by the panels of Best Odds (§14.390). */
+/** Small pieces shared by the panels of Best Odds (§14.391). */
 
 /**
  * A choice among a few: the chosen one in brand-soft like the DsSegmented of the design, the

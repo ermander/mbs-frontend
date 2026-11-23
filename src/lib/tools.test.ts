@@ -41,7 +41,7 @@ describe('canUseSection', () => {
   it('every section has a home page and a label, in the order of the top bar', () => {
     expect(SECTIONS.map((s) => s.label)).toEqual([
       'Offerte',
-      // §14.390: la sezione dell'Oddsmatcher è la tendina «Radar», con Best Odds.
+      // §14.391: la sezione dell'Oddsmatcher è la tendina «Radar», con Best Odds.
       'Radar',
       'Risultato + Goal',
       'Calcolatori',

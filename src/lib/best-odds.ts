@@ -12,7 +12,7 @@ import type {
 } from '@/types/best-odds'
 
 /**
- * «Best Odds» (ADAPTER_STATUS §14.390): names, the tree of an event's markets, the ranking of the
+ * «Best Odds» (ADAPTER_STATUS §14.391): names, the tree of an event's markets, the ranking of the
  * sites on one outcome and the address of the page. Pure: the components only draw what comes
  * out of here.
  */

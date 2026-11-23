@@ -45,7 +45,7 @@ function useNow(intervalMs: number): number {
 }
 
 /**
- * «Best Odds» (ADAPTER_STATUS §14.390, ClickUp «Best Odds»): the ladder sport → nation →
+ * «Best Odds» (ADAPTER_STATUS §14.391, ClickUp «Best Odds»): the ladder sport → nation →
  * competition → event, down to who prices a market of the event and who pays the most. The use
  * case: a cover left open, to place where it pays best.
  *

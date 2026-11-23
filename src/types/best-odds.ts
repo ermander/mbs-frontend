@@ -1,5 +1,5 @@
 /**
- * «Best Odds» (ADAPTER_STATUS §14.390): the answers of GET /odds-collection/best-odds/*.
+ * «Best Odds» (ADAPTER_STATUS §14.391): the answers of GET /odds-collection/best-odds/*.
  * The catalog (sport → nation → competition), the events of a competition, of a sport or of a
  * search, and one event with every market and every bookmaker's prices.
  */

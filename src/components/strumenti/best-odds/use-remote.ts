@@ -21,7 +21,7 @@ export interface Remote<T> {
 }
 
 /**
- * One read of the API, as the pages of Best Odds do them (§14.390): it runs when `loader` changes
+ * One read of the API, as the pages of Best Odds do them (§14.391): it runs when `loader` changes
  * (memoise it on what it reads, null = nothing to read) and a late answer of a loader that is no
  * longer the current one is dropped. `refresh` reads again without emptying the page; if it fails
  * the data on screen stays. State changes only in promise callbacks

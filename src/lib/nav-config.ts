@@ -54,7 +54,7 @@ export interface NavDropdownItem {
   requiresRole?: UserRole
 }
 
-/** Una pagina dentro una voce della barra: le tre pagine delle offerte (§14.358), i due strumenti di «Radar» (§14.390). */
+/** Una pagina dentro una voce della barra: le tre pagine delle offerte (§14.358), i due strumenti di «Radar» (§14.391). */
 export interface NavSubmenuLink {
   label: string
   href: string
@@ -116,7 +116,7 @@ export const OFFERS_NAV_ITEMS: NavSubmenuLink[] = OFFER_TYPES.map((t) => ({
 }))
 
 /**
- * §14.390 (ClickUp «Best Odds»): la tendina «Radar», gli strumenti che leggono le quote dai siti.
+ * §14.391 (ClickUp «Best Odds»): la tendina «Radar», gli strumenti che leggono le quote dai siti.
  * L'Oddsmatcher, che prima era una voce della barra, e Best Odds: chi quota un mercato di un
  * evento e chi paga di più. Stanno tutti e due nella sezione `oddsmatcher` (NAV_ITEM_SECTIONS).
  */
@@ -130,7 +130,7 @@ export const RADAR_NAV_ITEMS: NavSubmenuLink[] = [
  * Tracker · Forum (dal §14.367 con la Dashboard davanti a tutte), con Risultato + Goal dopo Radar per chi è abilitato e il Backoffice
  * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker; dal §14.358
  * anche Offerte apre una tendina, con le pagine di benvenuto, ricorrenti ed esclusive, e dal
- * §14.390 Radar, con l'Oddsmatcher e Best Odds.
+ * §14.391 Radar, con l'Oddsmatcher e Best Odds.
  */
 export const authNavSections: AuthNavSection[] = [
   {
@@ -141,7 +141,7 @@ export const authNavSections: AuthNavSection[] = [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, compact: true },
       { label: 'Guide', href: '/guide', icon: BookOpen },
       { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
-      // §14.390: l'Oddsmatcher sta nella tendina «Radar» con Best Odds; `href` è la prima pagina.
+      // §14.391: l'Oddsmatcher sta nella tendina «Radar» con Best Odds; `href` è la prima pagina.
       { label: 'Radar', href: '/odds-scanner', icon: Radar, children: RADAR_NAV_ITEMS },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
       { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal },
@@ -242,7 +242,7 @@ export function isActiveHref(pathname: string | null | undefined, href: string):
 
 /**
  * Una voce della barra è attiva sulla sua pagina (e sotto) e su ognuna delle pagine della sua
- * tendina: «Radar» è attiva su /odds-scanner e su /best-odds (§14.390).
+ * tendina: «Radar» è attiva su /odds-scanner e su /best-odds (§14.391).
  */
 export function isNavItemActive(
   pathname: string | null | undefined,

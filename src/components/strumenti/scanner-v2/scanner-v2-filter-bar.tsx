@@ -10,6 +10,7 @@ import {
 import { OmBookLogo, OmDropdown, OmSportIcon, type OmOption } from './om-ds'
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
 import { MATCH_TYPE_OPTIONS, ageLabel, ageSeconds, marketLabel } from '@/lib/matcher/format'
+import { bookmakersMatchingSearch } from '@/lib/matcher/bookmaker-search'
 import type { MatchType, MatcherBookmaker, MatcherMeta } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
@@ -114,12 +115,27 @@ export const SORT_OPTIONS = [
   { value: 'start_time', label: 'Data e ora' },
 ]
 
+/**
+ * One entry per bookmaker of the meta, twin brands included (§14.375): Snai, Lottomatica… are
+ * bookmakers of their own for the user, with a note of the feed whose prices they serve.
+ */
 function bookOptions(list: MatcherBookmaker[]): OmOption[] {
-  return list.map((b) => ({
-    value: b.slug,
-    label: shortBookmakerName(b.name),
-    render: <OmBookLogo slug={b.slug} name={b.name} />,
-  }))
+  const nameOf = new Map(list.map((b) => [b.slug, shortBookmakerName(b.name)]))
+  return list.map((b) => {
+    const feed = b.sameOddsAs ? (nameOf.get(b.sameOddsAs) ?? null) : null
+    return {
+      value: b.slug,
+      label: shortBookmakerName(b.name),
+      render: feed ? (
+        <span className="flex min-w-0 items-center gap-2" title={`Stesse quote di ${feed}`}>
+          <OmBookLogo slug={b.slug} name={b.name} />
+          <span className="ds-caption truncate text-ds-ink-muted">quote {feed}</span>
+        </span>
+      ) : (
+        <OmBookLogo slug={b.slug} name={b.name} />
+      ),
+    }
+  })
 }
 
 /** A group of the advanced panel: the label on the left, the fields in a grid of four. */
@@ -264,6 +280,9 @@ export function ScannerV2FilterBar({
       clear: () => onChange({ startFrom: '', startTo: '' }),
     })
   const hasAnyFilter = activeCount > 0 || filters.search.trim() !== ''
+  // «Snai» typed in «Cerca» (events and competitions only) would give an empty table: offer the
+  // bookmaker instead (§14.375).
+  const searchedBooks = bookmakersMatchingSearch(filters.search, books, filters.books)
 
   return (
     <div className="flex flex-col gap-4">
@@ -292,7 +311,7 @@ export function ScannerV2FilterBar({
           options={bookOptions(books)}
           selected={filters.books}
           onChange={(next) => onChange({ books: next })}
-          panelWidth={220}
+          panelWidth={260}
           emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
@@ -303,7 +322,7 @@ export function ScannerV2FilterBar({
           options={bookOptions(books)}
           selected={filters.coverBooks}
           onChange={(next) => onChange({ coverBooks: next })}
-          panelWidth={220}
+          panelWidth={260}
           emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
@@ -324,6 +343,27 @@ export function ScannerV2FilterBar({
           onChange={(v) => onChange({ sort: v === 'start_time' ? 'start_time' : 'rating' })}
         />
       </div>
+
+      {searchedBooks.length > 0 && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-ds-md border border-ds-line bg-ds-surface-sunken px-4 py-2.5"
+        >
+          <span className="ds-body-sm text-ds-ink">
+            «Cerca» trova eventi e competizioni. Cerchi le quote di un bookmaker?
+          </span>
+          {searchedBooks.map((b) => (
+            <button
+              key={b.slug}
+              type="button"
+              onClick={() => onChange({ books: [...filters.books, b.slug], search: '' })}
+              className={dsButtonClass('secondary', 'sm')}
+            >
+              Mostra le quote di {shortBookmakerName(b.name)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Azioni */}
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">

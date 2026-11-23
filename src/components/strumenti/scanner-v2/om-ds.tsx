@@ -46,7 +46,7 @@ export interface OmOption {
  * scorrimento del modal. Con `floating` e `alignBelow` si apre sempre sotto, allineato al
  * pulsante e largo quanto lui, e l'elenco si accorcia allo spazio che resta sotto. Con `chips`
  * le voci scelte stanno nel campo come chips con la ×, che tolgono quella voce senza aprire il
- * menu; il campo va a capo e cresce in altezza quando non ci stanno su una riga (§14.385).
+ * menu; il campo va a capo e cresce in altezza quando non ci stanno su una riga (§14.387).
  */
 export function OmDropdown({
   id,

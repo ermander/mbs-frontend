@@ -276,7 +276,7 @@ export function ScannerV2FilterBar({
   return (
     <div className="flex flex-col gap-4">
       {/* Barra principale: in alto, perché i menu dei bookmaker con le chips crescono verso il basso
-          quando vanno a capo (§14.385); etichetta e campo distano 6px in tutti e cinque. */}
+          quando vanno a capo (§14.387); etichetta e campo distano 6px in tutti e cinque. */}
       <div className="grid grid-cols-2 items-start gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-4 shadow-ds-sm sm:grid-cols-2 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_120px_150px]">
         <div className="col-span-2 flex min-w-0 flex-col gap-1.5 lg:col-span-1">
           <label htmlFor="om-search" className="text-sm leading-5 font-semibold text-ds-ink">

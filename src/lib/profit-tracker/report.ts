@@ -228,3 +228,22 @@ export function breakdownShare(row: BreakdownRow, rows: BreakdownRow[]): number 
   if (totalPositive === 0 || row.totale < 0) return null
   return (row.totale / totalPositive) * 100
 }
+
+/** Quante voci per pagina mostra ogni suddivisione (§14.389). */
+export const BREAKDOWN_PAGE_SIZE = 6
+
+/**
+ * Una pagina di una suddivisione: la pagina chiesta (da 0) riportata dentro i limiti, le sue voci,
+ * il numero di pagine e quante righe vuote servono all'ultima per restare alta come le altre.
+ */
+export function breakdownPage<T>(
+  rows: T[],
+  page: number,
+  pageSize: number = BREAKDOWN_PAGE_SIZE,
+): { page: number; pages: number; items: T[]; filler: number } {
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const current = Math.min(Math.max(0, Math.floor(page)), pages - 1)
+  const items = rows.slice(current * pageSize, (current + 1) * pageSize)
+  const filler = pages > 1 ? pageSize - items.length : 0
+  return { page: current, pages, items, filler }
+}

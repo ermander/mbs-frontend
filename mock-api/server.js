@@ -596,20 +596,35 @@ function filterRows(q) {
     if (get('market_type')) rows = rows.filter((r) => r.marketTypeKey === get('market_type'));
     if (get('nation')) rows = rows.filter((r) => r.nationName === get('nation'));
     if (get('competitions')) { const ids = new Set(get('competitions').split(',')); rows = rows.filter((r) => ids.has(r.competitionId)); }
-    if (get('bookmaker') && get('cover_bookmakers')) {
-        // §14.102: one leg on a chosen book, every other leg on a cover bookmaker.
-        const b = new Set(get('bookmaker').split(',')); const c = new Set(get('cover_bookmakers').split(','));
-        rows = rows.filter((r) => r.legs.some((leg, i) => b.has(leg.bookmakerSlug) && r.legs.every((o, j) => j === i || c.has(o.bookmakerSlug))));
-    } else if (get('bookmaker')) { const b = new Set(get('bookmaker').split(',')); rows = rows.filter((r) => r.legs.some((l) => b.has(l.bookmakerSlug))); }
-    else if (get('cover_bookmakers')) { const c = new Set(get('cover_bookmakers').split(',')); rows = rows.filter((r) => r.legs.every((l) => c.has(l.bookmakerSlug))); }
     if (get('allowed_bookmakers')) { const s = new Set(get('allowed_bookmakers').split(',')); rows = rows.filter((r) => r.legs.every((l) => s.has(l.bookmakerSlug))); }
     if (get('min_rating')) rows = rows.filter((r) => r.rating >= parseFloat(get('min_rating')));
     if (get('max_rating')) rows = rows.filter((r) => r.rating <= parseFloat(get('max_rating')));
-    const minO = get('min_odds') ? parseFloat(get('min_odds')) : null;
-    const maxO = get('max_odds') ? parseFloat(get('max_odds')) : null;
-    if (minO != null || maxO != null) {
-        const inRange = (o) => (minO == null || o >= minO) && (maxO == null || o <= maxO);
-        rows = rows.filter((r) => (r.matchType === 'back_lay' ? inRange(r.legs[0].odds) : r.legs.some((l) => inRange(l.odds))));
+    // §14.386 (matcher/stake-leg.ts of the backend): `bookmaker`, `cover_bookmakers` and the price
+    // bounds pick the leg the stake goes on («Puntata»): on a main book, every other leg on a cover,
+    // its price in the range. A dutch row comes back with that leg first; a back/lay keeps the BACK
+    // first (an exchange chosen as main book still matches its LAY).
+    const stake = {
+        b: get('bookmaker') ? new Set(get('bookmaker').split(',')) : null,
+        c: get('cover_bookmakers') ? new Set(get('cover_bookmakers').split(',')) : null,
+        min: get('min_odds') ? parseFloat(get('min_odds')) : null,
+        max: get('max_odds') ? parseFloat(get('max_odds')) : null,
+    };
+    const inRange = (o) => (stake.min == null || o >= stake.min) && (stake.max == null || o <= stake.max);
+    const canTake = (r, i) => (!stake.b || stake.b.has(r.legs[i].bookmakerSlug)) && inRange(r.legs[i].odds)
+        && (!stake.c || r.legs.every((o, j) => j === i || stake.c.has(o.bookmakerSlug)));
+    const stakeIndex = (r) => {
+        if (r.matchType === 'back_lay') {
+            if (canTake(r, 0)) return 0;
+            const layOk = stake.b && stake.b.has(r.legs[1].bookmakerSlug) && (!stake.c || stake.c.has(r.legs[0].bookmakerSlug)) && inRange(r.legs[0].odds);
+            return layOk ? 0 : -1;
+        }
+        return r.legs.findIndex((_, i) => canTake(r, i));
+    };
+    if (stake.b || stake.c || stake.min != null || stake.max != null) {
+        rows = rows.filter((r) => stakeIndex(r) >= 0).map((r) => {
+            const i = stakeIndex(r);
+            return i > 0 ? { ...r, legs: [r.legs[i], ...r.legs.filter((_, k) => k !== i)] } : r;
+        });
     }
     if (get('search')) { const s = get('search').toLowerCase(); rows = rows.filter((r) => `${r.homeName} ${r.awayName} ${r.competitionName}`.toLowerCase().includes(s)); }
     if (get('start_time_from')) rows = rows.filter((r) => r.startTime >= get('start_time_from'));

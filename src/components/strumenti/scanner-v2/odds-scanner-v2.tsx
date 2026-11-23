@@ -169,8 +169,9 @@ export function OddsScannerV2() {
     () => (meta?.bookmakers ?? []).filter((b) => b.isExchange === true),
     [meta],
   )
-  // «Book» = the book the stake goes on (at least one leg on it); «Book di
-  // copertura» and «Exchange» = where the other legs may sit (§14.102).
+  // «Bookmaker principale» = the book the stake goes on: the backend serves the rows with
+  // the «Puntata» leg on it and puts that leg first (§14.386); «Bookmaker di copertura»
+  // and «Exchange» = where the other legs may sit (§14.102).
   const bookmakerParam = useMemo(() => bookmakersParam(filters.books), [filters.books])
   const coverParam = useMemo(
     () =>
@@ -214,8 +215,8 @@ export function OddsScannerV2() {
     if (filters.nation) q.nation = filters.nation
     if (filters.competitionIds.length > 0) q.competitions = filters.competitionIds.join(',')
     if (multiplaMode && activeBook) {
-      // Every row involving the book: the punta side is checked in the browser,
-      // the covers may sit on any bookmaker or exchange.
+      // The rows with the book on the punta side (§14.386, rechecked in the browser),
+      // the covers on any bookmaker or exchange.
       q.bookmaker = activeBook
     } else {
       if (bookmakerParam) q.bookmaker = bookmakerParam

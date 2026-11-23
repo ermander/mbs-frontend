@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EMPTY_MONTH,
   adjacentMonth,
+  breakdownPage,
   breakdownShare,
   buildBreakdown,
   buildMonthTable,
@@ -145,5 +146,32 @@ describe('report', () => {
     expect(adjacentMonth(2026, 9, 1, limits)).toEqual({ year: 2026, month: 10 })
     expect(adjacentMonth(2026, 10, 1, limits)).toBeNull()
     expect(adjacentMonth(2022, 0, -1, limits)).toBeNull()
+  })
+
+  it('pagina le suddivisioni e riempie l’ultima pagina perché resti alta come le altre', () => {
+    const rows = Array.from({ length: 14 }, (_, i) => i)
+    expect(breakdownPage(rows, 0)).toEqual({
+      page: 0,
+      pages: 3,
+      items: [0, 1, 2, 3, 4, 5],
+      filler: 0,
+    })
+    expect(breakdownPage(rows, 2)).toEqual({ page: 2, pages: 3, items: [12, 13], filler: 4 })
+    // Con meno voci (un mese scelto, un filtro) la pagina rientra nei limiti.
+    expect(breakdownPage(rows.slice(0, 7), 2)).toEqual({
+      page: 1,
+      pages: 2,
+      items: [6],
+      filler: 5,
+    })
+    expect(breakdownPage(rows, -1).page).toBe(0)
+    // Una pagina sola: niente righe vuote.
+    expect(breakdownPage(rows.slice(0, 4), 0)).toEqual({
+      page: 0,
+      pages: 1,
+      items: [0, 1, 2, 3],
+      filler: 0,
+    })
+    expect(breakdownPage([], 0)).toEqual({ page: 0, pages: 1, items: [], filler: 0 })
   })
 })

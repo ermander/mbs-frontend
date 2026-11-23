@@ -44,7 +44,6 @@ const cardTone = {
 export function MatcherLegCard({
   tone,
   title,
-  note,
   odds,
   logo,
   figureLabel,
@@ -56,8 +55,6 @@ export function MatcherLegCard({
 }: {
   tone: keyof typeof cardTone
   title: string
-  /** Una riga sotto il titolo (la quota netta di una gamba exchange). */
-  note?: React.ReactNode
   odds: React.ReactNode
   logo: React.ReactNode
   figureLabel: string
@@ -93,10 +90,7 @@ export function MatcherLegCard({
         selected ? 'border-ds-brand shadow-[inset_0_0_0_1px_var(--ds-brand)]' : 'border-ds-line',
       )}
     >
-      <div>
-        <span className="ds-subheading block">{title}</span>
-        {note && <span className="ds-caption mt-0.5 block text-ds-ink-muted">{note}</span>}
-      </div>
+      <span className="ds-subheading block">{title}</span>
       {/* Il campo quota non sposta la scelta della gamba. */}
       <div className="w-[120px]" onClick={(e) => e.stopPropagation()}>
         {odds}

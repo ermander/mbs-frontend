@@ -32,9 +32,9 @@ export interface ScannerV2Filters {
   nation: string
   competitionIds: string[]
   marketType: string
-  /** The books the stake goes on (slugs): at least one leg of the row on one of them; none = any. */
+  /** The books the stake goes on (slugs): the «Puntata» leg on one of them (§14.386); none = any. */
   books: string[]
-  /** The books the OTHER legs may sit on (§14.102); none = any book. */
+  /** The books the OTHER legs («Bancata · copertura») may sit on (§14.102, §14.386); none = any book. */
   coverBooks: string[]
   /** The exchanges the other legs may sit on; none = any exchange. */
   exchanges: string[]
@@ -275,8 +275,9 @@ export function ScannerV2FilterBar({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Barra principale */}
-      <div className="grid grid-cols-2 items-end gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-4 shadow-ds-sm sm:grid-cols-2 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_120px_150px]">
+      {/* Barra principale: in alto, perché i menu dei bookmaker con le chips crescono verso il basso
+          quando vanno a capo (§14.387); etichetta e campo distano 6px in tutti e cinque. */}
+      <div className="grid grid-cols-2 items-start gap-4 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-4 shadow-ds-sm sm:grid-cols-2 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_120px_150px]">
         <div className="col-span-2 flex min-w-0 flex-col gap-1.5 lg:col-span-1">
           <label htmlFor="om-search" className="text-sm leading-5 font-semibold text-ds-ink">
             Cerca
@@ -295,6 +296,7 @@ export function ScannerV2FilterBar({
         </div>
         <OmDropdown
           id="om-books"
+          chips
           label="Bookmaker principale"
           allLabel="Tutti i bookmaker"
           options={bookOptions(books)}
@@ -306,6 +308,7 @@ export function ScannerV2FilterBar({
         />
         <OmDropdown
           id="om-cover"
+          chips
           label="Bookmaker di copertura"
           allLabel="Tutti i bookmaker"
           options={bookOptions(books)}
@@ -318,6 +321,7 @@ export function ScannerV2FilterBar({
         <CalcNumberField
           id="om-stake"
           label="Puntata"
+          className="gap-1.5"
           suffix="€"
           placeholder="0,00"
           value={filters.stake}
@@ -326,6 +330,7 @@ export function ScannerV2FilterBar({
         <CalcSelect
           id="om-sort"
           label="Ordina per"
+          className="gap-1.5"
           size="md"
           options={SORT_OPTIONS}
           value={filters.sort}

@@ -180,12 +180,56 @@ const ROWS = [
     { ...EVENTS.celtic, ...market('1x2', null), matchType: 'back_lay', legs: [leg('sisal', 'away', 'BACK 2', 5.5, 60), leg('betfair', 'away', 'LAY 2', 5.9, 20)], rating: backLayRating(5.5, 5.9) },
 ].map((r) => ({ ...r, rating: Math.round(r.rating * 100) / 100 }));
 
+// §14.375: the twin brands, as the backend lists them (matcher/twin-brands.ts): bookmakers with no
+// feed of their own, read as the feed they share and shown under their own name when chosen.
+const TWIN_BRANDS = [
+    { slug: 'lottomatica', name: 'Lottomatica', feedSlug: 'goldbet' },
+    { slug: 'planetwin365', name: 'PlanetWin365', feedSlug: 'goldbet' },
+    { slug: 'betflag', name: 'BetFlag', feedSlug: 'goldbet' },
+    { slug: 'pokerstars', name: 'PokerStars', feedSlug: 'sisal' },
+    { slug: 'snai', name: 'Snai', feedSlug: 'sisal' },
+    { slug: 'starcasino', name: 'StarCasinò', feedSlug: 'betsson' },
+    { slug: 'starvegas', name: 'StarVegas', feedSlug: 'admiralbet' },
+    { slug: 'betitaly', name: 'Betitaly', feedSlug: 'winbet' },
+    { slug: 'casinosanremo', name: 'Casinò di Sanremo', feedSlug: 'netbet' },
+    { slug: 'gioca7', name: 'Gioca7', feedSlug: 'netbet' },
+    { slug: 'netwin', name: 'Netwin', feedSlug: 'netbet' },
+    { slug: 'staryes', name: 'StarYes', feedSlug: 'netbet' },
+    { slug: 'casinovenezia', name: 'Casinò di Venezia', feedSlug: 'quigioco' },
+    { slug: 'giocodigitale', name: 'Gioco Digitale', feedSlug: 'bwin' },
+];
+const TWIN_BY_SLUG = new Map(TWIN_BRANDS.map((t) => [t.slug, t]));
+const feedOf = (slug) => TWIN_BY_SLUG.get(slug)?.feedSlug ?? slug;
+const shownName = (name) => name.replace(/\s*\([^)]*\)\s*$/, '').trim() || name;
+const META_BOOKMAKERS = [
+    ...Object.values(BOOKMAKERS).map(({ slug, name, isExchange }) => ({ slug, name, isExchange })),
+    ...TWIN_BRANDS.filter((t) => BOOKMAKERS[t.feedSlug]).map((t) => ({ slug: t.slug, name: t.name, isExchange: false, sameOddsAs: t.feedSlug })),
+].sort((a, b) => shownName(a.name).localeCompare(shownName(b.name), 'it', { sensitivity: 'base', numeric: true }));
+/** The legs on a feed shown as the twin chosen (the leg the stake goes on follows `bookmaker`, the others the cover lists). */
+function showTwinBrands(rows, lists) {
+    if (!Object.values(lists).some((l) => l && l.some((s) => TWIN_BY_SLUG.has(s)))) return rows;
+    const brandIn = (feed, l) => (!l ? null : l.includes(feed) ? feed : (l.find((s) => TWIN_BY_SLUG.get(s)?.feedSlug === feed) ?? null));
+    const principal = lists.bookmaker ? new Set(lists.bookmaker.map(feedOf)) : null;
+    return rows.map((r) => {
+        const p = principal ? r.legs.findIndex((l) => principal.has(l.bookmakerSlug)) : -1;
+        return {
+            ...r,
+            legs: r.legs.map((l, i) => {
+                const shown = i === p ? brandIn(l.bookmakerSlug, lists.bookmaker)
+                    : brandIn(l.bookmakerSlug, lists.cover) ?? brandIn(l.bookmakerSlug, lists.allowed) ?? brandIn(l.bookmakerSlug, lists.bookmaker);
+                const twin = shown ? TWIN_BY_SLUG.get(shown) : null;
+                return twin && twin.feedSlug === l.bookmakerSlug ? { ...l, bookmakerSlug: twin.slug, bookmakerName: twin.name, eventUrl: null } : l;
+            }),
+        };
+    });
+}
+
 const META = {
     totalResults: ROWS.length,
     calculatedAt: ago(35),
     exchangeCommission: C,
     sports: ['Basketball', 'Football'],
-    bookmakers: Object.values(BOOKMAKERS).map(({ slug, name, isExchange }) => ({ slug, name, isExchange })),
+    bookmakers: META_BOOKMAKERS,
     marketTypes: ['1x2', 'btts', 'double_chance', 'draw_no_bet', 'handicap_asian', 'over_under'],
     nations: ['England', 'Italy', 'USA', 'World'],
     competitions: [
@@ -515,7 +559,11 @@ function legSummaryOf(betId) {
 
 function filterRows(q) {
     let rows = ROWS.filter((r) => Date.parse(r.startTime) > Date.now());
-    const get = (k) => q.get(k) ?? '';
+    // §14.375: a twin brand is read as its feed; the lists as sent are kept to show the legs under the twin.
+    const asSent = (k) => (q.get(k) ? q.get(k).split(',') : undefined);
+    const lists = { bookmaker: asSent('bookmaker'), cover: asSent('cover_bookmakers'), allowed: asSent('allowed_bookmakers') };
+    const FEED_PARAMS = ['bookmaker', 'cover_bookmakers', 'allowed_bookmakers'];
+    const get = (k) => (FEED_PARAMS.includes(k) && q.get(k) ? [...new Set(q.get(k).split(',').map(feedOf))].join(',') : (q.get(k) ?? ''));
     if (get('sport')) rows = rows.filter((r) => r.sportName === get('sport'));
     if (get('match_type')) rows = rows.filter((r) => r.matchType === get('match_type'));
     if (get('market_type')) rows = rows.filter((r) => r.marketTypeKey === get('market_type'));
@@ -544,7 +592,7 @@ function filterRows(q) {
     rows.sort((a, b) => (a[key] > b[key] ? dir : a[key] < b[key] ? -dir : 0));
     const limit = Math.min(parseInt(get('limit') || '50', 10), 200);
     const offset = parseInt(get('offset') || '0', 10);
-    return { results: rows.slice(offset, offset + limit), total: rows.length, calculatedAt: META.calculatedAt };
+    return { results: showTwinBrands(rows.slice(offset, offset + limit), lists), total: rows.length, calculatedAt: META.calculatedAt };
 }
 
 // §14.339: the free Oddsmatcher, no login: back on Sisal (shown as Snai) and lay on an exchange

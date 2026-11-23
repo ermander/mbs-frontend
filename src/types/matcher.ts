@@ -73,6 +73,12 @@ export interface MatcherBookmaker {
   name: string
   /** Absent on backends older than §14.95 (or on a meta cached before it). */
   isExchange?: boolean
+  /**
+   * On a twin brand only (§14.375): the slug of the bookmaker whose prices it serves (Snai →
+   * `sisal`, Lottomatica → `goldbet`). The backend reads the twin as that feed and shows its legs
+   * under the twin. Absent on older backends, which do not list twins.
+   */
+  sameOddsAs?: string
 }
 
 export interface MatcherMeta {

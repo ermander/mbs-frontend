@@ -117,25 +117,14 @@ export const SORT_OPTIONS = [
 
 /**
  * One entry per bookmaker of the meta, twin brands included (§14.375): Snai, Lottomatica… are
- * bookmakers of their own for the user, with a note of the feed whose prices they serve.
+ * bookmakers of their own for the user, with no mention of the book whose prices they serve.
  */
 function bookOptions(list: MatcherBookmaker[]): OmOption[] {
-  const nameOf = new Map(list.map((b) => [b.slug, shortBookmakerName(b.name)]))
-  return list.map((b) => {
-    const feed = b.sameOddsAs ? (nameOf.get(b.sameOddsAs) ?? null) : null
-    return {
-      value: b.slug,
-      label: shortBookmakerName(b.name),
-      render: feed ? (
-        <span className="flex min-w-0 items-center gap-2" title={`Stesse quote di ${feed}`}>
-          <OmBookLogo slug={b.slug} name={b.name} />
-          <span className="ds-caption truncate text-ds-ink-muted">quote {feed}</span>
-        </span>
-      ) : (
-        <OmBookLogo slug={b.slug} name={b.name} />
-      ),
-    }
-  })
+  return list.map((b) => ({
+    value: b.slug,
+    label: shortBookmakerName(b.name),
+    render: <OmBookLogo slug={b.slug} name={b.name} />,
+  }))
 }
 
 /** A group of the advanced panel: the label on the left, the fields in a grid of four. */
@@ -311,7 +300,7 @@ export function ScannerV2FilterBar({
           options={bookOptions(books)}
           selected={filters.books}
           onChange={(next) => onChange({ books: next })}
-          panelWidth={260}
+          panelWidth={220}
           emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
@@ -322,7 +311,7 @@ export function ScannerV2FilterBar({
           options={bookOptions(books)}
           selected={filters.coverBooks}
           onChange={(next) => onChange({ coverBooks: next })}
-          panelWidth={260}
+          panelWidth={220}
           emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />

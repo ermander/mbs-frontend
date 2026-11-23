@@ -4,6 +4,7 @@ import {
   allBookmakerLogoSrcs,
   bookmakerLogoSrc,
   exchangeCommissionOf,
+  profitTrackerBookLogoSlug,
   legIsExchange,
   resolveProfitTrackerBook,
   shortBookmakerName,
@@ -41,9 +42,28 @@ describe('logos and names', () => {
     expect(bookmakerLogoSrc('xsport')).toBeNull()
   })
 
+  it('has the logos added in §14.371, Betfair Exchange and Betfair Sportsbook kept apart', () => {
+    for (const slug of [
+      'betwin360',
+      'casinosanremo',
+      'casinovenezia',
+      'gioca7',
+      'giocodigitale',
+      'lottomatica',
+      'sportium',
+      'starvegas',
+      'staryes',
+    ])
+      expect(bookmakerLogoSrc(slug)).toBe(`/loghi_book/${slug}.png`)
+    expect(bookmakerLogoSrc('betfair')).toBe('/loghi_book/36.png')
+    expect(bookmakerLogoSrc('betfairsportsbook')).toBe('/loghi_book/5.png')
+    expect(bookmakerLogoSrc('starcasino')).toBe('/loghi_book/31.png')
+    expect(bookmakerLogoSrc('totosi')).toBe('/loghi_book/34.png')
+  })
+
   it('lists one logo per brand for the landing carousel, sorted and without duplicates', () => {
     const all = allBookmakerLogoSrcs()
-    expect(all).toHaveLength(40)
+    expect(all).toHaveLength(49)
     expect(new Set(all).size).toBe(all.length)
     expect(all[0]).toBe('/loghi_book/14.png') // 888sport
     expect(all).toContain('/loghi_book/mylotteriesplay.png')
@@ -54,6 +74,59 @@ describe('logos and names', () => {
     expect(shortBookmakerName('Sisal (PokerStars · Snai)')).toBe('Sisal')
     expect(shortBookmakerName('Bwin (Gioco Digitale)')).toBe('Bwin')
     expect(shortBookmakerName('888sport')).toBe('888sport')
+  })
+})
+
+describe('profitTrackerBookLogoSlug', () => {
+  it('the global books: the external id, a slug or the old scanner number', () => {
+    // The global books as runMigrations seeds them (mbs-backend DEFAULT_GLOBAL_BOOKS).
+    const global = (nome: string, externalId: string, isExchange = false) =>
+      profitTrackerBookLogoSlug({ nome, externalId, isExchange })
+    expect(global('Betfair Exchange', '36', true)).toBe('betfair')
+    expect(global('Betfair', '5')).toBe('betfairsportsbook')
+    expect(global('StarCasinò', '31')).toBe('starcasino')
+    expect(global('Totosì', '34')).toBe('totosi')
+    expect(global('Casinò di Sanremo', 'casinosanremo')).toBe('casinosanremo')
+    expect(global('Casinò di Venezia', 'casinovenezia')).toBe('casinovenezia')
+    expect(global('Gioca7', 'gioca7')).toBe('gioca7')
+    expect(global('StarYes', 'staryes')).toBe('staryes')
+    // 48 and 50 have no file of that name: the name decides.
+    expect(global('Gioco Digitale', '48')).toBe('giocodigitale')
+    expect(global('StarVegas', '50')).toBe('starvegas')
+    expect(global('Snai', '26')).toBe('snai')
+  })
+
+  it('the books of the users: the name, accents folded, with a few aliases', () => {
+    const own = (nome: string, isExchange?: boolean) =>
+      profitTrackerBookLogoSlug({ nome, externalId: null, isExchange })
+    expect(own('Lottomatica.it')).toBe('lottomatica')
+    expect(own('Sportium.it')).toBe('sportium')
+    expect(own('GiocoDigitale.it')).toBe('giocodigitale')
+    expect(own('Staryes.it')).toBe('staryes')
+    expect(own('Betwin360')).toBe('betwin360')
+    expect(own('BW360')).toBe('betwin360')
+    expect(own('Casino Di San Remo')).toBe('casinosanremo')
+    expect(own('Casinò di Venezia')).toBe('casinovenezia')
+    expect(own('StarCasinò')).toBe('starcasino')
+    expect(own('TotoSì')).toBe('totosi')
+    expect(own('Betfair Exchange')).toBe('betfair')
+    expect(own('Betfair Sportbook')).toBe('betfairsportsbook')
+    expect(own('Betfair Sportsbook')).toBe('betfairsportsbook')
+    expect(own('Betfair', true)).toBe('betfair')
+    expect(own('Betfair', false)).toBe('betfairsportsbook')
+    expect(own('Betfair')).toBe('betfair')
+    expect(own('Book inventato')).toBe('')
+  })
+
+  it('the brand in the name wins over the engine link, which serves the books with other names', () => {
+    expect(profitTrackerBookLogoSlug({ nome: 'Lottomatica', externalId: 'goldbet' })).toBe(
+      'lottomatica',
+    )
+    expect(profitTrackerBookLogoSlug({ nome: 'Il mio book', externalId: 'goldbet' })).toBe(
+      'goldbet',
+    )
+    expect(profitTrackerBookLogoSlug({ nome: 'Sisal.it', externalId: 'xsport' })).toBe('sisal')
+    expect(profitTrackerBookLogoSlug({ nome: 'Pippo', externalId: '99' })).toBe('')
   })
 })
 

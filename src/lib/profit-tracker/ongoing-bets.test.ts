@@ -164,6 +164,15 @@ describe('bookLogoSlug', () => {
     expect(bookLogoSlug({ nome: 'Bet365' })).toBe('bet365')
     expect(bookLogoSlug({ nome: 'Book inventato' })).toBe('')
   })
+
+  it('Betfair Exchange e Betfair Sportsbook hanno due loghi diversi (§14.371)', () => {
+    expect(bookLogoSlug({ nome: 'Betfair Exchange', externalId: '36', isExchange: true })).toBe(
+      'betfair',
+    )
+    expect(bookLogoSlug({ nome: 'Betfair', externalId: '5', isExchange: false })).toBe(
+      'betfairsportsbook',
+    )
+  })
 })
 
 describe('filterOngoingBets', () => {

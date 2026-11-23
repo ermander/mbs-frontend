@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { sectionsSummary } from './backoffice-users'
+import {
+  USERS_PAGE_SIZE,
+  lastUsersPage,
+  sectionsSummary,
+  usersEmptyMessage,
+} from './backoffice-users'
 
 describe('sectionsSummary (§14.366)', () => {
   it('names what is missing when little is, what is there when little is', () => {
@@ -20,5 +25,20 @@ describe('sectionsSummary (§14.366)', () => {
   })
   it('ignores keys it does not know', () => {
     expect(sectionsSummary(['boh', 'offers'])).toBe('Solo Offerte')
+  })
+})
+
+describe('paginazione e ricerca degli utenti (§14.374)', () => {
+  it('lastUsersPage: l’ultima pagina con qualcuno, da 0', () => {
+    expect(lastUsersPage(0)).toBe(0)
+    expect(lastUsersPage(1)).toBe(0)
+    expect(lastUsersPage(USERS_PAGE_SIZE)).toBe(0)
+    expect(lastUsersPage(USERS_PAGE_SIZE + 1)).toBe(1)
+    expect(lastUsersPage(62, 25)).toBe(2)
+  })
+  it('usersEmptyMessage: la ricerca fra le virgolette, senza ricerca il messaggio di sempre', () => {
+    expect(usersEmptyMessage('')).toBe('Nessun utente trovato.')
+    expect(usersEmptyMessage('   ')).toBe('Nessun utente trovato.')
+    expect(usersEmptyMessage(' marco ')).toBe('Nessun utente corrisponde a «marco».')
   })
 })

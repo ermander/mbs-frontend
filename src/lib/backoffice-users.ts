@@ -14,3 +14,17 @@ export function sectionsSummary(enabled: readonly string[] | undefined): string 
   if (on.length <= 2) return `Solo ${on.map((s) => s.label).join(' e ')}`
   return `${on.length} su ${SECTIONS.length}`
 }
+
+/** §14.374: gli utenti di una pagina della tabella Utenti del Backoffice. */
+export const USERS_PAGE_SIZE = 25
+
+/** §14.374: l'ultima pagina (da 0) che contiene qualcuno; 0 se non c'è nessuno. */
+export function lastUsersPage(total: number, pageSize = USERS_PAGE_SIZE): number {
+  return Math.max(0, Math.ceil(total / pageSize) - 1)
+}
+
+/** §14.374: la riga della tabella vuota, con la ricerca se c'è. */
+export function usersEmptyMessage(search: string): string {
+  const q = search.trim()
+  return q ? `Nessun utente corrisponde a «${q}».` : 'Nessun utente trovato.'
+}

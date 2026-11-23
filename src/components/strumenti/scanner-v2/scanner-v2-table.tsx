@@ -25,6 +25,11 @@ import { cn } from '@/lib/utils'
 
 /** Selection of the Multipla (§14.99): shown as a checkbox column while the panel is open. */
 export interface MultiplaSelection {
+  /**
+   * The ticked rows, shown above the results and outside their count: the results hold only
+   * the rows from an hour after the last ticked event, so the ticked ones are not among them.
+   */
+  pinned: MatcherResult[]
   isSelected: (row: MatcherResult) => boolean
   eligibility: (row: MatcherResult) => { ok: boolean; reason: string | null }
   onToggle: (row: MatcherResult) => void
@@ -257,7 +262,10 @@ export function ScannerV2Table({
     onOpenCalculator(row)
   }
 
-  if (loading && results.length === 0) {
+  const pinned = multipla?.pinned ?? []
+  const rows = pinned.length > 0 ? [...pinned, ...results] : results
+
+  if (loading && rows.length === 0) {
     return (
       <div
         aria-busy="true"
@@ -279,7 +287,7 @@ export function ScannerV2Table({
     )
   }
 
-  if (results.length === 0) {
+  if (rows.length === 0) {
     return <OmEmptyStateWithReset onReset={onResetFilters} />
   }
 
@@ -293,7 +301,7 @@ export function ScannerV2Table({
       >
         {/* Telefono: schede */}
         <ul className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
-          {results.map((row) => {
+          {rows.map((row) => {
             const key = matcherRowKey(row)
             return (
               <li
@@ -394,7 +402,7 @@ export function ScannerV2Table({
               </tr>
             </thead>
             <tbody>
-              {results.map((row) => {
+              {rows.map((row) => {
                 const key = matcherRowKey(row)
                 const selected = multipla?.isSelected(row) || activeKey === key
                 const sport = sportDisplay(row.sportName)
@@ -476,6 +484,13 @@ export function ScannerV2Table({
           </table>
         </div>
       </div>
+
+      {pinned.length > 0 && results.length === 0 && !loading && (
+        <p className="ds-body-sm m-0 rounded-ds-md border border-ds-line bg-ds-surface-raised px-4 py-3 text-ds-ink-muted">
+          Nessun&apos;altra partita inizia almeno un&apos;ora dopo l&apos;ultimo evento scelto, con
+          questi filtri.
+        </p>
+      )}
 
       <OmPagination page={page} pageSize={pageSize} total={total} onChange={onPageChange} />
     </div>

@@ -97,11 +97,33 @@ const kickoffMs = (e: MultiplaEvent): number =>
     ? Date.parse(e.startTimeIso)
     : Date.parse(`${e.date}T${e.hour.replace('.', ':')}:00`)
 
+/** The next event of the multipla starts at least this long after the last one chosen. */
+export const MULTIPLA_GAP_MS = 60 * 60 * 1000
+
+/**
+ * The first kickoff a new event of the multipla may have: the latest kickoff among the chosen
+ * events plus `MULTIPLA_GAP_MS` (one hour). Null with nothing chosen. While the panel is open the
+ * table shows only the rows from here on, plus the chosen ones.
+ */
+export function multiplaWindowStart(selected: MultiplaEvent[]): number | null {
+  if (selected.length === 0) return null
+  const last = selected.reduce((max, e) => Math.max(max, kickoffMs(e)), -Infinity)
+  return Number.isFinite(last) ? last + MULTIPLA_GAP_MS : null
+}
+
+/** Whether the row starts inside the window of the multipla (always, with no window). */
+export function inMultiplaWindow(
+  row: Pick<MatcherResult, 'startTime'>,
+  windowStart: number | null,
+) {
+  return windowStart == null || Date.parse(row.startTime) >= windowStart
+}
+
 /**
  * Whether a row can be ticked: one book chosen, the book on the punta side,
- * room left, not the same event twice, and a kickoff after every event
- * already chosen (the hedges are placed one after the other, as each event
- * settles). A row already in the multipla is always eligible (to untick it).
+ * room left, not the same event twice, and a kickoff at least an hour after
+ * every event already chosen (`multiplaWindowStart`: the hedges are placed one
+ * after the other). A row already in the multipla is always eligible (to untick it).
  */
 export function multiplaEligibility(
   row: MatcherResult,
@@ -129,9 +151,9 @@ export function multiplaEligibility(
   ) {
     return { ok: false, reason: 'Questo evento è già nella multipla' }
   }
-  const lastKickoff = selected.reduce((max, e) => Math.max(max, kickoffMs(e)), 0)
-  if (selected.length > 0 && kickoffMs(event) <= lastKickoff) {
-    return { ok: false, reason: 'Deve iniziare dopo l’ultimo evento scelto' }
+  const windowStart = multiplaWindowStart(selected)
+  if (windowStart != null && kickoffMs(event) < windowStart) {
+    return { ok: false, reason: 'Deve iniziare almeno un’ora dopo l’ultimo evento scelto' }
   }
   return { ok: true, reason: null }
 }

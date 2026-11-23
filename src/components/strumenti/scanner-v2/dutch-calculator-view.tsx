@@ -8,6 +8,7 @@ import {
   CalcOutcomeTable,
   CalcProfits,
   amount,
+  type CalcProfitsDetail,
   type OutcomeProfitRow,
 } from '@/components/calculators/calc-ds'
 import { CalculatorRating, CalculatorSaveAction } from '@/components/calculators/calculator-panel'
@@ -54,7 +55,8 @@ interface DutchCalculatorViewProps {
  * panel of the Oddsmatcher (design of §14.273): the stake goes on one leg (a
  * click on another card moves it), the other legs are covers
  * for the same profit whichever outcome wins. Exchange legs are shown at their
- * gross price and priced net of the commission underneath, like the matcher.
+ * gross price on the card; their price net of the commission is in the summary
+ * line of «Profitti», so every card has the same rows and stays aligned.
  */
 export function DutchCalculatorView({
   row,
@@ -214,6 +216,19 @@ export function DutchCalculatorView({
         totale: result.legs[i].profit,
       }))
     : []
+  // The net price of each exchange leg, in the summary line of «Profitti» (it used to sit under the
+  // card title and pushed that card's field and logo out of line with the others).
+  const netOddsDetails: CalcProfitsDetail[] = row.legs.flatMap((leg, i) => {
+    if (!exchangeFlags[i]) return []
+    const net = result.legs[i]?.netOdds
+    return [
+      {
+        key: `net${i}`,
+        label: `Quota netta ${outcomeName(leg)} su ${shortBookmakerName(leg.bookmakerName)}`,
+        value: net != null ? net.toFixed(3).replace('.', ',') : '—',
+      },
+    ]
+  })
 
   return (
     <div className="flex flex-col gap-8">
@@ -238,11 +253,6 @@ export function DutchCalculatorView({
                     key={`${leg.bookmakerSlug}-${leg.outcomeKey}-${i}`}
                     tone={isPunta ? 'info' : 'plain'}
                     title={outcomeName(leg)}
-                    note={
-                      exchangeFlags[i]
-                        ? `exchange · netta ${legResult?.netOdds != null ? legResult.netOdds.toFixed(3).replace('.', ',') : '—'}`
-                        : undefined
-                    }
                     odds={
                       <CalcNumberField
                         id={`dutch-quota-${i}`}
@@ -335,7 +345,11 @@ export function DutchCalculatorView({
         }
       />
 
-      <CalcProfits outlay={result.totalOutlay} minGain={result.guadagnoMinimo}>
+      <CalcProfits
+        outlay={result.totalOutlay}
+        minGain={result.guadagnoMinimo}
+        details={netOddsDetails}
+      >
         <CalcOutcomeTable
           legLabels={legLabels}
           rows={profitRows}

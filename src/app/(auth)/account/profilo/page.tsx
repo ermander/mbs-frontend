@@ -50,13 +50,15 @@ const inlineLink = cn(
 /**
  * Il Profilo sul design OddWise (§14.350): dati dell'account, sicurezza, notifiche Telegram ed
  * eliminazione dell'account, sul guscio chiaro del tracker. Logica e salvataggi come prima.
+ * Dal §14.382 la colonna da 760px sta al centro della pagina (`mx-auto`), come il dettaglio
+ * dell'offerta (§14.373): con la pagina a tutta larghezza (§14.357) restava attaccata a sinistra.
  */
 export default function AccountProfiloPage() {
   const user = useAuthStore((s) => s.user)
 
   return (
     <GiocateDsShell>
-      <div className="flex w-full max-w-[760px] flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
         <DsPageHeader
           title="Profilo"
           description="I dati dell'account, la sicurezza e le notifiche."

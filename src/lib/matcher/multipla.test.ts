@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { MatcherResult } from '@/types/matcher'
 import { matcherRowKey } from './format'
 import {
+  inMultiplaWindow,
   localDateHour,
   matcherRowToMultiplaEvent,
   multiplaEligibility,
   multiplaSummary,
+  multiplaWindowStart,
 } from './multipla'
 
 function row(overrides: Partial<MatcherResult>): MatcherResult {
@@ -162,6 +164,44 @@ describe('multiplaEligibility', () => {
       multiplaEligibility(backLay, 'sisal', [later], 3, null, new Set([key(backLay)]), key(backLay))
         .ok,
     ).toBe(true)
+  })
+})
+
+describe('the window of the multipla', () => {
+  const key = (r: MatcherResult) => matcherRowKey(r)
+  const none = new Set<string>()
+  const first = matcherRowToMultiplaEvent(backLay, 'sisal', null, 4.5)! // 20/09 18:45 UTC
+  const at = (startTime: string, eventId: string) =>
+    row({
+      eventId,
+      startTime,
+      homeName: eventId,
+      legs: [leg('sisal', 'BACK Over', 2.05, false), leg('betfair', 'LAY Over', 2.02, true)],
+    })
+
+  it('starts an hour after the latest kickoff chosen, whatever the order of the ticks', () => {
+    expect(multiplaWindowStart([])).toBeNull()
+    expect(new Date(multiplaWindowStart([first])!).toISOString()).toBe('2026-09-20T19:45:00.000Z')
+    const later = matcherRowToMultiplaEvent(dutchBook, 'sisal', null, 4.5)! // 21/09 18:45 UTC
+    expect(new Date(multiplaWindowStart([later, first])!).toISOString()).toBe(
+      '2026-09-21T19:45:00.000Z',
+    )
+  })
+
+  it('keeps the rows from the window start on, the start included', () => {
+    const start = multiplaWindowStart([first])
+    expect(inMultiplaWindow(at('2026-09-20T19:44:00.000Z', 'a'), start)).toBe(false)
+    expect(inMultiplaWindow(at('2026-09-20T19:45:00.000Z', 'b'), start)).toBe(true)
+    expect(inMultiplaWindow(at('2026-09-20T17:00:00.000Z', 'c'), null)).toBe(true)
+  })
+
+  it('a row inside the hour cannot be ticked, one at the hour can', () => {
+    const soon = at('2026-09-20T19:30:00.000Z', 'soon')
+    expect(multiplaEligibility(soon, 'sisal', [first], 3, null, none, key(soon)).reason).toMatch(
+      /almeno un’ora dopo/,
+    )
+    const onTime = at('2026-09-20T19:45:00.000Z', 'on-time')
+    expect(multiplaEligibility(onTime, 'sisal', [first], 3, null, none, key(onTime)).ok).toBe(true)
   })
 })
 

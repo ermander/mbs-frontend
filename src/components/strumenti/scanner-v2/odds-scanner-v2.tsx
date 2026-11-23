@@ -16,9 +16,11 @@ import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildMultiplaBet } from '@/lib/calculators/bet-payloads'
 import { matcherRowKey } from '@/lib/matcher/format'
 import {
+  inMultiplaWindow,
   matcherRowToMultiplaEvent,
   multiplaEligibility,
   multiplaSummary,
+  multiplaWindowStart,
 } from '@/lib/matcher/multipla'
 import type { SharedAmounts } from '@/lib/matcher/quick-profit'
 import type { MatcherFilters, MatcherMeta, MatcherResult } from '@/types/matcher'
@@ -68,6 +70,8 @@ function dayEndIso(date: string): string {
 
 interface SelectedMultiplaRow {
   key: string
+  /** The row as it was when ticked: it stays on top of the table, out of the window. */
+  row: MatcherResult
   event: MultiplaEvent
 }
 
@@ -105,6 +109,14 @@ export function OddsScannerV2() {
   const [multiplaSaving, setMultiplaSaving] = useState(false)
   const [multiplaError, setMultiplaError] = useState<string | null>(null)
   const [multiplaSavedBetId, setMultiplaSavedBetId] = useState<string | null>(null)
+  const multiplaEvents = useMemo(() => multiplaRows.map((r) => r.event), [multiplaRows])
+  const multiplaKeys = useMemo(() => new Set(multiplaRows.map((r) => r.key)), [multiplaRows])
+  // With events chosen the table keeps only the rows from an hour after the last one: the
+  // earlier ones leave the list (and the count), and come back when that event is unticked.
+  const multiplaWindow = useMemo(
+    () => (!free && multiplaOpen ? multiplaWindowStart(multiplaEvents) : null),
+    [free, multiplaOpen, multiplaEvents],
+  )
 
   const setFilters = useCallback((patch: Partial<ScannerV2Filters>) => {
     setFiltersState((prev) => ({ ...prev, ...patch }))
@@ -226,9 +238,13 @@ export function OddsScannerV2() {
     if (minOdds != null) q.min_odds = minOdds
     if (maxOdds != null) q.max_odds = maxOdds
     if (debouncedSearch) q.search = debouncedSearch
-    if (multiplaMode && multiplaParams.dataInizio)
-      q.start_time_from = dayStartIso(multiplaParams.dataInizio)
-    else if (filters.startFrom) q.start_time_from = new Date(filters.startFrom).toISOString()
+    let from: string | undefined
+    if (multiplaMode && multiplaParams.dataInizio) from = dayStartIso(multiplaParams.dataInizio)
+    else if (filters.startFrom) from = new Date(filters.startFrom).toISOString()
+    if (multiplaWindow != null && (from == null || Date.parse(from) < multiplaWindow)) {
+      from = new Date(multiplaWindow).toISOString()
+    }
+    if (from) q.start_time_from = from
     if (multiplaMode && multiplaParams.dataFine)
       q.start_time_to = dayEndIso(multiplaParams.dataFine)
     else if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
@@ -257,6 +273,7 @@ export function OddsScannerV2() {
     multiplaParams.quotaMaxEvento,
     multiplaParams.dataInizio,
     multiplaParams.dataFine,
+    multiplaWindow,
   ])
 
   const loading = refreshing || loadedQuery !== query
@@ -357,11 +374,41 @@ export function OddsScannerV2() {
   )
 
   // ── Multipla selection ──
-  const multiplaEvents = useMemo(() => multiplaRows.map((r) => r.event), [multiplaRows])
-  const multiplaKeys = useMemo(() => new Set(multiplaRows.map((r) => r.key)), [multiplaRows])
+  const changeMultiplaRows = useCallback(
+    (next: SelectedMultiplaRow[]) => {
+      // A new window changes the whole list: back to its first page.
+      if (multiplaWindowStart(next.map((r) => r.event)) !== multiplaWindowStart(multiplaEvents)) {
+        setPage(0)
+      }
+      setMultiplaRows(next)
+    },
+    [multiplaEvents],
+  )
+  // The rows on screen: the ticked ones on top of the first page (they sit before the window,
+  // so the server leaves them out), then the rows of the window. The server already filters by
+  // the window; the check here hides the earlier rows at once, while the new page is loading.
+  const tableResults = useMemo(
+    () =>
+      multiplaWindow == null
+        ? results
+        : results.filter(
+            (r) => inMultiplaWindow(r, multiplaWindow) && !multiplaKeys.has(matcherRowKey(r)),
+          ),
+    [results, multiplaWindow, multiplaKeys],
+  )
+  const pinnedRows = useMemo(
+    () =>
+      multiplaWindow == null || page > 0
+        ? []
+        : multiplaRows
+            .map((r) => r.row)
+            .sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime)),
+    [multiplaRows, multiplaWindow, page],
+  )
   const multiplaSelection = useMemo<MultiplaSelection | undefined>(() => {
     if (!multiplaOpen) return undefined
     return {
+      pinned: pinnedRows,
       isSelected: (row) => multiplaKeys.has(matcherRowKey(row)),
       eligibility: (row) =>
         multiplaEligibility(
@@ -375,30 +422,37 @@ export function OddsScannerV2() {
         ),
       onToggle: (row) => {
         const key = matcherRowKey(row)
-        setMultiplaRows((prev) => {
-          if (prev.some((r) => r.key === key)) return prev.filter((r) => r.key !== key)
-          if (!activeBook) return prev
-          const event = matcherRowToMultiplaEvent(row, activeBook, meta, commissionPercent)
-          if (!event) return prev
-          return [...prev, { key, event }]
-        })
+        if (multiplaRows.some((r) => r.key === key)) {
+          changeMultiplaRows(multiplaRows.filter((r) => r.key !== key))
+          return
+        }
+        if (!activeBook) return
+        const event = matcherRowToMultiplaEvent(row, activeBook, meta, commissionPercent)
+        if (!event) return
+        changeMultiplaRows([...multiplaRows, { key, row, event }])
       },
     }
   }, [
     multiplaOpen,
+    pinnedRows,
+    multiplaRows,
     multiplaKeys,
     multiplaEvents,
+    changeMultiplaRows,
     activeBook,
     multiplaParams.numEventi,
     meta,
     commissionPercent,
   ])
 
-  const removeMultiplaEvent = useCallback((event: MultiplaEvent) => {
-    const eventKey = multiplaEventKey(event)
-    setMultiplaRows((prev) => prev.filter((r) => multiplaEventKey(r.event) !== eventKey))
-  }, [])
-  const clearMultipla = useCallback(() => setMultiplaRows([]), [])
+  const removeMultiplaEvent = useCallback(
+    (event: MultiplaEvent) => {
+      const eventKey = multiplaEventKey(event)
+      changeMultiplaRows(multiplaRows.filter((r) => multiplaEventKey(r.event) !== eventKey))
+    },
+    [multiplaRows, changeMultiplaRows],
+  )
+  const clearMultipla = useCallback(() => changeMultiplaRows([]), [changeMultiplaRows])
 
   // One account for the book, one per cover bookmaker (a lay on Betfair and a
   // back on Bwin cannot share a login).
@@ -515,10 +569,11 @@ export function OddsScannerV2() {
             rimborso={filters.rimborso}
             onAmountsChange={setFilters}
             bookName={activeBookName}
+            windowStart={multiplaWindow}
           />
         )}
         <ScannerV2Table
-          results={results}
+          results={tableResults}
           meta={meta}
           now={now}
           shared={shared}
@@ -560,7 +615,7 @@ export function OddsScannerV2() {
           onDone={() => {
             setMultiplaSaveOpen(false)
             setMultiplaSavedBetId(null)
-            setMultiplaRows([])
+            changeMultiplaRows([])
           }}
         />
       )}

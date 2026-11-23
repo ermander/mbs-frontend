@@ -45,13 +45,16 @@ interface ScannerV2MultiplaPanelProps {
   onAmountsChange: (patch: { bonus?: string; rimborso?: string }) => void
   /** The book the multipla is played on; null until exactly one book is chosen in the filter. */
   bookName: string | null
+  /** First kickoff the table still shows (`multiplaWindowStart`), in ms; null with nothing chosen. */
+  windowStart: number | null
 }
 
 /**
  * The Multipla of the scanner v2 in the design of §14.272: the parameters on the left, the
  * summary on the right (events chosen, rating, total price and result) with the chosen events,
  * «Azzera» and «Salva nel tracker». Events are ticked in the table (one book on the punta side,
- * kickoffs in order); the hedges are sized as in the old scanner (`multiplaLayStakes`).
+ * kickoffs in order, each at least an hour after the previous one: the earlier rows leave the
+ * table); the hedges are sized as in the old scanner (`multiplaLayStakes`).
  */
 export function ScannerV2MultiplaPanel({
   params,
@@ -65,6 +68,7 @@ export function ScannerV2MultiplaPanel({
   rimborso,
   onAmountsChange,
   bookName,
+  windowStart,
 }: ScannerV2MultiplaPanelProps) {
   const summary = multiplaSummary(selected, shared.puntata, shared.bonus, shared.rimborso)
   const quotaMinTotale = parseNum(params.quotaMinTotale) ?? 0
@@ -228,6 +232,12 @@ export function ScannerV2MultiplaPanel({
               )
             })}
           </ul>
+        )}
+        {windowStart != null && !complete && (
+          <p className="ds-caption m-0 text-ds-ink-muted">
+            In tabella restano le partite dal {formatKickoff(new Date(windowStart).toISOString())}{' '}
+            in poi, un&apos;ora dopo l&apos;ultimo evento scelto.
+          </p>
         )}
 
         {complete && !hasStake && (

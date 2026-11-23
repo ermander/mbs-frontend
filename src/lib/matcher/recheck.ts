@@ -136,7 +136,7 @@ export function readOutcomeText(b: RecheckBookmaker): {
         label: 'Occupato',
         tone: 'warning',
         detail:
-          'Una lettura programmata sta usando questo bookmaker e non è finita in tempo. Riprova fra un minuto.',
+          'Una lettura programmata sta usando questo bookmaker e non ha fatto posto in tempo a questa: non è stato riletto. Riprova fra poco.',
       }
     case 'off':
       return {

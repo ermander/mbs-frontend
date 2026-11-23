@@ -8,7 +8,8 @@ import type { RecheckRequest, RecheckResponse } from '@/types/odds-recheck'
  */
 export async function recheckOdds(request: RecheckRequest): Promise<RecheckResponse> {
   const response = await apiClient.post<RecheckResponse>('/odds-collection/recheck', request, {
-    // The backend waits up to a minute for a busy or slow bookmaker before answering.
+    // The backend waits up to a minute for a busy or slow bookmaker before answering; the /api
+    // rewrite is given a little longer than this (proxyTimeout in next.config.ts).
     timeout: 90_000,
   })
   return response.data

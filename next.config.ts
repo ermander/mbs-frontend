@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_TURBOPACK_ROOT
     ? { turbopack: { root: process.env.NEXT_TURBOPACK_ROOT } }
     : {}),
+  experimental: {
+    // The /api rewrite below is a proxy with a timeout of its own, 30 s unless said otherwise: past
+    // it the browser gets a 500 while the backend is still working. «Ricalcola» (ADAPTER_STATUS
+    // §14.392) waits for a bookmaker up to a minute, and its client gives up at 90 s.
+    proxyTimeout: 95_000,
+  },
   async headers() {
     return [
       {

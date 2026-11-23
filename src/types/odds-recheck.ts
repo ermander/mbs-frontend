@@ -9,9 +9,12 @@ import type { MatchType } from './matcher'
 export type RecheckReadOutcome =
   /** Read now and stored. */
   | 'read'
-  /** Its competition was read moments ago: not read again, the stored prices are that read. */
+  /**
+   * Its competition was read moments ago, or while this request waited for the bookmaker: not
+   * read again, the stored prices are that read.
+   */
   | 'recent'
-  /** A scheduled read holds the bookmaker and did not end in time. */
+  /** A scheduled read holds the bookmaker and gave this one no slot in time (§14.392). */
   | 'busy'
   /** The bookmaker is not being read (switched off, reads paused, reader not running). */
   | 'off'

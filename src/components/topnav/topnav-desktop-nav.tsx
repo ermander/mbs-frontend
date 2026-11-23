@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
-import { isActiveHref, type AuthNavItem } from '@/lib/nav-config'
+import { isActiveHref, isNavItemActive, type AuthNavItem } from '@/lib/nav-config'
 import { dsNavLinkClass } from '@/components/landing/ds-primitives'
 import { useNavSections } from './use-nav-sections'
 import { NavHoverMenu } from './nav-submenu'
@@ -16,7 +16,8 @@ interface TopnavDesktopNavProps {
 
 /**
  * Le voci della barra: i gruppi `links` come link diretti, i gruppi `menu` come tendine. Dal
- * §14.358 anche una voce con `children` (Offerte) è una tendina, al suo posto fra i link.
+ * §14.358 anche una voce con `children` (Offerte, e dal §14.391 Radar) è una tendina, al suo posto
+ * fra i link.
  */
 export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
   const sections = useNavSections()
@@ -35,7 +36,7 @@ export function TopnavDesktopNav({ className }: TopnavDesktopNavProps) {
                   <NavHoverMenu
                     label={item.label}
                     items={item.children}
-                    active={isActiveHref(pathname, item.href)}
+                    active={isNavItemActive(pathname, item)}
                     pathname={pathname}
                   />
                 ) : (

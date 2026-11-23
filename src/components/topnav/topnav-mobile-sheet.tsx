@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { isActiveHref } from '@/lib/nav-config'
+import { isNavItemActive } from '@/lib/nav-config'
 import { LANDING_ROUTES } from '@/lib/landing-content'
 import {
   Sheet,
@@ -32,7 +32,7 @@ interface TopnavMobileSheetProps {
 /**
  * Sotto `lg`: cassetto da destra sui token ds-*. Le voci dei gruppi `links` in colonna, quelle
  * delle tendine (Tracker, Backoffice) sotto l'etichetta del gruppo. Dal §14.358 una voce con
- * `children` (Offerte) è una riga che si espande sulle sue pagine. Il marchio in testa porta alla
+ * `children` (Offerte, Radar) è una riga che si espande sulle sue pagine. Il marchio in testa porta alla
  * landing come quello della barra (§14.363).
  */
 export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps) {
@@ -85,7 +85,7 @@ export function TopnavMobileSheet({ open, onOpenChange }: TopnavMobileSheetProps
               )}
               <div className="flex flex-col gap-0.5">
                 {section.items.map((item) => {
-                  const active = isActiveHref(pathname, item.href)
+                  const active = isNavItemActive(pathname, item)
                   const Icon = item.icon
                   if (item.children) {
                     return (

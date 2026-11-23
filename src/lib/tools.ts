@@ -8,7 +8,8 @@ import type { AuthUser, UserRole } from '@/services/api/auth-client'
  */
 export const SECTIONS = [
   { key: 'offers', label: 'Offerte' },
-  { key: 'oddsmatcher', label: 'Oddsmatcher' },
+  // §14.391: la sezione è la tendina «Radar», l'Oddsmatcher e Best Odds insieme (la chiave resta).
+  { key: 'oddsmatcher', label: 'Radar' },
   { key: 'result_btts', label: 'Risultato + Goal' },
   { key: 'calculators', label: 'Calcolatori' },
   { key: 'tracker', label: 'Tracker' },

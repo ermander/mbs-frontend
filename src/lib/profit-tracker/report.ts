@@ -135,7 +135,7 @@ export function breakdownShare(row: BreakdownRow, rows: BreakdownRow[]): number 
   return (row.totale / totalPositive) * 100
 }
 
-/** Quante voci per pagina mostra ogni suddivisione (§14.386). */
+/** Quante voci per pagina mostra ogni suddivisione (§14.389). */
 export const BREAKDOWN_PAGE_SIZE = 6
 
 /**

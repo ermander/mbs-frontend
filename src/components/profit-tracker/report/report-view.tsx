@@ -51,7 +51,7 @@ import type {
  * Il Report del tracker sul design OddWise (§14.350): filtri, riquadri del periodo, conto
  * economico (§14.111), barre dei mesi con il mese da approfondire, suddivisioni e dettaglio delle
  * voci. Stesse letture e stessi conti della pagina di prima; il grafico è quello a barre della
- * Dashboard al posto di Recharts. Dal §14.386 le suddivisioni vanno a pagine.
+ * Dashboard al posto di Recharts. Dal §14.389 le suddivisioni vanno a pagine.
  */
 
 const DETAIL_PAGE_SIZE = 15
@@ -804,7 +804,7 @@ function StatementLine({
 
 /**
  * Una suddivisione: voce, importo, barra in proporzione alla voce più grande, conteggio e quota.
- * Dal §14.386 a pagine di BREAKDOWN_PAGE_SIZE voci: barre e quote restano sul totale di tutte le
+ * Dal §14.389 a pagine di BREAKDOWN_PAGE_SIZE voci: barre e quote restano sul totale di tutte le
  * voci, e l'ultima pagina tiene l'altezza delle altre perché le frecce non si spostino.
  */
 function BreakdownCard({

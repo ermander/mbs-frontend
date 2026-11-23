@@ -3,9 +3,11 @@ import { SECTIONS } from './tools'
 import {
   NAV_ITEM_SECTIONS,
   OFFERS_NAV_ITEMS,
+  RADAR_NAV_ITEMS,
   accountNavItem,
   authNavSections,
   isActiveHref,
+  isNavItemActive,
   visibleNavSections,
 } from './nav-config'
 
@@ -26,7 +28,7 @@ describe('visibleNavSections', () => {
       'Dashboard',
       'Guide',
       'Offerte',
-      'Oddsmatcher',
+      'Radar',
       'Risultato + Goal',
       'Calcolatori',
     ])
@@ -48,13 +50,7 @@ describe('visibleNavSections', () => {
     for (const user of [{ role: 'USER_ROLE' as const, tools: [] }, null, undefined]) {
       const sections = outline(user)
       expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
-      expect(sections[0][1]).toEqual([
-        'Dashboard',
-        'Guide',
-        'Offerte',
-        'Oddsmatcher',
-        'Calcolatori',
-      ])
+      expect(sections[0][1]).toEqual(['Dashboard', 'Guide', 'Offerte', 'Radar', 'Calcolatori'])
     }
   })
   // §14.366: ogni voce è una sezione che l'admin accende o spegne per utente.
@@ -69,7 +65,7 @@ describe('visibleNavSections', () => {
       sections: ['oddsmatcher', 'result_btts', 'tracker', 'forum'],
     })
     expect(sections.map(([label]) => label)).toEqual(['Sezioni', 'Tracker', 'Community'])
-    expect(sections[0][1]).toEqual(['Dashboard', 'Oddsmatcher', 'Risultato + Goal'])
+    expect(sections[0][1]).toEqual(['Dashboard', 'Radar', 'Risultato + Goal'])
   })
   it('no section at all: only the Dashboard; an admin with no section stored still sees everything', () => {
     expect(outline({ role: 'USER_ROLE', sections: [] })).toEqual([['Sezioni', ['Dashboard']]])
@@ -104,7 +100,7 @@ describe('authNavSections', () => {
     expect(hrefs.every((h) => h.startsWith('/'))).toBe(true)
     expect(new Set(hrefs).size).toBe(hrefs.length)
   })
-  it('the bar reads as the design, with the Dashboard first (§14.367): Dashboard, Guide, Offerte, Oddsmatcher, Calcolatori, Tracker, Forum', () => {
+  it('the bar reads as the design, with the Dashboard first (§14.367) and Radar where the Oddsmatcher was (§14.391): Dashboard, Guide, Offerte, Radar, Calcolatori, Tracker, Forum', () => {
     // §14.275: i gruppi «links» sono voci dirette, i «menu» (Tracker, Backoffice) tendine.
     const bar = visibleNavSections({ role: 'USER_ROLE', tools: [] }).flatMap((s) =>
       s.display === 'links' ? s.items.map((i) => i.label) : [s.label],
@@ -113,7 +109,7 @@ describe('authNavSections', () => {
       'Dashboard',
       'Guide',
       'Offerte',
-      'Oddsmatcher',
+      'Radar',
       'Calcolatori',
       'Tracker',
       'Forum',
@@ -147,6 +143,48 @@ describe('Offerte', () => {
       OFFERS_NAV_ITEMS[1],
     ])
     expect(OFFERS_NAV_ITEMS.some((i) => isActiveHref('/offerte/snai-30', i.href))).toBe(false)
+  })
+})
+
+// §14.391 (ClickUp «Best Odds»): Radar apre l'Oddsmatcher e Best Odds.
+describe('Radar', () => {
+  const radar = () => visibleNavSections({ role: 'USER_ROLE', tools: [] })[0].items[3]
+  it('holds the Oddsmatcher and Best Odds, in this order, where the Oddsmatcher was', () => {
+    expect(radar().label).toBe('Radar')
+    expect(radar().children?.map((c) => [c.label, c.href])).toEqual([
+      ['Oddsmatcher', '/odds-scanner'],
+      ['Best Odds', '/best-odds'],
+    ])
+    expect(RADAR_NAV_ITEMS.every((i) => i.icon)).toBe(true)
+    // No other entry of the bar is called Oddsmatcher any more.
+    const labels = authNavSections.flatMap((s) => s.items.map((i) => i.label))
+    expect(labels).not.toContain('Oddsmatcher')
+    expect(labels).not.toContain('Best Odds')
+  })
+  it('follows the oddsmatcher section: off, the whole menu goes', () => {
+    expect(NAV_ITEM_SECTIONS[radar().href]).toBe('oddsmatcher')
+    const without = visibleNavSections({ role: 'USER_ROLE', sections: ['offers', 'result_btts'] })
+    expect(without[0].items.map((i) => i.label)).toEqual([
+      'Dashboard',
+      'Offerte',
+      'Risultato + Goal',
+    ])
+  })
+  it('is active on both of its pages, each page only on itself', () => {
+    expect(isNavItemActive('/odds-scanner', radar())).toBe(true)
+    expect(isNavItemActive('/best-odds', radar())).toBe(true)
+    expect(isNavItemActive('/risultato-goal', radar())).toBe(false)
+    expect(isNavItemActive(null, radar())).toBe(false)
+    expect(RADAR_NAV_ITEMS.filter((i) => isActiveHref('/best-odds', i.href))).toEqual([
+      RADAR_NAV_ITEMS[1],
+    ])
+  })
+  it('an entry without pages under it is active as before', () => {
+    expect(isNavItemActive('/guide/primi-passi', { href: '/guide' })).toBe(true)
+    expect(
+      isNavItemActive('/offerte/snai-30', { href: '/offerte', children: OFFERS_NAV_ITEMS }),
+    ).toBe(true)
+    expect(isNavItemActive('/forum', { href: '/guide' })).toBe(false)
   })
 })
 

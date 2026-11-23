@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Calculator } from 'lucide-react'
+import { Calculator, ScanSearch } from 'lucide-react'
 import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsMoney } from '@/components/landing/ds-data'
 import { BookmakerLink } from './leg-chip'
@@ -54,6 +54,11 @@ interface ScannerV2TableProps {
   pageSize: number
   onPageChange: (page: number) => void
   onOpenCalculator: (row: MatcherResult) => void
+  /**
+   * «Ricalcola» (§14.390): reads the row's event again now from its bookmakers. Passed only to
+   * who may ask for it; without it the rows have no such button.
+   */
+  onRecheck?: (row: MatcherResult) => void
   onResetFilters: () => void
 }
 
@@ -229,6 +234,24 @@ function CalcButton({
   )
 }
 
+/** «Ricalcola» of a row: the on-demand read of its event, next to the calculator. */
+function RecheckButton({ row, onRecheck }: { row: MatcherResult; onRecheck: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={`Ricalcola le quote di ${eventName(row)}`}
+      title="Ricalcola: rileggi adesso le quote di questa riga dai bookmaker"
+      onClick={(e) => {
+        e.stopPropagation()
+        onRecheck()
+      }}
+      className={cn(dsButtonClass('secondary', 'sm'), 'w-8 px-0')}
+    >
+      <ScanSearch className="h-4 w-4" aria-hidden />
+    </button>
+  )
+}
+
 const SKELETON_ROWS = 8
 
 /**
@@ -251,6 +274,7 @@ export function ScannerV2Table({
   pageSize,
   onPageChange,
   onOpenCalculator,
+  onRecheck,
   onResetFilters,
   multipla,
 }: ScannerV2TableProps) {
@@ -351,6 +375,9 @@ export function ScannerV2Table({
                       commissionPercent={commissionPercent}
                       meta={meta}
                     />
+                    {onRecheck && row.canonicalMarketId && (
+                      <RecheckButton row={row} onRecheck={() => onRecheck(row)} />
+                    )}
                     {multipla ? (
                       <MultiplaCheckbox row={row} multipla={multipla} />
                     ) : (
@@ -397,7 +424,9 @@ export function ScannerV2Table({
                   </th>
                 ))}
                 <th scope="col" className="bg-ds-surface-sunken p-3 pr-4">
-                  <span className="sr-only">Calcolatore</span>
+                  <span className="sr-only">
+                    {onRecheck ? 'Ricalcola e calcolatore' : 'Calcolatore'}
+                  </span>
                 </th>
               </tr>
             </thead>
@@ -471,11 +500,16 @@ export function ScannerV2Table({
                       <AgeCell row={row} now={now} />
                     </td>
                     <td className="border-t border-ds-line p-3 pr-4 text-right align-middle">
-                      <CalcButton
-                        row={row}
-                        active={activeKey === key}
-                        onOpen={() => onOpenCalculator(row)}
-                      />
+                      <span className="inline-flex items-center gap-2">
+                        {onRecheck && row.canonicalMarketId && (
+                          <RecheckButton row={row} onRecheck={() => onRecheck(row)} />
+                        )}
+                        <CalcButton
+                          row={row}
+                          active={activeKey === key}
+                          onOpen={() => onOpenCalculator(row)}
+                        />
+                      </span>
                     </td>
                   </tr>
                 )

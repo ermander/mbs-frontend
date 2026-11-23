@@ -16,6 +16,7 @@
 const http = require('http');
 const { URL } = require('url');
 const { createBackofficeMock } = require('./backoffice');
+const { createBestOddsMock } = require('./best-odds');
 
 const PORT = parseInt(process.argv[2] ?? '4000', 10);
 const now = Date.now();
@@ -29,6 +30,8 @@ const inDays = (d, hour = 18, minute = 45) => {
 
 // §14.365: sport mappings, matchings, review queue, Palinsesto, Competizioni and the scraper drill-down.
 const backofficeMock = createBackofficeMock(now);
+// §14.390: «Best Odds», the catalog, the lists of events and the prices of one event.
+const bestOddsMock = createBestOddsMock(now);
 // §14.366: every section of the site; a new account gets all of them but result_btts.
 const ALL_SECTIONS = ['offers', 'oddsmatcher', 'result_btts', 'calculators', 'tracker', 'guide', 'forum'];
 const BASE_SECTIONS = ALL_SECTIONS.filter((s) => s !== 'result_btts');
@@ -966,7 +969,7 @@ const server = http.createServer(async (req, res) => {
     {
         const gated =
             (path.startsWith('/api/tools/') && 'result_btts') ||
-            ((path === '/api/odds-collection/matcher/results' || path === '/api/odds-collection/matcher/meta') && 'oddsmatcher') ||
+            ((path === '/api/odds-collection/matcher/results' || path === '/api/odds-collection/matcher/meta' || path.startsWith('/api/odds-collection/best-odds/')) && 'oddsmatcher') ||
             ((path === '/api/offers' || (/^\/api\/offers\/[^/]+$/.test(path) && !path.startsWith('/api/offers/free'))) && 'offers') ||
             (path.startsWith('/api/profit-tracker/') && 'tracker');
         if (gated && sectionOff(gated)) return send(403, { message: 'Sezione non abilitata per questo utente' });
@@ -1209,6 +1212,13 @@ const server = http.createServer(async (req, res) => {
         return send(200, body);
     }
     if (path === '/api/odds-collection/matcher/results') return send(200, filterRows(url.searchParams));
+    // §14.390: Best Odds (mock-api/best-odds.js). An event that is not in the palinsesto answers the 404 of the backend.
+    if (path === '/api/odds-collection/best-odds/catalog') return send(200, bestOddsMock.catalog());
+    if (path === '/api/odds-collection/best-odds/events') return send(200, bestOddsMock.listEvents(url.searchParams));
+    if (path.startsWith('/api/odds-collection/best-odds/events/')) {
+        const found = bestOddsMock.event(decodeURIComponent(path.slice('/api/odds-collection/best-odds/events/'.length)));
+        return found ? send(200, found) : send(404, { message: 'Evento non disponibile: è iniziato o non è più in palinsesto.' });
+    }
     if (path === '/api/odds-collection/matcher/free/results') return send(200, freeRows(url.searchParams));
     if (path === '/api/odds-collection/matcher/free/meta') {
         const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange).map((b) => (b.slug === 'sisal' ? { ...b, slug: 'snai', name: 'Snai' } : b));

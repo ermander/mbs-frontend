@@ -60,6 +60,8 @@ import type { Reminder } from '@/types/profit-tracker'
 
 const TOOL_COPY: Record<string, string> = {
   '/odds-scanner': 'Le quote dei book contro quelle degli exchange, per trovare la banca giusta.',
+  // §14.390: il secondo strumento della tendina «Radar».
+  '/best-odds': 'Chi quota un mercato di un evento e chi paga di più, sito per sito.',
   '/risultato-goal': 'Risultato e Goal/No Goal coperti dentro lo stesso book.',
 }
 
@@ -75,11 +77,14 @@ export function DashboardHub() {
     () => new Set(sections.flatMap((s) => s.items.map((i) => i.href))),
     [sections],
   )
+  // §14.390: l'Oddsmatcher sta nella tendina «Radar» con Best Odds: qui ogni strumento ha la sua
+  // riga, quindi di una voce con le pagine sotto contano le pagine.
   const onlineTools = useMemo(
     () =>
       sections
         .flatMap((s) => s.items)
-        .filter((i) => i.href === '/odds-scanner' || i.href === '/risultato-goal'),
+        .flatMap((i) => i.children ?? [i])
+        .filter((i) => i.href in TOOL_COPY),
     [sections],
   )
   const trackerItems = useMemo(

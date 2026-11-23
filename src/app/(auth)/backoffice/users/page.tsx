@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { SlidersHorizontal } from 'lucide-react'
+import { Search, SlidersHorizontal } from 'lucide-react'
 import {
   BO_EMPTY_CELL,
   BO_ROW,
@@ -17,11 +17,17 @@ import {
 } from '@/components/backoffice/backoffice-ds'
 import { dsButtonClass } from '@/components/landing/ds-primitives'
 import { DsBadge } from '@/components/landing/ds-data'
-import { DsModal } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
+import { DsModal, GTextField } from '@/components/profit-tracker/giocate-in-corso/giocate-ds'
 import { DsAlert, DsPageHeader, countLabel } from '@/components/profit-tracker/tracker-ds'
+import { OmPagination } from '@/components/strumenti/scanner-v2/om-ds'
 import { cn } from '@/lib/utils'
 import { SECTIONS, type SectionKey } from '@/lib/tools'
-import { sectionsSummary } from '@/lib/backoffice-users'
+import {
+  USERS_PAGE_SIZE,
+  lastUsersPage,
+  sectionsSummary,
+  usersEmptyMessage,
+} from '@/lib/backoffice-users'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   getBackofficeUsers,
@@ -29,6 +35,9 @@ import {
   setBackofficeUserSection,
   type BackofficeUser,
 } from '@/services/api/backoffice-users-client'
+
+/** La ricerca parte quando si smette di scrivere per un attimo. */
+const SEARCH_DEBOUNCE_MS = 300
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN_ROLE: 'Admin',
@@ -57,26 +66,83 @@ function hasSection(user: BackofficeUser, section: SectionKey): boolean {
  * ATTIVO / NON ATTIVO (NON ATTIVO = fuori dal sito subito e niente accesso finché non lo si
  * riattiva; il proprio account non si disattiva) e le sezioni del sito che può aprire, in una
  * finestra «Abilitazioni» con uno switch «abilitato / non abilitato» per sezione. Gli admin
- * aprono tutte le sezioni.
+ * aprono tutte le sezioni. Dal §14.374 una pagina di USERS_PAGE_SIZE utenti alla volta, letta dal
+ * backend, con la ricerca su nome, username ed email; cambiare ricerca riporta alla pagina 1.
  */
 export default function BackofficeUsersPage() {
   const me = useAuthStore((s) => s.user)
   const [users, setUsers] = useState<BackofficeUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
   /** Le modifiche in corso, `<id>:active` o `<id>:<sezione>`. */
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deactivating, setDeactivating] = useState<BackofficeUser | null>(null)
 
-  // Lo stato cambia solo nei callback della promise; loading parte già a true
-  // (react-hooks/set-state-in-effect).
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  /** Da 0, come OmPagination. */
+  const [page, setPage] = useState(0)
+  const topRef = useRef<HTMLDivElement>(null)
+  const scrollOnArrival = useRef(false)
+
+  // Si cerca quando si smette di scrivere; la ricerca nuova riparte dalla pagina 1.
   useEffect(() => {
-    getBackofficeUsers()
-      .then((data) => setUsers(data))
-      .catch(() => setError('Errore nel caricamento degli utenti.'))
-      .finally(() => setLoading(false))
-  }, [])
+    if (search === debouncedSearch) return
+    const t = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(0)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [search, debouncedSearch])
+
+  const query = useMemo(
+    () => ({ limit: USERS_PAGE_SIZE, offset: page * USERS_PAGE_SIZE, q: debouncedSearch.trim() }),
+    [page, debouncedSearch],
+  )
+
+  // Le righe in mano sono «per» una query: finché non è quella corrente si sta caricando, e le
+  // righe di prima restano a schermo (più chiare) invece di sparire a ogni lettera o pagina; il
+  // primo caricamento è l'unico a tabella vuota. L'errore vale per la query corrente. Lo stato
+  // cambia nei callback della promise e una risposta superata viene ignorata
+  // (react-hooks/set-state-in-effect).
+  const [loaded, setLoaded] = useState<{ query: typeof query; error: string | null } | null>(null)
+  const firstLoad = loaded === null
+  const loading = loaded?.query !== query
+  const error = loaded?.query === query ? loaded.error : null
+
+  useEffect(() => {
+    let cancelled = false
+    getBackofficeUsers(query)
+      .then((data) => {
+        if (cancelled) return
+        // Una pagina oltre la fine (utenti cancellati nel frattempo): si va all'ultima.
+        if (data.users.length === 0 && data.total > 0 && query.offset > 0) {
+          setPage(lastUsersPage(data.total))
+          return
+        }
+        setUsers(data.users)
+        setTotal(data.total)
+        setLoaded({ query, error: null })
+        if (scrollOnArrival.current) {
+          scrollOnArrival.current = false
+          topRef.current?.scrollIntoView({ block: 'start' })
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        setUsers([])
+        setTotal(0)
+        setLoaded({ query, error: 'Errore nel caricamento degli utenti.' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [query])
+
+  const goToPage = (next: number) => {
+    scrollOnArrival.current = true
+    setPage(next)
+  }
 
   const run = useCallback(
     async (
@@ -133,9 +199,27 @@ export default function BackofficeUsersPage() {
         description="Tutti gli utenti iscritti alla piattaforma. Un utente NON ATTIVO esce subito dal sito e non può rientrare; da «Abilitazioni» scegli le sezioni che può aprire. Gli amministratori le aprono tutte."
       />
 
+      <div ref={topRef} className="scroll-mt-[calc(var(--topnav-h)+1.5rem)]">
+        <GTextField
+          id="bo-users-search"
+          ariaLabel="Cerca un utente per nome, username o email"
+          type="search"
+          size="sm"
+          value={search}
+          onChange={setSearch}
+          placeholder="Cerca per nome, username o email…"
+          prefix={<Search className="h-4 w-4" aria-hidden />}
+          suffix={!firstLoad && loading ? '…' : undefined}
+          className="w-full sm:max-w-sm"
+        />
+      </div>
+
       {error && <DsAlert>{error}</DsAlert>}
 
-      <div className={BO_TABLE_WRAP}>
+      <div
+        className={cn(BO_TABLE_WRAP, !firstLoad && loading && 'opacity-60 transition-opacity')}
+        aria-busy={loading}
+      >
         <table className={BO_TABLE}>
           <thead>
             <tr className={BO_THEAD_ROW}>
@@ -150,7 +234,7 @@ export default function BackofficeUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {firstLoad ? (
               <tr>
                 <td colSpan={8} className={BO_EMPTY_CELL}>
                   Caricamento degli utenti…
@@ -159,7 +243,7 @@ export default function BackofficeUsersPage() {
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={8} className={BO_EMPTY_CELL}>
-                  Nessun utente trovato.
+                  {error ? 'Nessun utente da mostrare.' : usersEmptyMessage(debouncedSearch)}
                 </td>
               </tr>
             ) : (
@@ -249,8 +333,17 @@ export default function BackofficeUsersPage() {
         </table>
       </div>
 
-      {!loading && users.length > 0 && (
-        <BoMuted>{countLabel(users.length, 'utente', 'utenti')}</BoMuted>
+      {/* Un backend di prima del §14.374 manda tutti gli utenti in una volta: niente pagine. */}
+      {total > USERS_PAGE_SIZE && users.length <= USERS_PAGE_SIZE ? (
+        <OmPagination
+          page={page}
+          pageSize={USERS_PAGE_SIZE}
+          total={total}
+          unit={total === 1 ? 'utente' : 'utenti'}
+          onChange={goToPage}
+        />
+      ) : (
+        !firstLoad && users.length > 0 && <BoMuted>{countLabel(total, 'utente', 'utenti')}</BoMuted>
       )}
 
       <DsModal

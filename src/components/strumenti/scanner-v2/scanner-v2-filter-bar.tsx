@@ -9,15 +9,17 @@ import {
 } from '@/components/strumenti/matcher-competition-filter'
 import { OmBookLogo, OmDropdown, OmSportIcon, type OmOption } from './om-ds'
 import { shortBookmakerName, sportDisplay } from '@/lib/bookmakers'
-import { MATCH_TYPE_OPTIONS, ageLabel, ageSeconds, marketLabel } from '@/lib/matcher/format'
+import { ageLabel, ageSeconds, marketLabel } from '@/lib/matcher/format'
 import { bookmakersMatchingSearch } from '@/lib/matcher/bookmaker-search'
-import type { MatchType, MatcherBookmaker, MatcherMeta } from '@/types/matcher'
+import type { MatcherPage } from '@/lib/matcher/pages'
+import type { MatcherBookmaker, MatcherMeta } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
 /**
  * Filters of the scanner v2. Every field but the three shared amounts is a
  * server-side filter of GET /matcher/results (§14.95): the page is paginated
- * on the server, nothing is filtered in the browser.
+ * on the server, nothing is filtered in the browser. The kind of combination is no filter since
+ * §14.406: each page of the scanner has its own (MATCHER_PAGES), the «Tipo» menu is gone.
  */
 export interface ScannerV2Filters {
   search: string
@@ -27,7 +29,6 @@ export interface ScannerV2Filters {
   rimborso: string
   /** «Ordina per» (§14.272): rating from the highest, or kickoff from the nearest. */
   sort: 'rating' | 'start_time'
-  matchType: MatchType | ''
   sport: string
   nation: string
   competitionIds: string[]
@@ -36,7 +37,10 @@ export interface ScannerV2Filters {
   books: string[]
   /** The books the OTHER legs («Bancata · copertura») may sit on (§14.102, §14.386); none = any book. */
   coverBooks: string[]
-  /** The exchanges the other legs may sit on; none = any exchange. */
+  /**
+   * The exchanges the other legs may sit on; none = any exchange. On the Oddsmatcher the menu is in
+   * the main bar, in place of «Bookmaker di copertura» (its other leg is always a lay, §14.406).
+   */
   exchanges: string[]
   minRating: string
   maxRating: string
@@ -52,7 +56,6 @@ export const EMPTY_FILTERS: ScannerV2Filters = {
   bonus: '',
   rimborso: '',
   sort: 'rating',
-  matchType: '',
   sport: '',
   nation: '',
   competitionIds: [],
@@ -78,7 +81,6 @@ export const SHARED_AMOUNT_KEYS: ReadonlySet<keyof ScannerV2Filters> = new Set([
 /** Groups of the advanced panel that are active (the count on the «Filtri» button). */
 export function countActiveFilters(f: ScannerV2Filters): number {
   return [
-    f.matchType !== '',
     f.sport !== '',
     f.nation !== '',
     f.competitionIds.length > 0,
@@ -93,6 +95,8 @@ export function countActiveFilters(f: ScannerV2Filters): number {
 }
 
 interface ScannerV2FilterBarProps {
+  /** The page of the scanner (§14.406): which cover menu the bar shows. */
+  matcherPage: MatcherPage
   filters: ScannerV2Filters
   onChange: (patch: Partial<ScannerV2Filters>) => void
   onReset: () => void
@@ -107,7 +111,8 @@ interface ScannerV2FilterBarProps {
   /** Clock of the page, for «Quote aggiornate … fa». */
   now: number
   multiplaOpen: boolean
-  onMultiplaOpenChange: (open: boolean) => void
+  /** Absent on a page without the Multipla (the Trimatcher): no button. */
+  onMultiplaOpenChange?: (open: boolean) => void
 }
 
 export const SORT_OPTIONS = [
@@ -141,8 +146,12 @@ function PanelGroup({ title, children }: { title: string; children: React.ReactN
  * The bar of the Oddsmatcher from the design (§14.272): a card with search, the two bookmaker
  * menus, the shared stake and the sort; under it Filtri, Multipla, Azzera and the age of the
  * prices with «Aggiorna»; the advanced panel (Evento, Scommessa) and the active filters.
+ * §14.406: the same bar on the three pages of the scanner; on the Oddsmatcher the second menu
+ * is «Exchange» (where the lay goes), on the Dutcher and the Trimatcher «Bookmaker di copertura»
+ * with «Exchange» in the panel, as before.
  */
 export function ScannerV2FilterBar({
+  matcherPage,
   filters,
   onChange,
   onReset,
@@ -192,20 +201,10 @@ export function ScannerV2FilterBar({
     value: m,
     label: marketLabel(m, null),
   }))
-  const typeOpts: OmOption[] = MATCH_TYPE_OPTIONS.filter((o) => o.value !== '').map((o) => ({
-    value: o.value,
-    label: o.label,
-  }))
 
   const age = meta?.calculatedAt != null ? ageLabel(ageSeconds(meta.calculatedAt, now)) : null
 
   const chips: { key: string; label: string; clear: () => void }[] = []
-  if (filters.matchType)
-    chips.push({
-      key: 'tipo',
-      label: `Tipo: ${MATCH_TYPE_OPTIONS.find((o) => o.value === filters.matchType)?.label}`,
-      clear: () => onChange({ matchType: '' }),
-    })
   if (filters.sport)
     chips.push({
       key: 'sport',
@@ -306,18 +305,35 @@ export function ScannerV2FilterBar({
           emptyText={loadingText}
           className="col-span-2 sm:col-span-1"
         />
-        <OmDropdown
-          id="om-cover"
-          chips
-          label="Bookmaker di copertura"
-          allLabel="Tutti i bookmaker"
-          options={bookOptions(books)}
-          selected={filters.coverBooks}
-          onChange={(next) => onChange({ coverBooks: next })}
-          panelWidth={220}
-          emptyText={loadingText}
-          className="col-span-2 sm:col-span-1"
-        />
+        {/* §14.406: the other leg of the Oddsmatcher is the exchange's lay, so its cover menu
+            lists the exchanges; the Dutcher and the Trimatcher cover on the books. */}
+        {matcherPage.coverIsExchange ? (
+          <OmDropdown
+            id="om-cover"
+            chips
+            label="Exchange"
+            allLabel="Tutti gli exchange"
+            options={bookOptions(exchanges)}
+            selected={filters.exchanges}
+            onChange={(next) => onChange({ exchanges: next })}
+            panelWidth={220}
+            emptyText={loadingText ?? 'Nessun exchange nel deposito'}
+            className="col-span-2 sm:col-span-1"
+          />
+        ) : (
+          <OmDropdown
+            id="om-cover"
+            chips
+            label="Bookmaker di copertura"
+            allLabel="Tutti i bookmaker"
+            options={bookOptions(books)}
+            selected={filters.coverBooks}
+            onChange={(next) => onChange({ coverBooks: next })}
+            panelWidth={220}
+            emptyText={loadingText}
+            className="col-span-2 sm:col-span-1"
+          />
+        )}
         <CalcNumberField
           id="om-stake"
           label="Puntata"
@@ -371,15 +387,17 @@ export function ScannerV2FilterBar({
             <Filter className="h-4 w-4" aria-hidden />
             Filtri{activeCount > 0 ? ` · ${activeCount}` : ''}
           </button>
-          <button
-            type="button"
-            onClick={() => onMultiplaOpenChange(!multiplaOpen)}
-            aria-expanded={multiplaOpen}
-            className={dsButtonClass(multiplaOpen ? 'primary' : 'secondary', 'sm')}
-          >
-            <ListChecks className="h-4 w-4" aria-hidden />
-            Multipla
-          </button>
+          {onMultiplaOpenChange && (
+            <button
+              type="button"
+              onClick={() => onMultiplaOpenChange(!multiplaOpen)}
+              aria-expanded={multiplaOpen}
+              className={dsButtonClass(multiplaOpen ? 'primary' : 'secondary', 'sm')}
+            >
+              <ListChecks className="h-4 w-4" aria-hidden />
+              Multipla
+            </button>
+          )}
           {hasAnyFilter && (
             <button type="button" onClick={onReset} className={dsButtonClass('ghost', 'sm')}>
               <X className="h-4 w-4" aria-hidden />
@@ -484,17 +502,6 @@ export function ScannerV2FilterBar({
           <div className="h-px bg-ds-line" />
           <PanelGroup title="Scommessa">
             <OmDropdown
-              id="om-type"
-              label="Tipo"
-              allLabel="Tutti i tipi"
-              size="sm"
-              single
-              searchable={false}
-              options={typeOpts}
-              selected={filters.matchType ? [filters.matchType] : []}
-              onChange={(next) => onChange({ matchType: (next[0] as MatchType | undefined) ?? '' })}
-            />
-            <OmDropdown
               id="om-market"
               label="Mercato"
               allLabel="Tutti i mercati"
@@ -504,19 +511,28 @@ export function ScannerV2FilterBar({
               selected={filters.marketType ? [filters.marketType] : []}
               onChange={(next) => onChange({ marketType: next[0] ?? '' })}
             />
-            <OmDropdown
-              id="om-exchange"
-              label="Exchange"
-              allLabel="Tutti gli exchange"
-              size="sm"
-              searchable={exchanges.length > 6}
-              panelWidth={220}
-              options={bookOptions(exchanges)}
-              selected={filters.exchanges}
-              onChange={(next) => onChange({ exchanges: next })}
-              emptyText={loadingText ?? 'Nessun exchange nel deposito'}
+            {/* On the Oddsmatcher the exchanges are in the main bar (§14.406). */}
+            {!matcherPage.coverIsExchange && (
+              <OmDropdown
+                id="om-exchange"
+                label="Exchange"
+                allLabel="Tutti gli exchange"
+                size="sm"
+                searchable={exchanges.length > 6}
+                panelWidth={220}
+                options={bookOptions(exchanges)}
+                selected={filters.exchanges}
+                onChange={(next) => onChange({ exchanges: next })}
+                emptyText={loadingText ?? 'Nessun exchange nel deposito'}
+              />
+            )}
+            <span
+              className={cn(
+                'hidden lg:block',
+                matcherPage.coverIsExchange ? 'lg:col-span-3' : 'lg:col-span-2',
+              )}
+              aria-hidden
             />
-            <span className="hidden lg:block" aria-hidden />
             <CalcNumberField
               id="om-min-odds"
               label="Quota minima"

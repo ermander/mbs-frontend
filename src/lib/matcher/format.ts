@@ -9,13 +9,6 @@ import type { MatchType, MatcherLeg } from '@/types/matcher'
 export const STALE_LEG_SECONDS = 180
 export const OLD_LEG_SECONDS = 600
 
-export const MATCH_TYPE_OPTIONS: Array<{ value: MatchType | ''; label: string }> = [
-  { value: '', label: 'Tutti i tipi' },
-  { value: 'back_lay', label: 'Punta / Banca' },
-  { value: 'dutch_2way', label: 'Dutch 2 vie' },
-  { value: 'dutch_3way', label: 'Dutch 3 vie' },
-]
-
 export function matchTypeLabel(type: MatchType): string {
   switch (type) {
     case 'dutch_2way':

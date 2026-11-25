@@ -66,6 +66,11 @@ export interface MatcherCompetition {
   sportName: string
   /** Matcher rows of this competition when meta was built. */
   results: number
+  /**
+   * The same rows by kind (§14.406), for the three pages of the scanner; a kind with no row is
+   * absent. Absent on older backends.
+   */
+  resultsByType?: Partial<Record<MatchType, number>>
 }
 
 export interface MatcherBookmaker {
@@ -95,6 +100,11 @@ export interface MatcherMeta {
   nations: string[]
   /** Absent on backends older than migration 0004. */
   competitions?: MatcherCompetition[]
+  /**
+   * Per kind of combination (§14.406): its rows and its market types, so that each page of the
+   * scanner offers only its own (`scopedMeta`). Absent on older backends and on the free meta.
+   */
+  byMatchType?: Partial<Record<MatchType, { totalResults: number; marketTypes: string[] }>>
 }
 
 export interface MatcherFilters {

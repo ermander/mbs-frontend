@@ -16,6 +16,7 @@ import { parseNum } from '@/lib/calculators/engines/odds'
 import { buildMultiplaBet } from '@/lib/calculators/bet-payloads'
 import { matcherRowKey } from '@/lib/matcher/format'
 import { recheckTargetOfRow } from '@/lib/matcher/recheck'
+import { MATCHER_PAGES, scopedMeta, type MatcherPageKey } from '@/lib/matcher/pages'
 import { hasRole } from '@/lib/tools'
 import {
   inMultiplaWindow,
@@ -27,6 +28,7 @@ import {
 import type { SharedAmounts } from '@/lib/matcher/quick-profit'
 import type { MatcherFilters, MatcherMeta, MatcherResult } from '@/types/matcher'
 import { multiplaEventKey, type MultiplaEvent } from '@/types/multipla-event'
+import { DsPageHeader } from '@/components/profit-tracker/tracker-ds'
 import { AssignAccountsModal, type AssignLeg } from './assign-accounts-modal'
 import { MatcherCalculatorPanel } from './matcher-calculator-panel'
 import {
@@ -86,8 +88,15 @@ interface SelectedMultiplaRow {
  * logged in gets here from the landing too and sees the free version: the free endpoints of the
  * backend (back on Snai, lay on an exchange, enforced on the server), only the
  * price and date filters, no Multipla and no «Salva nel tracker».
+ *
+ * §14.406: the same component draws the three pages of the scanner, one per kind of combination
+ * (`page`, MATCHER_PAGES): every request carries the page's `match_type` and the filters offer only
+ * what its rows hold (`scopedMeta`). Only the Oddsmatcher has a free version: the Dutcher and the
+ * Trimatcher sit in `(auth)`, so `free` is never true there.
  */
-export function OddsScannerV2() {
+export function OddsScannerV2({ page: pageKey = 'oddsmatcher' }: { page?: MatcherPageKey }) {
+  const scope = MATCHER_PAGES[pageKey]
+  const matchType = scope.matchType
   const saveOngoingBetFromCalculator = useProfitTrackerStore((s) => s.saveOngoingBetFromCalculator)
   // OpenAreaLayout renders the page for a visitor only with no user, for a member only with one.
   const free = useAuthStore((s) => s.user === null)
@@ -215,8 +224,9 @@ export function OddsScannerV2() {
       if (filters.startTo) q.start_time_to = new Date(filters.startTo).toISOString()
       return q
     }
+    // §14.406: the page's kind of combination, on every request.
+    q.match_type = matchType
     if (filters.sport) q.sport = filters.sport
-    if (filters.matchType) q.match_type = filters.matchType
     if (filters.marketType) q.market_type = filters.marketType
     if (filters.nation) q.nation = filters.nation
     if (filters.competitionIds.length > 0) q.competitions = filters.competitionIds.join(',')
@@ -259,9 +269,9 @@ export function OddsScannerV2() {
   }, [
     free,
     page,
+    matchType,
     filters.sort,
     filters.sport,
-    filters.matchType,
     filters.marketType,
     filters.nation,
     filters.competitionIds,
@@ -290,7 +300,9 @@ export function OddsScannerV2() {
   const loadMeta = useCallback(
     () =>
       (free ? getFreeMatcherMeta() : getMatcherMeta())
-        .then((m) => {
+        .then((full) => {
+          // §14.406: the lists of the page's kind only (the free meta has none to scope).
+          const m = scopedMeta(full, matchType)
           setMeta(m)
           // A selected competition that left the results (its rows purged) leaves the
           // filter too: the dropdown could not show it any more.
@@ -306,7 +318,7 @@ export function OddsScannerV2() {
         .catch(() => {
           /* ignore: meta is non-critical */
         }),
-    [free],
+    [free, matchType],
   )
 
   const applyResults = useCallback((res: Awaited<ReturnType<typeof getMatcherResults>>) => {
@@ -545,6 +557,8 @@ export function OddsScannerV2() {
     <>
       {/* Under the open calculator the page leaves the tab order and the screen readers. */}
       <div inert={calculatorRow ? true : undefined} className="flex flex-col gap-4">
+        {/* §14.406: three pages look alike; the title says which kind of combination this one is. */}
+        <DsPageHeader title={scope.title} description={scope.description} />
         {free ? (
           <ScannerV2FreeFilterBar
             filters={filters}
@@ -557,6 +571,7 @@ export function OddsScannerV2() {
           />
         ) : (
           <ScannerV2FilterBar
+            matcherPage={scope}
             filters={filters}
             onChange={setFilters}
             onReset={resetFilters}
@@ -569,7 +584,7 @@ export function OddsScannerV2() {
             loading={loading}
             now={now}
             multiplaOpen={multiplaOpen}
-            onMultiplaOpenChange={openMultipla}
+            onMultiplaOpenChange={scope.multipla ? openMultipla : undefined}
           />
         )}
         {!free && multiplaOpen && (
@@ -593,6 +608,7 @@ export function OddsScannerV2() {
           />
         )}
         <ScannerV2Table
+          matcherPage={scope}
           results={tableResults}
           meta={meta}
           now={now}

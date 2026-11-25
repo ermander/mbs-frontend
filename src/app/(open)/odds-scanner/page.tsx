@@ -13,6 +13,10 @@ import { PAGE_COLUMN } from '@/lib/page-column'
  * §14.339: sta nel gruppo di rotte `(open)` (OpenAreaLayout): chi arriva dalla landing senza
  * account vede la versione gratuita (OddsScannerV2 legge l'utente dallo store), chi è entrato
  * l'oddsmatcher completo come prima.
+ *
+ * §14.406: è la prima delle tre pagine dello scanner nella tendina «Radar», solo punta e banca
+ * (book contro exchange); Dutcher e Trimatcher stanno in /dutcher e /trimatcher. Il titolo
+ * visibile (h1) lo mette OddsScannerV2.
  */
 export default function OddsScannerPage() {
   return (
@@ -24,8 +28,7 @@ export default function OddsScannerPage() {
       )}
     >
       <div className={cn(PAGE_COLUMN, 'flex flex-1 flex-col gap-4 pt-6 pb-16')}>
-        <h1 className="sr-only">Oddsmatcher</h1>
-        <OddsScannerV2 />
+        <OddsScannerV2 page="oddsmatcher" />
         <p className="ds-caption mt-auto pt-6 text-ds-ink-muted">
           Gioco vietato ai minori di 18 anni. Gioca responsabilmente.
         </p>

@@ -33,6 +33,8 @@ import {
   Repeat,
   Sparkles,
   ArrowLeftRight,
+  Columns2,
+  Columns3,
   Medal,
 } from 'lucide-react'
 
@@ -54,7 +56,7 @@ export interface NavDropdownItem {
   requiresRole?: UserRole
 }
 
-/** Una pagina dentro una voce della barra: le tre pagine delle offerte (§14.358), i due strumenti di «Radar» (§14.391). */
+/** Una pagina dentro una voce della barra: le tre pagine delle offerte (§14.358), gli strumenti di «Radar» (§14.391, §14.406). */
 export interface NavSubmenuLink {
   label: string
   href: string
@@ -118,10 +120,14 @@ export const OFFERS_NAV_ITEMS: NavSubmenuLink[] = OFFER_TYPES.map((t) => ({
 /**
  * §14.391 (ClickUp «Best Odds»): la tendina «Radar», gli strumenti che leggono le quote dai siti.
  * L'Oddsmatcher, che prima era una voce della barra, e Best Odds: chi quota un mercato di un
- * evento e chi paga di più. Stanno tutti e due nella sezione `oddsmatcher` (NAV_ITEM_SECTIONS).
+ * evento e chi paga di più. §14.406: l'Oddsmatcher si divide in tre pagine, una per tipo di
+ * combinazione (MATCHER_PAGES): Oddsmatcher (punta e banca), Dutcher (punta-punta a 2 esiti) e
+ * Trimatcher (a 3 esiti). Stanno tutte nella sezione `oddsmatcher` (NAV_ITEM_SECTIONS).
  */
 export const RADAR_NAV_ITEMS: NavSubmenuLink[] = [
   { label: 'Oddsmatcher', href: '/odds-scanner', icon: ArrowLeftRight },
+  { label: 'Dutcher', href: '/dutcher', icon: Columns2 },
+  { label: 'Trimatcher', href: '/trimatcher', icon: Columns3 },
   { label: 'Best Odds', href: '/best-odds', icon: Medal },
 ]
 
@@ -130,7 +136,7 @@ export const RADAR_NAV_ITEMS: NavSubmenuLink[] = [
  * Tracker · Forum (dal §14.367 con la Dashboard davanti a tutte), con Risultato + Goal dopo Radar per chi è abilitato e il Backoffice
  * in fondo per gli admin. Tracker è una tendina con le pagine del Profit Tracker; dal §14.358
  * anche Offerte apre una tendina, con le pagine di benvenuto, ricorrenti ed esclusive, e dal
- * §14.391 Radar, con l'Oddsmatcher e Best Odds.
+ * §14.391 Radar, con l'Oddsmatcher e Best Odds (dal §14.406 anche Dutcher e Trimatcher).
  */
 export const authNavSections: AuthNavSection[] = [
   {
@@ -141,7 +147,8 @@ export const authNavSections: AuthNavSection[] = [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, compact: true },
       { label: 'Guide', href: '/guide', icon: BookOpen },
       { label: 'Offerte', href: '/offerte', icon: Gift, children: OFFERS_NAV_ITEMS },
-      // §14.391: l'Oddsmatcher sta nella tendina «Radar» con Best Odds; `href` è la prima pagina.
+      // §14.391: l'Oddsmatcher sta nella tendina «Radar» con Best Odds (dal §14.406 anche Dutcher
+      // e Trimatcher); `href` è la prima pagina.
       { label: 'Radar', href: '/odds-scanner', icon: Radar, children: RADAR_NAV_ITEMS },
       // §14.122: strumento riservato agli admin e agli utenti abilitati dal backoffice.
       { label: 'Risultato + Goal', href: '/risultato-goal', icon: Goal },
@@ -242,7 +249,7 @@ export function isActiveHref(pathname: string | null | undefined, href: string):
 
 /**
  * Una voce della barra è attiva sulla sua pagina (e sotto) e su ognuna delle pagine della sua
- * tendina: «Radar» è attiva su /odds-scanner e su /best-odds (§14.391).
+ * tendina: «Radar» è attiva su /odds-scanner, /dutcher, /trimatcher e /best-odds (§14.391, §14.406).
  */
 export function isNavItemActive(
   pathname: string | null | undefined,

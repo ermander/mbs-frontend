@@ -252,6 +252,16 @@ const META = {
         { id: 'c-lib', name: 'CONMEBOL Libertadores', nationName: 'World', nationCode: null, sportName: 'Football', results: 1 },
     ],
 };
+// §14.406: the lists split by kind, as the backend folds them (matcher/meta-by-type.ts), counted on ROWS: each page of the scanner (Oddsmatcher, Dutcher, Trimatcher) offers only its own.
+const MATCH_TYPES = ['back_lay', 'dutch_2way', 'dutch_3way'];
+META.competitions = META.competitions.map((c) => {
+    const rows = ROWS.filter((r) => r.competitionId === c.id);
+    return { ...c, results: rows.length, resultsByType: Object.fromEntries(MATCH_TYPES.map((t) => [t, rows.filter((r) => r.matchType === t).length]).filter(([, n]) => n > 0)) };
+});
+META.byMatchType = Object.fromEntries(MATCH_TYPES.map((t) => {
+    const rows = ROWS.filter((r) => r.matchType === t);
+    return [t, { totalResults: rows.length, marketTypes: [...new Set(rows.map((r) => r.marketTypeKey))].sort() }];
+}));
 
 // §14.122: «Risultato + Goal», il mercato 1X2 + GG/NG confrontato dentro il book (senza X & NG).
 const RB_PRICE = (odds, label) => ({ odds, label, lastSeenAt: ago(40) });
@@ -1345,7 +1355,7 @@ const server = http.createServer(async (req, res) => {
     if (path === '/api/odds-collection/matcher/free/meta') {
         const bookmakers = META.bookmakers.filter((b) => b.slug === 'sisal' || b.isExchange).map((b) => (b.slug === 'sisal' ? { ...b, slug: 'snai', name: 'Snai' } : b));
         const totalResults = freeRows(new URLSearchParams()).total;
-        return send(200, { ...META, calculatedAt: ago(35), totalResults, sports: [], bookmakers, marketTypes: [], nations: [], competitions: [] });
+        return send(200, { ...META, calculatedAt: ago(35), totalResults, sports: [], bookmakers, marketTypes: [], nations: [], competitions: [], byMatchType: undefined });
     }
     // §14.361: promemoria (filtro per stato, crea, modifica, completa, elimina), tag e book personali creati dalla pagina Impostazioni.
     if (path === '/api/profit-tracker/reminders' && req.method === 'GET') {

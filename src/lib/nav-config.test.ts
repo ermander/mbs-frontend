@@ -149,10 +149,13 @@ describe('Offerte', () => {
 // §14.391 (ClickUp «Best Odds»): Radar apre l'Oddsmatcher e Best Odds.
 describe('Radar', () => {
   const radar = () => visibleNavSections({ role: 'USER_ROLE', tools: [] })[0].items[3]
-  it('holds the Oddsmatcher and Best Odds, in this order, where the Oddsmatcher was', () => {
+  it('holds Oddsmatcher, Dutcher, Trimatcher and Best Odds, in this order, where the Oddsmatcher was', () => {
     expect(radar().label).toBe('Radar')
+    // §14.406: the scanner is three pages, one per kind of combination, before Best Odds.
     expect(radar().children?.map((c) => [c.label, c.href])).toEqual([
       ['Oddsmatcher', '/odds-scanner'],
+      ['Dutcher', '/dutcher'],
+      ['Trimatcher', '/trimatcher'],
       ['Best Odds', '/best-odds'],
     ])
     expect(RADAR_NAV_ITEMS.every((i) => i.icon)).toBe(true)
@@ -160,6 +163,8 @@ describe('Radar', () => {
     const labels = authNavSections.flatMap((s) => s.items.map((i) => i.label))
     expect(labels).not.toContain('Oddsmatcher')
     expect(labels).not.toContain('Best Odds')
+    expect(labels).not.toContain('Dutcher')
+    expect(labels).not.toContain('Trimatcher')
   })
   it('follows the oddsmatcher section: off, the whole menu goes', () => {
     expect(NAV_ITEM_SECTIONS[radar().href]).toBe('oddsmatcher')
@@ -170,14 +175,15 @@ describe('Radar', () => {
       'Risultato + Goal',
     ])
   })
-  it('is active on both of its pages, each page only on itself', () => {
-    expect(isNavItemActive('/odds-scanner', radar())).toBe(true)
-    expect(isNavItemActive('/best-odds', radar())).toBe(true)
+  it('is active on each of its pages, each page only on itself', () => {
+    for (const href of ['/odds-scanner', '/dutcher', '/trimatcher', '/best-odds']) {
+      expect(isNavItemActive(href, radar())).toBe(true)
+      expect(RADAR_NAV_ITEMS.filter((i) => isActiveHref(href, i.href)).map((i) => i.href)).toEqual([
+        href,
+      ])
+    }
     expect(isNavItemActive('/risultato-goal', radar())).toBe(false)
     expect(isNavItemActive(null, radar())).toBe(false)
-    expect(RADAR_NAV_ITEMS.filter((i) => isActiveHref('/best-odds', i.href))).toEqual([
-      RADAR_NAV_ITEMS[1],
-    ])
   })
   it('an entry without pages under it is active as before', () => {
     expect(isNavItemActive('/guide/primi-passi', { href: '/guide' })).toBe(true)

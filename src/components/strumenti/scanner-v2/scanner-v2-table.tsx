@@ -20,6 +20,7 @@ import {
   outcomeName,
 } from '@/lib/matcher/format'
 import { legDisplayOdds, quickProfit, type SharedAmounts } from '@/lib/matcher/quick-profit'
+import type { MatcherPage } from '@/lib/matcher/pages'
 import type { MatcherLeg, MatcherMeta, MatcherResult } from '@/types/matcher'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +37,8 @@ export interface MultiplaSelection {
 }
 
 interface ScannerV2TableProps {
+  /** The page of the scanner (§14.406): the header of the cover column and the caption. */
+  matcherPage: MatcherPage
   results: MatcherResult[]
   /** Present while the Multipla panel is open. */
   multipla?: MultiplaSelection
@@ -256,11 +259,14 @@ const SKELETON_ROWS = 8
 
 /**
  * The results of the Oddsmatcher as the design's Table (§14.272): Data, Evento (with market and
- * competition), Puntata, Bancata · copertura, Rating, Aggiornata and the calculator. A click on the
+ * competition), Puntata, the cover legs, Rating, Aggiornata and the calculator. A click on the
  * row opens the calculator (or ticks it while the Multipla is open). On the phone the rows become
- * cards. Skeleton on the first load, EmptyState when the filters leave nothing.
+ * cards. Skeleton on the first load, EmptyState when the filters leave nothing. §14.406: the
+ * cover column is «Bancata» on the Oddsmatcher, «Copertura» on the Dutcher, «Coperture» on the
+ * Trimatcher (it was «Bancata · copertura» while one table held every kind).
  */
 export function ScannerV2Table({
+  matcherPage,
   results,
   meta,
   now,
@@ -397,7 +403,7 @@ export function ScannerV2Table({
         {/* Tabella */}
         <div className="hidden overflow-x-auto rounded-ds-md border border-ds-line bg-ds-surface-raised md:block">
           <table className="w-full border-collapse">
-            <caption className="sr-only">Combinazioni puntata/bancata e dutch</caption>
+            <caption className="sr-only">{matcherPage.caption}</caption>
             <thead>
               <tr>
                 {multipla && (
@@ -405,7 +411,7 @@ export function ScannerV2Table({
                     <span className="sr-only">Multipla</span>
                   </th>
                 )}
-                {['Data', 'Evento', 'Puntata', 'Bancata · copertura'].map((label) => (
+                {['Data', 'Evento', 'Puntata', matcherPage.coverColumn].map((label) => (
                   <th
                     key={label}
                     scope="col"

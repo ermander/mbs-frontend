@@ -38,6 +38,7 @@ import {
   monthlySeries,
 } from '@/lib/profit-tracker/dashboard'
 import { bookLogoSlug, displayName, eventWhen } from '@/lib/profit-tracker/ongoing-bets'
+import { romeMonthsRange } from '@/lib/profit-tracker/report'
 import { cn } from '@/lib/utils'
 import { getOffersTodo, markOfferDone } from '@/services/api/offers-client'
 import {
@@ -246,11 +247,8 @@ function MoneyStrip() {
     getPuntateInCorsoTotale()
       .then((p) => setPuntate(p.totale))
       .catch(() => undefined)
-    getUnifiedProfitSummary({
-      granularity: 'month',
-      fromDate: `${year}-01-01T00:00:00Z`,
-      toDate: `${year}-12-31T23:59:59Z`,
-    })
+    // §14.416: l'anno da mezzanotte a mezzanotte di Roma, come il Report.
+    getUnifiedProfitSummary({ granularity: 'month', ...romeMonthsRange(year, 0, 12) })
       .then((s) => {
         const series = monthlySeries(s.buckets, year, now)
         setMeseProfit(dashboardProfit(series, s.rangeTotal, year, now).meseAttuale)

@@ -123,7 +123,7 @@ export function MatcherCategoryChoice({
     <div className="border-t border-ds-line pt-4">
       <CalcChoice
         label="Categoria"
-        columns={3}
+        columns={2}
         options={BET_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
         value={value}
         onChange={onChange}

@@ -13,14 +13,14 @@ interface BetCategorySelectProps {
 
 /**
  * Selettore mutuamente esclusivo della categoria del profitto
- * (Matched Betting / Surebet / Valuebet) usato nei calcolatori offline
+ * (Matched Betting / Surebet / Valuebet / Risultato + Goal, §14.415) usato nei calcolatori offline
  * e nella modale della giocata singola.
  */
 export function BetCategorySelect({ value, onChange, className }: BetCategorySelectProps) {
   return (
     <div className={cn('space-y-2', className)}>
       <Label className="text-xs text-muted-foreground">Categoria</Label>
-      <div className="grid grid-cols-3 gap-1 rounded-lg border border-input bg-muted/30 p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-lg border border-input bg-muted/30 p-1">
         {BET_CATEGORIES.map((cat) => (
           <button
             key={cat.value}

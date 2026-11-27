@@ -36,6 +36,7 @@ import {
 } from '@/components/profit-tracker/tracker-ds'
 import { ReportMonthTable } from '@/components/profit-tracker/report/report-mesi'
 import { ReportSaldi } from '@/components/profit-tracker/report/report-saldi'
+import { ReportSezioni } from '@/components/profit-tracker/report/report-sezioni'
 import { PROFIT_CATEGORIES } from '@/lib/profit-tracker/categories'
 import { MONTH_FULL, dashMoney } from '@/lib/profit-tracker/dashboard'
 import {
@@ -74,6 +75,9 @@ import type {
  * mese», e si scorre con le frecce; i riquadri passano al mese con il confronto col mese prima e
  * con la media. Un clic su una voce delle suddivisioni (identità, conto, categoria) la mette come
  * filtro, per seguire una sola identità mese per mese.
+ *
+ * §14.415: sotto i riquadri del periodo le sezioni (Matched Betting, Surebet, Valuebet,
+ * Risultato + Goal) con gli obiettivi mensili, in report-sezioni.tsx.
  */
 
 const DETAIL_PAGE_SIZE = 15
@@ -654,6 +658,17 @@ export function ReportView() {
           </div>
         )}
       </section>
+
+      <ReportSezioni
+        report={reportState?.filters === baseFilters ? report : null}
+        isLoading={isLoadingReport}
+        year={year}
+        selectedMonth={selectedMonth}
+        now={now}
+        categoria={categoria}
+        goalsHidden={Boolean(holderId || accountId)}
+        onSelectCategoria={(key) => setCategoria((prev) => (prev === key ? '' : key))}
+      />
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className={cn(DS_PANEL, 'flex min-w-0 flex-col gap-6 px-4 pt-5 pb-6 sm:px-6')}>

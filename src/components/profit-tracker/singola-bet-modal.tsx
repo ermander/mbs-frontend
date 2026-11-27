@@ -62,6 +62,7 @@ const CATEGORY_ITEMS: { value: BetCategory; label: string }[] = [
   { value: 'matched_betting', label: 'Matched betting' },
   { value: 'surebet', label: 'Surebet' },
   { value: 'valuebet', label: 'Valuebet' },
+  { value: 'risultato_goal', label: 'Risultato + Goal' },
 ]
 
 function modalitaSaldoFromTipoBonus(tipoBonus: BetBonusType): ModalitaSaldo {

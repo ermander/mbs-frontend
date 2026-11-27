@@ -23,6 +23,8 @@ export const BET_CATEGORIES: { value: BetCategory; label: string }[] = [
   { value: 'matched_betting', label: 'Matched Betting' },
   { value: 'surebet', label: 'Surebet' },
   { value: 'valuebet', label: 'Valuebet' },
+  // §14.415: le giocate dei calcolatori Risultato + Goal (prima stavano in Surebet).
+  { value: 'risultato_goal', label: 'Risultato + Goal' },
 ]
 
 /** Tutte le categorie di profitto (giocate + giocate rapide), per filtri e legende del Report. */

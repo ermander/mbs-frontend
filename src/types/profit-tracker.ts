@@ -64,7 +64,8 @@ export type QuickGameMethod =
   | 'altro'
 
 /** Categoria del profitto per le giocate (ongoing bets). Le giocate rapide usano QuickGameMethod. */
-export type BetCategory = 'matched_betting' | 'surebet' | 'valuebet'
+/** §14.415: `risultato_goal` = le giocate dei due calcolatori Risultato + Goal (prima `surebet`). */
+export type BetCategory = 'matched_betting' | 'surebet' | 'valuebet' | 'risultato_goal'
 
 /** Categoria come appare nella sezione Report: BetCategory oppure un QuickGameMethod. */
 export type ProfitCategory = BetCategory | QuickGameMethod
@@ -238,6 +239,17 @@ export interface ProfitReportFilters {
 
 export type ProfitReportSezione = 'giocate' | 'reddito' | 'costo_attivita' | 'spesa_personale'
 
+/**
+ * §14.415: il profitto delle giocate di una categoria, con le giocate contate una volta sola anche
+ * con le gambe su più conti. `periodStart` null = tutto il periodo del report.
+ */
+export interface ProfitReportCategoryAmount {
+  periodStart: string | null
+  categoria: string
+  totale: number
+  giocate: number
+}
+
 export interface ProfitReportRow {
   periodStart: string
   /** §14.111: giocate (ledger e rapide) oppure la natura della categoria del movimento. */
@@ -277,6 +289,8 @@ export interface ProfitReportBucket extends ProfitReportAmounts {
 export interface ProfitReportResult extends ProfitReportAmounts {
   rows: ProfitReportRow[]
   buckets: ProfitReportBucket[]
+  /** §14.415: le giocate per categoria, mese per mese e sull'intero periodo (assente prima). */
+  categorie?: ProfitReportCategoryAmount[]
   /** = profittoGiocate, il campo storico. */
   totale: number
   /** Fuori dal conto: capitale proprio del periodo, e ricariche/spese ancora senza categoria. */
@@ -486,3 +500,20 @@ export interface ActivityFeedResult {
   page: number
   limit: number
 }
+
+/** §14.415: l'obiettivo mensile di una sezione del Report, in vigore da `dalMese` (AAAA-MM). */
+export interface ProfitGoal {
+  sezione: BetCategory
+  dalMese: string
+  /** Euro al mese; null = nessun obiettivo da quel mese. */
+  importo: number | null
+}
+
+export interface ProfitGoalsResult {
+  /** Il mese in corso a Roma (AAAA-MM): un cambio vale da questo mese in poi. */
+  mese: string
+  goals: ProfitGoal[]
+}
+
+/** Le sezioni da cambiare: un importo, oppure null (o 0) per togliere l'obiettivo. */
+export type ProfitGoalsUpdate = Partial<Record<BetCategory, number | null>>

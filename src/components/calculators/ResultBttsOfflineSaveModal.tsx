@@ -122,7 +122,7 @@ export function ResultBttsOfflineSaveModal({
     try {
       const { betPayload, legsPayload } = buildDutchBet({
         event,
-        categoria: 'surebet',
+        categoria: 'risultato_goal',
         puntaIndex,
         puntata,
         bonus: 0,

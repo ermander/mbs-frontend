@@ -523,7 +523,20 @@ const REPORT_HISTORY = [
     [9, 5, 'a1', 'matched_betting', 175, 'Freebet Sisal'], [9, 20, 'a3', 'valuebet', -60, 'Valuebet Betfair'], [9, 26, null, 'commissioni', -8, 'Commissione prelievo'],
     [10, 9, 'a5', 'matched_betting', 140, 'Rimborso Betsson'], [10, 21, 'b365-3', 'surebet', 18.9, 'Surebet Bet365'],
     [11, 6, 'a1', 'matched_betting', 210, 'Benvenuto Sisal'], [11, 15, 'a2', 'valuebet', 42, 'Valuebet Sisal'], [11, 22, 'h2', 'compenso-identita', -70, 'Compenso Marco'],
-].map(([k, d, who, categoria, importo, nome], i) => ({ id: `rh${i + 1}`, data: monthsAgoDay(k, d), who, categoria, importo, nome }));
+    // §14.415: giocate Risultato + Goal nei mesi passati e alcune giocate del mese in corso (k = 0,
+    // mai dopo oggi), per le card delle sezioni e i loro obiettivi.
+    [1, 24, 'a4', 'risultato_goal', 132.5, 'Risultato + Goal Boca - River'], [2, 17, 'a3', 'risultato_goal', -75, 'Risultato + Goal 0-0 Racing'], [3, 12, 'a2', 'risultato_goal', 88.4, 'Risultato + Goal Velez'],
+    [0, 2, 'a1', 'matched_betting', 185, 'Benvenuto Sisal'], [0, 4, 'a2', 'risultato_goal', 96.3, 'Risultato + Goal Lanus'], [0, 6, 'a3', 'surebet', 38.5, 'Surebet Over 2,5'],
+    [0, 8, 'a4', 'valuebet', -22, 'Valuebet Bwin'], [0, 9, 'a5', 'risultato_goal', -60.4, 'Risultato + Goal 0-0 Huracan'], [0, 10, 'b365-3', 'matched_betting', 145, 'Rimborso Bet365'],
+].map(([k, d, who, categoria, importo, nome], i) => ({ id: `rh${i + 1}`, data: monthsAgoDay(k, k === 0 ? Math.min(d, new Date(now).getUTCDate()) : d), who, categoria, importo, nome }));
+// §14.415: gli obiettivi mensili delle sezioni del Report: matched betting da due mesi fa (500 €),
+// surebet dal mese scorso (100 €), risultato + goal da questo mese (300 €); valuebet senza.
+const goalMonthKey = (k) => { const t = new Date(now); t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() - k); return t.toISOString().slice(0, 7); };
+const PROFIT_GOALS = [
+    { sezione: 'matched_betting', dalMese: goalMonthKey(2), importo: 500 },
+    { sezione: 'surebet', dalMese: goalMonthKey(1), importo: 100 },
+    { sezione: 'risultato_goal', dalMese: goalMonthKey(0), importo: 300 },
+];
 const withCategory = (m) => { const c = categoryOf(m); return { ...m, categoriaSlug: c ? c.slug : null, categoriaNome: c ? c.nome : null, natura: c ? c.natura : null }; };
 const categoryInUse = (id) => WALLET_MOVEMENTS.filter((m) => m.categoryId === id).length;
 // §14.109: movimenti conto con lo stato del prelievo (w1 ha 60 in attesa da a1).
@@ -1781,7 +1794,39 @@ const server = http.createServer(async (req, res) => {
         const extraRows = (q.get('accountId') || q.get('bookId')) ? [] : WALLET_MOVEMENTS.filter((m) => m.tipo !== 'trasferimento' && (!from || m.dataRegistrazione >= from) && (!to || m.dataRegistrazione <= to) && (!holderId || (m.holderId ?? (WALLETS.find((w) => w.id === m.walletId) || {}).holderId) === holderId));
         const cap = (tipo) => extraRows.filter((m) => { const c = categoryOf(m); return c && c.natura === 'capitale' && m.tipo === tipo; }).reduce((s, m) => s + m.valore, 0);
         const totals = amountsOf(rows);
-        return send(200, { rows: [...groups.values()], buckets, totale: totals.profittoGiocate, ...totals, capitaleVersato: cap('ricarica'), capitaleRitirato: cap('spesa'), daClassificare: extraRows.filter((m) => !m.categoryId).length });
+        // §14.415: le giocate per categoria, mese per mese e sul periodo (periodStart null).
+        const catMap = new Map();
+        for (const r of rows.filter((x) => x.sezione === 'giocate')) {
+            for (const periodStart of [monthOf(r.data), null]) {
+                const key = `${periodStart}|${r.categoria}`;
+                const c = catMap.get(key) ?? { periodStart, categoria: r.categoria, totale: 0, refs: new Set() };
+                c.totale += r.importo; c.refs.add(r.refId); catMap.set(key, c);
+            }
+        }
+        const categorie = [...catMap.values()].map(({ refs, ...c }) => ({ ...c, giocate: refs.size }));
+        return send(200, { rows: [...groups.values()], buckets, categorie, totale: totals.profittoGiocate, ...totals, capitaleVersato: cap('ricarica'), capitaleRitirato: cap('spesa'), daClassificare: extraRows.filter((m) => !m.categoryId).length });
+    }
+    // §14.415: gli obiettivi mensili, con la stessa regola del backend (un cambio scrive il mese in
+    // corso; uguale all'obiettivo di prima = nessuna riga per questo mese).
+    if (path === '/api/profit-tracker/goals' && req.method === 'GET') {
+        return send(200, { mese: goalMonthKey(0), goals: [...PROFIT_GOALS].sort((a, b) => (a.sezione + a.dalMese < b.sezione + b.dalMese ? -1 : 1)) });
+    }
+    if (path === '/api/profit-tracker/goals' && req.method === 'PUT') {
+        const body = (await readBody(req)) || {};
+        const obiettivi = body.obiettivi || {};
+        const sezioni = ['matched_betting', 'surebet', 'valuebet', 'risultato_goal'];
+        const keys = Object.keys(obiettivi).filter((k) => sezioni.includes(k));
+        if (keys.length === 0 || keys.some((k) => obiettivi[k] !== null && (typeof obiettivi[k] !== 'number' || obiettivi[k] < 0))) return send(400, { message: 'Obiettivi non validi' });
+        const mese = goalMonthKey(0);
+        for (const k of keys) {
+            const importo = obiettivi[k] > 0 ? Math.round(obiettivi[k] * 100) / 100 : null;
+            const before = PROFIT_GOALS.filter((g) => g.sezione === k && g.dalMese < mese).sort((a, b) => (a.dalMese < b.dalMese ? 1 : -1))[0];
+            const i = PROFIT_GOALS.findIndex((g) => g.sezione === k && g.dalMese === mese);
+            if (i >= 0) PROFIT_GOALS.splice(i, 1);
+            if ((before ? before.importo : null) !== importo) PROFIT_GOALS.push({ sezione: k, dalMese: mese, importo });
+        }
+        console.log('  goals:', JSON.stringify(PROFIT_GOALS));
+        return send(200, { mese, goals: [...PROFIT_GOALS].sort((a, b) => (a.sezione + a.dalMese < b.sezione + b.dalMese ? -1 : 1)) });
     }
     if (path === '/api/profit-tracker/report/detail') {
         const q = url.searchParams; const page = Number(q.get('page') ?? 1); const limit = Number(q.get('limit') ?? 25);

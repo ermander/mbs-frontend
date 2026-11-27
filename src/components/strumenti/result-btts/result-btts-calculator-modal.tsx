@@ -260,7 +260,7 @@ export function ResultBttsCalculatorView({ row, event, onClose }: ResultBttsCalc
     try {
       const { betPayload, legsPayload } = buildDutchBet({
         event,
-        categoria: 'surebet',
+        categoria: 'risultato_goal',
         puntaIndex,
         puntata: puntataNum,
         bonus: 0,

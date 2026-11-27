@@ -21,6 +21,8 @@ import type {
   Holder,
   OngoingBet,
   PaymentMethod,
+  ProfitGoalsResult,
+  ProfitGoalsUpdate,
   ProfitReportDetailResult,
   ProfitReportFilters,
   ProfitReportResult,
@@ -687,6 +689,19 @@ export async function getProfitReportDetail(
   const response = await apiClient.get<ProfitReportDetailResult>('/profit-tracker/report/detail', {
     params: params ?? {},
   })
+  return response.data
+}
+
+// §14.415: monthly goals of the Report sections
+
+export async function getProfitGoals(): Promise<ProfitGoalsResult> {
+  const response = await apiClient.get<ProfitGoalsResult>('/profit-tracker/goals')
+  return response.data
+}
+
+/** Sets the goals of the sections sent from the current month on (the months before keep theirs). */
+export async function updateProfitGoals(obiettivi: ProfitGoalsUpdate): Promise<ProfitGoalsResult> {
+  const response = await apiClient.put<ProfitGoalsResult>('/profit-tracker/goals', { obiettivi })
   return response.data
 }
 

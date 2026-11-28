@@ -11,6 +11,8 @@ import {
   monthIndexOf,
   monthlyAverage,
   monthsOfYear,
+  romeMonthStart,
+  romeMonthsRange,
 } from '@/lib/profit-tracker/report'
 import type { ProfitReportBucket, ProfitReportRow } from '@/types/profit-tracker'
 
@@ -173,5 +175,30 @@ describe('report', () => {
       filler: 0,
     })
     expect(breakdownPage([], 0)).toEqual({ page: 0, pages: 1, items: [], filler: 0 })
+  })
+})
+
+describe('romeMonthStart / romeMonthsRange (§14.416)', () => {
+  it('starts each month at midnight in Rome, winter and summer time', () => {
+    expect(romeMonthStart(2026, 0).toISOString()).toBe('2025-12-31T23:00:00.000Z')
+    expect(romeMonthStart(2026, 3).toISOString()).toBe('2026-03-31T22:00:00.000Z')
+    expect(romeMonthStart(2026, 6).toISOString()).toBe('2026-06-30T22:00:00.000Z')
+    expect(romeMonthStart(2026, 10).toISOString()).toBe('2026-10-31T23:00:00.000Z')
+    expect(romeMonthStart(2026, 12).toISOString()).toBe('2026-12-31T23:00:00.000Z')
+  })
+
+  it('gives the Report filters of a month and of a whole year', () => {
+    expect(romeMonthsRange(2026, 11)).toEqual({
+      fromDate: '2026-11-30T23:00:00.000Z',
+      toDate: '2026-12-31T22:59:59.999Z',
+    })
+    expect(romeMonthsRange(2026, 0, 12)).toEqual({
+      fromDate: '2025-12-31T23:00:00.000Z',
+      toDate: '2026-12-31T22:59:59.999Z',
+    })
+    expect(romeMonthsRange(2026, 6)).toEqual({
+      fromDate: '2026-06-30T22:00:00.000Z',
+      toDate: '2026-07-31T21:59:59.999Z',
+    })
   })
 })

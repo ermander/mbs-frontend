@@ -11,10 +11,62 @@ import type {
   ProfitReportSezione,
 } from '@/types/profit-tracker'
 
-/** Anno e mese (UTC) di un periodStart ISO del backend. */
+/**
+ * Anno e mese di un periodStart ISO del backend: il backend raggruppa per mese di Roma
+ * (§14.416) e manda l'inizio del mese come mezzanotte UTC di quella data.
+ */
 export function monthIndexOf(periodStart: string): { year: number; month: number } {
   const d = new Date(periodStart)
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() }
+}
+
+const ROME_PARTS = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Rome',
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+})
+
+/** Scarto di Roma da UTC in un istante, in millisecondi (+1 h d'inverno, +2 h d'estate). */
+function romeOffsetMs(instantMs: number): number {
+  const parts = ROME_PARTS.formatToParts(new Date(instantMs))
+  const num = (type: string) => Number(parts.find((p) => p.type === type)?.value)
+  const wall = Date.UTC(
+    num('year'),
+    num('month') - 1,
+    num('day'),
+    num('hour') % 24,
+    num('minute'),
+    num('second'),
+  )
+  return wall - Math.floor(instantMs / 1000) * 1000
+}
+
+/**
+ * L'istante della mezzanotte di Roma il primo giorno di un mese (da 0; 12 è gennaio dell'anno
+ * dopo). I mesi del Report sono quelli italiani (§14.416), come quelli degli obiettivi: una giocata
+ * chiusa alle 00:30 del 1° dicembre è di dicembre. Il cambio d'ora non cade mai il primo del mese,
+ * quindi lo scarto letto alla mezzanotte UTC vale anche per quella di Roma.
+ */
+export function romeMonthStart(year: number, month: number): Date {
+  const utcMidnight = Date.UTC(year, month, 1)
+  return new Date(utcMidnight - romeOffsetMs(utcMidnight))
+}
+
+/** I filtri di data del Report per `count` mesi da `month` (da 0), da mezzanotte a mezzanotte di Roma. */
+export function romeMonthsRange(
+  year: number,
+  month: number,
+  count = 1,
+): { fromDate: string; toDate: string } {
+  return {
+    fromDate: romeMonthStart(year, month).toISOString(),
+    toDate: new Date(romeMonthStart(year, month + count).getTime() - 1).toISOString(),
+  }
 }
 
 /** Le voci del conto economico di un mese, dai bucket mensili del report. */

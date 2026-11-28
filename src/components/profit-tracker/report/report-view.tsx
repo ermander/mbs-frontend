@@ -51,6 +51,7 @@ import {
   monthIndexOf,
   monthlyAverage,
   monthsOfYear,
+  romeMonthsRange,
   rowCategoryLabel,
   type BreakdownRow,
   type CategoryAmount,
@@ -134,8 +135,7 @@ export function ReportView() {
 
   const baseFilters = useMemo(
     () => ({
-      fromDate: new Date(Date.UTC(year, 0, 1)).toISOString(),
-      toDate: new Date(Date.UTC(year, 11, 31, 23, 59, 59)).toISOString(),
+      ...romeMonthsRange(year, 0, 12),
       holderId: holderId || undefined,
       accountId: accountId || undefined,
       categoria: categoria || undefined,
@@ -177,8 +177,7 @@ export function ReportView() {
     if (selectedMonth == null) return baseFilters
     return {
       ...baseFilters,
-      fromDate: new Date(Date.UTC(year, selectedMonth, 1)).toISOString(),
-      toDate: new Date(Date.UTC(year, selectedMonth + 1, 0, 23, 59, 59)).toISOString(),
+      ...romeMonthsRange(year, selectedMonth),
     }
   }, [baseFilters, selectedMonth, year])
 
@@ -276,8 +275,7 @@ export function ReportView() {
       selectedMonth === 0
         ? {
             ...baseFilters,
-            fromDate: new Date(Date.UTC(year - 1, 11, 1)).toISOString(),
-            toDate: new Date(Date.UTC(year - 1, 11, 31, 23, 59, 59)).toISOString(),
+            ...romeMonthsRange(year - 1, 11),
           }
         : null,
     [baseFilters, selectedMonth, year],
